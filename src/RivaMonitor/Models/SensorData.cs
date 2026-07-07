@@ -10,6 +10,8 @@ public sealed class SensorData
 
     [JsonIgnore]
     public List<GpuProcessInfo> GpuProcesses { get; set; } = [];
+    [JsonIgnore]
+    public List<string> SensorDebugInfo { get; set; } = [];
 
     public double GetValue(SensorType type) =>
         Values.TryGetValue(type, out var v) ? v : 0;

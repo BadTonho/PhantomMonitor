@@ -34,7 +34,6 @@ public partial class MainWindow : Window
         _logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
         Directory.CreateDirectory(_logDir);
 
-        OverlayToggle.IsChecked = cfg.ShowOverlay;
         CsvToggle.IsChecked = cfg.LogToCsv;
         JsonToggle.IsChecked = cfg.LogToJson;
 
@@ -156,6 +155,10 @@ public partial class MainWindow : Window
 
             var uptime = DateTime.UtcNow - _startTime;
             UptimeText.Text = $"{(int)uptime.TotalMinutes}m {uptime.Seconds}s";
+
+            SensorCountText.Text = $"Sensores: {data.SensorDebugInfo.Count} detectados";
+            if (data.CpuTemp <= 0)
+                SensorCountText.Text += " | CPU temp: N/A";
 
             LastUpdateText.Text = $"Última leitura: {data.Timestamp:HH:mm:ss}";
 

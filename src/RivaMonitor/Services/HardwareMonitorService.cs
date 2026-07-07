@@ -55,13 +55,31 @@ public sealed class HardwareMonitorService : ISensorService
             _computer.Accept(new UpdateVisitor());
             var data = new SensorData();
 
+            var debugInfo = new List<string>();
+
             foreach (var hardware in _computer.Hardware)
             {
                 foreach (var subhardware in hardware.SubHardware)
                     subhardware.Update();
 
                 foreach (var sensor in hardware.Sensors)
+                {
                     MapSensor(sensor, data);
+                    var val = sensor.Value?.ToString("F2") ?? "null";
+                    debugInfo.Add($"[{sensor.Hardware.HardwareType}] {sensor.Name} ({sensor.SensorType}) = {val}");
+                }
+            }
+
+            data.SensorDebugInfo = debugInfo;
+
+            if (!data.Values.ContainsKey(Models.SensorType.CpuTemperature) || data.Values[Models.SensorType.CpuTemperature] == 0)
+            {
+                var moboTemp = data.GetValue(Models.SensorType.MotherboardTemp);
+                if (moboTemp > 0)
+                {
+                    data.Values[Models.SensorType.CpuTemperature] = moboTemp;
+                    data.Labels[Models.SensorType.CpuTemperature] = data.GetLabel(Models.SensorType.MotherboardTemp);
+                }
             }
 
             data.GpuProcesses = GetGpuProcesses();

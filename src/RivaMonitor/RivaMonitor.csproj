@@ -16,4 +16,15 @@
     <Reference Include="System.Management" />
   </ItemGroup>
 
+  <Target Name="BuildRivaSensorLib" BeforeTargets="BeforeBuild">
+    <Exec Command="&quot;C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat&quot; &amp;&amp; cd /d &quot;$(ProjectDir)..\RivaSensorLib&quot; &amp;&amp; cl /LD /EHsc /I. RivaSensorLib.cpp /Fe:RivaSensorLib.dll /nologo"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="low"
+          Condition="!Exists('$(OutDir)RivaSensorLib.dll') Or !Exists('$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll')">
+    </Exec>
+    <Copy SourceFiles="$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll"
+          DestinationFolder="$(OutDir)"
+          Condition="Exists('$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll')" />
+  </Target>
+
 </Project>

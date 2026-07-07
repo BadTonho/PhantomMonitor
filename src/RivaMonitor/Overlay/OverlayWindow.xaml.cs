@@ -10,9 +10,12 @@ namespace RivaMonitor.Overlay;
 
 public partial class OverlayWindow : Window
 {
-    public OverlayWindow()
+    public OverlayWindow(double left = 20, double top = 80, double opacity = 0.85)
     {
         InitializeComponent();
+        Left = left;
+        Top = top;
+        Opacity = opacity;
         MakeClickThrough();
     }
 
@@ -22,11 +25,22 @@ public partial class OverlayWindow : Window
         {
             new("CPU", $"{data.CpuUsage:F1}%", data.CpuUsage / 100.0),
             new("CPU Temp", $"{data.CpuTemp:F0}°C", data.CpuTemp / 100.0),
-            new("GPU", $"{data.GpuUsage:F1}%", data.GpuUsage / 100.0),
-            new("GPU Temp", $"{data.GpuTemp:F0}°C", data.GpuTemp / 100.0),
-            new("RAM", $"{data.RamUsagePercent:F1}%", data.RamUsagePercent / 100.0),
-            new("RAM Avail", $"{data.RamAvailableGB:F1}GB", 0),
         };
+
+        if (data.GetValue(SensorType.GpuCore) > 0 || data.GetValue(SensorType.GpuTemperature) > 0)
+        {
+            items.Add(new("GPU", $"{data.GpuUsage:F1}%", data.GpuUsage / 100.0));
+            items.Add(new("GPU Temp", $"{data.GpuTemp:F0}°C", data.GpuTemp / 100.0));
+        }
+
+        if (data.GetValue(SensorType.GpuCoreClock) > 0)
+            items.Add(new("GPU Clock", $"{data.GetValue(SensorType.GpuCoreClock):F0}MHz",
+                         data.GetValue(SensorType.GpuCoreClock) / 3000.0));
+
+        items.Add(new("RAM", $"{data.RamUsagePercent:F1}%", data.RamUsagePercent / 100.0));
+
+        if (data.GetValue(SensorType.FanSpeed) > 0)
+            items.Add(new("Fan", $"{data.GetValue(SensorType.FanSpeed):F0}RPM", 0));
 
         SensorList.ItemsSource = items;
     }
@@ -42,22 +56,19 @@ public partial class OverlayWindow : Window
         var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         if (handle == IntPtr.Zero)
         {
-            SourceInitialized += (_, _) =>
-            {
-                var h = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-                SetWindowExTransparent(h);
-            };
+            SourceInitialized += (_, _) => SetExTransparent();
         }
         else
         {
-            SetWindowExTransparent(handle);
+            SetExTransparent();
         }
     }
 
-    private static void SetWindowExTransparent(IntPtr hwnd)
+    private void SetExTransparent()
     {
-        var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT);
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var exStyle = GetWindowLong(handle, GWL_EXSTYLE);
+        SetWindowLong(handle, GWL_EXSTYLE, exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT);
     }
 
     private const int GWL_EXSTYLE = -20;
@@ -83,7 +94,7 @@ public sealed class OverlayItem : INotifyPropertyChanged
     public double BarWidth
     {
         get => _barWidth;
-        set => SetField(ref _barWidth, Math.Clamp(value * 200, 0, 200));
+        set => SetField(ref _barWidth, Math.Clamp(value * 180, 0, 180));
     }
     public Brush BarColor { get => _barColor; set => SetField(ref _barColor, value); }
 
@@ -91,7 +102,7 @@ public sealed class OverlayItem : INotifyPropertyChanged
     {
         _label = label;
         _valueText = valueText;
-        _barWidth = percent * 200;
+        _barWidth = percent * 180;
         _barColor = percent switch
         {
             < 0.5 => new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x88)),

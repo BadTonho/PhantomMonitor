@@ -5,39 +5,64 @@
         WindowStartupLocation="CenterScreen"
         BorderThickness="0"
         ResizeMode="CanResizeWithGrip">
-    <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="32" CornerRadius="0" GlassFrameThickness="0"/>
-    </WindowChrome.WindowChrome>
 
     <Grid Margin="0">
-        <!-- Sidebar -->
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{StaticResource BgCardBrush}"
+        <Border Grid.Column="0" Width="220"
+                Background="{StaticResource BgCardBrush}"
                 BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
-            <Grid Margin="16">
+            <Grid Margin="0">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="32"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
+                <!-- Title Bar -->
+                <Border Grid.Row="0" Background="#1E90FF">
+                    <Grid>
+                        <TextBlock Text="RIVA MONITOR" FontSize="11" FontWeight="Bold"
+                                   Foreground="White" VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                    Margin="0,0,4,0">
+                            <Button x:Name="MinimizeButton" Width="28" Height="28"
+                                    Background="Transparent" BorderThickness="0"
+                                    Click="OnMinimizeClick"
+                                    Foreground="White" FontSize="12"
+                                    Content="─" ToolTip="Minimizar"/>
+                            <Button x:Name="MaximizeButton" Width="28" Height="28"
+                                    Background="Transparent" BorderThickness="0"
+                                    Click="OnMaximizeClick"
+                                    Foreground="White" FontSize="10"
+                                    Content="□" ToolTip="Maximizar"/>
+                            <Button x:Name="CloseButton" Width="28" Height="28"
+                                    Background="Transparent" BorderThickness="0"
+                                    Click="OnCloseClick"
+                                    Foreground="White" FontSize="12"
+                                    Content="✕" ToolTip="Fechar"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
                 <!-- Logo -->
-                <StackPanel Grid.Row="0" Margin="0,16,0,24">
-                    <TextBlock Text="RIVA" FontSize="28" FontWeight="Bold"
+                <StackPanel Grid.Row="1" Margin="16,16,16,12">
+                    <TextBlock Text="RIVA" FontSize="22" FontWeight="Bold"
                                Foreground="{StaticResource AccentBrush}"/>
-                    <TextBlock Text="MONITOR" FontSize="11" FontWeight="Light"
+                    <TextBlock Text="MONITOR" FontSize="10" FontWeight="Light"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                Margin="0,2,0,0"/>
                 </StackPanel>
 
                 <!-- Status -->
-                <Border Grid.Row="1" Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+                <Border Grid.Row="2" Style="{StaticResource CardBorder}" Margin="16,0,16,12">
                     <StackPanel>
                         <TextBlock Text="STATUS" FontSize="9" FontWeight="Bold"
                                    Foreground="{StaticResource TextMutedBrush}"
@@ -50,7 +75,7 @@
                 </Border>
 
                 <!-- Navigation -->
-                <StackPanel Grid.Row="2">
+                <StackPanel Grid.Row="3" Margin="16,0">
                     <TextBlock Text="SENSORES" FontSize="9" FontWeight="Bold"
                                Foreground="{StaticResource TextMutedBrush}"
                                Margin="0,0,0,8"/>
@@ -81,7 +106,7 @@
                 </StackPanel>
 
                 <!-- Controls -->
-                <StackPanel Grid.Row="3" Margin="0,0,0,16">
+                <StackPanel Grid.Row="4" Margin="16,0,16,16">
                     <Button x:Name="StartButton" Content="INICIAR"
                             Style="{StaticResource PrimaryButton}"
                             Click="OnStartClick" Margin="0,0,0,8"/>
@@ -96,7 +121,6 @@
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled" Padding="24">
             <StackPanel>
-                <!-- Header -->
                 <TextBlock Text="VISÃO GERAL" FontSize="11" FontWeight="Bold"
                            Foreground="{StaticResource TextMutedBrush}"
                            Margin="0,8,0,16"/>
@@ -167,7 +191,6 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- RAM -->
                     <Border Grid.Column="0" Style="{StaticResource CardBorder}">
                         <StackPanel>
                             <TextBlock Text="MEMÓRIA RAM" FontSize="11" FontWeight="SemiBold"/>
@@ -181,7 +204,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Disco -->
                     <Border Grid.Column="2" Style="{StaticResource CardBorder}">
                         <StackPanel>
                             <TextBlock Text="DISCO" FontSize="11" FontWeight="SemiBold"/>
@@ -224,7 +246,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Last update timestamp -->
                 <TextBlock x:Name="LastUpdateText" Text="Aguardando..."
                            FontSize="11" Foreground="{StaticResource TextMutedBrush}"
                            HorizontalAlignment="Right" Margin="0,0,0,16"/>

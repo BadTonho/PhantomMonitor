@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using RivaMonitor.Models;
@@ -16,21 +15,34 @@ public partial class MainWindow : Window
     private JsonLogger? _jsonLogger;
     private DateTime _startTime;
     private readonly string _logDir;
+    private readonly AppConfig _config;
 
     public MainWindow()
     {
         InitializeComponent();
+
+        var configPath = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "config.json");
+        _config = AppConfig.Load(configPath);
+
         _logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
         Directory.CreateDirectory(_logDir);
+
+        OverlayToggle.IsChecked = _config.ShowOverlay;
+        CsvToggle.IsChecked = _config.LogToCsv;
+        JsonToggle.IsChecked = _config.LogToJson;
     }
 
     private void OnStartClick(object sender, RoutedEventArgs e)
     {
-        _sensorService = new HardwareMonitorService(1000);
+        _sensorService = new HardwareMonitorService(_config.UpdateIntervalMs);
         _sensorService.SensorUpdated += OnSensorData;
         _sensorService.Start();
 
-        _overlay = new OverlayWindow();
+        _overlay = new OverlayWindow(
+            _config.OverlayPosition.X,
+            _config.OverlayPosition.Y,
+            _config.OverlayOpacity);
         _overlay.Show();
 
         if (CsvToggle.IsChecked == true)
@@ -82,26 +94,22 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            // CPU
             CpuUsageText.Text = $"{data.CpuUsage:F1}%";
             CpuUsageText.Foreground = GetUsageBrush(data.CpuUsage);
             CpuRingText.Text = $"{data.CpuUsage:F0}%";
             CpuTempText.Text = data.CpuTemp > 0 ? $"{data.CpuTemp:F0}°C" : "--°C";
 
-            // GPU
             GpuUsageText.Text = $"{data.GpuUsage:F1}%";
             GpuUsageText.Foreground = GetUsageBrush(data.GpuUsage);
             GpuRingText.Text = $"{data.GpuUsage:F0}%";
             GpuTempText.Text = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°C" : "--°C";
 
-            // RAM
             RamUsageText.Text = $"{data.RamUsagePercent:F1}%";
             RamUsageText.Foreground = GetUsageBrush(data.RamUsagePercent);
             RamAvailableText.Text = data.RamAvailableGB > 0
                 ? $"{data.RamAvailableGB:F1} GB disponível"
                 : "-- GB disponível";
 
-            // Disk
             DiskUsageText.Text = $"{data.GetValue(SensorType.DiskUsage):F1}%";
             DiskUsageText.Foreground = GetUsageBrush(data.GetValue(SensorType.DiskUsage));
             var read = data.GetValue(SensorType.DiskRead);
@@ -110,20 +118,14 @@ public partial class MainWindow : Window
                 ? $"R: {FormatBytes(read)}/s | W: {FormatBytes(write)}/s"
                 : "--";
 
-            // GPU Processes
             GpuProcessList.ItemsSource = data.GpuProcesses;
 
-            // Uptime
             var uptime = DateTime.UtcNow - _startTime;
-            UptimeText.Text = $"Há {(int)uptime.TotalMinutes}m {uptime.Seconds}s";
+            UptimeText.Text = $"{(int)uptime.TotalMinutes}m {uptime.Seconds}s";
 
-            // Last update
             LastUpdateText.Text = $"Última leitura: {data.Timestamp:HH:mm:ss}";
 
-            // Overlay
             _overlay?.Update(data);
-
-            // Logging
             _csvLogger?.Write(data);
             _jsonLogger?.Write(data);
         });

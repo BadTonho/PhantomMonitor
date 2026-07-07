@@ -130,6 +130,14 @@ public sealed class HardwareMonitorService : ISensorService
                 data.Values[Models.SensorType.CpuTemperature] = val;
                 data.Labels[Models.SensorType.CpuTemperature] = label;
                 break;
+            case LhmSensorType.Clock:
+                data.Values[Models.SensorType.CpuClock] = val;
+                data.Labels[Models.SensorType.CpuClock] = label;
+                break;
+            case LhmSensorType.Voltage:
+                data.Values[Models.SensorType.CpuVoltage] = val;
+                data.Labels[Models.SensorType.CpuVoltage] = label;
+                break;
             case LhmSensorType.Power:
                 data.Values[Models.SensorType.CpuPower] = val;
                 data.Labels[Models.SensorType.CpuPower] = label;
@@ -149,6 +157,14 @@ public sealed class HardwareMonitorService : ISensorService
                 data.Values[Models.SensorType.GpuMemory] = val;
                 data.Labels[Models.SensorType.GpuMemory] = label;
                 break;
+            case LhmSensorType.Clock when sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase):
+                data.Values[Models.SensorType.GpuCoreClock] = val;
+                data.Labels[Models.SensorType.GpuCoreClock] = label;
+                break;
+            case LhmSensorType.Clock when sensor.Name.Contains("Memory", StringComparison.OrdinalIgnoreCase):
+                data.Values[Models.SensorType.GpuMemoryClock] = val;
+                data.Labels[Models.SensorType.GpuMemoryClock] = label;
+                break;
             case LhmSensorType.Temperature when sensor.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase):
                 data.Values[Models.SensorType.GpuHotSpot] = val;
                 data.Labels[Models.SensorType.GpuHotSpot] = label;
@@ -156,6 +172,10 @@ public sealed class HardwareMonitorService : ISensorService
             case LhmSensorType.Temperature:
                 data.Values[Models.SensorType.GpuTemperature] = val;
                 data.Labels[Models.SensorType.GpuTemperature] = label;
+                break;
+            case LhmSensorType.Voltage:
+                data.Values[Models.SensorType.GpuVoltage] = val;
+                data.Labels[Models.SensorType.GpuVoltage] = label;
                 break;
             case LhmSensorType.Fan:
                 data.Values[Models.SensorType.GpuFan] = val;

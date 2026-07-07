@@ -1,0 +1,44 @@
+using System.IO;
+using System.Text.Json;
+
+namespace RivaMonitor.Services;
+
+public sealed class AppConfig
+{
+    public int UpdateIntervalMs { get; set; } = 1000;
+    public bool LogToCsv { get; set; } = false;
+    public bool LogToJson { get; set; } = true;
+    public bool ShowOverlay { get; set; } = true;
+    public double OverlayOpacity { get; set; } = 0.85;
+    public OverlayPositionConfig OverlayPosition { get; set; } = new();
+    public SensorConfig Sensors { get; set; } = new();
+
+    public static AppConfig Load(string path)
+    {
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+        }
+        catch
+        {
+            return new AppConfig();
+        }
+    }
+}
+
+public sealed class OverlayPositionConfig
+{
+    public double X { get; set; } = 20;
+    public double Y { get; set; } = 80;
+}
+
+public sealed class SensorConfig
+{
+    public bool Cpu { get; set; } = true;
+    public bool Gpu { get; set; } = true;
+    public bool Ram { get; set; } = true;
+    public bool Disk { get; set; } = true;
+    public bool Network { get; set; } = false;
+    public bool Motherboard { get; set; } = false;
+}

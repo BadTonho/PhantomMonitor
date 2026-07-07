@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Security.Principal;
 using System.Windows;
 using System.Windows.Media;
 using RivaMonitor.Models;
@@ -14,36 +15,70 @@ public partial class MainWindow : Window
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
     private DateTime _startTime;
-    private readonly string _logDir;
-    private readonly AppConfig _config;
+    private string _logDir = "";
+    private AppConfig _config = new();
 
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
 
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
         var configPath = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "config.json");
-        _config = AppConfig.Load(configPath);
+        var cfg = AppConfig.Load(configPath);
+        _config = cfg;
 
         _logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
         Directory.CreateDirectory(_logDir);
 
-        OverlayToggle.IsChecked = _config.ShowOverlay;
-        CsvToggle.IsChecked = _config.LogToCsv;
-        JsonToggle.IsChecked = _config.LogToJson;
+        OverlayToggle.IsChecked = cfg.ShowOverlay;
+        CsvToggle.IsChecked = cfg.LogToCsv;
+        JsonToggle.IsChecked = cfg.LogToJson;
+
+        if (!IsRunningAsAdmin())
+            StatusText.Text = "Execute como Admin para sensores";
+
+        StartMonitoring();
+    }
+
+    private static bool IsRunningAsAdmin()
+    {
+        try
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void StartMonitoring()
+    {
+        OnStartClick(null!, null!);
     }
 
     private void OnStartClick(object sender, RoutedEventArgs e)
     {
+        if (_sensorService != null) return;
+
         _sensorService = new HardwareMonitorService(_config.UpdateIntervalMs);
         _sensorService.SensorUpdated += OnSensorData;
         _sensorService.Start();
 
-        _overlay = new OverlayWindow(
-            _config.OverlayPosition.X,
-            _config.OverlayPosition.Y,
-            _config.OverlayOpacity);
-        _overlay.Show();
+        if (_config.ShowOverlay)
+        {
+            _overlay = new OverlayWindow(
+                _config.OverlayPosition.X,
+                _config.OverlayPosition.Y,
+                _config.OverlayOpacity);
+            _overlay.Show();
+        }
 
         if (CsvToggle.IsChecked == true)
         {
@@ -145,6 +180,8 @@ public partial class MainWindow : Window
         if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024 * 1024):F1} MB";
         return $"{bytes / (1024 * 1024 * 1024):F2} GB";
     }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
     protected override void OnClosed(EventArgs e)
     {

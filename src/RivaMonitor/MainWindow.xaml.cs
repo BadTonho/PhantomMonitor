@@ -71,14 +71,13 @@ public partial class MainWindow : Window
         _sensorService.SensorUpdated += OnSensorData;
         _sensorService.Start();
 
-        if (_config.ShowOverlay)
-        {
-            _overlay = new OverlayWindow(
-                _config.OverlayPosition.X,
-                _config.OverlayPosition.Y,
-                _config.OverlayOpacity);
+        _overlay = new OverlayWindow(
+            _config.OverlayPosition.X,
+            _config.OverlayPosition.Y,
+            _config.OverlayOpacity);
+
+        if (OverlayToggle.IsChecked == true)
             _overlay.Show();
-        }
 
         if (CsvToggle.IsChecked == true)
         {

@@ -1,15 +1,19 @@
 using System.Diagnostics;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Session;
+using System.Runtime.InteropServices;
 
 namespace RivaMonitor.Services;
 
 public sealed class FpsMonitor : IDisposable
 {
-    private TraceEventSession? _session;
     private readonly FrametimeBuffer _frametimeHistory = new(600);
-    private readonly Dictionary<int, ProcessFpsData> _processes = new();
     private readonly List<double> _fpsSamples = new(300);
+    private readonly Dictionary<string, ProcessTracker> _processes = new();
+    private readonly Timer _pollTimer;
+    private IntPtr _lastHwnd;
+    private string _lastProcessName = "";
+    private long _lastFrameCount;
+    private DateTime _lastPoll = DateTime.UtcNow;
+    private DateTime _lastStatsCalc = DateTime.UtcNow;
 
     private volatile float _fps;
     private volatile float _frametimeMs;
@@ -17,9 +21,7 @@ public sealed class FpsMonitor : IDisposable
     private volatile float _fpsMin = float.MaxValue;
     private volatile float _fps1Low;
     private volatile bool _hasData;
-    private volatile string _debugInfo = "Inicializando...";
-    private DateTime _lastStatsCalc = DateTime.UtcNow;
-    private readonly string _sessionName;
+    private volatile string _debugInfo = "Aguardando...";
 
     public float Fps => _fps;
     public float FrametimeMs => _frametimeMs;
@@ -32,141 +34,138 @@ public sealed class FpsMonitor : IDisposable
 
     public FpsMonitor()
     {
-        _sessionName = $"RivaMonitorFps_{Process.GetCurrentProcess().Id}";
+        _pollTimer = new Timer(_ => Poll(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Start()
     {
-        if (_session != null) return;
-
-        try
-        {
-            _session = new TraceEventSession(_sessionName);
-            _session.EnableProvider("Microsoft-Windows-DXGI", TraceEventLevel.Informational);
-
-            _session.Source.Dynamic.AddCallbackForProviderEvent(
-                "Microsoft-Windows-DXGI", "Present_Start", OnFrameEvent);
-
-            Task.Run(() =>
-            {
-                try
-                {
-                    _session.Source.Process();
-                }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
-                {
-                    _debugInfo = $"ETW error: {ex.Message}";
-                }
-            });
-
-            _debugInfo = "ETW ativo";
-        }
-        catch (UnauthorizedAccessException)
-        {
-            _debugInfo = "ETW: admin necessário";
-        }
-        catch (Exception ex)
-        {
-            _debugInfo = $"ETW init: {ex.Message}";
-            _session?.Dispose();
-            _session = null;
-        }
+        _pollTimer.Change(0, 200);
+        _debugInfo = "Monitorando janela ativa...";
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-    private int GetForegroundPid()
-    {
-        var hwnd = GetForegroundWindow();
-        if (hwnd == IntPtr.Zero) return 0;
-        GetWindowThreadProcessId(hwnd, out uint pid);
-        return (int)pid;
-    }
-
-    private void OnFrameEvent(TraceEvent evt)
+    private void Poll()
     {
         try
         {
-            var pid = (int)evt.ProcessID;
-            if (pid <= 0) return;
-
-            var now = DateTime.UtcNow;
-
-            if (!_processes.TryGetValue(pid, out var proc))
+            var hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero)
             {
-                try
-                {
-                    var p = Process.GetProcessById(pid);
-                    proc = new ProcessFpsData { Name = p.ProcessName };
-                }
-                catch
-                {
-                    proc = new ProcessFpsData { Name = $"pid:{pid}" };
-                }
-                _processes[pid] = proc;
+                _lastHwnd = IntPtr.Zero;
+                _hasData = false;
+                return;
             }
 
-            // Ignorar processos de sistema e outros que não são jogos
-            var name = proc.Name.ToLowerInvariant();
-            if (name == "dwm" || name == "explorer" || name == "rivamonitor" || 
-                name == "chrome" || name == "msedge" || name == "discord" || 
-                name == "devenv" || name == "code" || name == "taskmgr" || name == "steamwebhelper")
+            // Check if window changed
+            if (hwnd != _lastHwnd)
             {
-                return; // Note: Removido ApplicationFrameHost para suportar UWP (Roblox Microsoft Store)
+                _lastHwnd = hwnd;
+                if (!IsValidWindow(hwnd))
+                {
+                    _hasData = false;
+                    return;
+                }
+
+                var pid = GetWindowPid(hwnd);
+                var name = GetProcessName(pid);
+
+                if (!_processes.TryGetValue(name, out var tracker))
+                {
+                    tracker = new ProcessTracker();
+                    _processes[name] = tracker;
+                }
+                _lastProcessName = name;
+                _lastFrameCount = 0;
+                _lastPoll = DateTime.UtcNow;
+                _debugInfo = $"Janela: {name}";
             }
 
-            proc.FramesThisWindow++;
-
-            var elapsed = (now - proc.LastCalc).TotalSeconds;
-            if (elapsed >= 1.0)
+            if (!IsValidWindow(_lastHwnd))
             {
-                var fps = proc.FramesThisWindow / elapsed;
-                proc.FramesThisWindow = 0;
-                proc.CurrentFps = fps;
-                proc.LastCalc = now;
+                _lastHwnd = IntPtr.Zero;
+                _hasData = false;
+                return;
+            }
 
-                ProcessFpsData? best = null;
-                var fgPid = GetForegroundPid();
+            // Try DWM timing info for per-window frame count
+            var frames = GetDwmFrameCount(_lastHwnd);
+            if (frames <= 0)
+            {
+                // Fallback: try DXGI ETW-style via process GPU activity
+                _debugInfo = $"Sem dados DWM: {_lastProcessName}";
+                return;
+            }
 
-                if (_processes.TryGetValue(fgPid, out var fgProc) && fgProc.CurrentFps > 0)
-                {
-                    best = fgProc; // Prioridade absoluta para a janela em foco
-                }
-                else
-                {
-                    foreach (var kvp in _processes)
-                    {
-                        if (best == null || kvp.Value.CurrentFps > best.CurrentFps)
-                            best = kvp.Value;
-                    }
-                }
+            if (_lastFrameCount == 0)
+            {
+                _lastFrameCount = frames;
+                _lastPoll = DateTime.UtcNow;
+                return;
+            }
 
-                if (best != null && best.CurrentFps > 0)
-                {
-                    _fps = (float)best.CurrentFps;
-                    _frametimeMs = _fps > 0 ? 1000f / _fps : 0;
-                    _frametimeHistory.Add(_frametimeMs);
-                    _fpsSamples.Add(_fps);
-                    if (_fps < _fpsMin) _fpsMin = _fps;
-                    _hasData = true;
-                    _debugInfo = $"FPS: {_fps:F1} ({best.Name})";
-                }
+            if (frames <= _lastFrameCount) return; // no new frame
 
-                if ((now - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
+            var elapsed = (DateTime.UtcNow - _lastPoll).TotalSeconds;
+            if (elapsed < 0.5) return;
+
+            var newFrames = frames - _lastFrameCount;
+            var fps = newFrames / elapsed;
+
+            _lastFrameCount = frames;
+            _lastPoll = DateTime.UtcNow;
+
+            if (fps > 0 && fps < 600)
+            {
+                _fps = (float)fps;
+                _frametimeMs = 1000f / _fps;
+                _frametimeHistory.Add(_frametimeMs);
+                _fpsSamples.Add(_fps);
+                if (_fps < _fpsMin) _fpsMin = _fps;
+                _hasData = true;
+
+                if ((DateTime.UtcNow - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
                 {
                     _fpsAvg = (float)_fpsSamples.Average();
                     var sorted = _fpsSamples.OrderBy(v => v).ToList();
                     _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
-                    _lastStatsCalc = now;
+                    _lastStatsCalc = DateTime.UtcNow;
                 }
+
+                _debugInfo = $"FPS: {_fps:F1} ({_lastProcessName}) via DWM";
             }
         }
         catch { }
+    }
+
+    private static long GetDwmFrameCount(IntPtr hwnd)
+    {
+        try
+        {
+            var info = new DWM_TIMING_INFO();
+            info.cbSize = Marshal.SizeOf<DWM_TIMING_INFO>();
+            var ptr = Marshal.AllocHGlobal(info.cbSize);
+            try
+            {
+                Marshal.StructureToPtr(info, ptr, false);
+                var hr = DwmGetCompositionTimingInfo(hwnd, ptr);
+                if (hr == 0)
+                {
+                    // Read cFrameDisplayed at offset
+                    // On Win10+, the struct has many fields, cFrameDisplayed is at a specific offset
+                    // Use Marshal to read the field directly
+                    var result = Marshal.ReadInt64(ptr, 64); // offset of cFrameDisplayed varies
+                    return result;
+                }
+                return -1;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+        }
+        catch
+        {
+            return -1;
+        }
     }
 
     public void Reset()
@@ -180,23 +179,88 @@ public sealed class FpsMonitor : IDisposable
         _fpsAvg = 0;
         _fps1Low = 0;
         _hasData = false;
+        _lastFrameCount = 0;
     }
 
     public void Dispose()
     {
-        if (_session != null)
-        {
-            try { _session.Stop(); } catch { }
-            try { _session.Dispose(); } catch { }
-            _session = null;
-        }
+        _pollTimer.Dispose();
     }
 
-    private sealed class ProcessFpsData
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetCompositionTimingInfo(IntPtr hwnd, IntPtr timingInfo);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    private static uint GetWindowPid(IntPtr hwnd)
     {
-        public string Name = "";
-        public long FramesThisWindow;
-        public double CurrentFps;
-        public DateTime LastCalc = DateTime.UtcNow;
+        GetWindowThreadProcessId(hwnd, out var pid);
+        return pid;
+    }
+
+    private static string GetProcessName(uint pid)
+    {
+        try { return Process.GetProcessById((int)pid).ProcessName; }
+        catch { return $"pid:{pid}"; }
+    }
+
+    private static bool IsValidWindow(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return false;
+        if (!IsWindowVisible(hwnd)) return false;
+
+        var sb = new System.Text.StringBuilder(256);
+        GetWindowText(hwnd, sb, sb.Capacity);
+        var title = sb.ToString();
+        if (string.IsNullOrWhiteSpace(title)) return false;
+
+        var pid = GetWindowPid(hwnd);
+        var name = GetProcessName(pid);
+        return !name.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DWM_TIMING_INFO
+    {
+        public int cbSize;
+        public DWM_FRAME_RATE rate;
+        public DWM_FRAME_RATE rateComposition;
+        public long qpcFrameStart;
+        public int cRefresh;
+        public int cDXRefresh;
+        public long qpcComposition;
+        public long qpcFrameDisplayed;
+        public long qpcCompositionDisplayed;
+        public long qpcDisplayedTime;
+        public long qpcCompositionDisplayTime;
+        public long qpcCompositionVBlankTime;
+        public long qpcVBlank;
+        public long cFrameDisplayed; // at offset 88 (8*11)
+        public long cFramesDropped;
+        public int cRefreshFrame;
+        public int cCompositionFrame;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DWM_FRAME_RATE
+    {
+        public int numerator;
+        public int denominator;
+    }
+
+    private sealed class ProcessTracker
+    {
+        public long FrameCount;
+        public DateTime LastSeen = DateTime.UtcNow;
     }
 }

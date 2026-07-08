@@ -2,15 +2,18 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <CsWinRTIncludes>Windows.Graphics.Capture;Windows.Graphics.DirectX;Windows.Graphics.DirectX.Direct3D11;Windows.Foundation;Windows.System</CsWinRTIncludes>
+    <CsWinRTGeneratedFilesDir>$(OutDir)</CsWinRTGeneratedFilesDir>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.4" />
+    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,8 +21,7 @@
   </ItemGroup>
 
   <Target Name="BuildRivaSensorLib" BeforeTargets="BeforeBuild">
-    <Exec Command="&quot;C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat&quot; &amp;&amp; cd /d &quot;$(ProjectDir)..\RivaSensorLib&quot; &amp;&amp; cl /LD /EHsc /I. RivaSensorLib.cpp /Fe:RivaSensorLib.dll /nologo" ConsoleToMSBuild="true" StandardOutputImportance="low" Condition="!Exists('$(OutDir)RivaSensorLib.dll') Or !Exists('$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll')">
-    </Exec>
+    <Exec Command="&quot;C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat&quot; &amp;&amp; cd /d &quot;$(ProjectDir)..\RivaSensorLib&quot; &amp;&amp; cl /LD /EHsc /I. RivaSensorLib.cpp /Fe:RivaSensorLib.dll /nologo" ConsoleToMSBuild="true" StandardOutputImportance="low" Condition="!Exists('$(OutDir)RivaSensorLib.dll') And !Exists('$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll')" />
     <Copy SourceFiles="$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll" DestinationFolder="$(OutDir)" Condition="Exists('$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll')" />
   </Target>
 

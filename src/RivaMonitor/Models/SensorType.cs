@@ -27,5 +27,10 @@ public enum SensorType
     NetworkUp,
     NetworkDown,
     MotherboardTemp,
-    FanSpeed
+    FanSpeed,
+    Fps,
+    FrametimeMs,
+    FpsAvg,
+    FpsMin,
+    Fps1Low
 }

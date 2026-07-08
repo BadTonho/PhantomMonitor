@@ -25,6 +25,15 @@ public sealed class SensorData
     public double GpuTemp => GetValue(SensorType.GpuTemperature);
     public double RamUsagePercent => GetValue(SensorType.RamUsage);
     public double RamAvailableGB => GetValue(SensorType.RamAvailable);
+
+    // FPS
+    public double Fps => GetValue(SensorType.Fps);
+    public double FrametimeMs => GetValue(SensorType.FrametimeMs);
+    public double FpsAvg => GetValue(SensorType.FpsAvg);
+    public double FpsMin => GetValue(SensorType.FpsMin);
+    public double Fps1Low => GetValue(SensorType.Fps1Low);
+    [JsonIgnore]
+    public float[] FrametimeHistory { get; set; } = [];
 }
 
 public sealed class GpuProcessInfo

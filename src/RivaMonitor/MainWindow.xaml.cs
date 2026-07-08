@@ -95,10 +95,9 @@ public partial class MainWindow : Window
         _sensorService.SensorUpdated += OnSensorData;
         _sensorService.Start();
 
-        _overlay = new OverlayWindow(
+        _overlay = new OverlayWindow(_config,
             _config.OverlayPosition.X,
-            _config.OverlayPosition.Y,
-            _config.OverlayOpacity);
+            _config.OverlayPosition.Y);
 
         if (OverlayToggle.IsChecked == true)
             _overlay.Show();
@@ -143,9 +142,16 @@ public partial class MainWindow : Window
     private void OnOverlayToggled(object sender, RoutedEventArgs e)
     {
         if (_overlay == null) return;
-        _overlay.Visibility = OverlayToggle.IsChecked == true
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        if (OverlayToggle.IsChecked == true)
+        {
+            if (!_overlay.IsVisible)
+                _overlay.Show();
+            _overlay.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            _overlay.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void OnSensorData(SensorData data)

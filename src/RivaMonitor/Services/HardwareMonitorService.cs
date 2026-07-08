@@ -12,6 +12,7 @@ public sealed class HardwareMonitorService : ISensorService
     private readonly Computer _computer;
     private readonly Timer _timer;
     private readonly int _updateIntervalMs;
+    private readonly FpsMonitor _fpsMonitor = new();
     private SensorData _current = new();
 
     public event Action<SensorData>? SensorUpdated;
@@ -176,6 +177,19 @@ public sealed class HardwareMonitorService : ISensorService
             data.SensorDebugInfo = debugInfo;
 
             data.GpuProcesses = GetGpuProcesses();
+
+            _fpsMonitor.Poll();
+            debugInfo.Add($"[FPS] {_fpsMonitor.DebugInfo}");
+            if (_fpsMonitor.HasData)
+            {
+                data.Values[Models.SensorType.Fps] = _fpsMonitor.Fps;
+                data.Values[Models.SensorType.FrametimeMs] = _fpsMonitor.FrametimeMs;
+                data.Values[Models.SensorType.FpsAvg] = _fpsMonitor.FpsAvg;
+                data.Values[Models.SensorType.FpsMin] = _fpsMonitor.FpsMin;
+                data.Values[Models.SensorType.Fps1Low] = _fpsMonitor.Fps1Low;
+                data.FrametimeHistory = _fpsMonitor.FrametimeHistory.ToArray();
+            }
+
             _current = data;
 
             try { SensorUpdated?.Invoke(data); } catch { }

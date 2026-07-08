@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Management;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Session;
@@ -14,8 +13,9 @@ public sealed class FpsMonitor : IDisposable
     private DateTime _lastStatsCalc = DateTime.UtcNow;
     private int _frameCount;
     private DateTime _lastFpsCalc = DateTime.UtcNow;
-    private readonly Timer _pollTimer;
-    private string _lastProcessName = "";
+    private readonly Timer _timer;
+
+    private readonly Dictionary<string, (PerformanceCounter Counter, long PrevRaw, long PrevTime)> _perfCounterStates = new();
 
     private volatile float _fps;
     private volatile float _frametimeMs;
@@ -25,11 +25,13 @@ public sealed class FpsMonitor : IDisposable
     private volatile bool _hasData;
     private volatile string _debugInfo = "Inicializando...";
     private volatile int _etwEventCount;
-    private volatile string _lastWmiQuery = "";
-    private volatile string _wmiResults = "";
+    private volatile string _perfResult = "";
+    private volatile string _etwDiag = "";
+    private volatile bool _firstEventLogged;
+    private volatile int _pollIteration;
 
-    private static readonly Guid DWM_CORE = new("5E8B2363-FA5D-4370-86C4-7B36A0E6A6FC");
-    private static readonly Guid DXGI = new("CA41C1A2-1A35-8E2A-2D39-9C6E6B5F2B1D");
+    private static readonly Guid DXGKRNL_GUID = new("802EC45A-1E99-4B83-9920-87C98277BA9D");
+    private static readonly Guid DWM_CORE_GUID = new("9E9BA3C0-F4E5-4FA6-B120-201E4F81F2D2");
 
     public float Fps => _fps;
     public float FrametimeMs => _frametimeMs;
@@ -40,66 +42,83 @@ public sealed class FpsMonitor : IDisposable
     public FrametimeBuffer FrametimeHistory => _frametimeHistory;
     public string DebugInfo => _debugInfo;
     public int EtwEventCount => _etwEventCount;
-    public string LastWmiQuery => _lastWmiQuery;
-    public string WmiResults => _wmiResults;
+    public string PerfResult => _perfResult;
+    public string EtwDiag => _etwDiag;
 
     public FpsMonitor()
     {
-        _pollTimer = new Timer(_ => PollFallback(), null, Timeout.Infinite, Timeout.Infinite);
+        _timer = new Timer(_ => Poll(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Start()
     {
-        try
+        _debugInfo = "Iniciando...";
+        StartEtw();
+        _timer.Change(0, 500);
+    }
+
+    private void StartEtw()
+    {
+        foreach (var guid in new[] { DXGKRNL_GUID, DWM_CORE_GUID })
         {
-            _session = new TraceEventSession("RivaMonitorFps");
-            _session.EnableProvider(DWM_CORE, TraceEventLevel.Verbose, 0xFFFFFFFFFFFFFFFF);
-            _session.EnableProvider(DXGI, TraceEventLevel.Verbose, 0xFFFFFFFFFFFFFFFF);
-
-            _session.Source.Dynamic.All += OnAnyEvent;
-
-            Task.Run(() =>
+            try
             {
-                try { _session.Source.Process(); }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
-                {
-                    _debugInfo = $"ETW error: {ex.Message}";
-                }
-            });
+                var session = new TraceEventSession("RivaMonitorFps");
+                session.EnableProvider(guid, TraceEventLevel.Verbose, 0xFFFFFFFFFFFFFFFF);
+                session.Source.AllEvents += OnAnyEvent;
 
-            _debugInfo = "ETW ativo";
-            _pollTimer.Change(1000, 1000);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            _debugInfo = "ETW: admin necessário";
-            _pollTimer.Change(1000, 1000);
-        }
-        catch (Exception ex)
-        {
-            _debugInfo = $"ETW init: {ex.Message}";
-            _pollTimer.Change(1000, 1000);
+                Task.Run(() =>
+                {
+                    try { session.Source.Process(); }
+                    catch (OperationCanceledException) { }
+                    catch (Exception ex) { _etwDiag = $"ETW proc: {ex.Message}"; }
+                });
+
+                _session = session;
+                _etwDiag = $"ETW ativo: {guid}";
+                _debugInfo = "ETW: aguardando eventos";
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                _etwDiag = "Admin necessário";
+            }
+            catch (Exception ex)
+            {
+                _etwDiag = $"Init: {ex.Message}";
+            }
         }
     }
 
-    private void CountFrame(string source)
+    private void OnAnyEvent(TraceEvent evt)
     {
+        try
+        {
+            var c = Interlocked.Increment(ref _etwEventCount);
+            if (!_firstEventLogged)
+            {
+                _etwDiag = "Primeiro evento recebido! c=" + c;
+                _firstEventLogged = true;
+            }
+            if ((int)evt.ID == 1)
+                AddFrames(1, "ETW");
+        }
+        catch { }
+    }
+
+    private void AddFrames(int count, string source)
+    {
+        Interlocked.Add(ref _frameCount, count);
         var now = DateTime.UtcNow;
         var elapsed = (now - _lastFpsCalc).TotalSeconds;
-
-        var c = Interlocked.Increment(ref _frameCount);
-        _debugInfo = $"[{c}] frames em {elapsed:F2}s ({source})";
-
-        if (elapsed >= 1.0)
+        if (elapsed >= 0.5)
         {
-            var count = Interlocked.Exchange(ref _frameCount, 0);
-            var fps = count / elapsed;
-
+            var total = Interlocked.Exchange(ref _frameCount, 0);
+            var fps = total / elapsed;
             if (fps > 0 && fps < 600)
             {
                 _fps = (float)fps;
-                _frametimeMs = _fps > 0 ? 1000f / _fps : 0;
+                _frametimeMs = 1000f / _fps;
                 _frametimeHistory.Add(_frametimeMs);
                 _fpsSamples.Add(_fps);
                 if (_fps < _fpsMin) _fpsMin = _fps;
@@ -112,80 +131,100 @@ public sealed class FpsMonitor : IDisposable
                     _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
                     _lastStatsCalc = now;
                 }
-
-                _debugInfo = $"FPS: {_fps:F1} ({source})";
+                _debugInfo = $"FPS: {_fps:F0} ({source})";
             }
             _lastFpsCalc = now;
         }
     }
 
-    private void OnAnyEvent(TraceEvent evt)
+    private void Poll()
     {
+        _pollIteration++;
         try
         {
-            var c = Interlocked.Increment(ref _etwEventCount);
-            // Ignore non-DWM/DXGI providers
-            if (evt.ProviderGuid != DWM_CORE && evt.ProviderGuid != DXGI) return;
-            if (c <= 5)
-                _debugInfo = $"ETW evt #{c}: PID={evt.ProcessID} Prov={evt.ProviderGuid} Op={evt.Opcode}";
-            CountFrame(evt.ProviderGuid == DWM_CORE ? "DWM" : "DXGI");
-        }
-        catch { }
-    }
+            var pidUsage = new Dictionary<uint, (float total3D, int count3D, float totalOther, int countOther)>();
 
-    private void PollFallback()
-    {
-        try
-        {
-            var hwnd = GetForegroundWindow();
-            if (hwnd == IntPtr.Zero) return;
+            var category = new PerformanceCounterCategory("GPU Engine");
+            var instances = category.GetInstanceNames();
+            var sb = new System.Text.StringBuilder();
 
-            GetWindowThreadProcessId(hwnd, out var pid);
-            if (pid <= 0) return;
-
-            string pname;
-            try
+            foreach (var inst in instances)
             {
-                var proc = Process.GetProcessById((int)pid);
-                if (proc.ProcessName.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase))
-                    return;
-                pname = proc.ProcessName;
-                _lastProcessName = pname;
-            }
-            catch { return; }
+                if (sb.Length < 120) sb.Append(inst).Append(" ");
 
-            var pidStr = pid.ToString();
-            // Query ALL GPU engine counters and filter by PID in code (more reliable)
-            using var allSearcher = new ManagementObjectSearcher(
-                "SELECT Name, PercentOfTime FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
-            float usage = 0;
-            int count = 0;
-            var matchedNames = new System.Text.StringBuilder();
-            var allNames = new System.Text.StringBuilder();
-            foreach (var obj in allSearcher.Get())
-            {
-                var name = (string)obj["Name"] ?? "";
-                if (allNames.Length < 200) allNames.Append(name).Append("  ");
-                if (name.EndsWith("_" + pidStr) || name.StartsWith(pidStr + "_"))
+                uint pid = 0;
+                if (inst.StartsWith("pid_"))
                 {
-                    var pct = Convert.ToSingle(obj["PercentOfTime"] ?? 0);
-                    if (matchedNames.Length < 100) matchedNames.Append($"{name}={pct:F1}% ");
-                    usage += pct;
-                    count++;
+                    var underscore = inst.IndexOf('_', 4);
+                    if (underscore > 4 && uint.TryParse(inst.AsSpan(4, underscore - 4), out pid)) { }
+                }
+                if (pid == 0) continue;
+
+                try
+                {
+                    if (!_perfCounterStates.TryGetValue(inst, out var state))
+                    {
+                        var pc = new PerformanceCounter("GPU Engine", "Running Time", inst);
+                        var first = pc.NextSample();
+                        _perfCounterStates[inst] = (pc, first.RawValue, first.TimeStamp100nSec);
+                        continue;
+                    }
+                    var sample = state.Counter.NextSample();
+                    var rawDelta = sample.RawValue - state.PrevRaw;
+                    var timeDelta = sample.TimeStamp100nSec - state.PrevTime;
+                    _perfCounterStates[inst] = (state.Counter, sample.RawValue, sample.TimeStamp100nSec);
+
+                    float pct = timeDelta > 0 ? (float)rawDelta / (float)timeDelta : 0f;
+                    if (pct > 0.005f)
+                    {
+                        var entry = pidUsage.GetValueOrDefault(pid);
+                        bool is3D = inst.Contains("engtype_3D", StringComparison.OrdinalIgnoreCase);
+                        if (is3D) { entry.total3D += pct; entry.count3D++; }
+                        else { entry.totalOther += pct; entry.countOther++; }
+                        pidUsage[pid] = entry;
+                    }
+                }
+                catch { }
+            }
+
+            uint bestPid = 0;
+            float bestScore = 0;
+            foreach (var kv in pidUsage)
+            {
+                float score = kv.Value.total3D > 0 ? kv.Value.total3D * 2f : kv.Value.totalOther;
+                if (score > bestScore) { bestScore = score; bestPid = kv.Key; }
+            }
+
+            string bestName = "";
+            if (bestPid > 0)
+            {
+                try
+                {
+                    var p = Process.GetProcessById((int)bestPid);
+                    bestName = p.ProcessName;
+                }
+                catch { bestName = $"pid:{bestPid}"; }
+
+                if (bestName.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase))
+                {
+                    _perfResult = $"#{_pollIteration} Só RivaMonitor usando GPU";
+                    _debugInfo = _perfResult;
+                    return;
                 }
             }
 
-            _lastWmiQuery = $"ALL GPU engines (filtering for pid={pid})";
-            _wmiResults = $"{pname}: {count} match, tot={usage:F1}% | matches: {matchedNames}| all: {allNames}";
-
-            if (count > 0 && usage > 1.0f)
-            {
-                CountFrame(pname);
-            }
+            _perfResult = $"#{_pollIteration} GPU ativa: {bestName}({bestPid}) | {sb}";
+            _debugInfo = _perfResult;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _perfResult = $"#{_pollIteration} Categoria 'GPU Engine' não existe - {ex.Message}";
+            _debugInfo = _perfResult;
         }
         catch (Exception ex)
         {
-            _wmiResults = $"WMI error: {ex.GetType().Name}: {ex.Message}";
+            _perfResult = $"#{_pollIteration} erro: {ex.GetType().Name}: {ex.Message}";
+            _debugInfo = _perfResult;
         }
     }
 
@@ -204,17 +243,9 @@ public sealed class FpsMonitor : IDisposable
 
     public void Dispose()
     {
-        _pollTimer.Dispose();
-        if (_session != null)
-        {
-            try { _session.Stop(); } catch { }
-            try { _session.Dispose(); } catch { }
-            _session = null;
-        }
+        _timer.Dispose();
+        foreach (var state in _perfCounterStates.Values) state.Counter.Dispose();
+        _perfCounterStates.Clear();
+        _session?.Dispose();
     }
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }

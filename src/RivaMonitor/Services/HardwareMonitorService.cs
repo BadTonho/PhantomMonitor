@@ -181,8 +181,8 @@ public sealed class HardwareMonitorService : ISensorService
 
             debugInfo.Add($"[FPS] {_fpsMonitor.DebugInfo}");
             debugInfo.Add($"[FPS] Eventos ETW: {_fpsMonitor.EtwEventCount}");
-            debugInfo.Add($"[FPS] WMI Query: {_fpsMonitor.LastWmiQuery}");
-            debugInfo.Add($"[FPS] WMI Res: {_fpsMonitor.WmiResults}");
+            debugInfo.Add($"[FPS] ETW Diag: {_fpsMonitor.EtwDiag}");
+            debugInfo.Add($"[FPS] PerfCount: {_fpsMonitor.PerfResult}");
             if (_fpsMonitor.HasData)
             {
                 data.Values[Models.SensorType.Fps] = _fpsMonitor.Fps;

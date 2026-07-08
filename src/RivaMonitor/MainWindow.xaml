@@ -24,12 +24,15 @@
                 </Grid.RowDefinitions>
 
                 <!-- Logo -->
-                <StackPanel Grid.Row="0" Margin="16,16,16,12">
-                    <TextBlock Text="RIVA" FontSize="22" FontWeight="Bold"
-                               Foreground="{StaticResource AccentBrush}"/>
-                    <TextBlock Text="MONITOR" FontSize="10" FontWeight="Light"
+                <StackPanel Grid.Row="0" Margin="16,24,16,16">
+                    <TextBlock Text="RIVA" FontSize="24" FontWeight="Black">
+                        <TextBlock.Foreground>
+                            <StaticResource ResourceKey="AccentGradientBrush"/>
+                        </TextBlock.Foreground>
+                    </TextBlock>
+                    <TextBlock Text="M O N I T O R" FontSize="9" FontWeight="Medium"
                                Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,2,0,0"/>
+                               Margin="2,2,0,0"/>
                 </StackPanel>
 
                 <!-- Status -->
@@ -149,8 +152,9 @@
                                        Foreground="{StaticResource TextSecondaryBrush}"/>
                         </StackPanel>
                         <Border Grid.Column="1" Width="80" Height="80" CornerRadius="40"
-                                Background="#0A1E90FF" BorderBrush="{StaticResource AccentBrush}"
-                                BorderThickness="2" Margin="0,0,12,0">
+                                Background="#0500F0FF" BorderBrush="{StaticResource AccentGradientBrush}"
+                                BorderThickness="3" Margin="0,0,12,0"
+                                Effect="{StaticResource NeonCyanGlow}">
                             <TextBlock x:Name="CpuRingText" Text="0%"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
@@ -188,8 +192,9 @@
                                        Foreground="{StaticResource TextSecondaryBrush}"/>
                         </StackPanel>
                         <Border Grid.Column="1" Width="80" Height="80" CornerRadius="40"
-                                Background="#0A1E90FF" BorderBrush="{StaticResource AccentBrush}"
-                                BorderThickness="2" Margin="0,0,12,0">
+                                Background="#0500F0FF" BorderBrush="{StaticResource AccentGradientBrush}"
+                                BorderThickness="3" Margin="0,0,12,0"
+                                Effect="{StaticResource NeonCyanGlow}">
                             <TextBlock x:Name="GpuRingText" Text="0%"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
@@ -268,8 +273,9 @@
                                            Foreground="{StaticResource TextMutedBrush}"/>
                             </StackPanel>
                             <Border Grid.Column="1" Width="70" Height="70" CornerRadius="35"
-                                    Background="#0A1E90FF" BorderBrush="{StaticResource AccentBrush}"
-                                    BorderThickness="2" Margin="8,0,0,0">
+                                    Background="#0500F0FF" BorderBrush="{StaticResource AccentGradientBrush}"
+                                    BorderThickness="3" Margin="8,0,0,0"
+                                    Effect="{StaticResource NeonCyanGlow}">
                                 <TextBlock x:Name="RamRingText" Text="0%"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"

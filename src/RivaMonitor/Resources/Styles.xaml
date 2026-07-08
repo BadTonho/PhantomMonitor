@@ -2,18 +2,21 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Cores -->
-    <Color x:Key="BgDark">#0D1117</Color>
-    <Color x:Key="BgCard">#161B22</Color>
-    <Color x:Key="BgCardHover">#1C2333</Color>
-    <Color x:Key="Accent">#1E90FF</Color>
-    <Color x:Key="AccentDim">#1A5F9E</Color>
-    <Color x:Key="TextPrimary">#E6EDF3</Color>
-    <Color x:Key="TextSecondary">#8B949E</Color>
-    <Color x:Key="TextMuted">#484F58</Color>
+    <Color x:Key="BgDark">#080A0F</Color>
+    <Color x:Key="BgCard">#111622</Color>
+    <Color x:Key="BgCardHover">#182030</Color>
+    <Color x:Key="Accent">#00F0FF</Color>
+    <Color x:Key="AccentDim">#008A9E</Color>
+    <Color x:Key="AccentPurple">#9B51E0</Color>
+    <Color x:Key="AccentPurpleDim">#602C9E</Color>
+    
+    <Color x:Key="TextPrimary">#F0F3F6</Color>
+    <Color x:Key="TextSecondary">#8E9AA8</Color>
+    <Color x:Key="TextMuted">#4C566A</Color>
     <Color x:Key="Green">#00FF88</Color>
-    <Color x:Key="Yellow">#FFBB00</Color>
-    <Color x:Key="Red">#FF4444</Color>
-    <Color x:Key="Divider">#21262D</Color>
+    <Color x:Key="Yellow">#FFCC00</Color>
+    <Color x:Key="Red">#FF3B30</Color>
+    <Color x:Key="Divider">#1F293D</Color>
 
     <!-- Brushes -->
     <SolidColorBrush x:Key="BgDarkBrush" Color="{StaticResource BgDark}"/>
@@ -21,6 +24,9 @@
     <SolidColorBrush x:Key="BgCardHoverBrush" Color="{StaticResource BgCardHover}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}"/>
     <SolidColorBrush x:Key="AccentDimBrush" Color="{StaticResource AccentDim}"/>
+    <SolidColorBrush x:Key="AccentPurpleBrush" Color="{StaticResource AccentPurple}"/>
+    <SolidColorBrush x:Key="AccentPurpleDimBrush" Color="{StaticResource AccentPurpleDim}"/>
+    
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}"/>
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
     <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMuted}"/>
@@ -28,6 +34,22 @@
     <SolidColorBrush x:Key="YellowBrush" Color="{StaticResource Yellow}"/>
     <SolidColorBrush x:Key="RedBrush" Color="{StaticResource Red}"/>
     <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource Divider}"/>
+
+    <!-- Gradients -->
+    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource Accent}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource AccentPurple}" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="AccentGradientDimBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource AccentDim}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource AccentPurpleDim}" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- Shadows -->
+    <DropShadowEffect x:Key="CardShadow" BlurRadius="15" ShadowDepth="1" Opacity="0.4" Color="#000000"/>
+    <DropShadowEffect x:Key="NeonCyanGlow" BlurRadius="12" ShadowDepth="0" Opacity="0.5" Color="{StaticResource Accent}"/>
+    <DropShadowEffect x:Key="NeonPurpleGlow" BlurRadius="12" ShadowDepth="0" Opacity="0.5" Color="{StaticResource AccentPurple}"/>
 
     <!-- Estilos Globais -->
     <Style TargetType="Window">
@@ -45,30 +67,39 @@
         <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
     </Style>
 
+    <!-- Button Styles -->
     <Style TargetType="Button" x:Key="PrimaryButton">
-        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Background" Value="{StaticResource AccentGradientBrush}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="16,8"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}"
-                            CornerRadius="6"
+                    <Border x:Name="ButtonBorder" 
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="8"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{StaticResource AccentDimBrush}"/>
+                            <Setter Property="Background" Value="{StaticResource AccentGradientDimBrush}"/>
+                            <Setter TargetName="ButtonBorder" Property="Effect" Value="{StaticResource NeonCyanGlow}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+                            <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource DividerBrush}"/>
+                            <Setter TargetName="ButtonBorder" Property="BorderThickness" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -81,14 +112,15 @@
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Padding" Value="16,10"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}"
-                            CornerRadius="6"
+                    <Border x:Name="ButtonBorder"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="8"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             Padding="{TemplateBinding Padding}">
@@ -97,6 +129,11 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{StaticResource BgCardHoverBrush}"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -104,23 +141,92 @@
         </Setter>
     </Style>
 
-    <Style TargetType="ToggleButton" x:Key="ToggleSwitch">
+    <!-- Sleek RadioButton for Navigation Sidebar -->
+    <Style TargetType="RadioButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="ToggleButton">
-                    <Border Width="44" Height="22" CornerRadius="11"
-                            Background="{StaticResource BgCardBrush}"
-                            BorderBrush="{StaticResource DividerBrush}"
-                            BorderThickness="1">
-                        <Ellipse x:Name="Thumb" Width="16" Height="16"
-                                 Fill="{StaticResource TextMutedBrush}"
-                                 HorizontalAlignment="Left" Margin="2,0"/>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="TabBorder"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}"
+                            Margin="0,2">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Indicador Lateral Roxo/Azul -->
+                            <Border x:Name="Indicator" Width="3" Height="14" 
+                                    CornerRadius="1.5"
+                                    Background="{StaticResource AccentGradientBrush}"
+                                    HorizontalAlignment="Left"
+                                    Visibility="Collapsed"
+                                    Margin="-4,0,8,0"/>
+                            
+                            <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#0AFFFFFF"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                        </Trigger>
                         <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Background" Value="#1500F0FF"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Sleek CheckBox styled as a ToggleSwitch -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="Padding" Value="8,0,0,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                        <Grid VerticalAlignment="Center">
+                            <!-- Trilho do Toggle -->
+                            <Border x:Name="Track" Width="38" Height="20" CornerRadius="10"
+                                    Background="{StaticResource BgCardBrush}"
+                                    BorderBrush="{StaticResource DividerBrush}"
+                                    BorderThickness="1"/>
+                            <!-- Bola do Toggle -->
+                            <Ellipse x:Name="Thumb" Width="14" Height="14"
+                                     Fill="{StaticResource TextSecondaryBrush}"
+                                     HorizontalAlignment="Left"
+                                     Margin="3,0"/>
+                        </Grid>
+                        <ContentPresenter x:Name="Content"
+                                          Content="{TemplateBinding Content}"
+                                          Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background" Value="#1A00F0FF"/>
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                             <Setter TargetName="Thumb" Property="Fill" Value="{StaticResource AccentBrush}"/>
                             <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                            <Setter TargetName="Thumb" Property="Margin" Value="0,0,2,0"/>
+                            <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

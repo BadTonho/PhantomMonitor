@@ -8,8 +8,9 @@
         WindowStartupLocation="Manual"
         SizeToContent="Height"
         IsHitTestVisible="False">
-    <Border x:Name="MainBorder" CornerRadius="10" Background="#CC0D1117"
-            BorderBrush="#1E90FF" BorderThickness="1" Padding="10,8">
+    <Border x:Name="MainBorder" CornerRadius="12" Background="#DE080A0F"
+            BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5" Padding="12,10"
+            Effect="{StaticResource CardShadow}">
         <StackPanel x:Name="SensorPanel">
             <!-- built programmatically -->
         </StackPanel>

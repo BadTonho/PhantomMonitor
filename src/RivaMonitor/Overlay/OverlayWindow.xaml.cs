@@ -149,22 +149,23 @@ public partial class OverlayWindow : Window
     {
         var section = new Border
         {
-            CornerRadius = new CornerRadius(6),
-            Background = new SolidColorBrush(Color.FromArgb(10, 0xFF, 0xFF, 0xFF)),
-            Padding = new Thickness(8, 6, 8, 6),
-            Margin = new Thickness(0, 0, 0, 4)
+            CornerRadius = new CornerRadius(8),
+            Background = new SolidColorBrush(Color.FromArgb(12, 0x00, 0xF0, 0xFF)), // Vidro ciano translúcido
+            BorderBrush = FindResource("DividerBrush") as Brush,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(10, 8, 10, 8),
+            Margin = new Thickness(0, 0, 0, 6)
         };
 
         var stack = new StackPanel();
-        var accent = MainBorder.BorderBrush;
 
         var header = new TextBlock
         {
-            Text = title,
-            FontSize = 9,
+            Text = title.ToUpperInvariant(),
+            FontSize = 9.5,
             FontWeight = FontWeights.Bold,
-            Foreground = accent,
-            Margin = new Thickness(0, 0, 0, 4)
+            Foreground = FindResource("AccentGradientBrush") as Brush, // Cabeçalhos com gradiente neon
+            Margin = new Thickness(0, 0, 0, 6)
         };
         stack.Children.Add(header);
 
@@ -189,7 +190,7 @@ public partial class OverlayWindow : Window
         outerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         // Label + Value row
-        var topGrid = new Grid();
+        var topGrid = new Grid { Margin = new Thickness(0, 1, 0, 1) };
         topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -197,7 +198,7 @@ public partial class OverlayWindow : Window
         {
             Text = label,
             FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
+            Foreground = FindResource("TextSecondaryBrush") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 6, 0)
         };
@@ -207,7 +208,8 @@ public partial class OverlayWindow : Window
         var val = new TextBlock
         {
             FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)),
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("TextPrimaryBrush") as Brush,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
             Text = "--"
@@ -218,22 +220,22 @@ public partial class OverlayWindow : Window
         outerGrid.Children.Add(topGrid);
 
         // Bar
-        var barGrid = new Grid { Margin = new Thickness(0, 2, 0, 0) };
+        var barGrid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
         var barBg = new Border
         {
-            Height = 3,
-            CornerRadius = new CornerRadius(1.5),
-            Background = new SolidColorBrush(Color.FromArgb(30, 0xFF, 0xFF, 0xFF))
+            Height = 4,
+            CornerRadius = new CornerRadius(2),
+            Background = new SolidColorBrush(Color.FromArgb(20, 0xFF, 0xFF, 0xFF))
         };
         barGrid.Children.Add(barBg);
 
         var barFill = new Border
         {
-            Height = 3,
-            CornerRadius = new CornerRadius(1.5),
+            Height = 4,
+            CornerRadius = new CornerRadius(2),
             HorizontalAlignment = HorizontalAlignment.Left,
             Width = 0,
-            Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x90, 0xFF))
+            Background = FindResource("AccentGradientBrush") as Brush
         };
         barGrid.Children.Add(barFill);
         Grid.SetRow(barGrid, 1);
@@ -247,22 +249,23 @@ public partial class OverlayWindow : Window
     {
         var section = new Border
         {
-            CornerRadius = new CornerRadius(6),
-            Background = new SolidColorBrush(Color.FromArgb(10, 0xFF, 0xFF, 0xFF)),
-            Padding = new Thickness(8, 6, 8, 6),
-            Margin = new Thickness(0, 0, 0, 4)
+            CornerRadius = new CornerRadius(8),
+            Background = new SolidColorBrush(Color.FromArgb(12, 0x00, 0xF0, 0xFF)), // Vidro ciano translúcido
+            BorderBrush = FindResource("DividerBrush") as Brush,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(10, 8, 10, 8),
+            Margin = new Thickness(0, 0, 0, 6)
         };
 
         var stack = new StackPanel();
-        var accent = MainBorder.BorderBrush;
 
         var header = new TextBlock
         {
             Text = "FPS",
-            FontSize = 9,
+            FontSize = 9.5,
             FontWeight = FontWeights.Bold,
-            Foreground = accent,
-            Margin = new Thickness(0, 0, 0, 4)
+            Foreground = FindResource("AccentGradientBrush") as Brush,
+            Margin = new Thickness(0, 0, 0, 6)
         };
         stack.Children.Add(header);
 
@@ -277,7 +280,7 @@ public partial class OverlayWindow : Window
         {
             Text = "FPS",
             FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
+            Foreground = FindResource("TextSecondaryBrush") as Brush,
             VerticalAlignment = VerticalAlignment.Center
         };
         Grid.SetColumn(fpsLabel, 0);
@@ -285,9 +288,9 @@ public partial class OverlayWindow : Window
 
         var fpsVal = new TextBlock
         {
-            FontSize = 14,
+            FontSize = 15,
             FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x88)),
+            Foreground = FindResource("GreenBrush") as Brush,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
             Text = "--",
@@ -301,7 +304,7 @@ public partial class OverlayWindow : Window
         {
             Text = "ms",
             FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
+            Foreground = FindResource("TextSecondaryBrush") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right
         };
@@ -310,9 +313,9 @@ public partial class OverlayWindow : Window
 
         var ftVal = new TextBlock
         {
-            FontSize = 14,
+            FontSize = 15,
             FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xBB, 0x00)),
+            Foreground = FindResource("YellowBrush") as Brush,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
             Text = "--",
@@ -329,7 +332,7 @@ public partial class OverlayWindow : Window
         statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        statsGrid.Margin = new Thickness(0, 4, 0, 0);
+        statsGrid.Margin = new Thickness(0, 6, 0, 2);
 
         AddStat(statsGrid, 0, "Avg", "FpsAvg", d => d.FpsAvg > 0 ? $"{d.FpsAvg:F0}" : "--");
         AddStat(statsGrid, 1, "Min", "FpsMin", d => d.FpsMin > 0 ? $"{d.FpsMin:F0}" : "--");
@@ -341,7 +344,7 @@ public partial class OverlayWindow : Window
         _frametimeGraph = new Canvas
         {
             Height = 40,
-            Margin = new Thickness(0, 4, 0, 0),
+            Margin = new Thickness(0, 6, 0, 0),
             ClipToBounds = true
         };
         stack.Children.Add(_frametimeGraph);
@@ -358,7 +361,7 @@ public partial class OverlayWindow : Window
         {
             Text = label,
             FontSize = 8,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)),
+            Foreground = parent.FindResource("TextSecondaryBrush") as Brush,
             HorizontalAlignment = HorizontalAlignment.Center
         };
         inner.Children.Add(lbl);
@@ -367,7 +370,7 @@ public partial class OverlayWindow : Window
         {
             FontSize = 10,
             FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)),
+            Foreground = parent.FindResource("TextPrimaryBrush") as Brush,
             HorizontalAlignment = HorizontalAlignment.Center,
             Text = "--"
         };
@@ -387,11 +390,11 @@ public partial class OverlayWindow : Window
                 row.BarFill.Width = pct * (ActualWidth - 56);
 
                 if (pct < 0.5)
-                    row.BarFill.Background = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x88));
+                    row.BarFill.Background = FindResource("GreenBrush") as Brush;
                 else if (pct < 0.8)
-                    row.BarFill.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xBB, 0x00));
+                    row.BarFill.Background = FindResource("YellowBrush") as Brush;
                 else
-                    row.BarFill.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44));
+                    row.BarFill.Background = FindResource("RedBrush") as Brush;
             }
 
             if (row.GetText != null)
@@ -425,9 +428,16 @@ public partial class OverlayWindow : Window
             var poly = new Polyline
             {
                 Points = pts,
-                Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0xBB, 0x00)),
+                Stroke = FindResource("YellowBrush") as Brush,
                 StrokeThickness = 1.5,
-                StrokeLineJoin = PenLineJoin.Round
+                StrokeLineJoin = PenLineJoin.Round,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 8,
+                    ShadowDepth = 0,
+                    Opacity = 0.6,
+                    Color = (Color)FindResource("Yellow")
+                }
             };
             _frametimeGraph.Children.Add(poly);
         }

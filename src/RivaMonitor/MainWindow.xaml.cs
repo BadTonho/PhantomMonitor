@@ -262,11 +262,20 @@ public partial class MainWindow : Window
             ring.Background = new RadialGradientBrush(inner, mid);
 
             text.Foreground = new SolidColorBrush(color);
+
+            ring.Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                BlurRadius = 12,
+                ShadowDepth = 0,
+                Opacity = 0.4,
+                Color = color
+            };
         }
         else
         {
             ring.Background = new SolidColorBrush(Color.FromArgb(0x1A, 0x66, 0x66, 0x66));
             text.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66));
+            ring.Effect = null;
         }
     }
 

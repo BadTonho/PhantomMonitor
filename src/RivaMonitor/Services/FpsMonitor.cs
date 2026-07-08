@@ -27,7 +27,6 @@ public sealed class FpsMonitor : IDisposable
     private volatile int _etwEventCount;
     private volatile string _perfResult = "";
     private volatile string _etwDiag = "";
-    private volatile bool _firstEventLogged;
     private volatile int _pollIteration;
 
     private static readonly Guid DXGKRNL_GUID = new("802EC45A-1E99-4B83-9920-87C98277BA9D");
@@ -64,7 +63,7 @@ public sealed class FpsMonitor : IDisposable
             try
             {
                 var session = new TraceEventSession("RivaMonitorFps");
-                session.EnableProvider(guid, TraceEventLevel.Verbose, 0xFFFFFFFFFFFFFFFF);
+                session.EnableProvider(guid, TraceEventLevel.Verbose, 0x0001);
                 session.Source.AllEvents += OnAnyEvent;
 
                 Task.Run(() =>
@@ -92,24 +91,27 @@ public sealed class FpsMonitor : IDisposable
 
     private volatile int _targetPid;
 
+    private readonly Dictionary<int, int> _idCounts = new();
+
     private void OnAnyEvent(TraceEvent evt)
     {
         try
         {
-            var c = Interlocked.Increment(ref _etwEventCount);
-            if (c <= 10)
-            {
-                var pid = 0;
-                try { pid = evt.ProcessID; } catch { }
-                var eid = 0;
-                try { eid = (int)evt.ID; } catch { }
-                _etwDiag = (c > 1 ? _etwDiag + " | " : "") + $"#{c} PID={pid} ID={eid}";
-            }
+            var eid = 0;
+            try { eid = (int)evt.ID; } catch { }
             var tp = _targetPid;
             var ep = 0;
             try { ep = evt.ProcessID; } catch { }
             if (tp > 0 && ep == tp)
+            {
+                Interlocked.Increment(ref _etwEventCount);
+                lock (_idCounts)
+                {
+                    _idCounts.TryGetValue(eid, out var n);
+                    _idCounts[eid] = n + 1;
+                }
                 AddFrames(1, "ETW");
+            }
         }
         catch { }
     }
@@ -138,6 +140,12 @@ public sealed class FpsMonitor : IDisposable
                 _lastStatsCalc = now;
             }
             _debugInfo = $"FPS: {_fps:F0} ({source})";
+            lock (_idCounts)
+            {
+                var top = _idCounts.OrderByDescending(kv => kv.Value).Take(5);
+                _etwDiag = "IDs: " + string.Join(" ", top.Select(kv => $"{kv.Key}x{kv.Value}"));
+                _idCounts.Clear();
+            }
             _lastFpsCalc = now;
         }
     }
@@ -216,6 +224,7 @@ public sealed class FpsMonitor : IDisposable
                     _debugInfo = _perfResult;
                     return;
                 }
+                _targetPid = (int)bestPid;
             }
 
             _perfResult = $"#{_pollIteration} GPU ativa: {bestName}({bestPid}) | {sb}";

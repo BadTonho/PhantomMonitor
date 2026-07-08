@@ -38,6 +38,7 @@ public sealed class HardwareMonitorService : ISensorService
     public void Start()
     {
         _computer.Open();
+        _fpsMonitor.Start();
         IsRunning = true;
         _timer.Change(0, _updateIntervalMs);
     }
@@ -178,7 +179,6 @@ public sealed class HardwareMonitorService : ISensorService
 
             data.GpuProcesses = GetGpuProcesses();
 
-            _fpsMonitor.Poll();
             debugInfo.Add($"[FPS] {_fpsMonitor.DebugInfo}");
             if (_fpsMonitor.HasData)
             {

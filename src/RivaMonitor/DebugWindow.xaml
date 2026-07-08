@@ -18,13 +18,14 @@
 
         <Border Grid.Row="1" Background="#0D1B2A" Padding="10"
                 BorderBrush="#1A3A5C" BorderThickness="1" CornerRadius="6">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                <TextBox x:Name="DebugTextBox" FontFamily="Consolas" FontSize="11"
-                         Foreground="#E6EDF3" Background="Transparent"
-                         BorderThickness="0" IsReadOnly="True"
-                         TextWrapping="NoWrap"
-                         Padding="4"/>
-            </ScrollViewer>
+            <TextBox x:Name="DebugTextBox" FontFamily="Consolas" FontSize="11"
+                     Foreground="#E6EDF3" Background="Transparent"
+                     BorderThickness="0" IsReadOnly="True"
+                     TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.ScrollChanged="OnDebugScrollChanged"
+                     Padding="4"/>
         </Border>
 
         <TextBlock x:Name="LastUpdateText" Grid.Row="2"

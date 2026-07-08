@@ -1,161 +1,170 @@
-using System.Runtime.InteropServices;
+using System.Diagnostics;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Session;
 
 namespace RivaMonitor.Services;
 
 public sealed class FpsMonitor : IDisposable
 {
-    private const int DWMWA_LAST_FRAME_PRESENT_TIME = 34;
-
+    private TraceEventSession? _session;
     private readonly FrametimeBuffer _frametimeHistory = new(600);
-    private long _lastFrameQpc;
-    private double _fps;
-    private double _frametimeMs;
-    private double _fpsAvg;
-    private double _fpsMin = double.MaxValue;
-    private double _fps1Low;
-    private bool _hasData;
-    private long _qpcFrequency;
-    private DateTime _lastStatsReset = DateTime.UtcNow;
-    private readonly List<double> _recentFpsValues = new(300);
-    private string _debugInfo = "";
+    private readonly Dictionary<int, ProcessFpsData> _processes = new();
+    private readonly List<double> _fpsSamples = new(300);
 
-    public float Fps => (float)_fps;
-    public float FrametimeMs => (float)_frametimeMs;
-    public float FpsAvg => (float)_fpsAvg;
-    public float FpsMin => (float)(_fpsMin == double.MaxValue ? 0 : _fpsMin);
-    public float Fps1Low => (float)_fps1Low;
+    private volatile float _fps;
+    private volatile float _frametimeMs;
+    private volatile float _fpsAvg;
+    private volatile float _fpsMin = float.MaxValue;
+    private volatile float _fps1Low;
+    private volatile bool _hasData;
+    private volatile string _debugInfo = "Inicializando...";
+    private DateTime _lastStatsCalc = DateTime.UtcNow;
+    private readonly string _sessionName;
+
+    public float Fps => _fps;
+    public float FrametimeMs => _frametimeMs;
+    public float FpsAvg => _fpsAvg;
+    public float FpsMin => _fpsMin == float.MaxValue ? 0 : _fpsMin;
+    public float Fps1Low => _fps1Low;
     public bool HasData => _hasData;
     public FrametimeBuffer FrametimeHistory => _frametimeHistory;
     public string DebugInfo => _debugInfo;
 
     public FpsMonitor()
     {
-        QueryPerformanceFrequency(out _qpcFrequency);
+        _sessionName = $"RivaMonitorFps_{Process.GetCurrentProcess().Id}";
     }
 
-    public void Poll()
+    public void Start()
     {
+        if (_session != null) return;
+
         try
         {
-            var hwnd = GetForegroundWindow();
-            if (hwnd == IntPtr.Zero)
+            _session = new TraceEventSession(_sessionName);
+            _session.EnableProvider("Microsoft-Windows-DXGI", TraceEventLevel.Informational);
+
+            _session.Source.Dynamic.AddCallbackForProviderEvent(
+                "Microsoft-Windows-DXGI", "Present_Start", OnFrameEvent);
+
+            Task.Run(() =>
             {
-                _debugInfo = "No foreground window";
-                _hasData = false;
-                return;
-            }
-
-            // Get window title
-            var sb = new System.Text.StringBuilder(256);
-            GetWindowText(hwnd, sb, sb.Capacity);
-            var title = sb.ToString();
-            if (string.IsNullOrWhiteSpace(title))
-            {
-                _debugInfo = "Foreground window has no title";
-                _hasData = false;
-                return;
-            }
-
-            // Try DwmGetWindowAttribute with LAST_FRAME_PRESENT_TIME
-            var hr = DwmGetWindowAttribute(hwnd, DWMWA_LAST_FRAME_PRESENT_TIME,
-                out long frameQpc, sizeof(long));
-
-            if (hr != 0)
-            {
-                _debugInfo = $"DwmGetWindowAttribute returned {hr} for '{title}'";
-                _hasData = false;
-                return;
-            }
-
-            if (frameQpc == 0)
-            {
-                _debugInfo = $"Frame QPC is 0 for '{title}'";
-                _hasData = false;
-                return;
-            }
-
-            if (_lastFrameQpc == 0)
-            {
-                // First frame detected
-                _lastFrameQpc = frameQpc;
-                _debugInfo = $"First frame detected for '{title}'";
-                _hasData = false;
-                return;
-            }
-
-            if (frameQpc != _lastFrameQpc)
-            {
-                var prevQpc = _lastFrameQpc;
-                _lastFrameQpc = frameQpc;
-
-                var delta = frameQpc - prevQpc;
-                if (delta > 0 && delta < _qpcFrequency * 10)
+                try
                 {
-                    _frametimeMs = (double)delta / _qpcFrequency * 1000.0;
-                    _fps = _frametimeMs > 0 ? 1000.0 / _frametimeMs : 0;
-                    _frametimeHistory.Add((float)_frametimeMs);
-
-                    if (_fps > 0 && _fps < 500)
-                    {
-                        _recentFpsValues.Add(_fps);
-                        if (_fps < _fpsMin) _fpsMin = _fps;
-                    }
-
-                    _debugInfo = $"FPS: {_fps:F1} | FT: {_frametimeMs:F1}ms | '{title}'";
-                    _hasData = true;
+                    _session.Source.Process();
                 }
-                else
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
                 {
-                    _debugInfo = $"Frame delta {delta} too large for '{title}'";
+                    _debugInfo = $"ETW error: {ex.Message}";
                 }
-            }
-            else
-            {
-                _debugInfo = $"Same frame QPC for '{title}'";
-            }
+            });
 
-            // Recalculate stats every 2 seconds
-            var elapsed = (DateTime.UtcNow - _lastStatsReset).TotalSeconds;
-            if (elapsed >= 2.0 && _recentFpsValues.Count > 0)
-            {
-                _fpsAvg = _recentFpsValues.Average();
-                var sorted = _recentFpsValues.OrderBy(v => v).ToList();
-                var onePctIdx = Math.Max(0, (int)(sorted.Count * 0.01));
-                _fps1Low = sorted[onePctIdx];
-                _lastStatsReset = DateTime.UtcNow;
-            }
+            _debugInfo = "ETW ativo";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _debugInfo = "ETW: admin necessário";
         }
         catch (Exception ex)
         {
-            _debugInfo = $"Error: {ex.Message}";
-            _hasData = false;
+            _debugInfo = $"ETW init: {ex.Message}";
+            _session?.Dispose();
+            _session = null;
         }
+    }
+
+    private void OnFrameEvent(TraceEvent evt)
+    {
+        try
+        {
+            var pid = (int)evt.ProcessID;
+            if (pid <= 0) return;
+
+            var now = DateTime.UtcNow;
+
+            if (!_processes.TryGetValue(pid, out var proc))
+            {
+                try
+                {
+                    var p = Process.GetProcessById(pid);
+                    proc = new ProcessFpsData { Name = p.ProcessName };
+                }
+                catch
+                {
+                    proc = new ProcessFpsData { Name = $"pid:{pid}" };
+                }
+                _processes[pid] = proc;
+            }
+
+            proc.FramesThisWindow++;
+
+            var elapsed = (now - proc.LastCalc).TotalSeconds;
+            if (elapsed >= 1.0)
+            {
+                var fps = proc.FramesThisWindow / elapsed;
+                proc.FramesThisWindow = 0;
+                proc.CurrentFps = fps;
+                proc.LastCalc = now;
+
+                ProcessFpsData? best = null;
+                foreach (var kvp in _processes)
+                {
+                    if (best == null || kvp.Value.CurrentFps > best.CurrentFps)
+                        best = kvp.Value;
+                }
+
+                if (best != null && best.CurrentFps > 0)
+                {
+                    _fps = (float)best.CurrentFps;
+                    _frametimeMs = _fps > 0 ? 1000f / _fps : 0;
+                    _frametimeHistory.Add(_frametimeMs);
+                    _fpsSamples.Add(_fps);
+                    if (_fps < _fpsMin) _fpsMin = _fps;
+                    _hasData = true;
+                    _debugInfo = $"FPS: {_fps:F1} ({best.Name})";
+                }
+
+                if ((now - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
+                {
+                    _fpsAvg = (float)_fpsSamples.Average();
+                    var sorted = _fpsSamples.OrderBy(v => v).ToList();
+                    _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
+                    _lastStatsCalc = now;
+                }
+            }
+        }
+        catch { }
     }
 
     public void Reset()
     {
-        _lastFrameQpc = 0;
-        _recentFpsValues.Clear();
+        _processes.Clear();
+        _fpsSamples.Clear();
+        _frametimeHistory.Clear();
         _fps = 0;
         _frametimeMs = 0;
-        _fpsMin = double.MaxValue;
+        _fpsMin = float.MaxValue;
         _fpsAvg = 0;
         _fps1Low = 0;
         _hasData = false;
-        _frametimeHistory.Clear();
     }
 
-    public void Dispose() { }
+    public void Dispose()
+    {
+        if (_session != null)
+        {
+            try { _session.Stop(); } catch { }
+            try { _session.Dispose(); } catch { }
+            _session = null;
+        }
+    }
 
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out long pvAttribute, int cbAttribute);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool QueryPerformanceFrequency(out long lpFrequency);
+    private sealed class ProcessFpsData
+    {
+        public string Name = "";
+        public long FramesThisWindow;
+        public double CurrentFps;
+        public DateTime LastCalc = DateTime.UtcNow;
+    }
 }

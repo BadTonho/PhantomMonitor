@@ -1,20 +1,40 @@
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 using RivaMonitor.Models;
 
 namespace RivaMonitor;
 
 public partial class DebugWindow : Window
 {
+    private bool _autoScroll = true;
+
     public DebugWindow()
     {
         InitializeComponent();
+    }
+
+    private void OnDebugScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.ExtentHeight <= e.ViewportHeight) { _autoScroll = true; return; }
+        _autoScroll = e.VerticalOffset >= e.ExtentHeight - e.ViewportHeight - 5;
     }
 
     public void Update(SensorData data)
     {
         Dispatcher.Invoke(() =>
         {
+            var sv = FindScrollViewer(DebugTextBox);
+            double scrollRatio = 0;
+            bool wasAtBottom = _autoScroll;
+
+            if (sv != null && sv.ExtentHeight > sv.ViewportHeight)
+            {
+                scrollRatio = sv.VerticalOffset / (sv.ExtentHeight - sv.ViewportHeight);
+            }
+
             var grouped = GroupByCategory(data.SensorDebugInfo);
             var sb = new StringBuilder();
 
@@ -27,8 +47,40 @@ public partial class DebugWindow : Window
             }
 
             DebugTextBox.Text = sb.ToString().TrimEnd();
+
+            if (wasAtBottom)
+            {
+                DebugTextBox.ScrollToLine(DebugTextBox.LineCount - 1);
+            }
+            else if (sv != null)
+            {
+                // Restaurar posição após layout completar
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+                {
+                    var sv2 = FindScrollViewer(DebugTextBox);
+                    if (sv2 != null && sv2.ExtentHeight > sv2.ViewportHeight)
+                    {
+                        var newOffset = scrollRatio * (sv2.ExtentHeight - sv2.ViewportHeight);
+                        sv2.ScrollToVerticalOffset(newOffset);
+                    }
+                });
+            }
+
             LastUpdateText.Text = $"Atualizado: {data.Timestamp:HH:mm:ss}  |  Total: {data.SensorDebugInfo.Count} sensores  |  Ctrl+A copiar";
         });
+    }
+
+    private static ScrollViewer? FindScrollViewer(DependencyObject? obj)
+    {
+        if (obj == null) return null;
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+        {
+            var child = VisualTreeHelper.GetChild(obj, i);
+            if (child is ScrollViewer sv) return sv;
+            var found = FindScrollViewer(child);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private static List<(string Category, List<string> Lines)> GroupByCategory(List<string> debugInfo)

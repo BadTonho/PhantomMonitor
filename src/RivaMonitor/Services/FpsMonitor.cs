@@ -74,6 +74,20 @@ public sealed class FpsMonitor : IDisposable
         }
     }
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    private int GetForegroundPid()
+    {
+        var hwnd = GetForegroundWindow();
+        if (hwnd == IntPtr.Zero) return 0;
+        GetWindowThreadProcessId(hwnd, out uint pid);
+        return (int)pid;
+    }
+
     private void OnFrameEvent(TraceEvent evt)
     {
         try
@@ -97,6 +111,15 @@ public sealed class FpsMonitor : IDisposable
                 _processes[pid] = proc;
             }
 
+            // Ignorar processos de sistema e outros que não são jogos
+            var name = proc.Name.ToLowerInvariant();
+            if (name == "dwm" || name == "explorer" || name == "rivamonitor" || 
+                name == "chrome" || name == "msedge" || name == "discord" || 
+                name == "devenv" || name == "code" || name == "taskmgr" || name == "steamwebhelper")
+            {
+                return; // Note: Removido ApplicationFrameHost para suportar UWP (Roblox Microsoft Store)
+            }
+
             proc.FramesThisWindow++;
 
             var elapsed = (now - proc.LastCalc).TotalSeconds;
@@ -108,10 +131,19 @@ public sealed class FpsMonitor : IDisposable
                 proc.LastCalc = now;
 
                 ProcessFpsData? best = null;
-                foreach (var kvp in _processes)
+                var fgPid = GetForegroundPid();
+
+                if (_processes.TryGetValue(fgPid, out var fgProc) && fgProc.CurrentFps > 0)
                 {
-                    if (best == null || kvp.Value.CurrentFps > best.CurrentFps)
-                        best = kvp.Value;
+                    best = fgProc; // Prioridade absoluta para a janela em foco
+                }
+                else
+                {
+                    foreach (var kvp in _processes)
+                    {
+                        if (best == null || kvp.Value.CurrentFps > best.CurrentFps)
+                            best = kvp.Value;
+                    }
                 }
 
                 if (best != null && best.CurrentFps > 0)

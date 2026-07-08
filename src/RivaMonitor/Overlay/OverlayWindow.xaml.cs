@@ -81,6 +81,65 @@ public partial class OverlayWindow : Window
         _showFps = config.Overlay.ShowFps;
         if (_showFps)
             AddFpsSection();
+
+        _offsetX = left;
+        _offsetY = top;
+        var timer = new System.Windows.Threading.DispatcherTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(30);
+        timer.Tick += (s, e) => UpdatePosition();
+        timer.Start();
+    }
+
+    private double _offsetX;
+    private double _offsetY;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    private void UpdatePosition()
+    {
+        var hwnd = GetForegroundWindow();
+        if (hwnd == IntPtr.Zero) return;
+
+        GetWindowThreadProcessId(hwnd, out uint pid);
+        if (pid == System.Diagnostics.Process.GetCurrentProcess().Id) return; // Ignora se for a própria janela do RivaMonitor (MainWindow/DebugWindow)
+        
+        // Ignorar o desktop/explorer
+        if (pid == GetExplorerPid()) return;
+
+        if (GetWindowRect(hwnd, out var rect))
+        {
+            // Verifica se não está minimizada
+            if (rect.Left <= -32000) return;
+
+            this.Left = rect.Left + _offsetX;
+            this.Top = rect.Top + _offsetY;
+        }
+    }
+
+    private static uint _explorerPid = 0;
+    private static uint GetExplorerPid()
+    {
+        if (_explorerPid != 0) return _explorerPid;
+        var procs = System.Diagnostics.Process.GetProcessesByName("explorer");
+        if (procs.Length > 0) _explorerPid = (uint)procs[0].Id;
+        return _explorerPid;
     }
 
     private static (string label, Func<SensorData, double>? getValue, Func<SensorData, string>? getText, double max)[] MakeEntries(

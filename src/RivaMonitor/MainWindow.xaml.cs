@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Principal;
 using System.Windows;
@@ -171,6 +171,12 @@ public partial class MainWindow : Window
             GpuTempText.Text = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°C" : "--°C";
             GpuTempRingText.Text = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°" : "--°";
             UpdateTempRing(GpuTempRing, GpuTempRingText, data.GpuTemp);
+
+            FpsText.Text = data.Fps > 0 ? $"{data.Fps:F0}" : "--";
+            FpsDetailsText.Text = data.Fps > 0
+                ? $"Mín: {data.FpsMin:F0} | Avg: {data.FpsAvg:F0} | 1% Low: {data.Fps1Low:F0}"
+                : "Mín: -- | Avg: -- | 1% Low: --";
+            FrametimeText.Text = data.FrametimeMs > 0 ? $"{data.FrametimeMs:F1} ms" : "-- ms";
 
             RamUsageText.Text = $"{data.RamUsagePercent:F1}%";
             RamUsageText.Foreground = GetUsageBrush(data.RamUsagePercent);

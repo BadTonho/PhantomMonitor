@@ -34,6 +34,8 @@ public sealed class FpsMonitor : IDisposable
     private volatile int _presentEventId;
     private readonly Dictionary<int, int> _eventCounts = new();
     private DateTime _calibrationStart;
+    private int _diagCount;
+    private string _diagEvents = "";
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -109,6 +111,13 @@ public sealed class FpsMonitor : IDisposable
             try { ep = evt.ProcessID; } catch { }
             if (tp > 0 && ep == tp)
             {
+                if (_presentEventId == 0 && _diagCount < 20)
+                {
+                    var diag = "";
+                    try { diag = evt.ToString(); } catch { diag = $"(ex: ID={eid})"; }
+                    _diagEvents += $"\n#{++_diagCount} ID={eid} {diag}";
+                }
+
                 var pid = _presentEventId;
                 if (pid > 0)
                 {
@@ -172,11 +181,11 @@ public sealed class FpsMonitor : IDisposable
                     if (bestId > 0)
                     {
                         _presentEventId = bestId;
-                        _etwDiag = $"calib: ID {bestId} = {_eventCounts[bestId] / totalSec:F1} FPS";
+                        _etwDiag = $"calib: ID {bestId}" + _diagEvents;
                     }
                     else
                     {
-                        _etwDiag = $"calib: nenhum ID entre 15-400 FPS";
+                        _etwDiag = $"calib: nenhum ID 15-400" + _diagEvents;
                         _eventCounts.Clear();
                         _calibrationStart = now;
                     }

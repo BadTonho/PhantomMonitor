@@ -95,13 +95,9 @@ public sealed class FpsMonitor : IDisposable
         try
         {
             var c = Interlocked.Increment(ref _etwEventCount);
-            if (!_firstEventLogged)
-            {
-                _etwDiag = "Primeiro evento recebido! c=" + c;
-                _firstEventLogged = true;
-            }
-            if ((int)evt.ID == 1)
-                AddFrames(1, "ETW");
+            AddFrames(1, "ETW");
+            if (c <= 5)
+                _etwDiag = $"#{c} recebido";
         }
         catch { }
     }

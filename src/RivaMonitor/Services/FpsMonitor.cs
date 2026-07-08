@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Session;
 
@@ -13,8 +14,6 @@ public sealed class FpsMonitor : IDisposable
     private int _frameCount;
     private DateTime _lastFpsCalc = DateTime.UtcNow;
     private readonly Timer _timer;
-
-    private readonly Dictionary<string, (PerformanceCounter Counter, long PrevRaw, long PrevTime)> _perfCounterStates = new();
 
     private volatile float _fps;
     private volatile float _frametimeMs;
@@ -35,6 +34,12 @@ public sealed class FpsMonitor : IDisposable
     private volatile int _presentEventId;
     private readonly Dictionary<int, int> _eventCounts = new();
     private DateTime _calibrationStart;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     public float Fps => _fps;
     public float FrametimeMs => _frametimeMs;
@@ -196,91 +201,37 @@ public sealed class FpsMonitor : IDisposable
         _pollIteration++;
         try
         {
-            var pidUsage = new Dictionary<uint, (float total3D, int count3D, float totalOther, int countOther)>();
-
-            var category = new PerformanceCounterCategory("GPU Engine");
-            var instances = category.GetInstanceNames();
-            var sb = new System.Text.StringBuilder();
-
-            foreach (var inst in instances)
+            var hwnd = GetForegroundWindow();
+            if (hwnd != IntPtr.Zero)
             {
-                if (sb.Length < 120) sb.Append(inst).Append(" ");
-
-                uint pid = 0;
-                if (inst.StartsWith("pid_"))
+                GetWindowThreadProcessId(hwnd, out uint fgPid);
+                if (fgPid > 0)
                 {
-                    var underscore = inst.IndexOf('_', 4);
-                    if (underscore > 4 && uint.TryParse(inst.AsSpan(4, underscore - 4), out pid)) { }
-                }
-                if (pid == 0) continue;
-
-                try
-                {
-                    if (!_perfCounterStates.TryGetValue(inst, out var state))
+                    string fgName = "";
+                    try
                     {
-                        var pc = new PerformanceCounter("GPU Engine", "Running Time", inst);
-                        var first = pc.NextSample();
-                        _perfCounterStates[inst] = (pc, first.RawValue, first.TimeStamp100nSec);
-                        continue;
+                        var p = Process.GetProcessById((int)fgPid);
+                        fgName = p.ProcessName;
                     }
-                    var sample = state.Counter.NextSample();
-                    var rawDelta = sample.RawValue - state.PrevRaw;
-                    var timeDelta = sample.TimeStamp100nSec - state.PrevTime;
-                    _perfCounterStates[inst] = (state.Counter, sample.RawValue, sample.TimeStamp100nSec);
+                    catch { fgName = $"pid:{fgPid}"; }
 
-                    float pct = timeDelta > 0 ? (float)rawDelta / (float)timeDelta : 0f;
-                    if (pct > 0.005f)
+                    if (!fgName.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase))
                     {
-                        var entry = pidUsage.GetValueOrDefault(pid);
-                        bool is3D = inst.Contains("engtype_3D", StringComparison.OrdinalIgnoreCase);
-                        if (is3D) { entry.total3D += pct; entry.count3D++; }
-                        else { entry.totalOther += pct; entry.countOther++; }
-                        pidUsage[pid] = entry;
+                        var prev = _targetPid;
+                        _targetPid = (int)fgPid;
+                        if (prev != _targetPid)
+                        {
+                            _presentEventId = 0;
+                            _eventCounts.Clear();
+                            _calibrationStart = DateTime.UtcNow;
+                        }
+                        _perfResult = $"#{_pollIteration} foco: {fgName}({fgPid})";
+                        _debugInfo = _perfResult;
+                        return;
                     }
                 }
-                catch { }
             }
-
-            uint bestPid = 0;
-            float bestScore = 0;
-            foreach (var kv in pidUsage)
-            {
-                float score = kv.Value.total3D > 0 ? kv.Value.total3D * 2f : kv.Value.totalOther;
-                if (score > bestScore) { bestScore = score; bestPid = kv.Key; }
-            }
-
-            string bestName = "";
-            if (bestPid > 0)
-            {
-                try
-                {
-                    var p = Process.GetProcessById((int)bestPid);
-                    bestName = p.ProcessName;
-                }
-                catch { bestName = $"pid:{bestPid}"; }
-
-                if (bestName.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase))
-                {
-                    _perfResult = $"#{_pollIteration} Só RivaMonitor usando GPU";
-                    _debugInfo = _perfResult;
-                    return;
-                }
-                var prev = _targetPid;
-                _targetPid = (int)bestPid;
-                if (prev != _targetPid)
-                {
-                    _presentEventId = 0;
-                    _eventCounts.Clear();
-                    _calibrationStart = DateTime.UtcNow;
-                }
-            }
-
-            _perfResult = $"#{_pollIteration} GPU ativa: {bestName}({bestPid}) | {sb}";
-            _debugInfo = _perfResult;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _perfResult = $"#{_pollIteration} Categoria 'GPU Engine' não existe - {ex.Message}";
+            _perfResult = $"#{_pollIteration} sem foco";
             _debugInfo = _perfResult;
         }
         catch (Exception ex)
@@ -306,8 +257,6 @@ public sealed class FpsMonitor : IDisposable
     public void Dispose()
     {
         _timer.Dispose();
-        foreach (var state in _perfCounterStates.Values) state.Counter.Dispose();
-        _perfCounterStates.Clear();
         _session?.Dispose();
     }
 }

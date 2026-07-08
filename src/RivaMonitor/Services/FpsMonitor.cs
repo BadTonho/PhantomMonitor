@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Session;
 
@@ -31,6 +30,11 @@ public sealed class FpsMonitor : IDisposable
 
     private static readonly Guid DXGKRNL_GUID = new("802EC45A-1E99-4B83-9920-87C98277BA9D");
     private static readonly Guid DWM_CORE_GUID = new("9E9BA3C0-F4E5-4FA6-B120-201E4F81F2D2");
+
+    private volatile int _targetPid;
+    private volatile int _presentEventId;
+    private readonly Dictionary<int, int> _eventCounts = new();
+    private DateTime _calibrationStart;
 
     public float Fps => _fps;
     public float FrametimeMs => _frametimeMs;
@@ -89,10 +93,6 @@ public sealed class FpsMonitor : IDisposable
         }
     }
 
-    private volatile int _targetPid;
-
-    private readonly Dictionary<int, int> _idCounts = new();
-
     private void OnAnyEvent(TraceEvent evt)
     {
         try
@@ -104,13 +104,20 @@ public sealed class FpsMonitor : IDisposable
             try { ep = evt.ProcessID; } catch { }
             if (tp > 0 && ep == tp)
             {
-                Interlocked.Increment(ref _etwEventCount);
-                lock (_idCounts)
+                var pid = _presentEventId;
+                if (pid > 0)
                 {
-                    _idCounts.TryGetValue(eid, out var n);
-                    _idCounts[eid] = n + 1;
+                    if (eid == pid)
+                    {
+                        Interlocked.Increment(ref _etwEventCount);
+                        AddFrames(1, "ETW");
+                    }
                 }
-                AddFrames(1, "ETW");
+                else
+                {
+                    _eventCounts.TryGetValue(eid, out var n);
+                    _eventCounts[eid] = n + 1;
+                }
             }
         }
         catch { }
@@ -139,13 +146,46 @@ public sealed class FpsMonitor : IDisposable
                 _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
                 _lastStatsCalc = now;
             }
-            _debugInfo = $"FPS: {_fps:F0} ({source})";
-            lock (_idCounts)
+
+            if (_presentEventId == 0 && _targetPid > 0 && _eventCounts.Count > 0)
             {
-                var top = _idCounts.OrderByDescending(kv => kv.Value).Take(5);
-                _etwDiag = "IDs: " + string.Join(" ", top.Select(kv => $"{kv.Key}x{kv.Value}"));
-                _idCounts.Clear();
+                var totalSec = (now - _calibrationStart).TotalSeconds;
+                if (totalSec >= 2.0)
+                {
+                    var bestId = 0;
+                    var bestScore = double.MaxValue;
+                    foreach (var kv in _eventCounts)
+                    {
+                        var rate = kv.Value / totalSec;
+                        if (rate >= 15 && rate <= 400)
+                        {
+                            var score = Math.Abs(rate - 60);
+                            if (score < bestScore) { bestScore = score; bestId = kv.Key; }
+                        }
+                    }
+                    if (bestId > 0)
+                    {
+                        _presentEventId = bestId;
+                        _etwDiag = $"calib: ID {bestId} = {_eventCounts[bestId] / totalSec:F1} FPS";
+                    }
+                    else
+                    {
+                        _etwDiag = $"calib: nenhum ID entre 15-400 FPS";
+                        _eventCounts.Clear();
+                        _calibrationStart = now;
+                    }
+                }
+                else
+                {
+                    _etwDiag = $"calib: {_eventCounts.Count} IDs, restam {2 - totalSec:F1}s";
+                }
             }
+            else if (_presentEventId > 0)
+            {
+                _etwDiag = $"ID {_presentEventId}: {_fps:F0} FPS";
+            }
+
+            _debugInfo = $"FPS: {_fps:F0} ({source})";
             _lastFpsCalc = now;
         }
     }
@@ -224,7 +264,14 @@ public sealed class FpsMonitor : IDisposable
                     _debugInfo = _perfResult;
                     return;
                 }
+                var prev = _targetPid;
                 _targetPid = (int)bestPid;
+                if (prev != _targetPid)
+                {
+                    _presentEventId = 0;
+                    _eventCounts.Clear();
+                    _calibrationStart = DateTime.UtcNow;
+                }
             }
 
             _perfResult = $"#{_pollIteration} GPU ativa: {bestName}({bestPid}) | {sb}";

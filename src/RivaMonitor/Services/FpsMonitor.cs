@@ -24,6 +24,9 @@ public sealed class FpsMonitor : IDisposable
     private volatile float _fps1Low;
     private volatile bool _hasData;
     private volatile string _debugInfo = "Inicializando...";
+    private volatile int _etwEventCount;
+    private volatile string _lastWmiQuery = "";
+    private volatile string _wmiResults = "";
 
     private static readonly Guid DWM_CORE = new("5E8B2363-FA5D-4370-86C4-7B36A0E6A6FC");
     private static readonly Guid DXGI = new("CA41C1A2-1A35-8E2A-2D39-9C6E6B5F2B1D");
@@ -36,6 +39,9 @@ public sealed class FpsMonitor : IDisposable
     public bool HasData => _hasData;
     public FrametimeBuffer FrametimeHistory => _frametimeHistory;
     public string DebugInfo => _debugInfo;
+    public int EtwEventCount => _etwEventCount;
+    public string LastWmiQuery => _lastWmiQuery;
+    public string WmiResults => _wmiResults;
 
     public FpsMonitor()
     {
@@ -82,7 +88,8 @@ public sealed class FpsMonitor : IDisposable
         var now = DateTime.UtcNow;
         var elapsed = (now - _lastFpsCalc).TotalSeconds;
 
-        Interlocked.Increment(ref _frameCount);
+        var c = Interlocked.Increment(ref _frameCount);
+        _debugInfo = $"[{c}] frames em {elapsed:F2}s ({source})";
 
         if (elapsed >= 1.0)
         {
@@ -116,8 +123,12 @@ public sealed class FpsMonitor : IDisposable
     {
         try
         {
-            if (evt.ProcessID <= 0 && (evt.ProviderGuid != DWM_CORE)) return;
-            CountFrame("DWM");
+            var c = Interlocked.Increment(ref _etwEventCount);
+            // Ignore non-DWM/DXGI providers
+            if (evt.ProviderGuid != DWM_CORE && evt.ProviderGuid != DXGI) return;
+            if (c <= 5)
+                _debugInfo = $"ETW evt #{c}: PID={evt.ProcessID} Prov={evt.ProviderGuid} Op={evt.Opcode}";
+            CountFrame(evt.ProviderGuid == DWM_CORE ? "DWM" : "DXGI");
         }
         catch { }
     }
@@ -132,33 +143,50 @@ public sealed class FpsMonitor : IDisposable
             GetWindowThreadProcessId(hwnd, out var pid);
             if (pid <= 0) return;
 
+            string pname;
             try
             {
                 var proc = Process.GetProcessById((int)pid);
                 if (proc.ProcessName.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase))
                     return;
-                _lastProcessName = proc.ProcessName;
+                pname = proc.ProcessName;
+                _lastProcessName = pname;
             }
             catch { return; }
 
-            // Read GPU engine time for foreground process via WMI
-            using var searcher = new ManagementObjectSearcher(
-                "SELECT * FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine WHERE Name LIKE '%_%" + pid + "'");
+            var pidStr = pid.ToString();
+            // Query ALL GPU engine counters and filter by PID in code (more reliable)
+            using var allSearcher = new ManagementObjectSearcher(
+                "SELECT Name, PercentOfTime FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
             float usage = 0;
             int count = 0;
-            foreach (var obj in searcher.Get())
+            var matchedNames = new System.Text.StringBuilder();
+            var allNames = new System.Text.StringBuilder();
+            foreach (var obj in allSearcher.Get())
             {
-                usage += Convert.ToSingle(obj["PercentOfTime"] ?? 0);
-                count++;
+                var name = (string)obj["Name"] ?? "";
+                if (allNames.Length < 200) allNames.Append(name).Append("  ");
+                if (name.EndsWith("_" + pidStr) || name.StartsWith(pidStr + "_"))
+                {
+                    var pct = Convert.ToSingle(obj["PercentOfTime"] ?? 0);
+                    if (matchedNames.Length < 100) matchedNames.Append($"{name}={pct:F1}% ");
+                    usage += pct;
+                    count++;
+                }
             }
+
+            _lastWmiQuery = $"ALL GPU engines (filtering for pid={pid})";
+            _wmiResults = $"{pname}: {count} match, tot={usage:F1}% | matches: {matchedNames}| all: {allNames}";
 
             if (count > 0 && usage > 1.0f)
             {
-                // Process is using GPU - estimate FPS from GPU utilization pattern
-                CountFrame(_lastProcessName);
+                CountFrame(pname);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _wmiResults = $"WMI error: {ex.GetType().Name}: {ex.Message}";
+        }
     }
 
     public void Reset()

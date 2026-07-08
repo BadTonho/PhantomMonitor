@@ -180,6 +180,9 @@ public sealed class HardwareMonitorService : ISensorService
             data.GpuProcesses = GetGpuProcesses();
 
             debugInfo.Add($"[FPS] {_fpsMonitor.DebugInfo}");
+            debugInfo.Add($"[FPS] Eventos ETW: {_fpsMonitor.EtwEventCount}");
+            debugInfo.Add($"[FPS] WMI Query: {_fpsMonitor.LastWmiQuery}");
+            debugInfo.Add($"[FPS] WMI Res: {_fpsMonitor.WmiResults}");
             if (_fpsMonitor.HasData)
             {
                 data.Values[Models.SensorType.Fps] = _fpsMonitor.Fps;

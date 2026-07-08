@@ -292,23 +292,10 @@
                            FontSize="11" Foreground="{StaticResource TextMutedBrush}"
                            HorizontalAlignment="Right" Margin="0,0,0,8"/>
 
-                <!-- Debug sensors -->
-                <Expander Header="Sensores Detectados" FontSize="11"
-                          Foreground="{StaticResource AccentBrush}"
-                          Margin="0,0,0,16">
-                    <Border Background="{StaticResource BgCardBrush}" Padding="8"
-                            BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
-                            CornerRadius="4">
-                        <ItemsControl x:Name="DebugSensorList" FontFamily="Consolas" FontSize="10"
-                                      Foreground="{StaticResource TextPrimaryBrush}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Border>
-                </Expander>
+                <Button Content="ABRIR SENSORES DETECTADOS"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="OnOpenDebugWindow"
+                        Margin="0,0,0,16"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

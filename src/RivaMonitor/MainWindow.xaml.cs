@@ -200,7 +200,7 @@ public partial class MainWindow : Window
             if (data.CpuTemp <= 0)
                 SensorCountText.Text += " | CPU temp: N/A";
 
-            DebugSensorList.ItemsSource = data.SensorDebugInfo;
+            _debugWindow?.Update(data);
 
             LastUpdateText.Text = $"Última leitura: {data.Timestamp:HH:mm:ss}";
 
@@ -208,6 +208,23 @@ public partial class MainWindow : Window
             _csvLogger?.Write(data);
             _jsonLogger?.Write(data);
         });
+    }
+
+    private DebugWindow? _debugWindow;
+
+    private void OnOpenDebugWindow(object sender, RoutedEventArgs e)
+    {
+        if (_debugWindow == null || !_debugWindow.IsVisible)
+        {
+            _debugWindow = new DebugWindow();
+            _debugWindow.Owner = this;
+            _debugWindow.Closed += (_, _) => _debugWindow = null;
+            _debugWindow.Show();
+        }
+        else
+        {
+            _debugWindow.Activate();
+        }
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();

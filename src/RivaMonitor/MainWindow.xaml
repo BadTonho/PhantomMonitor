@@ -101,17 +101,41 @@
 
         <!-- Main Content -->
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled" Padding="24">
+                      HorizontalScrollBarVisibility="Disabled" Padding="24"
+                      Background="{StaticResource BgDarkBrush}">
             <StackPanel>
                 <TextBlock Text="VISÃO GERAL" FontSize="11" FontWeight="Bold"
                            Foreground="{StaticResource TextMutedBrush}"
                            Margin="0,8,0,16"/>
+
+                <Border x:Name="AdminWarning" Background="#1AFF4444" BorderBrush="#FF4444"
+                        BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,12"
+                        Visibility="Collapsed">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="⚠ Executar como Administrador" FontSize="12" FontWeight="Bold"
+                                       Foreground="#FF8888"/>
+                            <TextBlock Text="Sensor de temperatura da CPU requer privilégios elevados"
+                                       FontSize="11" Foreground="#FF6666" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="▶ Executar como Admin"
+                                Background="#FF4444" Foreground="White" BorderThickness="0"
+                                FontSize="11" FontWeight="Bold" Padding="10,4"
+                                Cursor="Hand" Click="OnRestartAsAdmin"
+                                VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
 
                 <!-- CPU Card -->
                 <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
@@ -126,12 +150,21 @@
                         </StackPanel>
                         <Border Grid.Column="1" Width="80" Height="80" CornerRadius="40"
                                 Background="#0A1E90FF" BorderBrush="{StaticResource AccentBrush}"
-                                BorderThickness="2">
+                                BorderThickness="2" Margin="0,0,12,0">
                             <TextBlock x:Name="CpuRingText" Text="0%"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        FontSize="16" FontWeight="Bold"
                                        Foreground="{StaticResource AccentBrush}"/>
+                        </Border>
+                        <Border x:Name="CpuTempRing" Grid.Column="2" Width="80" Height="80" CornerRadius="40"
+                                Background="#1AFF6600" BorderBrush="#FF6600"
+                                BorderThickness="2">
+                            <TextBlock x:Name="CpuTempRingText" Text="--°"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="16" FontWeight="Bold"
+                                       Foreground="#FF6600"/>
                         </Border>
                     </Grid>
                 </Border>
@@ -141,6 +174,7 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
@@ -155,12 +189,21 @@
                         </StackPanel>
                         <Border Grid.Column="1" Width="80" Height="80" CornerRadius="40"
                                 Background="#0A1E90FF" BorderBrush="{StaticResource AccentBrush}"
-                                BorderThickness="2">
+                                BorderThickness="2" Margin="0,0,12,0">
                             <TextBlock x:Name="GpuRingText" Text="0%"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        FontSize="16" FontWeight="Bold"
                                        Foreground="{StaticResource AccentBrush}"/>
+                        </Border>
+                        <Border x:Name="GpuTempRing" Grid.Column="2" Width="80" Height="80" CornerRadius="40"
+                                Background="#1AFF6600" BorderBrush="#FF6600"
+                                BorderThickness="2">
+                            <TextBlock x:Name="GpuTempRingText" Text="--°"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="16" FontWeight="Bold"
+                                       Foreground="#FF6600"/>
                         </Border>
                     </Grid>
                 </Border>
@@ -174,16 +217,33 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Style="{StaticResource CardBorder}">
-                        <StackPanel>
-                            <TextBlock Text="MEMÓRIA RAM" FontSize="11" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="RamUsageText" Text="0.0%"
-                                       FontSize="28" FontWeight="Light"
-                                       Foreground="{StaticResource GreenBrush}"
-                                       Margin="0,6,0,2"/>
-                            <TextBlock x:Name="RamAvailableText" Text="-- GB disponível"
-                                       FontSize="12"
-                                       Foreground="{StaticResource TextSecondaryBrush}"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="MEMÓRIA RAM" FontSize="11" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="RamUsageText" Text="0.0%"
+                                           FontSize="28" FontWeight="Light"
+                                           Foreground="{StaticResource GreenBrush}"
+                                           Margin="0,6,0,2"/>
+                                <TextBlock x:Name="RamAvailableText" Text="-- GB disponível"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock x:Name="RamTotalText" Text="" FontSize="11"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Width="70" Height="70" CornerRadius="35"
+                                    Background="#0A1E90FF" BorderBrush="{StaticResource AccentBrush}"
+                                    BorderThickness="2" Margin="8,0,0,0">
+                                <TextBlock x:Name="RamRingText" Text="0%"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontSize="14" FontWeight="Bold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                            </Border>
+                        </Grid>
                     </Border>
 
                     <Border Grid.Column="2" Style="{StaticResource CardBorder}">
@@ -230,7 +290,25 @@
 
                 <TextBlock x:Name="LastUpdateText" Text="Aguardando..."
                            FontSize="11" Foreground="{StaticResource TextMutedBrush}"
-                           HorizontalAlignment="Right" Margin="0,0,0,16"/>
+                           HorizontalAlignment="Right" Margin="0,0,0,8"/>
+
+                <!-- Debug sensors -->
+                <Expander Header="Sensores Detectados" FontSize="11"
+                          Foreground="{StaticResource AccentBrush}"
+                          Margin="0,0,0,16">
+                    <Border Background="{StaticResource BgCardBrush}" Padding="8"
+                            BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                            CornerRadius="4">
+                        <ItemsControl x:Name="DebugSensorList" FontFamily="Consolas" FontSize="10"
+                                      Foreground="{StaticResource TextPrimaryBrush}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                </Expander>
             </StackPanel>
         </ScrollViewer>
     </Grid>

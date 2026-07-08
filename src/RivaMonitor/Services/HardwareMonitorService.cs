@@ -1,4 +1,6 @@
 using System.IO;
+using System.Management;
+using System.Runtime.InteropServices;
 using LibreHardwareMonitor.Hardware;
 using RivaMonitor.Models;
 using LhmSensorType = LibreHardwareMonitor.Hardware.SensorType;
@@ -54,48 +56,216 @@ public sealed class HardwareMonitorService : ISensorService
         {
             _computer.Accept(new UpdateVisitor());
             var data = new SensorData();
-
             var debugInfo = new List<string>();
 
             foreach (var hardware in _computer.Hardware)
             {
+                debugInfo.Add($"[HWR] {hardware.HardwareType}: {hardware.Name}");
+
                 foreach (var subhardware in hardware.SubHardware)
+                {
                     subhardware.Update();
+                    debugInfo.Add($"  [SUB] {subhardware.HardwareType}: {subhardware.Name}");
+                }
 
                 foreach (var sensor in hardware.Sensors)
                 {
                     MapSensor(sensor, data);
                     var val = sensor.Value?.ToString("F2") ?? "null";
-                    debugInfo.Add($"[{sensor.Hardware.HardwareType}] {sensor.Name} ({sensor.SensorType}) = {val}");
+                    debugInfo.Add($"  [{hardware.HardwareType}] {sensor.Name} ({sensor.SensorType}) = {val}");
                 }
             }
 
             data.SensorDebugInfo = debugInfo;
 
-            if (!data.Values.ContainsKey(Models.SensorType.CpuTemperature) || data.Values[Models.SensorType.CpuTemperature] == 0)
+            // WMI: CPU Temperature (tenta 3 métodos diferentes)
+            double cpuTempValue = 0;
+            string cpuTempSource = "";
+
+            try
             {
-                var moboTemp = data.GetValue(Models.SensorType.MotherboardTemp);
-                if (moboTemp > 0)
+                cpuTempValue = ReadCpuTempFromThermalZone();
+                cpuTempSource = "ThermalZone";
+                debugInfo.Add($"[WMI] ThermalZone = {cpuTempValue:F1}°C");
+            }
+            catch (Exception ex) { debugInfo.Add($"[WMI] ThermalZone error: {ex.Message}"); }
+
+            if (cpuTempValue <= 0)
+            {
+                try
                 {
-                    data.Values[Models.SensorType.CpuTemperature] = moboTemp;
-                    data.Labels[Models.SensorType.CpuTemperature] = data.GetLabel(Models.SensorType.MotherboardTemp);
+                    cpuTempValue = ReadCpuTempFromPerfCounter();
+                    cpuTempSource = "PerfCounter";
+                    debugInfo.Add($"[WMI] PerfCounter = {cpuTempValue:F1}°C");
+                }
+                catch (Exception ex) { debugInfo.Add($"[WMI] PerfCounter error: {ex.Message}"); }
+            }
+
+            if (cpuTempValue <= 0)
+            {
+                try
+                {
+                    cpuTempValue = ReadCpuTempFromWmiProbe();
+                    cpuTempSource = "TemperatureProbe";
+                    debugInfo.Add($"[WMI] TemperatureProbe = {cpuTempValue:F1}°C");
+                }
+                catch (Exception ex) { debugInfo.Add($"[WMI] TemperatureProbe error: {ex.Message}"); }
+            }
+
+            if (cpuTempValue <= 0)
+            {
+                try
+                {
+                    cpuTempValue = ReadCpuTempFromRegistry();
+                    cpuTempSource = "Registry";
+                    debugInfo.Add($"[REG] CPU Temperature = {cpuTempValue:F1}°C");
+                }
+                catch (Exception ex) { debugInfo.Add($"[REG] CPU Temp error: {ex.Message}"); }
+            }
+
+            if (cpuTempValue <= 0)
+            {
+                try
+                {
+                    cpuTempValue = ReadCpuTempFromWmiBattery();
+                    cpuTempSource = "Battery";
+                    debugInfo.Add($"[WMI] BatteryTemp = {cpuTempValue:F1}°C");
+                }
+                catch (Exception ex) { debugInfo.Add($"[WMI] Battery error: {ex.Message}"); }
+            }
+
+            if (cpuTempValue > 0)
+            {
+                data.Values[Models.SensorType.CpuTemperature] = cpuTempValue;
+                data.Labels[Models.SensorType.CpuTemperature] = $"CPU ({cpuTempSource})";
+            }
+
+            // WMI: RAM info
+            try
+            {
+                var (avail, total) = ReadRamFromWmi();
+                debugInfo.Add($"[WMI] RAM Available = {avail:F1} GB");
+                debugInfo.Add($"[WMI] RAM Total = {total:F1} GB");
+                if (avail > 0)
+                {
+                    data.Values[Models.SensorType.RamAvailable] = avail;
+                    data.Labels[Models.SensorType.RamAvailable] = "RAM Disponível (WMI)";
+                }
+                if (total > 0)
+                {
+                    data.Values[Models.SensorType.RamTotal] = total;
+                    data.Labels[Models.SensorType.RamTotal] = "RAM Total (WMI)";
                 }
             }
+            catch (Exception ex) { debugInfo.Add($"[WMI] RAM error: {ex.Message}"); }
+
+            // Fallback: pegar RAM disponível do desempenho do Windows se WMI falhou
+            if (!data.Values.ContainsKey(Models.SensorType.RamAvailable) || data.Values[Models.SensorType.RamAvailable] == 0)
+            {
+                try
+                {
+                    var perf = new System.Diagnostics.PerformanceCounter("Memory", "Available MBytes");
+                    var availMB = perf.NextValue();
+                    debugInfo.Add($"[PERF] RAM Available = {availMB / 1024.0:F1} GB");
+                    data.Values[Models.SensorType.RamAvailable] = availMB / 1024.0;
+                    data.Labels[Models.SensorType.RamAvailable] = "RAM Disponível (Perf)";
+                }
+                catch (Exception ex) { debugInfo.Add($"[PERF] RAM error: {ex.Message}"); }
+            }
+
+            data.SensorDebugInfo = debugInfo;
 
             data.GpuProcesses = GetGpuProcesses();
             _current = data;
 
-            try
-            {
-                SensorUpdated?.Invoke(data);
-            }
-            catch
-            {
-            }
+            try { SensorUpdated?.Invoke(data); } catch { }
         }
-        catch
+        catch { }
+    }
+
+    private static double ReadCpuTempFromThermalZone()
+    {
+        using var searcher = new ManagementObjectSearcher(
+            "SELECT * FROM MSAcpi_ThermalZoneTemperature");
+        foreach (var obj in searcher.Get())
         {
+            var temp = Convert.ToDouble(obj["CurrentTemperature"] ?? 0);
+            if (temp > 0)
+                return (temp - 2731.5) / 10.0;
         }
+        return 0;
+    }
+
+    private static double ReadCpuTempFromPerfCounter()
+    {
+        using var searcher = new ManagementObjectSearcher(
+            "SELECT * FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation");
+        foreach (var obj in searcher.Get())
+        {
+            var temp = Convert.ToDouble(obj["Temperature"] ?? 0);
+            if (temp > 0)
+                return temp / 100.0;
+        }
+        return 0;
+    }
+
+    private static double ReadCpuTempFromWmiProbe()
+    {
+        using var searcher = new ManagementObjectSearcher(
+            "SELECT * FROM Win32_TemperatureProbe");
+        foreach (var obj in searcher.Get())
+        {
+            var temp = Convert.ToDouble(obj["CurrentReading"] ?? 0);
+            if (temp > 0)
+                return temp / 10.0;
+        }
+        return 0;
+    }
+
+    private static double ReadCpuTempFromRegistry()
+    {
+        using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+            @"HARDWARE\ACPI\DSDT\ACPI0004\CPU0\_TMP");
+        if (key != null)
+        {
+            var val = key.GetValue("_TMP");
+            if (val is byte[] bytes && bytes.Length >= 4)
+            {
+                var raw = BitConverter.ToUInt32(bytes, 0);
+                return (raw - 2731.5) / 10.0;
+            }
+        }
+        return 0;
+    }
+
+    private static double ReadCpuTempFromWmiBattery()
+    {
+        using var searcher = new ManagementObjectSearcher(
+            "SELECT * FROM Win32_Battery");
+        foreach (var obj in searcher.Get())
+        {
+            var temp = Convert.ToDouble(obj["Temperature"] ?? 0);
+            if (temp > 0)
+                return temp / 10.0;
+        }
+        return 0;
+    }
+
+    private static (double availableGB, double totalGB) ReadRamFromWmi()
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT * FROM Win32_OperatingSystem");
+            foreach (var obj in searcher.Get())
+            {
+                var free = Convert.ToDouble(obj["FreePhysicalMemory"] ?? 0);
+                var total = Convert.ToDouble(obj["TotalVisibleMemorySize"] ?? 0);
+                return (free / 1024.0 / 1024.0, total / 1024.0 / 1024.0);
+            }
+        }
+        catch { }
+        return (0, 0);
     }
 
     private static void MapSensor(ISensor sensor, SensorData data)
@@ -218,6 +388,10 @@ public sealed class HardwareMonitorService : ISensorService
                 data.Values[Models.SensorType.RamAvailable] = val / 1024.0;
                 data.Labels[Models.SensorType.RamAvailable] = label;
                 break;
+            case LhmSensorType.Data when sensor.Name.Contains("Used", StringComparison.OrdinalIgnoreCase):
+                data.Values[Models.SensorType.RamUsed] = val / 1024.0;
+                data.Labels[Models.SensorType.RamUsed] = label;
+                break;
         }
     }
 
@@ -275,11 +449,10 @@ public sealed class HardwareMonitorService : ISensorService
         var list = new List<GpuProcessInfo>();
         try
         {
-            if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
-                    System.Runtime.InteropServices.OSPlatform.Windows))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return list;
 
-            using var searcher = new System.Management.ManagementObjectSearcher(
+            using var searcher = new ManagementObjectSearcher(
                 "SELECT * FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
             foreach (var obj in searcher.Get())
             {
@@ -296,9 +469,7 @@ public sealed class HardwareMonitorService : ISensorService
                     list.Add(new GpuProcessInfo { Name = processName, Usage = usage });
             }
         }
-        catch
-        {
-        }
+        catch { }
 
         return list.OrderByDescending(p => p.Usage).Take(10).ToList();
     }

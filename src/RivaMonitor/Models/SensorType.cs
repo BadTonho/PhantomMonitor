@@ -19,6 +19,8 @@ public enum SensorType
     GpuPower,
     RamUsage,
     RamAvailable,
+    RamUsed,
+    RamTotal,
     DiskUsage,
     DiskRead,
     DiskWrite,

@@ -117,6 +117,7 @@ public sealed class FpsMonitor : IDisposable
                 {
                     _eventCounts.TryGetValue(eid, out var n);
                     _eventCounts[eid] = n + 1;
+                    AddFrames(1, "RAW");
                 }
             }
         }

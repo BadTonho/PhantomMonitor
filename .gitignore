@@ -1,0 +1,17 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+.vs/
+
+## Logs
+Logs/
+
+## Config with secrets
+config*.local.json
+
+## IDE
+.idea/
+*.swp

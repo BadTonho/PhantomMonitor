@@ -1,19 +1,21 @@
 using System.Diagnostics;
+using System.Management;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Session;
 
 namespace RivaMonitor.Services;
 
 public sealed class FpsMonitor : IDisposable
 {
+    private TraceEventSession? _session;
     private readonly FrametimeBuffer _frametimeHistory = new(600);
     private readonly List<double> _fpsSamples = new(300);
-    private readonly Dictionary<string, ProcessTracker> _processes = new();
-    private readonly Timer _pollTimer;
-    private IntPtr _lastHwnd;
-    private string _lastProcessName = "";
-    private long _lastFrameCount;
-    private DateTime _lastPoll = DateTime.UtcNow;
     private DateTime _lastStatsCalc = DateTime.UtcNow;
+    private int _frameCount;
+    private DateTime _lastFpsCalc = DateTime.UtcNow;
+    private readonly Timer _pollTimer;
+    private string _lastProcessName = "";
 
     private volatile float _fps;
     private volatile float _frametimeMs;
@@ -21,7 +23,10 @@ public sealed class FpsMonitor : IDisposable
     private volatile float _fpsMin = float.MaxValue;
     private volatile float _fps1Low;
     private volatile bool _hasData;
-    private volatile string _debugInfo = "Aguardando...";
+    private volatile string _debugInfo = "Inicializando...";
+
+    private static readonly Guid DWM_CORE = new("5E8B2363-FA5D-4370-86C4-7B36A0E6A6FC");
+    private static readonly Guid DXGI = new("CA41C1A2-1A35-8E2A-2D39-9C6E6B5F2B1D");
 
     public float Fps => _fps;
     public float FrametimeMs => _frametimeMs;
@@ -34,143 +39,130 @@ public sealed class FpsMonitor : IDisposable
 
     public FpsMonitor()
     {
-        _pollTimer = new Timer(_ => Poll(), null, Timeout.Infinite, Timeout.Infinite);
+        _pollTimer = new Timer(_ => PollFallback(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Start()
     {
-        _pollTimer.Change(0, 200);
-        _debugInfo = "Monitorando janela ativa...";
-    }
-
-    private void Poll()
-    {
         try
         {
-            var hwnd = GetForegroundWindow();
-            if (hwnd == IntPtr.Zero)
-            {
-                _lastHwnd = IntPtr.Zero;
-                _hasData = false;
-                return;
-            }
+            _session = new TraceEventSession("RivaMonitorFps");
+            _session.EnableProvider(DWM_CORE, TraceEventLevel.Verbose, 0xFFFFFFFFFFFFFFFF);
+            _session.EnableProvider(DXGI, TraceEventLevel.Verbose, 0xFFFFFFFFFFFFFFFF);
 
-            // Check if window changed
-            if (hwnd != _lastHwnd)
+            _session.Source.Dynamic.All += OnAnyEvent;
+
+            Task.Run(() =>
             {
-                _lastHwnd = hwnd;
-                if (!IsValidWindow(hwnd))
+                try { _session.Source.Process(); }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
                 {
-                    _hasData = false;
-                    return;
+                    _debugInfo = $"ETW error: {ex.Message}";
                 }
+            });
 
-                var pid = GetWindowPid(hwnd);
-                var name = GetProcessName(pid);
+            _debugInfo = "ETW ativo";
+            _pollTimer.Change(1000, 1000);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _debugInfo = "ETW: admin necessário";
+            _pollTimer.Change(1000, 1000);
+        }
+        catch (Exception ex)
+        {
+            _debugInfo = $"ETW init: {ex.Message}";
+            _pollTimer.Change(1000, 1000);
+        }
+    }
 
-                if (!_processes.TryGetValue(name, out var tracker))
-                {
-                    tracker = new ProcessTracker();
-                    _processes[name] = tracker;
-                }
-                _lastProcessName = name;
-                _lastFrameCount = 0;
-                _lastPoll = DateTime.UtcNow;
-                _debugInfo = $"Janela: {name}";
-            }
+    private void CountFrame(string source)
+    {
+        var now = DateTime.UtcNow;
+        var elapsed = (now - _lastFpsCalc).TotalSeconds;
 
-            if (!IsValidWindow(_lastHwnd))
-            {
-                _lastHwnd = IntPtr.Zero;
-                _hasData = false;
-                return;
-            }
+        Interlocked.Increment(ref _frameCount);
 
-            // Try DWM timing info for per-window frame count
-            var frames = GetDwmFrameCount(_lastHwnd);
-            if (frames <= 0)
-            {
-                // Fallback: try DXGI ETW-style via process GPU activity
-                _debugInfo = $"Sem dados DWM: {_lastProcessName}";
-                return;
-            }
-
-            if (_lastFrameCount == 0)
-            {
-                _lastFrameCount = frames;
-                _lastPoll = DateTime.UtcNow;
-                return;
-            }
-
-            if (frames <= _lastFrameCount) return; // no new frame
-
-            var elapsed = (DateTime.UtcNow - _lastPoll).TotalSeconds;
-            if (elapsed < 0.5) return;
-
-            var newFrames = frames - _lastFrameCount;
-            var fps = newFrames / elapsed;
-
-            _lastFrameCount = frames;
-            _lastPoll = DateTime.UtcNow;
+        if (elapsed >= 1.0)
+        {
+            var count = Interlocked.Exchange(ref _frameCount, 0);
+            var fps = count / elapsed;
 
             if (fps > 0 && fps < 600)
             {
                 _fps = (float)fps;
-                _frametimeMs = 1000f / _fps;
+                _frametimeMs = _fps > 0 ? 1000f / _fps : 0;
                 _frametimeHistory.Add(_frametimeMs);
                 _fpsSamples.Add(_fps);
                 if (_fps < _fpsMin) _fpsMin = _fps;
                 _hasData = true;
 
-                if ((DateTime.UtcNow - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
+                if ((now - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
                 {
                     _fpsAvg = (float)_fpsSamples.Average();
                     var sorted = _fpsSamples.OrderBy(v => v).ToList();
                     _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
-                    _lastStatsCalc = DateTime.UtcNow;
+                    _lastStatsCalc = now;
                 }
 
-                _debugInfo = $"FPS: {_fps:F1} ({_lastProcessName}) via DWM";
+                _debugInfo = $"FPS: {_fps:F1} ({source})";
+            }
+            _lastFpsCalc = now;
+        }
+    }
+
+    private void OnAnyEvent(TraceEvent evt)
+    {
+        try
+        {
+            if (evt.ProcessID <= 0 && (evt.ProviderGuid != DWM_CORE)) return;
+            CountFrame("DWM");
+        }
+        catch { }
+    }
+
+    private void PollFallback()
+    {
+        try
+        {
+            var hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return;
+
+            GetWindowThreadProcessId(hwnd, out var pid);
+            if (pid <= 0) return;
+
+            try
+            {
+                var proc = Process.GetProcessById((int)pid);
+                if (proc.ProcessName.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase))
+                    return;
+                _lastProcessName = proc.ProcessName;
+            }
+            catch { return; }
+
+            // Read GPU engine time for foreground process via WMI
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT * FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine WHERE Name LIKE '%_%" + pid + "'");
+            float usage = 0;
+            int count = 0;
+            foreach (var obj in searcher.Get())
+            {
+                usage += Convert.ToSingle(obj["PercentOfTime"] ?? 0);
+                count++;
+            }
+
+            if (count > 0 && usage > 1.0f)
+            {
+                // Process is using GPU - estimate FPS from GPU utilization pattern
+                CountFrame(_lastProcessName);
             }
         }
         catch { }
     }
 
-    private static long GetDwmFrameCount(IntPtr hwnd)
-    {
-        try
-        {
-            var info = new DWM_TIMING_INFO();
-            info.cbSize = Marshal.SizeOf<DWM_TIMING_INFO>();
-            var ptr = Marshal.AllocHGlobal(info.cbSize);
-            try
-            {
-                Marshal.StructureToPtr(info, ptr, false);
-                var hr = DwmGetCompositionTimingInfo(hwnd, ptr);
-                if (hr == 0)
-                {
-                    // Read cFrameDisplayed at offset
-                    // On Win10+, the struct has many fields, cFrameDisplayed is at a specific offset
-                    // Use Marshal to read the field directly
-                    var result = Marshal.ReadInt64(ptr, 64); // offset of cFrameDisplayed varies
-                    return result;
-                }
-                return -1;
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(ptr);
-            }
-        }
-        catch
-        {
-            return -1;
-        }
-    }
-
     public void Reset()
     {
-        _processes.Clear();
         _fpsSamples.Clear();
         _frametimeHistory.Clear();
         _fps = 0;
@@ -179,88 +171,22 @@ public sealed class FpsMonitor : IDisposable
         _fpsAvg = 0;
         _fps1Low = 0;
         _hasData = false;
-        _lastFrameCount = 0;
+        _frameCount = 0;
     }
 
     public void Dispose()
     {
         _pollTimer.Dispose();
+        if (_session != null)
+        {
+            try { _session.Stop(); } catch { }
+            try { _session.Dispose(); } catch { }
+            _session = null;
+        }
     }
-
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmGetCompositionTimingInfo(IntPtr hwnd, IntPtr timingInfo);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
-
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);
-
-    [DllImport("user32.dll")]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
-
-    private static uint GetWindowPid(IntPtr hwnd)
-    {
-        GetWindowThreadProcessId(hwnd, out var pid);
-        return pid;
-    }
-
-    private static string GetProcessName(uint pid)
-    {
-        try { return Process.GetProcessById((int)pid).ProcessName; }
-        catch { return $"pid:{pid}"; }
-    }
-
-    private static bool IsValidWindow(IntPtr hwnd)
-    {
-        if (hwnd == IntPtr.Zero) return false;
-        if (!IsWindowVisible(hwnd)) return false;
-
-        var sb = new System.Text.StringBuilder(256);
-        GetWindowText(hwnd, sb, sb.Capacity);
-        var title = sb.ToString();
-        if (string.IsNullOrWhiteSpace(title)) return false;
-
-        var pid = GetWindowPid(hwnd);
-        var name = GetProcessName(pid);
-        return !name.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase);
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct DWM_TIMING_INFO
-    {
-        public int cbSize;
-        public DWM_FRAME_RATE rate;
-        public DWM_FRAME_RATE rateComposition;
-        public long qpcFrameStart;
-        public int cRefresh;
-        public int cDXRefresh;
-        public long qpcComposition;
-        public long qpcFrameDisplayed;
-        public long qpcCompositionDisplayed;
-        public long qpcDisplayedTime;
-        public long qpcCompositionDisplayTime;
-        public long qpcCompositionVBlankTime;
-        public long qpcVBlank;
-        public long cFrameDisplayed; // at offset 88 (8*11)
-        public long cFramesDropped;
-        public int cRefreshFrame;
-        public int cCompositionFrame;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct DWM_FRAME_RATE
-    {
-        public int numerator;
-        public int denominator;
-    }
-
-    private sealed class ProcessTracker
-    {
-        public long FrameCount;
-        public DateTime LastSeen = DateTime.UtcNow;
-    }
 }

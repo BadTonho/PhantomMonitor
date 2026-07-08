@@ -90,14 +90,26 @@ public sealed class FpsMonitor : IDisposable
         }
     }
 
+    private volatile int _targetPid;
+
     private void OnAnyEvent(TraceEvent evt)
     {
         try
         {
             var c = Interlocked.Increment(ref _etwEventCount);
-            AddFrames(1, "ETW");
-            if (c <= 5)
-                _etwDiag = $"#{c} recebido";
+            if (c <= 10)
+            {
+                var pid = 0;
+                try { pid = evt.ProcessID; } catch { }
+                var eid = 0;
+                try { eid = (int)evt.ID; } catch { }
+                _etwDiag = (c > 1 ? _etwDiag + " | " : "") + $"#{c} PID={pid} ID={eid}";
+            }
+            var tp = _targetPid;
+            var ep = 0;
+            try { ep = evt.ProcessID; } catch { }
+            if (tp > 0 && ep == tp)
+                AddFrames(1, "ETW");
         }
         catch { }
     }
@@ -111,24 +123,21 @@ public sealed class FpsMonitor : IDisposable
         {
             var total = Interlocked.Exchange(ref _frameCount, 0);
             var fps = total / elapsed;
-            if (fps > 0 && fps < 600)
-            {
-                _fps = (float)fps;
-                _frametimeMs = 1000f / _fps;
-                _frametimeHistory.Add(_frametimeMs);
-                _fpsSamples.Add(_fps);
-                if (_fps < _fpsMin) _fpsMin = _fps;
-                _hasData = true;
+            _fps = (float)fps;
+            _frametimeMs = 1000f / _fps;
+            _frametimeHistory.Add(_frametimeMs);
+            _fpsSamples.Add(_fps);
+            if (_fps < _fpsMin) _fpsMin = _fps;
+            _hasData = true;
 
-                if ((now - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
-                {
-                    _fpsAvg = (float)_fpsSamples.Average();
-                    var sorted = _fpsSamples.OrderBy(v => v).ToList();
-                    _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
-                    _lastStatsCalc = now;
-                }
-                _debugInfo = $"FPS: {_fps:F0} ({source})";
+            if ((now - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
+            {
+                _fpsAvg = (float)_fpsSamples.Average();
+                var sorted = _fpsSamples.OrderBy(v => v).ToList();
+                _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
+                _lastStatsCalc = now;
             }
+            _debugInfo = $"FPS: {_fps:F0} ({source})";
             _lastFpsCalc = now;
         }
     }

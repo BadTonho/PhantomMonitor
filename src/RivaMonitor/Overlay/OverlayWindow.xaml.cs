@@ -1,7 +1,7 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using RivaMonitor.Models;
@@ -11,77 +11,90 @@ namespace RivaMonitor.Overlay;
 
 public partial class OverlayWindow : Window
 {
-    private readonly List<SensorRow> _rows = new();
+    private readonly List<Action<SensorData>> _updaters = new();
     private Canvas? _frametimeGraph;
     private bool _showFps;
 
-    private sealed class SensorRow
-    {
-        public TextBlock ValueText { get; }
-        public Border BarFill { get; }
-        public Func<SensorData, double>? GetValue { get; }
-        public Func<SensorData, string>? GetText { get; }
-        public double MaxValue { get; }
-
-        public SensorRow(TextBlock valueText, Border barFill,
-            Func<SensorData, double>? getValue, Func<SensorData, string>? getText,
-            double maxValue)
-        {
-            ValueText = valueText;
-            BarFill = barFill;
-            GetValue = getValue;
-            GetText = getText;
-            MaxValue = maxValue;
-        }
-    }
+    private static readonly FontFamily OsdFont = new("Consolas, Cascadia Mono, Lucida Console, Segoe UI");
+    private static readonly Brush NormalBrush = new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9));
+    private static readonly Brush WarmBrush = new SolidColorBrush(Color.FromRgb(0xFA, 0xCC, 0x15)); // Amarelo
+    private static readonly Brush HotBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));  // Vermelho
+    private static readonly Brush MutedBrush = new SolidColorBrush(Color.FromRgb(0x8E, 0x9A, 0xA8));
+    private static readonly Brush ColonBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255));
+    private static readonly Brush GreenFpsBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x88));
 
     public OverlayWindow(AppConfig config, double left = 20, double top = 80)
     {
         InitializeComponent();
         Left = left;
         Top = top;
-        Width = config.Overlay.Width;
         Opacity = config.OverlayOpacity;
-
-        if (!string.IsNullOrEmpty(config.Overlay.AccentColor))
-        {
-            try
-            {
-                var color = (Color)ColorConverter.ConvertFromString(config.Overlay.AccentColor);
-                MainBorder.BorderBrush = new SolidColorBrush(color);
-            }
-            catch { }
-        }
 
         MakeClickThrough();
         StartTopmostTimer();
 
-        if (config.Overlay.ShowCpu)
-            AddSection("CPU", MakeEntries(
-                ("Uso",  GetCpuUsage, GetCpuUsageText, 100.0),
-                ("Temp", null, GetCpuTempText, 100.0)
-            ));
-
+        // GPU
         if (config.Overlay.ShowGpu)
-            AddSection("GPU", MakeEntries(
-                ("Uso",  GetGpuUsage, GetGpuUsageText, 100.0),
-                ("Temp", null, GetGpuTempText, 100.0)
-            ));
+        {
+            AddMetricRow("GPU", Color.FromRgb(0xFF, 0x8A, 0x00), data =>
+            {
+                string tempStr = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°C" : "--°C";
+                string usageStr = $"{data.GpuUsage:F1}%";
+                return (tempStr, GetTempBrush(data.GpuTemp), usageStr, GetUsageBrush(data.GpuUsage));
+            });
+        }
 
+        // CPU
+        if (config.Overlay.ShowCpu)
+        {
+            AddMetricRow("CPU", Color.FromRgb(0x00, 0xD2, 0xFF), data =>
+            {
+                string tempStr = data.CpuTemp > 0 ? $"{data.CpuTemp:F0}°C" : "--°C";
+                string usageStr = $"{data.CpuUsage:F1}%";
+                return (tempStr, GetTempBrush(data.CpuTemp), usageStr, GetUsageBrush(data.CpuUsage));
+            });
+        }
+
+        // RAM
         if (config.Overlay.ShowRam)
-            AddSection("RAM", MakeEntries(
-                ("Uso", GetRamUsage, GetRamUsageText, 100.0)
-            ));
+        {
+            AddMetricRow("RAM", Color.FromRgb(0xC0, 0x84, 0xFC), data =>
+            {
+                double total = data.GetValue(SensorType.RamTotal);
+                double avail = data.RamAvailableGB;
+                string usedStr;
+                if (total > 0 && avail > 0 && total >= avail)
+                {
+                    double used = total - avail;
+                    usedStr = $"{used:F1} GB";
+                }
+                else
+                {
+                    usedStr = $"{data.RamUsagePercent:F0}%";
+                }
 
+                string pctStr = $"{data.RamUsagePercent:F0}%";
+                return (usedStr, NormalBrush, pctStr, GetUsageBrush(data.RamUsagePercent));
+            });
+        }
+
+        // DISCO
         if (config.Overlay.ShowDisk)
-            AddSection("DISCO", MakeEntries(
-                ("Leitura",  null, GetDiskReadText, 100.0),
-                ("Escrita", null, GetDiskWriteText, 100.0)
-            ));
+        {
+            AddMetricRow("DSK", Color.FromRgb(0x60, 0xA5, 0xFA), data =>
+            {
+                string readStr = "R: " + FormatBytes(data.GetValue(SensorType.DiskRead));
+                string writeStr = "W: " + FormatBytes(data.GetValue(SensorType.DiskWrite));
+                return (readStr, MutedBrush, writeStr, MutedBrush);
+            });
+        }
 
+        // FPS
         _showFps = config.Overlay.ShowFps;
         if (_showFps)
+        {
             AddFpsSection();
+        }
 
         _offsetX = left;
         _offsetY = top;
@@ -119,18 +132,16 @@ public partial class OverlayWindow : Window
         if (hwnd == IntPtr.Zero) return;
 
         GetWindowThreadProcessId(hwnd, out uint pid);
-        if (pid == System.Diagnostics.Process.GetCurrentProcess().Id) return; // Ignora se for a própria janela do RivaMonitor (MainWindow/DebugWindow)
-        
-        // Ignorar o desktop/explorer
+        if (pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id) return;
+
         if (pid == GetExplorerPid()) return;
 
         if (GetWindowRect(hwnd, out var rect))
         {
-            // Verifica se não está minimizada
             if (rect.Left <= -32000) return;
 
-            this.Left = rect.Left + _offsetX;
-            this.Top = rect.Top + _offsetY;
+            Left = rect.Left + _offsetX;
+            Top = rect.Top + _offsetY;
         }
     }
 
@@ -143,328 +154,282 @@ public partial class OverlayWindow : Window
         return _explorerPid;
     }
 
-    private static (string label, Func<SensorData, double>? getValue, Func<SensorData, string>? getText, double max)[] MakeEntries(
-        params (string label, Func<SensorData, double>? getValue, Func<SensorData, string>? getText, double max)[] entries) => entries;
-
-    private void AddSection(string title, (string label, Func<SensorData, double>? getValue, Func<SensorData, string>? getText, double max)[] entries)
+    private void AddMetricRow(
+        string tag,
+        Color tagColor,
+        Func<SensorData, (string val1, Brush col1, string val2, Brush col2)> dataProvider)
     {
-        var section = new Border
+        var grid = new Grid
         {
-            CornerRadius = new CornerRadius(8),
-            Background = new SolidColorBrush(Color.FromArgb(12, 0x00, 0xF0, 0xFF)), // Vidro ciano translúcido
-            BorderBrush = FindResource("DividerBrush") as Brush,
-            BorderThickness = new Thickness(1),
-            Padding = new Thickness(10, 8, 10, 8),
-            Margin = new Thickness(0, 0, 0, 6)
+            Margin = new Thickness(0, 1.5, 0, 1.5)
         };
 
-        var stack = new StackPanel();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) }); // Tag
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });  // :
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) }); // Métrica 1
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Métrica 2
 
-        var header = new TextBlock
+        var tagBlock = new TextBlock
         {
-            Text = title.ToUpperInvariant(),
-            FontSize = 9.5,
+            Text = tag,
+            FontFamily = OsdFont,
+            FontSize = 11.5,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("AccentGradientBrush") as Brush, // Cabeçalhos com gradiente neon
-            Margin = new Thickness(0, 0, 0, 6)
+            Foreground = new SolidColorBrush(tagColor),
+            VerticalAlignment = VerticalAlignment.Center
         };
-        stack.Children.Add(header);
+        Grid.SetColumn(tagBlock, 0);
+        grid.Children.Add(tagBlock);
 
-        foreach (var (label, getValue, getText, max) in entries)
+        var colonBlock = new TextBlock
         {
-            var row = BuildRow(label, getValue, getText, max);
-            stack.Children.Add(row.Item1);
-            _rows.Add(row.Item2);
-        }
-
-        section.Child = stack;
-        SensorPanel.Children.Add(section);
-    }
-
-    private (UIElement, SensorRow) BuildRow(string label,
-        Func<SensorData, double>? getValue,
-        Func<SensorData, string>? getText,
-        double maxValue)
-    {
-        var outerGrid = new Grid();
-        outerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        outerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        // Label + Value row
-        var topGrid = new Grid { Margin = new Thickness(0, 1, 0, 1) };
-        topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        var lbl = new TextBlock
-        {
-            Text = label,
-            FontSize = 10,
-            Foreground = FindResource("TextSecondaryBrush") as Brush,
+            Text = ":",
+            FontFamily = OsdFont,
+            FontSize = 11.5,
+            Foreground = ColonBrush,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 6, 0)
+            HorizontalAlignment = HorizontalAlignment.Center
         };
-        Grid.SetColumn(lbl, 0);
-        topGrid.Children.Add(lbl);
+        Grid.SetColumn(colonBlock, 1);
+        grid.Children.Add(colonBlock);
 
-        var val = new TextBlock
+        var val1Block = new TextBlock
         {
-            FontSize = 10,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("TextPrimaryBrush") as Brush,
-            HorizontalAlignment = HorizontalAlignment.Right,
+            FontFamily = OsdFont,
+            FontSize = 11.5,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = NormalBrush,
             VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
             Text = "--"
         };
-        Grid.SetColumn(val, 1);
-        topGrid.Children.Add(val);
-        Grid.SetRow(topGrid, 0);
-        outerGrid.Children.Add(topGrid);
+        Grid.SetColumn(val1Block, 2);
+        grid.Children.Add(val1Block);
 
-        // Bar
-        var barGrid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
-        var barBg = new Border
+        var val2Block = new TextBlock
         {
-            Height = 4,
-            CornerRadius = new CornerRadius(2),
-            Background = new SolidColorBrush(Color.FromArgb(20, 0xFF, 0xFF, 0xFF))
+            FontFamily = OsdFont,
+            FontSize = 11.5,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = NormalBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Text = "--"
         };
-        barGrid.Children.Add(barBg);
+        Grid.SetColumn(val2Block, 3);
+        grid.Children.Add(val2Block);
 
-        var barFill = new Border
+        _updaters.Add(data =>
         {
-            Height = 4,
-            CornerRadius = new CornerRadius(2),
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Width = 0,
-            Background = FindResource("AccentGradientBrush") as Brush
-        };
-        barGrid.Children.Add(barFill);
-        Grid.SetRow(barGrid, 1);
-        outerGrid.Children.Add(barGrid);
+            var (v1, c1, v2, c2) = dataProvider(data);
+            val1Block.Text = v1;
+            val1Block.Foreground = c1 ?? NormalBrush;
+            val2Block.Text = v2;
+            val2Block.Foreground = c2 ?? NormalBrush;
+        });
 
-        var row = new SensorRow(val, barFill, getValue, getText, maxValue);
-        return (outerGrid, row);
+        SensorPanel.Children.Add(grid);
     }
 
     private void AddFpsSection()
     {
-        var section = new Border
+        // Linha Principal de FPS
+        var grid = new Grid
         {
-            CornerRadius = new CornerRadius(8),
-            Background = new SolidColorBrush(Color.FromArgb(12, 0x00, 0xF0, 0xFF)), // Vidro ciano translúcido
-            BorderBrush = FindResource("DividerBrush") as Brush,
-            BorderThickness = new Thickness(1),
-            Padding = new Thickness(10, 8, 10, 8),
-            Margin = new Thickness(0, 0, 0, 6)
+            Margin = new Thickness(0, 1.5, 0, 1)
         };
 
-        var stack = new StackPanel();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) }); // FPS
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });  // :
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) }); // FPS valor
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Frametime ms
 
-        var header = new TextBlock
+        var tagBlock = new TextBlock
         {
             Text = "FPS",
-            FontSize = 9.5,
+            FontFamily = OsdFont,
+            FontSize = 11.5,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("AccentGradientBrush") as Brush,
-            Margin = new Thickness(0, 0, 0, 6)
-        };
-        stack.Children.Add(header);
-
-        // FPS + Frametime row
-        var fpsGrid = new Grid();
-        fpsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        fpsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        fpsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        fpsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var fpsLabel = new TextBlock
-        {
-            Text = "FPS",
-            FontSize = 10,
-            Foreground = FindResource("TextSecondaryBrush") as Brush,
+            Foreground = GreenFpsBrush,
             VerticalAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(fpsLabel, 0);
-        fpsGrid.Children.Add(fpsLabel);
+        Grid.SetColumn(tagBlock, 0);
+        grid.Children.Add(tagBlock);
 
-        var fpsVal = new TextBlock
+        var colonBlock = new TextBlock
         {
-            FontSize = 15,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("GreenBrush") as Brush,
-            HorizontalAlignment = HorizontalAlignment.Right,
+            Text = ":",
+            FontFamily = OsdFont,
+            FontSize = 11.5,
+            Foreground = ColonBrush,
             VerticalAlignment = VerticalAlignment.Center,
-            Text = "--",
-            Margin = new Thickness(6, 0, 12, 0)
-        };
-        Grid.SetColumn(fpsVal, 1);
-        fpsGrid.Children.Add(fpsVal);
-        _rows.Add(new SensorRow(fpsVal, null!, null, d => d.Fps > 0 ? $"{d.Fps:F0}" : d.Fps == 0 ? "0" : "--", 240));
-
-        var ftLabel = new TextBlock
-        {
-            Text = "ms",
-            FontSize = 10,
-            Foreground = FindResource("TextSecondaryBrush") as Brush,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Right
-        };
-        Grid.SetColumn(ftLabel, 2);
-        fpsGrid.Children.Add(ftLabel);
-
-        var ftVal = new TextBlock
-        {
-            FontSize = 15,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("YellowBrush") as Brush,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Center,
-            Text = "--",
-            Margin = new Thickness(6, 0, 0, 0)
-        };
-        Grid.SetColumn(ftVal, 3);
-        fpsGrid.Children.Add(ftVal);
-        _rows.Add(new SensorRow(ftVal, null!, null, d => d.FrametimeMs > 0 ? $"{d.FrametimeMs:F1}" : "--", 0));
-
-        stack.Children.Add(fpsGrid);
-
-        // Stats row: avg / min / 1% low
-        var statsGrid = new Grid();
-        statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        statsGrid.Margin = new Thickness(0, 6, 0, 2);
-
-        AddStat(statsGrid, 0, "Avg", "FpsAvg", d => d.FpsAvg > 0 ? $"{d.FpsAvg:F0}" : "--");
-        AddStat(statsGrid, 1, "Min", "FpsMin", d => d.FpsMin > 0 ? $"{d.FpsMin:F0}" : "--");
-        AddStat(statsGrid, 2, "1% Low", "Fps1Low", d => d.Fps1Low > 0 ? $"{d.Fps1Low:F0}" : "--");
-
-        stack.Children.Add(statsGrid);
-
-        // Frametime graph
-        _frametimeGraph = new Canvas
-        {
-            Height = 40,
-            Margin = new Thickness(0, 6, 0, 0),
-            ClipToBounds = true
-        };
-        stack.Children.Add(_frametimeGraph);
-
-        section.Child = stack;
-        SensorPanel.Children.Add(section);
-    }
-
-    private static void AddStat(Grid parent, int col, string label, string _, Func<SensorData, string> getter)
-    {
-        var inner = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-
-        var lbl = new TextBlock
-        {
-            Text = label,
-            FontSize = 8,
-            Foreground = parent.FindResource("TextSecondaryBrush") as Brush,
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        inner.Children.Add(lbl);
+        Grid.SetColumn(colonBlock, 1);
+        grid.Children.Add(colonBlock);
 
-        var val = new TextBlock
+        var fpsBlock = new TextBlock
         {
-            FontSize = 10,
+            FontFamily = OsdFont,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Foreground = parent.FindResource("TextPrimaryBrush") as Brush,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Text = "--"
+            Foreground = GreenFpsBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Text = "-- FPS"
         };
-        inner.Children.Add(val);
-        Grid.SetColumn(inner, col);
-        parent.Children.Add(inner);
+        Grid.SetColumn(fpsBlock, 2);
+        grid.Children.Add(fpsBlock);
+
+        var ftBlock = new TextBlock
+        {
+            FontFamily = OsdFont,
+            FontSize = 11.5,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = WarmBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Text = "-- ms"
+        };
+        Grid.SetColumn(ftBlock, 3);
+        grid.Children.Add(ftBlock);
+
+        SensorPanel.Children.Add(grid);
+
+        // Sublinha: AVG / 1% Low
+        var statsGrid = new Grid
+        {
+            Margin = new Thickness(0, 0, 0, 2)
+        };
+        statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(46) }); // Espaço sob a tag
+        statsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var statsBlock = new TextBlock
+        {
+            FontFamily = OsdFont,
+            FontSize = 9.5,
+            Foreground = MutedBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Text = "AVG: --  1%: --"
+        };
+        Grid.SetColumn(statsBlock, 1);
+        statsGrid.Children.Add(statsBlock);
+
+        SensorPanel.Children.Add(statsGrid);
+
+        // Gráfico de Frametime compacto estilo RivaTuner
+        _frametimeGraph = new Canvas
+        {
+            Height = 24,
+            Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
+            ClipToBounds = true
+        };
+
+        var graphBorder = new Border
+        {
+            CornerRadius = new CornerRadius(2),
+            BorderThickness = new Thickness(0.5),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+            Child = _frametimeGraph,
+            Margin = new Thickness(0, 2, 0, 0)
+        };
+
+        SensorPanel.Children.Add(graphBorder);
+
+        _updaters.Add(data =>
+        {
+            fpsBlock.Text = data.Fps > 0 ? $"{data.Fps:F0} FPS" : "-- FPS";
+            ftBlock.Text = data.FrametimeMs > 0 ? $"{data.FrametimeMs:F1} ms" : "-- ms";
+
+            string avg = data.FpsAvg > 0 ? $"{data.FpsAvg:F0}" : "--";
+            string low = data.Fps1Low > 0 ? $"{data.Fps1Low:F0}" : "--";
+            statsBlock.Text = $"AVG: {avg}  1%: {low}";
+        });
     }
 
     public void Update(SensorData data)
     {
-        foreach (var row in _rows)
+        foreach (var updater in _updaters)
         {
-            if (row.GetValue != null)
-            {
-                var val = row.GetValue(data);
-                var pct = Math.Clamp(val / row.MaxValue, 0, 1);
-                row.BarFill.Width = pct * (ActualWidth - 56);
-
-                if (pct < 0.5)
-                    row.BarFill.Background = FindResource("GreenBrush") as Brush;
-                else if (pct < 0.8)
-                    row.BarFill.Background = FindResource("YellowBrush") as Brush;
-                else
-                    row.BarFill.Background = FindResource("RedBrush") as Brush;
-            }
-
-            if (row.GetText != null)
-                row.ValueText.Text = row.GetText(data);
+            updater(data);
         }
 
-        // Update frametime graph
+        // Atualizar o gráfico de frametime
         if (_frametimeGraph != null && data.FrametimeHistory.Length > 1)
         {
             _frametimeGraph.Children.Clear();
-            var w = _frametimeGraph.ActualWidth;
-            var h = _frametimeGraph.ActualHeight;
+            double w = _frametimeGraph.ActualWidth;
+            double h = _frametimeGraph.ActualHeight;
             if (w <= 0 || h <= 0) { w = _frametimeGraph.Width; h = _frametimeGraph.Height; }
-            if (w <= 0) w = Width - 36;
-            if (h <= 0) h = 40;
+            if (w <= 0) w = 184;
+            if (h <= 0) h = 24;
 
             var history = data.FrametimeHistory;
-            var maxFt = 33.0; // ~30fps worst case
-            for (int i = 0; i < history.Length; i++)
-                if (history[i] > maxFt) maxFt = history[i];
-            if (maxFt < 8) maxFt = 16;
-
-            var pts = new PointCollection();
+            double maxFt = 33.3; // 30 FPS baseline
             for (int i = 0; i < history.Length; i++)
             {
-                var x = w - (history.Length - i) * (w / Math.Max(history.Length, 300));
-                var y = h - (history[i] / maxFt) * (h - 2);
+                if (history[i] > maxFt) maxFt = history[i];
+            }
+            if (maxFt < 16.6) maxFt = 16.6;
+
+            // Linha guia sutil de 60 FPS (16.6ms)
+            double y60 = h - (16.66 / maxFt) * (h - 2);
+            if (y60 >= 0 && y60 <= h)
+            {
+                var guide = new Line
+                {
+                    X1 = 0,
+                    X2 = w,
+                    Y1 = y60,
+                    Y2 = y60,
+                    Stroke = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+                    StrokeThickness = 0.8,
+                    StrokeDashArray = new DoubleCollection { 2, 2 }
+                };
+                _frametimeGraph.Children.Add(guide);
+            }
+
+            var pts = new PointCollection();
+            int count = history.Length;
+            for (int i = 0; i < count; i++)
+            {
+                double x = w - (count - i) * (w / Math.Max(count, 120));
+                double y = h - (history[i] / maxFt) * (h - 2);
                 pts.Add(new Point(x, Math.Clamp(y, 0, h)));
             }
 
             var poly = new Polyline
             {
                 Points = pts,
-                Stroke = FindResource("YellowBrush") as Brush,
-                StrokeThickness = 1.5,
-                StrokeLineJoin = PenLineJoin.Round,
-                Effect = new System.Windows.Media.Effects.DropShadowEffect
-                {
-                    BlurRadius = 8,
-                    ShadowDepth = 0,
-                    Opacity = 0.6,
-                    Color = (Color)FindResource("Yellow")
-                }
+                Stroke = new SolidColorBrush(Color.FromRgb(0x00, 0xF0, 0xFF)),
+                StrokeThickness = 1.2,
+                StrokeLineJoin = PenLineJoin.Round
             };
             _frametimeGraph.Children.Add(poly);
         }
     }
 
-    // Getters
-    private static double GetCpuUsage(SensorData d) => d.CpuUsage;
-    private static string GetCpuUsageText(SensorData d) => $"{d.CpuUsage:F1}%";
-    private static string GetCpuTempText(SensorData d) => d.CpuTemp > 0 ? $"{d.CpuTemp:F0}°C" : "--°C";
+    private static Brush GetTempBrush(double temp)
+    {
+        if (temp >= 80) return HotBrush;
+        if (temp >= 70) return WarmBrush;
+        return NormalBrush;
+    }
 
-    private static double GetGpuUsage(SensorData d) => d.GpuUsage;
-    private static string GetGpuUsageText(SensorData d) => $"{d.GpuUsage:F1}%";
-    private static string GetGpuTempText(SensorData d) => d.GpuTemp > 0 ? $"{d.GpuTemp:F0}°C" : "--°C";
-
-    private static double GetRamUsage(SensorData d) => d.RamUsagePercent;
-    private static string GetRamUsageText(SensorData d) => $"{d.RamUsagePercent:F1}%";
-
-    private static string GetDiskReadText(SensorData d) => FormatBytes(d.GetValue(SensorType.DiskRead)) + "/s";
-    private static string GetDiskWriteText(SensorData d) => FormatBytes(d.GetValue(SensorType.DiskWrite)) + "/s";
+    private static Brush GetUsageBrush(double usage)
+    {
+        if (usage >= 90) return HotBrush;
+        if (usage >= 75) return WarmBrush;
+        return NormalBrush;
+    }
 
     private static string FormatBytes(double bytes)
     {
-        if (bytes < 1024) return $"{bytes:F0}B";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024:F1}KB";
-        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024 * 1024):F1}MB";
-        return $"{bytes / (1024 * 1024 * 1024):F2}GB";
+        if (bytes < 1024) return $"{bytes:F0}B/s";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024:F0}KB/s";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024 * 1024):F1}MB/s";
+        return $"{bytes / (1024 * 1024 * 1024):F2}GB/s";
     }
 
     private void MakeClickThrough()
@@ -502,7 +467,7 @@ public partial class OverlayWindow : Window
     private const int WS_EX_TOPMOST = 0x00000008;
     private const int WS_EX_NOACTIVATE = 0x08000000;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
-    private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+    private static readonly IntPtr HWND_TOPMOST = new(-1);
     private const uint SWP_NOMOVE = 0x0002;
     private const uint SWP_NOSIZE = 0x0001;
     private const uint SWP_NOACTIVATE = 0x0010;

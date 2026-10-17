@@ -1,42 +1,45 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Session;
+using System.Text;
 
 namespace RivaMonitor.Services;
 
 public sealed class FpsMonitor : IDisposable
 {
     private readonly FrametimeBuffer _frametimeHistory = new(600);
-    private readonly List<double> _fpsSamples = new(300);
-    private readonly object _samplesLock = new();
-    private DateTime _lastStatsCalc = DateTime.UtcNow;
-    private readonly Timer _timer;
+    private readonly List<double> _fpsSamples = new(600);
+    private readonly object _lock = new();
 
-    // Usa Stopwatch para timing de alta precisão
-    private readonly Stopwatch _stopwatch = new();
-    private long _lastFpsCalcTick;
+    private Process? _presentMonProcess;
+    private readonly Timer _pollTimer;
 
     private volatile float _fps;
     private volatile float _fpsAvg;
     private volatile float _fpsMin = float.MaxValue;
     private volatile float _fps1Low;
+    private volatile float _lastFrametimeMs;
     private volatile bool _hasData;
     private volatile string _debugInfo = "Inicializando...";
     private volatile string _perfResult = "";
-    private volatile string _etwDiag = "";
-    private volatile int _pollIteration;
+    private volatile string _etwDiag = "Iniciando PresentMon...";
 
-    private TraceEventSession? _session;
-    private readonly ConcurrentDictionary<int, long> _pidPresentCounts = new();
-    private int _lastFgPid;
-    private long _lastPresentCount;
+    private int _targetPid;
+    private string _targetProcessName = "";
+    private DateTime _lastFrameTime = DateTime.UtcNow;
+    private DateTime _lastStatsCalc = DateTime.UtcNow;
+
+    // Colunas dinâmicas do CSV do PresentMon
+    private int _colPid = -1;
+    private int _colApp = -1;
+    private int _colFrametime = -1;
+    private bool _headerParsed;
 
     // EMA (Exponential Moving Average) para suavizar o FPS
     private double _emaFps;
     private bool _emaInitialized;
-    private const double EmaAlpha = 0.3; // 0.0 = muito suave, 1.0 = sem suavização
+    private const double EmaAlpha = 0.35;
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -45,7 +48,7 @@ public sealed class FpsMonitor : IDisposable
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     public float Fps => _fps;
-    public float FrametimeMs => _fps > 0 ? 1000f / _fps : 0;
+    public float FrametimeMs => _lastFrametimeMs > 0 ? _lastFrametimeMs : (_fps > 0 ? 1000f / _fps : 0);
     public float FpsAvg => _fpsAvg;
     public float FpsMin => _fpsMin == float.MaxValue ? 0 : _fpsMin;
     public float Fps1Low => _fps1Low;
@@ -57,226 +60,322 @@ public sealed class FpsMonitor : IDisposable
 
     public FpsMonitor()
     {
-        _timer = new Timer(_ => Poll(), null, Timeout.Infinite, Timeout.Infinite);
+        _pollTimer = new Timer(_ => CheckForegroundWindow(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Start()
     {
-        _debugInfo = "Iniciando ETW...";
-        _stopwatch.Start();
-        _lastFpsCalcTick = _stopwatch.ElapsedTicks;
-        InitEtw();
-        _timer.Change(0, 500);
+        _debugInfo = "Iniciando PresentMon...";
+        Reset();
+        StartPresentMon();
+        _pollTimer.Change(0, 500);
     }
 
-    private void InitEtw()
+    private static string? FindPresentMonPath()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var candidates = new[]
+        {
+            Path.Combine(baseDir, "PresentMon.exe"),
+            Path.Combine(baseDir, "tools", "PresentMon.exe"),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "tools", "PresentMon.exe")),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "tools", "PresentMon.exe")),
+            Path.Combine(Directory.GetCurrentDirectory(), "tools", "PresentMon.exe"),
+            Path.Combine(Directory.GetCurrentDirectory(), "PresentMon.exe")
+        };
+
+        foreach (var path in candidates)
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        return null;
+    }
+
+    private void StartPresentMon()
     {
         try
         {
-            if (TraceEventSession.IsElevated() != true)
+            StopPresentMon();
+
+            var presentMonPath = FindPresentMonPath();
+            if (presentMonPath == null)
             {
-                _etwDiag = "ERRO: Requer Administrador para ler FPS via ETW.";
+                _etwDiag = "ERRO: PresentMon.exe não encontrado.";
+                _debugInfo = _etwDiag;
                 return;
             }
 
-            _session = new TraceEventSession("RivaMonitorFpsSession");
-            _session.StopOnDispose = true;
-
-            // Ativa os provedores de gráficos:
-            // - DxgKrnl: captura Present de qualquer API gráfica (DX, OpenGL, Vulkan)
-            // - DXGI: captura Present de aplicações DirectX
-            _session.EnableProvider("Microsoft-Windows-DxgKrnl", TraceEventLevel.Informational, ulong.MaxValue);
-            _session.EnableProvider("Microsoft-Windows-DXGI", TraceEventLevel.Informational, ulong.MaxValue);
-
-            // Usa HashSet para deduplicar: cada frame pode gerar eventos em ambos os provedores
-            // Contamos apenas do DxgKrnl (mais abrangente), DXGI serve como fallback
-            var dxgiPids = new ConcurrentDictionary<int, long>();
-
-            _session.Source.Dynamic.All += (TraceEvent data) =>
+            var startInfo = new ProcessStartInfo
             {
-                int pid = data.ProcessID;
-                if (pid == 0) return;
+                FileName = presentMonPath,
+                Arguments = "--output_stdout --no_console_stats --stop_existing_session --session_name RivaMonitorFps --exclude RivaMonitor.exe --no_track_input --no_track_gpu_video --exclude_dropped",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
 
-                string providerName = data.ProviderName;
-                string eventName = data.EventName;
+            _presentMonProcess = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
-                // FILTRO EXATO: contar apenas o evento "Present" (1 por frame)
-                // Ignora: PresentHistory, PresentHistoryDetailed, PresentMonitoredFence, etc.
-                if (eventName == "Present")
+            _presentMonProcess.OutputDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
                 {
-                    if (providerName == "Microsoft-Windows-DxgKrnl")
+                    ProcessCsvLine(e.Data);
+                }
+            };
+
+            _presentMonProcess.ErrorDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    if (e.Data.Contains("access denied", StringComparison.OrdinalIgnoreCase) ||
+                        e.Data.Contains("elevated privilege", StringComparison.OrdinalIgnoreCase))
                     {
-                        _pidPresentCounts.AddOrUpdate(pid, 1, (_, count) => count + 1);
+                        _etwDiag = "Requer Administrador (execute como Admin)";
                     }
-                    else if (providerName == "Microsoft-Windows-DXGI")
+                    else if (!e.Data.Contains("warning", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Conta DXGI separado como fallback
-                        dxgiPids.AddOrUpdate(pid, 1, (_, count) => count + 1);
+                        _etwDiag = $"PresentMon: {e.Data}";
                     }
                 }
             };
 
-            // Fallback: se DxgKrnl não tiver dados para um PID, usa DXGI
-            // Isso é verificado periodicamente no Poll()
-            Task.Run(() =>
+            _presentMonProcess.Exited += (s, e) =>
             {
-                try { _session.Source.Process(); }
-                catch { /* Sessão encerrada */ }
-            });
-
-            // Timer para mesclar contadores DXGI como fallback
-            var mergeTimer = new Timer(_ =>
-            {
-                foreach (var kvp in dxgiPids)
+                if (string.IsNullOrEmpty(_etwDiag) || _etwDiag.StartsWith("PresentMon ativo"))
                 {
-                    // Só usa DXGI se DxgKrnl não tem dados para esse PID
-                    if (!_pidPresentCounts.ContainsKey(kvp.Key) || _pidPresentCounts[kvp.Key] == 0)
-                    {
-                        _pidPresentCounts[kvp.Key] = kvp.Value;
-                    }
+                    _etwDiag = "PresentMon encerrado";
                 }
-            }, null, 1000, 2000);
+            };
 
-            _etwDiag = "ETW Session OK (DxgKrnl + DXGI)";
+            _presentMonProcess.Start();
+            _presentMonProcess.BeginOutputReadLine();
+            _presentMonProcess.BeginErrorReadLine();
+
+            _etwDiag = "PresentMon ativo";
+            _debugInfo = "PresentMon aguardando frames...";
         }
         catch (Exception ex)
         {
-            _etwDiag = $"ETW init ERRO: {ex.GetType().Name}: {ex.Message}";
+            _etwDiag = $"Erro ao iniciar PresentMon: {ex.Message}";
+            _debugInfo = _etwDiag;
         }
     }
 
-    private void Poll()
+    private void ProcessCsvLine(string line)
     {
-        _pollIteration++;
         try
         {
-            var hwnd = GetForegroundWindow();
-            string fgName = "";
-            uint fgPid = 0;
-
-            if (hwnd != IntPtr.Zero)
+            // Verifica se é a linha de cabeçalho
+            if (!_headerParsed || line.StartsWith("Application", StringComparison.OrdinalIgnoreCase))
             {
-                GetWindowThreadProcessId(hwnd, out fgPid);
-                if (fgPid > 0)
+                var headers = line.Split(',');
+                for (int i = 0; i < headers.Length; i++)
                 {
-                    try
+                    var h = headers[i].Trim();
+                    if (h.Equals("ProcessID", StringComparison.OrdinalIgnoreCase))
+                        _colPid = i;
+                    else if (h.Equals("Application", StringComparison.OrdinalIgnoreCase))
+                        _colApp = i;
+                    else if (h.Equals("msBetweenPresents", StringComparison.OrdinalIgnoreCase) ||
+                             h.Equals("FrameTime", StringComparison.OrdinalIgnoreCase) ||
+                             h.Equals("msBetweenDisplayChange", StringComparison.OrdinalIgnoreCase))
                     {
-                        var p = Process.GetProcessById((int)fgPid);
-                        fgName = p.ProcessName;
+                        if (_colFrametime == -1 || h.Equals("msBetweenPresents", StringComparison.OrdinalIgnoreCase))
+                            _colFrametime = i;
                     }
-                    catch { fgName = $"pid:{fgPid}"; }
+                }
 
-                    if (fgName.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _perfResult = $"#{_pollIteration} foco: RivaMonitor";
-                        _debugInfo = _perfResult;
-                        return;
-                    }
+                if (_colPid >= 0 && _colFrametime >= 0)
+                {
+                    _headerParsed = true;
+                }
+                return;
+            }
+
+            var parts = line.Split(',');
+            int minCols = Math.Max(_colPid, _colFrametime);
+            if (parts.Length <= minCols) return;
+
+            if (!int.TryParse(parts[_colPid].Trim(), out int pid) || pid <= 0)
+                return;
+
+            // Filtro por processo: focar no processo da janela ativa se definido
+            if (_targetPid > 0 && pid != _targetPid)
+                return;
+
+            string rawFt = parts[_colFrametime].Trim();
+            if (!double.TryParse(rawFt, NumberStyles.Float, CultureInfo.InvariantCulture, out double ftMs) || ftMs <= 0 || ftMs > 2000)
+                return;
+
+            // Se ainda não temos um target e o processo não é do sistema, adotamos este
+            if (_targetPid == 0 && _colApp >= 0 && parts.Length > _colApp)
+            {
+                var appName = parts[_colApp].Trim();
+                if (!IsIgnoredProcess(appName))
+                {
+                    _targetPid = pid;
+                    _targetProcessName = appName;
                 }
             }
 
-            if (_session != null)
+            lock (_lock)
             {
-                if (fgPid > 0)
+                _lastFrametimeMs = (float)ftMs;
+                _frametimeHistory.Add((float)ftMs);
+
+                double instantFps = 1000.0 / ftMs;
+
+                if (!_emaInitialized)
                 {
-                    if (fgPid != _lastFgPid)
-                    {
-                        _lastFgPid = (int)fgPid;
-                        _lastPresentCount = _pidPresentCounts.TryGetValue(_lastFgPid, out var startC) ? startC : 0;
-                        Reset();
-                        _lastFpsCalcTick = _stopwatch.ElapsedTicks;
-                    }
-
-                    long current = _pidPresentCounts.TryGetValue(_lastFgPid, out var cur) ? cur : 0;
-                    var delta = current - _lastPresentCount;
-                    long nowTick = _stopwatch.ElapsedTicks;
-                    double elapsed = (double)(nowTick - _lastFpsCalcTick) / Stopwatch.Frequency;
-
-                    if (elapsed >= 0.4 && delta > 0)
-                    {
-                        double rawFps = delta / elapsed;
-
-                        // Suavização EMA para evitar oscilações
-                        if (!_emaInitialized)
-                        {
-                            _emaFps = rawFps;
-                            _emaInitialized = true;
-                        }
-                        else
-                        {
-                            _emaFps = EmaAlpha * rawFps + (1.0 - EmaAlpha) * _emaFps;
-                        }
-
-                        _fps = (float)_emaFps;
-                        _frametimeHistory.Add(FrametimeMs);
-
-                        lock (_samplesLock)
-                        {
-                            _fpsSamples.Add(_fps);
-                            if (_fps > 0 && _fps < _fpsMin) _fpsMin = _fps;
-                            _hasData = true;
-
-                            var now = DateTime.UtcNow;
-                            if ((now - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
-                            {
-                                _fpsAvg = (float)_fpsSamples.Average();
-                                var sorted = _fpsSamples.OrderBy(v => v).ToList();
-                                _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
-                                _lastStatsCalc = now;
-                            }
-                        }
-                        _lastPresentCount = current;
-                        _lastFpsCalcTick = nowTick;
-                    }
-                    _perfResult = $"#{_pollIteration} {_fps:F0} FPS (raw={delta / Math.Max(elapsed, 0.001):F0}, delta={delta}, elapsed={elapsed:F3}s), foco: {fgName}";
-                    _debugInfo = _perfResult;
+                    _emaFps = instantFps;
+                    _emaInitialized = true;
                 }
                 else
                 {
-                    _perfResult = $"#{_pollIteration} ETW: Sem processo em foco";
-                    _debugInfo = _perfResult;
+                    _emaFps = EmaAlpha * instantFps + (1.0 - EmaAlpha) * _emaFps;
                 }
-            }
-            else
-            {
-                _perfResult = $"#{_pollIteration} ETW: não iniciado ({_etwDiag}), foco: {fgName}";
+
+                _fps = (float)_emaFps;
+                _fpsSamples.Add(instantFps);
+                if (_fpsSamples.Count > 600)
+                {
+                    _fpsSamples.RemoveAt(0);
+                }
+
+                if (instantFps > 0 && instantFps < _fpsMin)
+                {
+                    _fpsMin = (float)instantFps;
+                }
+
+                _hasData = true;
+                _lastFrameTime = DateTime.UtcNow;
+
+                var now = DateTime.UtcNow;
+                if ((now - _lastStatsCalc).TotalSeconds >= 1.0 && _fpsSamples.Count > 0)
+                {
+                    _fpsAvg = (float)_fpsSamples.Average();
+                    var sorted = _fpsSamples.OrderBy(v => v).ToList();
+                    int idx1Low = Math.Max(0, (int)(sorted.Count * 0.01));
+                    _fps1Low = (float)sorted[idx1Low];
+                    _lastStatsCalc = now;
+                }
+
+                _perfResult = $"{_fps:F0} FPS ({ftMs:F1} ms) - {_targetProcessName} (PID {_targetPid})";
                 _debugInfo = _perfResult;
             }
         }
-        catch (Exception ex)
+        catch { }
+    }
+
+    private void CheckForegroundWindow()
+    {
+        try
         {
-            _perfResult = $"#{_pollIteration} erro: {ex.GetType().Name}: {ex.Message}";
-            _debugInfo = _perfResult;
+            var hwnd = GetForegroundWindow();
+            if (hwnd != IntPtr.Zero)
+            {
+                GetWindowThreadProcessId(hwnd, out uint fgPid);
+                if (fgPid > 0)
+                {
+                    string pName = "";
+                    try
+                    {
+                        var p = Process.GetProcessById((int)fgPid);
+                        pName = p.ProcessName;
+                    }
+                    catch { pName = $"pid:{fgPid}"; }
+
+                    if (!IsIgnoredProcess(pName) && _targetPid != (int)fgPid)
+                    {
+                        _targetPid = (int)fgPid;
+                        _targetProcessName = pName;
+                        ResetStats();
+                    }
+                }
+            }
+
+            // Se o jogo parou de enviar frames há mais de 2 segundos, zera o FPS exibido
+            if ((DateTime.UtcNow - _lastFrameTime).TotalSeconds > 2.0 && _hasData)
+            {
+                lock (_lock)
+                {
+                    _fps = 0;
+                    _lastFrametimeMs = 0;
+                    _perfResult = $"Aguardando frames de {_targetProcessName}...";
+                    _debugInfo = _perfResult;
+                }
+            }
+        }
+        catch { }
+    }
+
+    private static bool IsIgnoredProcess(string name)
+    {
+        return name.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("explorer", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("ShellExperienceHost", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("StartMenuExperienceHost", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("SearchHost", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("TextInputHost", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("LockApp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ResetStats()
+    {
+        lock (_lock)
+        {
+            _fpsSamples.Clear();
+            _frametimeHistory.Clear();
+            _fps = 0;
+            _fpsMin = float.MaxValue;
+            _fpsAvg = 0;
+            _fps1Low = 0;
+            _lastFrametimeMs = 0;
+            _hasData = false;
+            _emaFps = 0;
+            _emaInitialized = false;
         }
     }
 
     public void Reset()
     {
-        lock (_samplesLock)
+        ResetStats();
+        _targetPid = 0;
+        _targetProcessName = "";
+    }
+
+    public void Stop() => StopPresentMon();
+
+    private void StopPresentMon()
+    {
+        if (_presentMonProcess != null)
         {
-            _fpsSamples.Clear();
+            try
+            {
+                if (!_presentMonProcess.HasExited)
+                {
+                    _presentMonProcess.Kill(true);
+                    _presentMonProcess.WaitForExit(1000);
+                }
+            }
+            catch { }
+            finally
+            {
+                _presentMonProcess.Dispose();
+                _presentMonProcess = null;
+            }
         }
-        _frametimeHistory.Clear();
-        _fps = 0;
-        _fpsMin = float.MaxValue;
-        _fpsAvg = 0;
-        _fps1Low = 0;
-        _hasData = false;
-        _emaFps = 0;
-        _emaInitialized = false;
     }
 
     public void Dispose()
     {
-        _timer.Dispose();
-        _stopwatch.Stop();
-        if (_session != null)
-        {
-            try
-            {
-                _session.Dispose();
-            }
-            catch { }
-        }
+        _pollTimer.Dispose();
+        StopPresentMon();
     }
 }

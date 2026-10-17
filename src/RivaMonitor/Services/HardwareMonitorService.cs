@@ -48,6 +48,7 @@ public sealed class HardwareMonitorService : ISensorService
         _timer.Change(Timeout.Infinite, Timeout.Infinite);
         IsRunning = false;
         _computer.Close();
+        _fpsMonitor.Stop();
     }
 
     public SensorData GetCurrentSnapshot() => _current;

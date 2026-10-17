@@ -1,33 +1,29 @@
 # FpsMonitor
 
-Monitor de FPS independente que utiliza a API nativa do Windows (`DwmGetWindowAttribute`) para ler o timestamp de apresentação de frames da janela em primeiro plano. Não depende de nenhum software externo (MSI Afterburner, RTSS, etc).
+Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon** (open-source) em segundo plano para capturar eventos de apresentação de frames (`Present`) da placa de vídeo via ETW nativo. Não depende de MSI Afterburner ou RTSS e é imune a banimentos de anti-cheat por não injetar DLL nos jogos.
 
 ## Funcionalidades
 
-- Leitura de FPS em tempo real da janela ativa
-- Cálculo de frametime (ms) baseado no intervalo entre frames
-- Histórico de frametime para gráficos (600 amostras)
-- Estatísticas: FPS médio, mínimo e 1% low
-- Detecção automática de janelas de jogos (DirectX)
+- Leitura de FPS e Frametime (ms) em tempo real da janela/jogo em primeiro plano
+- Histórico circular de frametime para gráficos em tempo real (600 amostras)
+- Estatísticas dinâmicas: FPS instantâneo (com suavização EMA), FPS médio, mínimo e 1% Low
+- Detecção automática de jogos em primeiro plano (ignora explorer, tarefas do sistema e a própria janela do RivaMonitor)
+- Encerramento automático e limpo do processo do PresentMon ao fechar o app
 
-## Principais métodos
+## Arquitetura & Integração
 
-- `Poll()` - Deve ser chamado a cada ciclo de atualização. Verifica a janela em primeiro plano e conta frames
-- `Reset()` - Reseta todas as estatísticas e histórico
-
-## API utilizada
-
-- `DwmGetWindowAttribute` com `DWMWA_LAST_FRAME_PRESENT_TIME` (Windows 10+)
-- `GetForegroundWindow` para detectar a janela ativa
-- `QueryPerformanceCounter`/`QueryPerformanceFrequency` para temporização precisa
+- **Motor:** `PresentMon.exe` (standalone oficial v2.6.0 da Intel, armazenado em `tools/` e copiado automaticamente para a pasta de saída)
+- **Comunicação:** O serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats`) e analisa o fluxo de CSV em tempo real de forma assíncrona
+- **Parse Dinâmico:** Mapeia automaticamente as colunas do PresentMon (`ProcessID`, `Application`, `msBetweenPresents` / `FrameTime`)
+- **Detecção de Foco:** `GetForegroundWindow` e `GetWindowThreadProcessId` via P/Invoke identificam o jogo ativo a cada 500ms
 
 ## Propriedades
 
-- `Fps` - FPS atual
+- `Fps` - FPS atual (suavizado via Exponential Moving Average)
 - `FrametimeMs` - Frametime em milissegundos
-- `FpsAvg` - FPS médio (últimos 2 segundos)
-- `FpsMin` - FPS mínimo registrado
-- `Fps1Low` - 1% low (pior 1% dos frames)
-- `HasData` - Indica se há dados de FPS disponíveis
-- `FrametimeHistory` - Buffer circular com histórico de frametimes
-- `DebugInfo` - String com informações de depuração
+- `FpsAvg` - FPS médio dos frames recentes
+- `FpsMin` - Menor FPS registrado na sessão atual
+- `Fps1Low` - 1% Low (pior 1% dos frametimes para detecção de stuttering)
+- `HasData` - Indica se há dados de frames ativos
+- `FrametimeHistory` - Buffer circular de 600 amostras usado pelo gráfico do overlay
+- `DebugInfo` / `PerfResult` / `EtwDiag` - Diagnósticos e status da sessão do PresentMon

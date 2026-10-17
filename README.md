@@ -6,7 +6,7 @@ Monitor de hardware leve e elegante para Windows. Exibe CPU, GPU, RAM, disco e F
 
 - **Monitoramento completo**: CPU (uso, temperatura, clock, potência), GPU (uso, temperatura, clock), RAM (uso, disponível), disco (uso, I/O)
 - **Overlay transparente**: Janela flutuante sempre visível sobre jogos com informações em tempo real
-- **FPS independente**: Leitura de FPS sem dependência de MSI Afterburner/RTSS — usa API nativa do Windows
+- **FPS independente**: Leitura de FPS e frametime de alta precisão via Intel PresentMon (sem RTSS, sem ban de anti-cheat)
 - **Gráfico de frametime**: Visualização em tempo real da variação de frametime
 - **Logging**: Exportação para CSV e JSON
 - **Tema escuro**: Interface moderna com cards e círculos de progresso
@@ -74,5 +74,6 @@ Detalhes de cada funcionalidade em `docs/funções/`.
 - **C# WPF** (.NET 10) — Interface gráfica
 - **C++** (MSVC) — DLL nativa para sensores (futuro)
 - **LibreHardwareMonitorLib** — Leitura de sensores de hardware
-- **Windows API** — FPS tracking via DWM, overlay transparente
+- **Intel PresentMon** — Captura de frames e frametimes via ETW nativo
+- **Windows API** — Overlay transparente e detecção de janelas ativas
 - **WMI** — Fallback para temperatura e RAM

@@ -299,7 +299,7 @@ public partial class OverlayWindow : Window
         };
         Grid.SetColumn(fpsVal, 1);
         fpsGrid.Children.Add(fpsVal);
-        _rows.Add(new SensorRow(fpsVal, null!, null, d => d.Fps > 0 ? $"{d.Fps:F0}" : "--", 240));
+        _rows.Add(new SensorRow(fpsVal, null!, null, d => d.Fps > 0 ? $"{d.Fps:F0}" : d.Fps == 0 ? "0" : "--", 240));
 
         var ftLabel = new TextBlock
         {

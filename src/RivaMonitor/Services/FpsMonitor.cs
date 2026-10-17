@@ -1,5 +1,8 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Session;
 
 namespace RivaMonitor.Services;
 
@@ -7,9 +10,13 @@ public sealed class FpsMonitor : IDisposable
 {
     private readonly FrametimeBuffer _frametimeHistory = new(600);
     private readonly List<double> _fpsSamples = new(300);
+    private readonly object _samplesLock = new();
     private DateTime _lastStatsCalc = DateTime.UtcNow;
-    private DateTime _lastFpsCalc = DateTime.UtcNow;
     private readonly Timer _timer;
+
+    // Usa Stopwatch para timing de alta precisão
+    private readonly Stopwatch _stopwatch = new();
+    private long _lastFpsCalcTick;
 
     private volatile float _fps;
     private volatile float _fpsAvg;
@@ -21,34 +28,21 @@ public sealed class FpsMonitor : IDisposable
     private volatile string _etwDiag = "";
     private volatile int _pollIteration;
 
-    private IntPtr _dxgiOutputPtr;
+    private TraceEventSession? _session;
+    private readonly ConcurrentDictionary<int, long> _pidPresentCounts = new();
+    private int _lastFgPid;
     private long _lastPresentCount;
-    private GetFrameStatsDelegate? _getFrameStats;
+
+    // EMA (Exponential Moving Average) para suavizar o FPS
+    private double _emaFps;
+    private bool _emaInitialized;
+    private const double EmaAlpha = 0.3; // 0.0 = muito suave, 1.0 = sem suavização
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-    [DllImport("dxgi.dll")]
-    private static extern int CreateDXGIFactory1([MarshalAs(UnmanagedType.LPStruct)] Guid riid, out IntPtr ppFactory);
-
-    private static readonly Guid IID_IDXGIFactory1 = new("770AAE78-F26F-4DBA-A829-253C83D1B387");
-    private static readonly Guid IID_IDXGIAdapter1 = new("29038F61-3839-4626-91FD-086879011A05");
-    private static readonly Guid IID_IDXGIOutput = new("AE02EEDB-C735-4690-8D52-5A8DC20213AA");
-
-    private delegate int GetFrameStatsDelegate(IntPtr pThis, out DxgiFrameStatistics stats);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct DxgiFrameStatistics
-    {
-        public uint PresentCount;
-        public uint PresentRefreshCount;
-        public uint SyncRefreshCount;
-        public long SyncQPCTime;
-        public long SyncGPUTime;
-    }
 
     public float Fps => _fps;
     public float FrametimeMs => _fps > 0 ? 1000f / _fps : 0;
@@ -68,74 +62,87 @@ public sealed class FpsMonitor : IDisposable
 
     public void Start()
     {
-        _debugInfo = "Iniciando...";
-        InitDxgiOutput();
+        _debugInfo = "Iniciando ETW...";
+        _stopwatch.Start();
+        _lastFpsCalcTick = _stopwatch.ElapsedTicks;
+        InitEtw();
         _timer.Change(0, 500);
     }
 
-    private void InitDxgiOutput()
+    private void InitEtw()
     {
         try
         {
-            var hr = CreateDXGIFactory1(IID_IDXGIFactory1, out var factoryPtr);
-            if (hr < 0 || factoryPtr == IntPtr.Zero) { _etwDiag = $"CreateDXGIFactory1: {hr}"; return; }
-
-            for (int ai = 0; ; ai++)
+            if (TraceEventSession.IsElevated() != true)
             {
-                var enumAdapters = GetVtblMethod<EnumAdapters1Delegate>(factoryPtr, 12);
-                hr = enumAdapters(factoryPtr, (uint)ai, out var adapterPtr);
-                if (hr < 0 || adapterPtr == IntPtr.Zero) break;
-
-                for (int oi = 0; ; oi++)
-                {
-                    var enumOutputs = GetVtblMethod<EnumOutputsDelegate>(adapterPtr, 7);
-                    hr = enumOutputs(adapterPtr, (uint)oi, out var outputPtr);
-                    if (hr < 0 || outputPtr == IntPtr.Zero) break;
-
-                    var getDesc = GetVtblMethod<GetDescDelegate>(outputPtr, 7);
-                    hr = getDesc(outputPtr, out var desc);
-                    if (hr >= 0 && (desc.Right - desc.Left) > 0)
-                    {
-                        _dxgiOutputPtr = outputPtr;
-                        _getFrameStats = GetVtblMethod<GetFrameStatsDelegate>(outputPtr, 18);
-                        _etwDiag = $"DXGI: {desc.DeviceName}";
-                        return;
-                    }
-                    Marshal.Release(outputPtr);
-                }
-                Marshal.Release(adapterPtr);
+                _etwDiag = "ERRO: Requer Administrador para ler FPS via ETW.";
+                return;
             }
-            _etwDiag = "DXGI: nenhum output";
+
+            _session = new TraceEventSession("RivaMonitorFpsSession");
+            _session.StopOnDispose = true;
+
+            // Ativa os provedores de gráficos:
+            // - DxgKrnl: captura Present de qualquer API gráfica (DX, OpenGL, Vulkan)
+            // - DXGI: captura Present de aplicações DirectX
+            _session.EnableProvider("Microsoft-Windows-DxgKrnl", TraceEventLevel.Informational, ulong.MaxValue);
+            _session.EnableProvider("Microsoft-Windows-DXGI", TraceEventLevel.Informational, ulong.MaxValue);
+
+            // Usa HashSet para deduplicar: cada frame pode gerar eventos em ambos os provedores
+            // Contamos apenas do DxgKrnl (mais abrangente), DXGI serve como fallback
+            var dxgiPids = new ConcurrentDictionary<int, long>();
+
+            _session.Source.Dynamic.All += (TraceEvent data) =>
+            {
+                int pid = data.ProcessID;
+                if (pid == 0) return;
+
+                string providerName = data.ProviderName;
+                string eventName = data.EventName;
+
+                // FILTRO EXATO: contar apenas o evento "Present" (1 por frame)
+                // Ignora: PresentHistory, PresentHistoryDetailed, PresentMonitoredFence, etc.
+                if (eventName == "Present")
+                {
+                    if (providerName == "Microsoft-Windows-DxgKrnl")
+                    {
+                        _pidPresentCounts.AddOrUpdate(pid, 1, (_, count) => count + 1);
+                    }
+                    else if (providerName == "Microsoft-Windows-DXGI")
+                    {
+                        // Conta DXGI separado como fallback
+                        dxgiPids.AddOrUpdate(pid, 1, (_, count) => count + 1);
+                    }
+                }
+            };
+
+            // Fallback: se DxgKrnl não tiver dados para um PID, usa DXGI
+            // Isso é verificado periodicamente no Poll()
+            Task.Run(() =>
+            {
+                try { _session.Source.Process(); }
+                catch { /* Sessão encerrada */ }
+            });
+
+            // Timer para mesclar contadores DXGI como fallback
+            var mergeTimer = new Timer(_ =>
+            {
+                foreach (var kvp in dxgiPids)
+                {
+                    // Só usa DXGI se DxgKrnl não tem dados para esse PID
+                    if (!_pidPresentCounts.ContainsKey(kvp.Key) || _pidPresentCounts[kvp.Key] == 0)
+                    {
+                        _pidPresentCounts[kvp.Key] = kvp.Value;
+                    }
+                }
+            }, null, 1000, 2000);
+
+            _etwDiag = "ETW Session OK (DxgKrnl + DXGI)";
         }
         catch (Exception ex)
         {
-            _etwDiag = $"DXGI init: {ex.Message}";
+            _etwDiag = $"ETW init ERRO: {ex.GetType().Name}: {ex.Message}";
         }
-    }
-
-    private static T GetVtblMethod<T>(IntPtr comPtr, int methodIndex) where T : class
-    {
-        var vtbl = Marshal.ReadIntPtr(comPtr);
-        var methodPtr = Marshal.ReadIntPtr(vtbl, IntPtr.Size * methodIndex);
-        return (T)(object)Marshal.GetDelegateForFunctionPointer(methodPtr, typeof(T));
-    }
-
-    private delegate int EnumAdapters1Delegate(IntPtr factory, uint adapterIndex, out IntPtr adapter);
-    private delegate int EnumOutputsDelegate(IntPtr adapter, uint outputIndex, out IntPtr output);
-    private delegate int GetDescDelegate(IntPtr output, out DxgiOutputDesc desc);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct DxgiOutputDesc
-    {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-        public string DeviceName;
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-        public int AttachedToDesktop;
-        public uint Rotation;
-        public IntPtr Monitor;
     }
 
     private void Poll()
@@ -145,9 +152,11 @@ public sealed class FpsMonitor : IDisposable
         {
             var hwnd = GetForegroundWindow();
             string fgName = "";
+            uint fgPid = 0;
+
             if (hwnd != IntPtr.Zero)
             {
-                GetWindowThreadProcessId(hwnd, out uint fgPid);
+                GetWindowThreadProcessId(hwnd, out fgPid);
                 if (fgPid > 0)
                 {
                     try
@@ -166,26 +175,48 @@ public sealed class FpsMonitor : IDisposable
                 }
             }
 
-            if (_dxgiOutputPtr != IntPtr.Zero && _getFrameStats != null)
+            if (_session != null)
             {
-                var hr = _getFrameStats(_dxgiOutputPtr, out var stats);
-                if (hr >= 0)
+                if (fgPid > 0)
                 {
-                    var current = (long)stats.PresentCount;
-                    if (_lastPresentCount > 0)
+                    if (fgPid != _lastFgPid)
                     {
-                        var delta = (uint)(current - _lastPresentCount);
-                        var now = DateTime.UtcNow;
-                        var elapsed = (now - _lastFpsCalc).TotalSeconds;
-                        if (elapsed >= 0.5)
+                        _lastFgPid = (int)fgPid;
+                        _lastPresentCount = _pidPresentCounts.TryGetValue(_lastFgPid, out var startC) ? startC : 0;
+                        Reset();
+                        _lastFpsCalcTick = _stopwatch.ElapsedTicks;
+                    }
+
+                    long current = _pidPresentCounts.TryGetValue(_lastFgPid, out var cur) ? cur : 0;
+                    var delta = current - _lastPresentCount;
+                    long nowTick = _stopwatch.ElapsedTicks;
+                    double elapsed = (double)(nowTick - _lastFpsCalcTick) / Stopwatch.Frequency;
+
+                    if (elapsed >= 0.4 && delta > 0)
+                    {
+                        double rawFps = delta / elapsed;
+
+                        // Suavização EMA para evitar oscilações
+                        if (!_emaInitialized)
                         {
-                            var fps = delta / elapsed;
-                            _fps = (float)fps;
-                            _frametimeHistory.Add(FrametimeMs);
+                            _emaFps = rawFps;
+                            _emaInitialized = true;
+                        }
+                        else
+                        {
+                            _emaFps = EmaAlpha * rawFps + (1.0 - EmaAlpha) * _emaFps;
+                        }
+
+                        _fps = (float)_emaFps;
+                        _frametimeHistory.Add(FrametimeMs);
+
+                        lock (_samplesLock)
+                        {
                             _fpsSamples.Add(_fps);
-                            if (_fps < _fpsMin) _fpsMin = _fps;
+                            if (_fps > 0 && _fps < _fpsMin) _fpsMin = _fps;
                             _hasData = true;
 
+                            var now = DateTime.UtcNow;
                             if ((now - _lastStatsCalc).TotalSeconds >= 2.0 && _fpsSamples.Count > 0)
                             {
                                 _fpsAvg = (float)_fpsSamples.Average();
@@ -193,22 +224,22 @@ public sealed class FpsMonitor : IDisposable
                                 _fps1Low = (float)sorted[Math.Max(0, (int)(sorted.Count * 0.01))];
                                 _lastStatsCalc = now;
                             }
-                            _lastFpsCalc = now;
                         }
+                        _lastPresentCount = current;
+                        _lastFpsCalcTick = nowTick;
                     }
-                    _lastPresentCount = current;
-                    _perfResult = $"#{_pollIteration} {_fps:F0} FPS, foco: {fgName}";
+                    _perfResult = $"#{_pollIteration} {_fps:F0} FPS (raw={delta / Math.Max(elapsed, 0.001):F0}, delta={delta}, elapsed={elapsed:F3}s), foco: {fgName}";
                     _debugInfo = _perfResult;
                 }
                 else
                 {
-                    _perfResult = $"#{_pollIteration} DXGI: erro {hr}";
+                    _perfResult = $"#{_pollIteration} ETW: Sem processo em foco";
                     _debugInfo = _perfResult;
                 }
             }
             else
             {
-                _perfResult = $"#{_pollIteration} DXGI: sem output, foco: {fgName}";
+                _perfResult = $"#{_pollIteration} ETW: não iniciado ({_etwDiag}), foco: {fgName}";
                 _debugInfo = _perfResult;
             }
         }
@@ -221,18 +252,31 @@ public sealed class FpsMonitor : IDisposable
 
     public void Reset()
     {
-        _fpsSamples.Clear();
+        lock (_samplesLock)
+        {
+            _fpsSamples.Clear();
+        }
         _frametimeHistory.Clear();
         _fps = 0;
         _fpsMin = float.MaxValue;
         _fpsAvg = 0;
         _fps1Low = 0;
         _hasData = false;
+        _emaFps = 0;
+        _emaInitialized = false;
     }
 
     public void Dispose()
     {
         _timer.Dispose();
-        if (_dxgiOutputPtr != IntPtr.Zero) Marshal.Release(_dxgiOutputPtr);
+        _stopwatch.Stop();
+        if (_session != null)
+        {
+            try
+            {
+                _session.Dispose();
+            }
+            catch { }
+        }
     }
 }

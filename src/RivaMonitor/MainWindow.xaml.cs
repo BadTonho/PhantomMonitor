@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows;
 using System.Windows.Controls;
@@ -217,6 +218,8 @@ public partial class MainWindow : Window
     }
 
     private DebugWindow? _debugWindow;
+
+    public void OpenDebugWindow() => OnOpenDebugWindow(null!, null!);
 
     private void OnOpenDebugWindow(object sender, RoutedEventArgs e)
     {

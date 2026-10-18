@@ -4,8 +4,8 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 
 ## Funcionalidades
 
-- **Monitoramento completo**: CPU (uso, temperatura, clock, potência), GPU (uso, temperatura, VRAM, clock), RAM (uso, disponível), disco (uso, I/O)
-- **Overlay configurável & transparente**: Janela flutuante sempre visível sobre jogos com informações em tempo real e Editor Visual de posições (grid canvas, drag-and-drop, tamanho e espaçamento)
+- **Monitoramento completo**: CPU (uso, temperatura, clock, potência, voltagem), GPU (uso, temperatura, VRAM usada/total, clock, potência, hotspot), RAM (uso, disponível), disco (uso, I/O), rede (↓/↑), ventoinhas (GPU/sistema) e temperaturas de placa-mãe/SuperIO
+- **Overlay configurável & transparente**: Janela flutuante sempre visível sobre jogos com informações em tempo real, sublinhas de detalhes (CPU/GPU) e linhas opcionais NET/FAN/MB com auto-revelação, além do Editor Visual de posições (grid canvas, drag-and-drop, tamanho e espaçamento)
 - **FPS 100% independente de terceiros**:
   - **Windows**: Leitura de FPS e frametime de alta precisão via Intel PresentMon (ETW nativo, sem injetar DLLs, imune a banimentos de anti-cheat)
   - **Linux**: Camada nativa em C++ `PhantomVulkanLayer` interceptando `vkQueuePresentKHR` com comunicação por memória compartilhada (`/dev/shm/phantom_fps`)
@@ -126,3 +126,4 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Configuração](docs/funções/configuracao.md)
 - [Logging e ErrorLog](docs/funções/logging.md)
 - [Biblioteca nativa (PhantomSensorLib)](docs/funções/sensor-nativo.md)
+- [Formatação de sensores (SensorFormatter)](docs/funções/sensor-formatter.md)

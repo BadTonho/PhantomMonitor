@@ -5,7 +5,7 @@
 Enumeração com todos os tipos de sensores suportados:
 
 - **CPU**: CpuTotal, CpuPerCore, CpuTemperature, CpuPower, CpuClock, CpuVoltage
-- **GPU**: GpuCore, GpuMemory, GpuTemperature, GpuHotSpot, GpuCoreClock, GpuMemoryClock, GpuVoltage, GpuFan, GpuPower
+- **GPU**: GpuCore, GpuMemory, GpuMemoryUsed, GpuMemoryTotal, GpuTemperature, GpuHotSpot, GpuCoreClock, GpuMemoryClock, GpuVoltage, GpuFan, GpuPower
 - **RAM**: RamUsage, RamAvailable, RamUsed, RamTotal
 - **Disco**: DiskUsage, DiskRead, DiskWrite
 - **Rede**: NetworkUp, NetworkDown

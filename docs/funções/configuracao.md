@@ -16,7 +16,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 
 ### OverlayConfig
 - `width` - Largura do overlay em pixels
-- `showCpu/Gpu/Ram/Disk/Network/Fans/Fps` - Visibilidade de cada seção
+- `showCpu/Gpu/Ram/Disk/Network/Fans/Motherboard/Fps` - Visibilidade de cada seção
 - `showGpuProcesses` - Mostrar processos da GPU no overlay
 - `compactMode` - Modo compacto
 - `accentColor` - Cor de destaque (hex, ex: "#1E90FF")
@@ -39,4 +39,5 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - `AppConfig.Save()` grava de forma atômica (arquivo `.tmp` + substituição) e retorna `bool`; o Editor de Overlay avisa se não conseguiu salvar.
 - Falhas de leitura/gravação são registradas em `logs/errors.log` (ver [logging.md](logging.md)).
 - `showOverlay` define o estado inicial do toggle "Overlay".
-- `sensors.*`, `overlay.showNetwork`, `showGpuProcesses`, `showFans`, `compactMode`, `accentColor` e `fontSize` estão reservados no modelo, mas ainda não são consumidos pela interface.
+- `overlay.showNetwork`, `overlay.showFans` e `overlay.showMotherboard` já são consumidos pelo overlay (linhas NET/FAN/MB, com auto-revelação no primeiro dado real) e editáveis pelo Editor Visual.
+- `sensors.*`, `overlay.showGpuProcesses`, `overlay.compactMode`, `overlay.accentColor` e `overlay.fontSize` estão reservados no modelo, mas ainda não são consumidos pela interface.

@@ -10,6 +10,8 @@ public enum SensorType
     CpuVoltage,
     GpuCore,
     GpuMemory,
+    GpuMemoryUsed,
+    GpuMemoryTotal,
     GpuTemperature,
     GpuHotSpot,
     GpuCoreClock,

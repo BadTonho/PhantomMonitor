@@ -143,6 +143,45 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Bloco Rede -->
+                    <Border x:Name="BlockNetwork" Canvas.Left="310" Canvas.Top="30" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll" Width="240"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="REDE (NET)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11" FontWeight="Bold" Foreground="#34D399"/>
+                            <TextBlock Text="↓ 12.4 MB/s    ↑ 1.2 MB/s" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11.5" Foreground="#F1F5F9" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bloco Ventoinhas -->
+                    <Border x:Name="BlockFan" Canvas.Left="310" Canvas.Top="106" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll" Width="240"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="VENTOINHAS (FAN)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11" FontWeight="Bold" Foreground="#F472B6"/>
+                            <TextBlock Text="GPU: 1450 RPM   Sistema: 1200 RPM" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11.5" Foreground="#F1F5F9" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bloco Placa-mãe -->
+                    <Border x:Name="BlockMotherboard" Canvas.Left="310" Canvas.Top="182" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll" Width="240"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="PLACA-MÃE (MB)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11" FontWeight="Bold" Foreground="#CBD5E1"/>
+                            <TextBlock Text="Temp máx: 38°C" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11.5" Foreground="#F1F5F9" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+
                 </Canvas>
             </Border>
 
@@ -203,6 +242,12 @@
                         <CheckBox x:Name="CheckRam" Content="Memória RAM" IsChecked="True" 
                                   Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
                         <CheckBox x:Name="CheckDisk" Content="Armazenamento (Disco)" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckNetwork" Content="Rede (↓/↑)" IsChecked="False" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckFans" Content="Ventoinhas (GPU/Sistema)" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckMotherboard" Content="Placa-mãe (Temperatura)" IsChecked="False" 
                                   Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
 
                         <!-- Section: Aparência -->

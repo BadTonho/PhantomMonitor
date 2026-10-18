@@ -6,6 +6,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 
 - Leitura de temperatura, uso, clock, voltagem e potência da CPU
 - Leitura de temperatura, uso, clock e potência da GPU
+- Leitura de VRAM usada/total (`SmallData`: `GPU Memory Used/Total` em MB; reserva `D3D Dedicated Memory Used/Total` para GPUs integradas)
 - Leitura de uso e disponibilidade de RAM
 - Leitura de uso e I/O de disco
 - Leitura de velocidade de ventoinhas e temperatura da placa-mãe (inclui sensores de sub-hardware/SuperIO)
@@ -18,6 +19,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - **Temperatura da CPU:** prioridade `Package/Tctl/Tdie/Average` > `Max` > demais.
 - **Temperatura da GPU:** `GPU Core` tem prioridade sobre `Memory Junction` etc.; GPU Intel integrada é processada antes, e a GPU dedicada prevalece.
 - **Vários núcleos/discos:** uso por núcleo, uso de disco, clock, ventoinhas e temperatura da placa-mãe guardam o **maior** valor; throughput de disco e rede é **somado**.
+- **VRAM da GPU:** prioridade `GPU Memory Used/Total` > `D3D Dedicated Memory Used/Total` (sensores `SmallData`, em MB).
 - **Disco (`DiskUsage`):** usa o sensor `Total Activity` (% de atividade), não `Used Space`.
 - **RAM:** somente memória física (ignora `Virtual Memory`). Os sensores `Data` do LibreHardwareMonitor já vêm em **GB**; `RamTotal` = usada + disponível.
 

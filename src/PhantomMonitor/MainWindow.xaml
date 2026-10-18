@@ -144,6 +144,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <!-- Card Header -->
@@ -192,6 +193,10 @@
                                            Foreground="{StaticResource TextSecondaryBrush}"/>
                             </Border>
                         </Grid>
+
+                        <!-- Detalhes: clock / potência / voltagem -->
+                        <TextBlock x:Name="CpuDetailText" Grid.Row="2" Text=""
+                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,0"/>
                     </Grid>
                 </Border>
 
@@ -199,6 +204,7 @@
                 <Border Style="{StaticResource CardBorder}" Margin="0,0,0,10">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
@@ -249,6 +255,10 @@
                                            Foreground="{StaticResource TextSecondaryBrush}"/>
                             </Border>
                         </Grid>
+
+                        <!-- Detalhes: VRAM / clock / potência / hotspot -->
+                        <TextBlock x:Name="GpuDetailText" Grid.Row="2" Text=""
+                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,0"/>
                     </Grid>
                 </Border>
 
@@ -342,6 +352,43 @@
                                          Style="{StaticResource CleanProgressBarStyle}"/>
                             <TextBlock x:Name="DiskIoText" Text="--"
                                        FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Network & Motherboard/Fans Grid -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Network Card -->
+                    <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                        <StackPanel>
+                            <TextBlock Text="REDE" FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8"/>
+                            <TextBlock x:Name="NetworkDownText" Text="↓ --"
+                                       FontSize="20" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock x:Name="NetworkUpText" Text="↑ --"
+                                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Motherboard & Fans Card -->
+                    <Border Grid.Column="2" Style="{StaticResource CardBorder}">
+                        <StackPanel>
+                            <TextBlock Text="PLACA-MÃE &amp; VENTOINHAS" FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8"/>
+                            <TextBlock x:Name="MotherboardTempText" Text="--°C"
+                                       FontSize="20" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock x:Name="FanSpeedsText" Text="Ventoinhas: --"
+                                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                 </Grid>

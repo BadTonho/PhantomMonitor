@@ -421,6 +421,20 @@ public sealed class HardwareMonitorService : ISensorService
             case LhmSensorType.Load when sensor.Name.Contains("Memory", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuMemory, val, label);
                 break;
+            // SmallData: VRAM real em MB (GPU Memory total/usada). "D3D Dedicated" serve de reserva
+            // (GPUs integradas costumam expor só a variante D3D).
+            case LhmSensorType.SmallData when sensor.Name.Contains("GPU Memory Total", StringComparison.OrdinalIgnoreCase):
+                PutPreferred(data, SType.GpuMemoryTotal, val, label, 2);
+                break;
+            case LhmSensorType.SmallData when sensor.Name.Contains("D3D Dedicated Memory Total", StringComparison.OrdinalIgnoreCase):
+                PutPreferred(data, SType.GpuMemoryTotal, val, label, 1);
+                break;
+            case LhmSensorType.SmallData when sensor.Name.Contains("GPU Memory Used", StringComparison.OrdinalIgnoreCase):
+                PutPreferred(data, SType.GpuMemoryUsed, val, label, 2);
+                break;
+            case LhmSensorType.SmallData when sensor.Name.Contains("D3D Dedicated Memory Used", StringComparison.OrdinalIgnoreCase):
+                PutPreferred(data, SType.GpuMemoryUsed, val, label, 1);
+                break;
             case LhmSensorType.Clock when sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuCoreClock, val, label);
                 break;

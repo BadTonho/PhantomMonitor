@@ -10,7 +10,15 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no v
   - `CPU`: Ciano elétrico (`#00D2FF`) com temperatura e uso
   - `RAM`: Roxo suave (`#C084FC`) com memória em uso e porcentagem
   - `DSK`: Azul ardósia (`#60A5FA`) com taxas de leitura e escrita
+  - `NET`: Verde esmeralda (`#34D399`) com download (↓) e upload (↑)
+  - `FAN`: Rosa (`#F472B6`) com ventoinha da GPU e do sistema (% ou RPM)
+  - `MB`: Cinza claro (`#CBD5E1`) com a maior temperatura de placa-mãe/SuperIO
   - `FPS`: Verde vibrante (`#00FF88`) com FPS e Frametime em milissegundos
+- **Sublinhas de Detalhes (CPU/GPU):** Sob as linhas de CPU e GPU, uma linha secundária compacta (9.5pt) exibe:
+  - CPU: clock, potência e voltagem (ex.: `4.15 GHz  65 W  1.250 V`)
+  - GPU: VRAM usada/total, clock, potência e hotspot (ex.: `VRAM 7.2/12 GB  2.10 GHz  220 W  HS 75°C`)
+  - A sublinha fica oculta quando nenhum dos valores está disponível.
+- **Linhas Opcionais com Auto-Revelação:** NET, FAN e MB só aparecem depois do primeiro dado real do sensor — sem poluir o OSD em máquinas que não expõem esses sensores.
 - **Estatísticas de FPS:** Sublinha compacta com `AVG` e `1% Low`
 - **Gráfico de Frametime Slim:** Mini-gráfico de 24px com linha guia de 60 FPS (16.6ms) para detecção instantânea de stuttering
 - **Tipografia:** Fonte monoespaçada (`Consolas / Cascadia Mono`) para evitar que os números fiquem oscilando ou pulando de posição na tela
@@ -19,7 +27,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no v
 ## Editor Visual de Informações na Tela (OverlayEditorWindow)
 
 Inspirado diretamente no editor de layouts OSD do RTSS (`Editor de informações na tela`):
-- **Área de Edição com Grade (Grid Canvas):** Canvas com malha ortogonal escura onde os blocos de métricas (FPS, Gráfico de Frametime, CPU, GPU, RAM, Disco) são visualizados e manipulados.
+- **Área de Edição com Grade (Grid Canvas):** Canvas com malha ortogonal escura onde os blocos de métricas (FPS, Gráfico de Frametime, CPU, GPU, RAM, Disco, Rede, Ventoinhas e Placa-mãe) são visualizados e manipulados.
 - **Arrastar e Soltar Interativo:** Suporte a movimentação livre dos blocos com o mouse e opção de alinhamento à grade (*Snap to Grid* de 10px).
 - **Seleção de Camadas:** Destaque visual da camada selecionada com moldura wireframe e indicação de coordenadas em tempo real.
 - **Painel Inspetor Lateral:**
@@ -33,6 +41,9 @@ Inspirado diretamente no editor de layouts OSD do RTSS (`Editor de informações
 Configurado via `config.json` ou pelo Editor Visual:
 - `width` - Largura da janela
 - `showCpu/Gpu/Ram/Disk/Fps/ShowFrametimeGraph` - Alternar visibilidade de cada linha
+- `showNetwork` - Linha de rede (`NET`) com ↓/↑ (oculta até o primeiro dado real)
+- `showFans` - Linha de ventoinhas (`FAN`): GPU e sistema (oculta até o primeiro dado real)
+- `showMotherboard` - Linha de placa-mãe (`MB`) com a maior temperatura (oculta até o primeiro dado real)
 - `overlayOpacity` - Opacidade do fundo translúcido (padrão: 0.85)
 - `overlayPosition` - Coordenadas `x` e `y` na tela
 

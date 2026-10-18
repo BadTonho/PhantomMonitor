@@ -102,6 +102,7 @@ public sealed class OverlayConfig
     public bool ShowNetwork { get; set; } = false;
     public bool ShowGpuProcesses { get; set; } = false;
     public bool ShowFans { get; set; } = true;
+    public bool ShowMotherboard { get; set; } = false;
     public bool ShowFps { get; set; } = true;
     public bool ShowFrametimeGraph { get; set; } = true;
     public bool CompactMode { get; set; } = false;

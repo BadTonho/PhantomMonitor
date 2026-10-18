@@ -85,6 +85,9 @@ public partial class OverlayEditorWindow : Window
         if (CheckGpu != null) CheckGpu.IsChecked = _config.Overlay.ShowGpu;
         if (CheckRam != null) CheckRam.IsChecked = _config.Overlay.ShowRam;
         if (CheckDisk != null) CheckDisk.IsChecked = _config.Overlay.ShowDisk;
+        if (CheckNetwork != null) CheckNetwork.IsChecked = _config.Overlay.ShowNetwork;
+        if (CheckFans != null) CheckFans.IsChecked = _config.Overlay.ShowFans;
+        if (CheckMotherboard != null) CheckMotherboard.IsChecked = _config.Overlay.ShowMotherboard;
 
         if (OpacitySlider != null) OpacitySlider.Value = _config.OverlayOpacity;
         if (OpacityLabel != null) OpacityLabel.Text = $"{(_config.OverlayOpacity * 100):F0}%";
@@ -103,6 +106,9 @@ public partial class OverlayEditorWindow : Window
         if (BlockGpu != null) BlockGpu.Visibility = CheckGpu?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         if (BlockRam != null) BlockRam.Visibility = CheckRam?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         if (BlockDisk != null) BlockDisk.Visibility = CheckDisk?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockNetwork != null) BlockNetwork.Visibility = CheckNetwork?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockFan != null) BlockFan.Visibility = CheckFans?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockMotherboard != null) BlockMotherboard.Visibility = CheckMotherboard?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnLayerToggled(object sender, RoutedEventArgs e)
@@ -152,6 +158,9 @@ public partial class OverlayEditorWindow : Window
             "BlockGpu" => "Placa de Vídeo (GPU)",
             "BlockRam" => "Memória RAM",
             "BlockDisk" => "Armazenamento (Disco)",
+            "BlockNetwork" => "Rede (↓/↑)",
+            "BlockFan" => "Ventoinhas (GPU/Sistema)",
+            "BlockMotherboard" => "Placa-mãe (Temperatura)",
             _ => "Bloco Selecionado"
         };
 
@@ -290,6 +299,9 @@ public partial class OverlayEditorWindow : Window
         if (CheckGpu != null) _config.Overlay.ShowGpu = CheckGpu.IsChecked == true;
         if (CheckRam != null) _config.Overlay.ShowRam = CheckRam.IsChecked == true;
         if (CheckDisk != null) _config.Overlay.ShowDisk = CheckDisk.IsChecked == true;
+        if (CheckNetwork != null) _config.Overlay.ShowNetwork = CheckNetwork.IsChecked == true;
+        if (CheckFans != null) _config.Overlay.ShowFans = CheckFans.IsChecked == true;
+        if (CheckMotherboard != null) _config.Overlay.ShowMotherboard = CheckMotherboard.IsChecked == true;
 
         if (OpacitySlider != null) _config.OverlayOpacity = OpacitySlider.Value;
         if (WidthSlider != null) _config.Overlay.Width = (int)WidthSlider.Value;
@@ -321,6 +333,9 @@ public partial class OverlayEditorWindow : Window
         _config.Overlay.ShowGpu = true;
         _config.Overlay.ShowRam = true;
         _config.Overlay.ShowDisk = true;
+        _config.Overlay.ShowNetwork = false;
+        _config.Overlay.ShowFans = true;
+        _config.Overlay.ShowMotherboard = false;
 
         LoadConfigToUi();
     }

@@ -334,13 +334,22 @@ public sealed class LinuxSensorService : ISensorService
                 }
             }
 
-            // AMD VRAM Used
+            // AMD VRAM usada/total (MB)
             const string amdVramUsedPath = "/sys/class/drm/card0/device/mem_info_vram_used";
             if (File.Exists(amdVramUsedPath))
             {
                 if (long.TryParse(File.ReadAllText(amdVramUsedPath).Trim(), out var bytes))
                 {
-                    data.SetValue(SensorType.GpuMemory, bytes / (1024.0 * 1024.0)); // MB
+                    data.SetValue(SensorType.GpuMemoryUsed, bytes / (1024.0 * 1024.0), "VRAM Usada"); // MB
+                }
+            }
+
+            const string amdVramTotalPath = "/sys/class/drm/card0/device/mem_info_vram_total";
+            if (File.Exists(amdVramTotalPath))
+            {
+                if (long.TryParse(File.ReadAllText(amdVramTotalPath).Trim(), out var totalBytes))
+                {
+                    data.SetValue(SensorType.GpuMemoryTotal, totalBytes / (1024.0 * 1024.0), "VRAM Total"); // MB
                 }
             }
         }

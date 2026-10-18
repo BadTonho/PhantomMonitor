@@ -14,6 +14,7 @@ public partial class OverlayWindow : Window
     private readonly List<Action<SensorData>> _updaters = new();
     private Canvas? _frametimeGraph;
     private bool _showFps;
+    private readonly double _detailMaxWidth = 160;
 
     private static readonly FontFamily OsdFont = new("Consolas, Cascadia Mono, Lucida Console, Segoe UI");
     private static readonly Brush NormalBrush = new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9));
@@ -32,6 +33,8 @@ public partial class OverlayWindow : Window
         if (config.Overlay.Width > 0)
             MainBorder.MinWidth = config.Overlay.Width;
 
+        _detailMaxWidth = Math.Max(120, (config.Overlay.Width > 0 ? config.Overlay.Width : 220) - 62);
+
         MakeClickThrough();
         StartTopmostTimer();
 
@@ -44,6 +47,7 @@ public partial class OverlayWindow : Window
                 string usageStr = $"{data.GpuUsage:F1}%";
                 return (tempStr, GetTempBrush(data.GpuTemp), usageStr, GetUsageBrush(data.GpuUsage));
             });
+            AddDetailLine(SensorFormatter.BuildGpuDetail);
         }
 
         // CPU
@@ -55,6 +59,7 @@ public partial class OverlayWindow : Window
                 string usageStr = $"{data.CpuUsage:F1}%";
                 return (tempStr, GetTempBrush(data.CpuTemp), usageStr, GetUsageBrush(data.CpuUsage));
             });
+            AddDetailLine(SensorFormatter.BuildCpuDetail);
         }
 
         // RAM
@@ -85,10 +90,43 @@ public partial class OverlayWindow : Window
         {
             AddMetricRow("DSK", Color.FromRgb(0x60, 0xA5, 0xFA), data =>
             {
-                string readStr = "R: " + FormatBytes(data.GetValue(SensorType.DiskRead));
-                string writeStr = "W: " + FormatBytes(data.GetValue(SensorType.DiskWrite));
+                string readStr = "R: " + SensorFormatter.FormatBytesPerSec(data.GetValue(SensorType.DiskRead));
+                string writeStr = "W: " + SensorFormatter.FormatBytesPerSec(data.GetValue(SensorType.DiskWrite));
                 return (readStr, MutedBrush, writeStr, MutedBrush);
             });
+        }
+
+        // REDE (linha oculta até o primeiro dado real)
+        if (config.Overlay.ShowNetwork)
+        {
+            AddMetricRow("NET", Color.FromRgb(0x34, 0xD3, 0x99), data =>
+            {
+                string downStr = "↓ " + SensorFormatter.FormatBytesPerSec(data.GetValue(SensorType.NetworkDown));
+                string upStr = "↑ " + SensorFormatter.FormatBytesPerSec(data.GetValue(SensorType.NetworkUp));
+                return (downStr, MutedBrush, upStr, MutedBrush);
+            }, data => data.GetValue(SensorType.NetworkDown) > 0 || data.GetValue(SensorType.NetworkUp) > 0);
+        }
+
+        // VENTOINHAS (linha oculta até o primeiro dado real)
+        if (config.Overlay.ShowFans)
+        {
+            AddMetricRow("FAN", Color.FromRgb(0xF4, 0x72, 0xB6), data =>
+            {
+                string gpuStr = SensorFormatter.FormatFan(data.GetValue(SensorType.GpuFan));
+                string sysStr = SensorFormatter.FormatFan(data.GetValue(SensorType.FanSpeed));
+                return (gpuStr, MutedBrush, sysStr, MutedBrush);
+            }, data => data.GetValue(SensorType.GpuFan) > 0 || data.GetValue(SensorType.FanSpeed) > 0);
+        }
+
+        // PLACA-MÃE (linha oculta até o primeiro dado real)
+        if (config.Overlay.ShowMotherboard)
+        {
+            AddMetricRow("MB", Color.FromRgb(0xCB, 0xD5, 0xE1), data =>
+            {
+                double temp = data.GetValue(SensorType.MotherboardTemp);
+                string tempStr = temp > 0 ? $"{temp:F0}°C" : "--°C";
+                return (tempStr, temp > 0 ? GetTempBrush(temp) : MutedBrush, "", NormalBrush);
+            }, data => data.GetValue(SensorType.MotherboardTemp) > 0);
         }
 
         // FPS
@@ -159,7 +197,8 @@ public partial class OverlayWindow : Window
     private void AddMetricRow(
         string tag,
         Color tagColor,
-        Func<SensorData, (string val1, Brush col1, string val2, Brush col2)> dataProvider)
+        Func<SensorData, (string val1, Brush col1, string val2, Brush col2)> dataProvider,
+        Func<SensorData, bool>? revealWhen = null)
     {
         var grid = new Grid
         {
@@ -168,7 +207,7 @@ public partial class OverlayWindow : Window
 
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) }); // Tag
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });  // :
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) }); // Métrica 1
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) }); // Métrica 1
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Métrica 2
 
         var tagBlock = new TextBlock
@@ -221,8 +260,16 @@ public partial class OverlayWindow : Window
         Grid.SetColumn(val2Block, 3);
         grid.Children.Add(val2Block);
 
+        bool revealed = revealWhen == null;
+
         _updaters.Add(data =>
         {
+            if (!revealed && revealWhen!(data))
+            {
+                revealed = true;
+                grid.Visibility = Visibility.Visible;
+            }
+
             var (v1, c1, v2, c2) = dataProvider(data);
             val1Block.Text = v1;
             val1Block.Foreground = c1 ?? NormalBrush;
@@ -230,7 +277,35 @@ public partial class OverlayWindow : Window
             val2Block.Foreground = c2 ?? NormalBrush;
         });
 
+        if (!revealed) grid.Visibility = Visibility.Collapsed;
         SensorPanel.Children.Add(grid);
+    }
+
+    /// <summary>
+    /// Linha secundária compacta sob uma métrica (ex.: clock/potência/voltagem).
+    /// Fica oculta enquanto o provedor não retornar dados.
+    /// </summary>
+    private void AddDetailLine(Func<SensorData, string?> provider)
+    {
+        var block = new TextBlock
+        {
+            FontFamily = OsdFont,
+            FontSize = 9.5,
+            Foreground = MutedBrush,
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = _detailMaxWidth,
+            Margin = new Thickness(46, 0, 0, 2),
+            Text = ""
+        };
+
+        _updaters.Add(data =>
+        {
+            var text = provider(data);
+            block.Text = text ?? "";
+            block.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
+        });
+
+        SensorPanel.Children.Add(block);
     }
 
     private void AddFpsSection(bool showFrametimeGraph = true)
@@ -243,7 +318,7 @@ public partial class OverlayWindow : Window
 
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) }); // FPS
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });  // :
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) }); // FPS valor
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) }); // FPS valor
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Frametime ms
 
         var tagBlock = new TextBlock
@@ -427,14 +502,6 @@ public partial class OverlayWindow : Window
         if (usage >= 90) return HotBrush;
         if (usage >= 75) return WarmBrush;
         return NormalBrush;
-    }
-
-    private static string FormatBytes(double bytes)
-    {
-        if (bytes < 1024) return $"{bytes:F0}B/s";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024:F0}KB/s";
-        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024 * 1024):F1}MB/s";
-        return $"{bytes / (1024 * 1024 * 1024):F2}GB/s";
     }
 
     private void MakeClickThrough()

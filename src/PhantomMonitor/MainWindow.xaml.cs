@@ -187,6 +187,11 @@ public partial class MainWindow : Window
             GpuTempRingText.Text = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°C" : "--°C";
             UpdateTempRing(GpuTempRing, GpuTempRingText, data.GpuTemp);
 
+            CpuDetailText.Text = SensorFormatter.BuildCpuDetail(data)
+                ?? "Clock, potência e voltagem indisponíveis";
+            GpuDetailText.Text = SensorFormatter.BuildGpuDetail(data)
+                ?? "VRAM, clocks e hotspot indisponíveis";
+
             FpsText.Text = data.Fps > 0 ? $"{data.Fps:F0}" : "--";
             FpsDetailsText.Text = data.Fps > 0
                 ? $"Mín: {data.FpsMin:F0} | Avg: {data.FpsAvg:F0} | 1% Low: {data.Fps1Low:F0}"
@@ -212,8 +217,18 @@ public partial class MainWindow : Window
             var read = data.GetValue(SensorType.DiskRead);
             var write = data.GetValue(SensorType.DiskWrite);
             DiskIoText.Text = read > 0 || write > 0
-                ? $"R: {FormatBytes(read)}/s | W: {FormatBytes(write)}/s"
+                ? $"R: {SensorFormatter.FormatBytesPerSec(read)} | W: {SensorFormatter.FormatBytesPerSec(write)}"
                 : "--";
+
+            var netDown = data.GetValue(SensorType.NetworkDown);
+            var netUp = data.GetValue(SensorType.NetworkUp);
+            NetworkDownText.Text = netDown > 0 ? "↓ " + SensorFormatter.FormatBytesPerSec(netDown) : "↓ --";
+            NetworkUpText.Text = netUp > 0 ? "↑ " + SensorFormatter.FormatBytesPerSec(netUp) : "↑ --";
+
+            var mbTemp = data.GetValue(SensorType.MotherboardTemp);
+            MotherboardTempText.Text = mbTemp > 0 ? $"{mbTemp:F0}°C" : "--°C";
+            MotherboardTempText.Foreground = new SolidColorBrush(GetTempColor(mbTemp));
+            FanSpeedsText.Text = SensorFormatter.BuildFanSummary(data);
 
             GpuProcessList.ItemsSource = data.GpuProcesses;
 
@@ -318,14 +333,6 @@ public partial class MainWindow : Window
         pill.Background = new SolidColorBrush(Color.FromArgb(0x18, color.R, color.G, color.B));
         text.Foreground = new SolidColorBrush(color);
         pill.Effect = null;
-    }
-
-    private static string FormatBytes(double bytes)
-    {
-        if (bytes < 1024) return $"{bytes:F0} B";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024:F1} KB";
-        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024 * 1024):F1} MB";
-        return $"{bytes / (1024 * 1024 * 1024):F2} GB";
     }
 
     protected override void OnClosed(EventArgs e)

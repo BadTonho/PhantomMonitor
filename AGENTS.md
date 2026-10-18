@@ -62,3 +62,11 @@ Sempre que novas funcionalidades, alterações arquiteturais, novos sensores, co
 2. **Diretório `docs/`:** Atualizar ou criar os documentos correspondentes na pasta `docs/` (ex.: `docs/funções/` e guias de módulos).
 3. **`README.md`:** Refletir mudanças em instruções de execução, novos requisitos, atalhos, arquitetura geral ou dependências.
 4. **Sem Código Órfão de Documentação:** Nenhuma funcionalidade deve ser adicionada ou modificada sem que a respectiva documentação reflita o comportamento real e atualizado do sistema.
+
+---
+
+## 5. Modularidade e Organização da Base de Código (Proatividade)
+
+1. **Criação Livre de Arquivos e Pastas:** Sempre que necessário para manter a clareza, legibilidade, desacoplamento e boa organização do projeto, **crie novos arquivos ou pastas sem hesitar**.
+2. **Evitar Arquivos Monolíticos:** Não concentre múltiplas responsabilidades em arquivos extensos. Divida classes, serviços, utilitários, componentes de interface ou documentação em módulos dedicados com responsabilidades bem definidas (Single Responsibility Principle).
+3. **Consistência Estrutural:** Posicione os novos arquivos respeitando a estrutura do projeto (ex.: regras de negócio/serviços em `Services/`, entidades em `Models/`, novas janelas/views em diretórios temáticos e novos manuais em `docs/`).

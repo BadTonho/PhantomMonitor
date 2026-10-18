@@ -20,11 +20,25 @@ public sealed class LinuxSensorService : ISensorService
     // CPU calculation state
     private long _prevCpuTotal;
     private long _prevCpuIdle;
+    private readonly Dictionary<int, (long Total, long Idle)> _prevPerCore = [];
 
     // Disk calculation state
     private long _prevDiskReadSectors;
     private long _prevDiskWriteSectors;
     private DateTime _prevDiskTimestamp = DateTime.UtcNow;
+    private readonly Dictionary<string, int> _diskSlots = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (long Read, long Write)> _prevPerDisk = new(StringComparer.Ordinal);
+
+    // Network state (↑/↓ por interface + totais da sessão)
+    private readonly Dictionary<string, int> _nicSlots = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (long Rx, long Tx)> _prevPerNic = new(StringComparer.Ordinal);
+    private DateTime _prevNetTimestamp = DateTime.MinValue;
+    private DateTime? _lastNetSampleUtc;
+    private double _netDownSessionBytes;
+    private double _netUpSessionBytes;
+
+    // Slot estável por caminho de hwmon (hwmon com o mesmo "name", como duas amdgpu).
+    private readonly Dictionary<string, int> _hwmonSlots = new(StringComparer.Ordinal);
 
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
@@ -65,6 +79,7 @@ public sealed class LinuxSensorService : ISensorService
 
             ReadCpuStats(data);
             ReadMemInfo(data);
+            ReadNetworkStats(data);
             ReadHwmonSensors(data);
             ReadDiskStats(data);
             ReadGpuSysfs(data);
@@ -137,14 +152,51 @@ public sealed class LinuxSensorService : ISensorService
                 _prevCpuIdle = idleTotal;
             }
 
-            // Ler frequência da CPU (scaling_cur_freq do core 0 em kHz)
-            const string cpuFreqPath = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq";
-            if (File.Exists(cpuFreqPath))
+            // Uso por núcleo: linhas "cpuN" do /proc/stat com estado por núcleo.
+            foreach (var line in File.ReadLines("/proc/stat"))
             {
-                if (long.TryParse(File.ReadAllText(cpuFreqPath).Trim(), out var khz))
+                if (!line.StartsWith("cpu", StringComparison.Ordinal) || line.Length <= 3) continue;
+
+                var coreToken = line["cpu".Length..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (coreToken.Length == 0 || !int.TryParse(coreToken[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var core))
+                    continue;
+
+                var coreParts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (coreParts.Length < 5) continue;
+
+                long cUser = long.Parse(coreParts[1], CultureInfo.InvariantCulture);
+                long cNice = long.Parse(coreParts[2], CultureInfo.InvariantCulture);
+                long cSystem = long.Parse(coreParts[3], CultureInfo.InvariantCulture);
+                long cIdle = long.Parse(coreParts[4], CultureInfo.InvariantCulture);
+                long cIowait = coreParts.Length > 5 ? long.Parse(coreParts[5], CultureInfo.InvariantCulture) : 0;
+                long cIrq = coreParts.Length > 6 ? long.Parse(coreParts[6], CultureInfo.InvariantCulture) : 0;
+                long cSoftirq = coreParts.Length > 7 ? long.Parse(coreParts[7], CultureInfo.InvariantCulture) : 0;
+                long cSteal = coreParts.Length > 8 ? long.Parse(coreParts[8], CultureInfo.InvariantCulture) : 0;
+
+                long cIdleTotal = cIdle + cIowait;
+                long cNonIdle = cUser + cNice + cSystem + cIrq + cSoftirq + cSteal;
+                long cTotal = cIdleTotal + cNonIdle;
+
+                if (_prevPerCore.TryGetValue(core, out var prev))
                 {
-                    data.SetValue(SensorType.CpuClock, khz / 1000.0); // MHz
+                    long dTotal = cTotal - prev.Total;
+                    long dIdle = cIdleTotal - prev.Idle;
+                    if (dTotal > 0)
+                    {
+                        double usage = Math.Clamp(100.0 * (1.0 - (double)dIdle / dTotal), 0, 100);
+                        data.SetValue(new SensorKey(SensorType.CpuPerCore, core + 1), usage, $"CPU Core #{core}");
+                    }
                 }
+                _prevPerCore[core] = (cTotal, cIdleTotal);
+            }
+
+            // Frequência por núcleo (scaling_cur_freq em kHz; pára no primeiro core sem cpufreq)
+            for (var core = 0; core < 512; core++)
+            {
+                var freqPath = $"/sys/devices/system/cpu/cpu{core}/cpufreq/scaling_cur_freq";
+                if (!File.Exists(freqPath)) break;
+                if (!long.TryParse(File.ReadAllText(freqPath).Trim(), out var coreKhz)) continue;
+                data.SetValue(new SensorKey(SensorType.CpuClock, core + 1), coreKhz / 1000.0, $"CPU Core #{core}");
             }
         }
         catch
@@ -234,37 +286,64 @@ public sealed class LinuxSensorService : ISensorService
                         name = nameRaw.ToLowerInvariant();
                     }
 
+                    // Slot estável por caminho: hwmon com o mesmo "name" (duas amdgpu,
+                    // por exemplo) precisa de instâncias disjuntas.
+                    if (!_hwmonSlots.TryGetValue(dir, out var hwmonSlot))
+                        hwmonSlot = _hwmonSlots[dir] = _hwmonSlots.Count + 1;
+
                     bool isCpuHwmon = name.Contains("coretemp") || name.Contains("k10temp") || name.Contains("zenpower");
                     bool isGpuHwmon = name.Contains("amdgpu") || name.Contains("nouveau") || name.Contains("nvidia");
+                    bool isFanController = !isCpuHwmon && !isGpuHwmon;
+                    var hwLabel = name;
 
-                    // Ler temperaturas do diretório
+                    // Ler temperaturas do diretório (o número do arquivo dá a instância: temp1, temp2...)
+                    int mbTempSlot = 0;
                     foreach (var tempFile in Directory.GetFiles(dir, "temp*_input"))
                     {
-                        if (TryReadSysfsFile(tempFile, out var tempRaw) &&
-                            double.TryParse(tempRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var milliDeg))
-                        {
-                            double deg = milliDeg / 1000.0;
+                        if (!TryReadSysfsFile(tempFile, out var tempRaw) ||
+                            !double.TryParse(tempRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var milliDeg))
+                            continue;
 
-                            if (isCpuHwmon && (data.CpuTemp <= 0 || deg > data.CpuTemp))
-                            {
+                        double deg = milliDeg / 1000.0;
+                        int fileSlot = ParseSysfsIndex(tempFile, "temp");
+
+                        if (isCpuHwmon)
+                        {
+                            data.SetValue(new SensorKey(SensorType.CpuTemperature, fileSlot > 0 ? fileSlot : hwmonSlot), deg, hwLabel);
+                            if (data.CpuTemp <= 0 || deg > data.CpuTemp)
                                 data.SetValue(SensorType.CpuTemperature, deg, "CPU Temp");
-                            }
-                            else if (isGpuHwmon && (data.GpuTemp <= 0 || deg > data.GpuTemp))
-                            {
+                        }
+                        else if (isGpuHwmon)
+                        {
+                            data.SetValue(new SensorKey(SensorType.GpuTemperature, hwmonSlot), deg, hwLabel);
+                            if (data.GpuTemp <= 0 || deg > data.GpuTemp)
                                 data.SetValue(SensorType.GpuTemperature, deg, "GPU Temp");
-                            }
+                        }
+                        else if (isFanController)
+                        {
+                            // Controladores (it8620/nct6775/EC...): temperatura por slot + canônica máxima.
+                            mbTempSlot++;
+                            data.SetValue(new SensorKey(SensorType.MotherboardTemp, mbTempSlot), deg, hwLabel);
+                            var mbTemp = data.GetValue(SensorType.MotherboardTemp);
+                            if (deg > mbTemp)
+                                data.SetValue(SensorType.MotherboardTemp, deg, hwLabel);
                         }
                     }
 
-                    // Ler RPM de Fan se disponível
+                    // Ventoinhas: fan1_input → FanSpeed#1 ... (GPU também publica GpuFan canônica)
                     foreach (var fanFile in Directory.GetFiles(dir, "fan*_input"))
                     {
-                        if (TryReadSysfsFile(fanFile, out var fanRaw) &&
-                            double.TryParse(fanRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var rpm))
-                        {
-                            if (isGpuHwmon)
-                                data.SetValue(SensorType.GpuFan, rpm);
-                        }
+                        if (!TryReadSysfsFile(fanFile, out var fanRaw) ||
+                            !double.TryParse(fanRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var rpm))
+                            continue;
+
+                        int fanSlot = ParseSysfsIndex(fanFile, "fan");
+                        if (fanSlot <= 0) fanSlot = hwmonSlot;
+
+                        data.SetValue(new SensorKey(SensorType.FanSpeed, hwmonSlot * 100 + fanSlot), rpm, hwLabel);
+                        data.SetValue(SensorType.FanSpeed, Math.Max(rpm, data.GetValue(SensorType.FanSpeed)), "Fan (sistema)");
+                        if (isGpuHwmon)
+                            data.SetValue(SensorType.GpuFan, rpm);
                     }
                 }
                 catch
@@ -277,6 +356,15 @@ public sealed class LinuxSensorService : ISensorService
         {
             // Ignora falhas de leitura
         }
+    }
+
+    /// <summary>Extraí o número embutido num arquivo sysfs (temp1_input → 1; fan2_input → 2).</summary>
+    private static int ParseSysfsIndex(string path, string prefix)
+    {
+        var file = Path.GetFileName(path);
+        var withPrefix = file.StartsWith(prefix, StringComparison.Ordinal) ? file[prefix.Length..] : file;
+        int end = withPrefix.IndexOf('_');
+        return end > 0 && int.TryParse(withPrefix[..end], NumberStyles.Integer, CultureInfo.InvariantCulture, out var idx) ? idx : 0;
     }
 
     private static bool TryReadSysfsFile(string path, out string content)
@@ -302,45 +390,59 @@ public sealed class LinuxSensorService : ISensorService
         {
             if (!File.Exists("/proc/diskstats")) return;
 
+            var now = DateTime.UtcNow;
+            var elapsedSec = (now - _prevDiskTimestamp).TotalSeconds;
+
             long totalReadSectors = 0;
             long totalWriteSectors = 0;
+            var devices = new List<string>();
 
             foreach (var line in File.ReadLines("/proc/diskstats"))
             {
                 var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 // Coluna 2: nome do dispositivo (nvme0n1, sda, etc.)
-                if (parts.Length >= 10)
+                if (parts.Length < 10) continue;
+                string devName = parts[2];
+                // Filtrar apenas discos principais, ignorando partições (sda1) e loopback
+                if (!IsPhysicalDisk(devName)) continue;
+                if (!long.TryParse(parts[5], NumberStyles.Integer, CultureInfo.InvariantCulture, out var rSectors) ||
+                    !long.TryParse(parts[9], NumberStyles.Integer, CultureInfo.InvariantCulture, out var wSectors))
+                    continue;
+
+                devices.Add(devName);
+                totalReadSectors += rSectors;
+                totalWriteSectors += wSectors;
+
+                // Série por disco: slot estável por nome na ordem de enumeração.
+                if (!_diskSlots.TryGetValue(devName, out var slot)) slot = _diskSlots[devName] = _diskSlots.Count + 1;
+
+                if (elapsedSec > 0 && _prevPerDisk.TryGetValue(devName, out var prev))
                 {
-                    string devName = parts[2];
-                    // Filtrar apenas discos principais, ignorando partições numeradas como sda1 ou loopback
-                    if (devName.StartsWith("sd") && char.IsLetter(devName[^1]) ||
-                        devName.StartsWith("nvme") && devName.Contains("n1") && !devName.Contains("p"))
-                    {
-                        if (long.TryParse(parts[5], out var rSectors)) totalReadSectors += rSectors;
-                        if (long.TryParse(parts[9], out var wSectors)) totalWriteSectors += wSectors;
-                    }
+                    double readBps = Math.Max(0, rSectors - prev.Read) * 512.0 / elapsedSec;
+                    double writeBps = Math.Max(0, wSectors - prev.Write) * 512.0 / elapsedSec;
+                    data.SetValue(new SensorKey(SensorType.DiskRead, slot), readBps, devName);
+                    data.SetValue(new SensorKey(SensorType.DiskWrite, slot), writeBps, devName);
                 }
+                _prevPerDisk[devName] = (rSectors, wSectors);
             }
 
-            var now = DateTime.UtcNow;
-            var elapsedSec = (now - _prevDiskTimestamp).TotalSeconds;
-
-            if (elapsedSec > 0 && _prevDiskReadSectors > 0)
+            var elapsed = (now - _prevDiskTimestamp).TotalSeconds;
+            if (elapsed > 0 && _prevDiskReadSectors > 0)
             {
                 long deltaRead = Math.Max(0, totalReadSectors - _prevDiskReadSectors);
                 long deltaWrite = Math.Max(0, totalWriteSectors - _prevDiskWriteSectors);
 
                 // 1 setor = 512 bytes
-                double readBytesSec = (deltaRead * 512.0) / elapsedSec;
-                double writeBytesSec = (deltaWrite * 512.0) / elapsedSec;
+                double readBytesSec = (deltaRead * 512.0) / elapsed;
+                double writeBytesSec = (deltaWrite * 512.0) / elapsed;
 
-                data.SetValue(SensorType.DiskRead, readBytesSec);
-                data.SetValue(SensorType.DiskWrite, writeBytesSec);
+                data.SetValue(SensorType.DiskRead, readBytesSec, "Discos (somatório)");
+                data.SetValue(SensorType.DiskWrite, writeBytesSec, "Discos (somatório)");
 
                 // Estimativa de atividade de disco
                 double totalThroughputMB = (readBytesSec + writeBytesSec) / (1024.0 * 1024.0);
                 double usage = Math.Min(100.0, (totalThroughputMB / 500.0) * 100.0);
-                data.SetValue(SensorType.DiskUsage, usage);
+                data.SetValue(SensorType.DiskUsage, usage, "Discos (estimado)");
             }
 
             _prevDiskReadSectors = totalReadSectors;
@@ -353,39 +455,139 @@ public sealed class LinuxSensorService : ISensorService
         }
     }
 
+    /// <summary>Discos físicos principais (sda..sdz, nvme0n1); ignora partições/loop/ram/usb flash?</summary>
+    private static bool IsPhysicalDisk(string devName) =>
+        (devName.StartsWith("sd", StringComparison.Ordinal) && devName.Length == 3 && char.IsAsciiLetter(devName[2])) ||
+        (devName.StartsWith("nvme", StringComparison.Ordinal) && devName.Length > 4 && char.IsAsciiDigit(devName[4]) && devName.Contains('n') && !devName.Contains('p'));
+
     /// <summary>
-    /// Lê a utilização de GPU via subsistema DRM (/sys/class/drm)
+    /// Lê tráfego de rede por interface a partir de /proc/net/dev (↑/↓ + totais da sessão).
+    /// </summary>
+    private void ReadNetworkStats(SensorData data)
+    {
+        try
+        {
+            const string netDevPath = "/proc/net/dev";
+            if (!File.Exists(netDevPath)) return;
+
+            var now = DateTime.UtcNow;
+            if (_prevNetTimestamp == DateTime.MinValue) _prevNetTimestamp = now;
+            var elapsedSec = (now - _prevNetTimestamp).TotalSeconds;
+
+            var interfaces = new List<(string Name, long Rx, long Tx)>();
+            foreach (var line in File.ReadLines(netDevPath))
+            {
+                var colon = line.IndexOf(':');
+                if (colon <= 0) continue;
+
+                var ifName = line[..colon].Trim();
+                if (ifName == "lo") continue; // loopback polui totais sem tráfego real de NIC
+
+                var fields = line[(colon + 1)..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (fields.Length < 9) continue;
+                if (!long.TryParse(fields[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var rx) ||
+                    !long.TryParse(fields[8], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tx))
+                    continue;
+
+                interfaces.Add((ifName, rx, tx));
+            }
+            _prevNetTimestamp = now;
+            if (interfaces.Count == 0) return;
+
+            double downBps = 0;
+            double upBps = 0;
+            foreach (var (name, rx, tx) in interfaces)
+            {
+                if (!_nicSlots.TryGetValue(name, out var slot)) slot = _nicSlots[name] = _nicSlots.Count + 1;
+
+                if (elapsedSec > 0 && _prevPerNic.TryGetValue(name, out var prev))
+                {
+                    double rxBps = Math.Max(0, rx - prev.Rx) / elapsedSec;
+                    double txBps = Math.Max(0, tx - prev.Tx) / elapsedSec;
+                    downBps += rxBps;
+                    upBps += txBps;
+                    data.SetValue(new SensorKey(SensorType.NetworkDown, slot), rxBps, name);
+                    data.SetValue(new SensorKey(SensorType.NetworkUp, slot), txBps, name);
+                }
+                _prevPerNic[name] = (rx, tx);
+            }
+
+            if (downBps > 0 || upBps > 0)
+            {
+                data.SetValue(SensorType.NetworkDown, downBps, "Rede ↓ (todas as interfaces)");
+                data.SetValue(SensorType.NetworkUp, upBps, "Rede ↑ (todas as interfaces)");
+
+                // Totais da sessão: velocidade observada x tempo desde a amostra anterior.
+                if (_lastNetSampleUtc is { } last)
+                {
+                    var dt = (now - last).TotalSeconds;
+                    _netDownSessionBytes += downBps * dt;
+                    _netUpSessionBytes += upBps * dt;
+                }
+                _lastNetSampleUtc = now;
+
+                data.SetValue(SensorType.NetworkDownTotal, _netDownSessionBytes, "Total recebido (sessão)");
+                data.SetValue(SensorType.NetworkUpTotal, _netUpSessionBytes, "Total enviado (sessão)");
+            }
+        }
+        catch
+        {
+            // Ignora falhas de leitura
+        }
+    }
+
+    /// <summary>
+    /// Lê a utilização de GPU via subsistema DRM (/sys/class/drm) — com séries por card
+    /// (multi-GPU: GpuCore#1 = card com menor índice).
     /// </summary>
     private void ReadGpuSysfs(SensorData data)
     {
         try
         {
-            // AMD GPU Busy Percent
-            const string amdGpuBusyPath = "/sys/class/drm/card0/device/gpu_busy_percent";
-            if (File.Exists(amdGpuBusyPath))
-            {
-                if (double.TryParse(File.ReadAllText(amdGpuBusyPath).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var busy))
-                {
-                    data.SetValue(SensorType.GpuCore, Math.Clamp(busy, 0.0, 100.0), "GPU Core");
-                }
-            }
+            if (!Directory.Exists("/sys/class/drm")) return;
 
-            // AMD VRAM usada/total (MB)
-            const string amdVramUsedPath = "/sys/class/drm/card0/device/mem_info_vram_used";
-            if (File.Exists(amdVramUsedPath))
-            {
-                if (long.TryParse(File.ReadAllText(amdVramUsedPath).Trim(), out var bytes))
-                {
-                    data.SetValue(SensorType.GpuMemoryUsed, bytes / (1024.0 * 1024.0), "VRAM Usada"); // MB
-                }
-            }
+            var cards = Directory.GetDirectories("/sys/class/drm")
+                .Select(d => Path.GetFileName(d))
+                .Where(n => n.StartsWith("card", StringComparison.Ordinal) &&
+                            n[4..].All(char.IsAsciiDigit))
+                .OrderBy(n => int.Parse(n[4..], CultureInfo.InvariantCulture))
+                .ToArray();
 
-            const string amdVramTotalPath = "/sys/class/drm/card0/device/mem_info_vram_total";
-            if (File.Exists(amdVramTotalPath))
+            var cardIndex = 0;
+            foreach (var cardName in cards)
             {
-                if (long.TryParse(File.ReadAllText(amdVramTotalPath).Trim(), out var totalBytes))
+                cardIndex++;
+                var deviceDir = Path.Combine("/sys/class/drm", cardName, "device");
+
+                var isPrimary = cardIndex == 1;
+
+                // AMD GPU Busy Percent
+                var busyPath = Path.Combine(deviceDir, "gpu_busy_percent");
+                if (File.Exists(busyPath) &&
+                    double.TryParse(File.ReadAllText(busyPath).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var busy))
                 {
-                    data.SetValue(SensorType.GpuMemoryTotal, totalBytes / (1024.0 * 1024.0), "VRAM Total"); // MB
+                    data.SetValue(new SensorKey(SensorType.GpuCore, cardIndex), Math.Clamp(busy, 0.0, 100.0), cardName);
+                    if (isPrimary)
+                        data.SetValue(SensorType.GpuCore, Math.Clamp(busy, 0.0, 100.0), "GPU Core");
+                }
+
+                // AMD VRAM usada/total (MB)
+                var vramUsedPath = Path.Combine(deviceDir, "mem_info_vram_used");
+                if (File.Exists(vramUsedPath) &&
+                    long.TryParse(File.ReadAllText(vramUsedPath).Trim(), out var bytes))
+                {
+                    data.SetValue(new SensorKey(SensorType.GpuMemoryUsed, cardIndex), bytes / (1024.0 * 1024.0), cardName); // MB
+                    if (isPrimary)
+                        data.SetValue(SensorType.GpuMemoryUsed, bytes / (1024.0 * 1024.0), "VRAM Usada"); // MB
+                }
+
+                var vramTotalPath = Path.Combine(deviceDir, "mem_info_vram_total");
+                if (File.Exists(vramTotalPath) &&
+                    long.TryParse(File.ReadAllText(vramTotalPath).Trim(), out var totalBytes))
+                {
+                    data.SetValue(new SensorKey(SensorType.GpuMemoryTotal, cardIndex), totalBytes / (1024.0 * 1024.0), cardName); // MB
+                    if (isPrimary)
+                        data.SetValue(SensorType.GpuMemoryTotal, totalBytes / (1024.0 * 1024.0), "VRAM Total"); // MB
                 }
             }
         }

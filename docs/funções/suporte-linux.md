@@ -45,17 +45,22 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
 
 * **CPU (Uso e Clock):**
   * Uso: calculado a partir de deltas de tempo (user, nice, system, idle, iowait) em `/proc/stat`.
-  * Clock: frequência atual de cada núcleo em `/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq`.
+  * **Uso por núcleo:** mesmíssimo cálculo por linha `cpuN` publicado como `CpuPerCore#i`.
+  * Clock: frequência atual de cada núcleo em `/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq` — canônica (cpu0) + `CpuClock#(i+1)` por núcleo.
 * **Memória RAM:**
   * Uso total, disponível e ocupado obtidos em `/proc/meminfo` (`MemTotal`, `MemAvailable`).
 * **Temperaturas e Ventoinhas:**
   * Subsistema unificado `hwmon` em `/sys/class/hwmon/hwmon*`.
-  * CPU: drivers de temperatura nativos `coretemp` (Intel), `k10temp` ou `zenpower` (AMD).
-  * GPU: drivers de kernel DRM (`amdgpu`, `nouveau`, `nvidia`).
+  * CPU: drivers de temperatura nativos `coretemp` (Intel), `k10temp` ou `zenpower` (AMD) — série por arquivo (`temp1_input` → `CpuTemperature#1`).
+  * GPU: drivers de kernel DRM (`amdgpu`, `nouveau`, `nvidia`) — `GpuTemperature#hwmon` por card; `GpuFan` canônico + `FanSpeed#hwmon` por ventoinha.
+  * Controladores/EC: temperaturas por slot + canônica máxima (`MotherboardTemp`, `MotherboardTemp#i`).
 * **Disco:**
-  * Leitura e escrita em `/proc/diskstats`, convertendo setores (512 bytes) em throughput de MB/s.
+  * Leitura e escrita em `/proc/diskstats`, convertendo setores (512 bytes) em throughput: canônico somado ("Discos (somatório)") + `DiskRead#i`/`DiskWrite#i` por device (slot estável por nome).
+* **Rede (`/proc/net/dev`):**
+  * ↑/↓ somados nas séries canônicas; `NetworkUp#i`/`NetworkDown#i` por interface (slot estável por nome, `lo` ignorado);
+  * Totais da sessão: `NetworkUpTotal`/`NetworkDownTotal` (integrando a velocidade observada entre amostras).
 * **GPU (Utilização e VRAM):**
-  * Monitoramento DRM em `/sys/class/drm/card*/device/gpu_busy_percent` e `/sys/class/drm/card*/device/mem_info_vram_used`.
+  * Monitoramento DRM em `/sys/class/drm/card*/device/gpu_busy_percent` e `mem_info_vram_*` — multi-GPU real: canônica do primeiro card + `GpuCore#i`, `GpuMemoryUsed#i`, `GpuMemoryTotal#i` para cada card.
 
 ---
 

@@ -18,9 +18,24 @@ public sealed class AppConfig
     {
         try
         {
-            var json = File.ReadAllText(path);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<AppConfig>(json, options) ?? new AppConfig();
+            if (!File.Exists(path))
+            {
+                var dir = Path.GetDirectoryName(path) ?? "";
+                var examplePath = Path.Combine(dir, "config.example.json");
+                if (File.Exists(examplePath))
+                {
+                    File.Copy(examplePath, path);
+                }
+            }
+
+            if (File.Exists(path))
+            {
+                var json = File.ReadAllText(path);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<AppConfig>(json, options) ?? new AppConfig();
+            }
+
+            return new AppConfig();
         }
         catch
         {

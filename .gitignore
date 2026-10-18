@@ -25,6 +25,7 @@
 sensors_latest.json
 
 ## Config with secrets / local settings
+config.json
 config*.local.json
 *.local.json
 .env

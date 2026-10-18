@@ -1,0 +1,34 @@
+{
+  "updateIntervalMs": 1000,
+  "logToCsv": false,
+  "logToJson": true,
+  "showOverlay": false,
+  "overlayOpacity": 0.85,
+  "overlayPosition": {
+    "x": 20,
+    "y": 80
+  },
+  "overlay": {
+    "width": 220,
+    "showCpu": true,
+    "showGpu": true,
+    "showRam": true,
+    "showDisk": true,
+    "showNetwork": false,
+    "showGpuProcesses": false,
+    "showFans": true,
+    "showFps": true,
+    "showFrametimeGraph": true,
+    "compactMode": false,
+    "accentColor": "#1E90FF",
+    "fontSize": 11.5
+  },
+  "sensors": {
+    "cpu": true,
+    "gpu": true,
+    "ram": true,
+    "disk": true,
+    "network": false,
+    "motherboard": false
+  }
+}

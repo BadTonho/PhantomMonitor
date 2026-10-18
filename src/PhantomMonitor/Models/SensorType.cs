@@ -34,5 +34,7 @@ public enum SensorType
     FrametimeMs,
     FpsAvg,
     FpsMin,
-    Fps1Low
+    Fps1Low,
+    Fps01Low,
+    FpsMax
 }

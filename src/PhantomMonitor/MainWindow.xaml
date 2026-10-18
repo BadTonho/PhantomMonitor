@@ -300,8 +300,9 @@
                                            Foreground="{StaticResource TextMutedBrush}" 
                                            Margin="6,0,0,5" VerticalAlignment="Bottom"/>
                             </StackPanel>
-                            <TextBlock x:Name="FpsDetailsText" Text="Mín: -- | Avg: -- | 1% Low: --"
+                            <TextBlock x:Name="FpsDetailsText" Text="Mín: -- | Avg: -- | 1% Low: -- | 0.1% Low: -- | Máx: --"
                                        FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
                                        Margin="0,4,0,0"/>
                         </StackPanel>
                     </Grid>

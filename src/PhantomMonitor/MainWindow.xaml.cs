@@ -261,8 +261,8 @@ public partial class MainWindow : Window
 
             FpsText.Text = data.Fps > 0 ? $"{data.Fps:F0}" : "--";
             FpsDetailsText.Text = data.Fps > 0
-                ? $"Mín: {data.FpsMin:F0} | Avg: {data.FpsAvg:F0} | 1% Low: {data.Fps1Low:F0}"
-                : "Mín: -- | Avg: -- | 1% Low: --";
+                ? $"Mín: {data.FpsMin:F0} | Avg: {data.FpsAvg:F0} | 1% Low: {data.Fps1Low:F0} | 0.1% Low: {data.Fps01Low:F0} | Máx: {data.FpsMax:F0}"
+                : "Mín: -- | Avg: -- | 1% Low: -- | 0.1% Low: -- | Máx: --";
             FrametimeText.Text = data.FrametimeMs > 0 ? $"{data.FrametimeMs:F1} ms" : "-- ms";
 
             RamUsageText.Text = $"{data.RamUsagePercent:F1}%";

@@ -6,7 +6,7 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 
 - Leitura de FPS e Frametime (ms) em tempo real da janela/jogo em primeiro plano
 - Histórico circular de frametime para gráficos em tempo real (600 amostras)
-- Estatísticas dinâmicas: FPS instantâneo (com suavização EMA), FPS médio, mínimo e 1% Low
+- Estatísticas dinâmicas: FPS instantâneo (com suavização EMA), médio, mínimo, máximo, 1% Low e 0.1% Low (janela móvel de ~3600 frames, ≈60 s a 60 FPS)
 - Detecção automática de jogos em primeiro plano (ignora explorer, tarefas do sistema e a própria janela do PhantomMonitor)
 - Encerramento automático e limpo do processo do PresentMon ao fechar o app
 
@@ -24,9 +24,11 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 
 - `Fps` - FPS atual (suavizado via Exponential Moving Average)
 - `FrametimeMs` - Frametime em milissegundos
-- `FpsAvg` - FPS médio das últimas 600 amostras
-- `FpsMin` - Menor FPS das últimas 600 amostras (janela móvel, atualizado a cada ~1 s)
-- `Fps1Low` - 1% Low (pior 1% dos frametimes para detecção de stuttering)
+- `FpsAvg` - FPS médio da janela móvel de 3600 amostras (~60 s a 60 FPS)
+- `FpsMin` - Menor FPS da janela recente (atualizado a cada ~1 s)
+- `Fps1Low` - 1% Low (índice de 1% das amostras ordenadas; pior 1% para detecção de stuttering)
+- `Fps01Low` - 0.1% Low (índice de 0.1%; mais rigoroso que o 1% Low e sensível a engasgos isolados)
+- `FpsMax` - Maior FPS da janela móvel
 - `HasData` - Indica se há dados de frames ativos
 - `FrametimeHistory` - Buffer circular de 600 amostras usado pelo gráfico do overlay
 - `DebugInfo` / `PerfResult` / `EtwDiag` - Diagnósticos e status da sessão do PresentMon

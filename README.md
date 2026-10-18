@@ -12,7 +12,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Atalho global do OSD**: Mostrar/ocultar o overlay de qualquer aplicativo via Win32 `RegisterHotKey` (ex.: `Ctrl+Shift+O`), sem injeção de DLL
 - **Bandeja do sistema**: Ícone na bandeja (Win32 puro, sem WinForms) com menu de contexto — mostrar janela, alternar OSD, iniciar com o Windows e sair — e opção de autostart via registro do usuário
 - **Gráfico de frametime**: Visualização em tempo real da variação de frametime com buffer circular
-- **Estatísticas avançadas**: FPS instantâneo, FPS médio, mínimo e 1% Low
+- **Estatísticas avançadas**: FPS instantâneo, médio, mínimo, máximo, 1% Low e 0.1% Low
 - **Logging**: Exportação contínua para CSV e JSON
 - **Visual Clean**: Design profissional refinado (paleta Slate Dark), eliminando efeitos excessivos de neon
 - **Configurável**: `config.json` com fallback automático para `config.example.json`

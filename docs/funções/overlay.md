@@ -19,7 +19,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no v
   - GPU: VRAM usada/total, clock core/memória, potência, voltagem e hotspot (ex.: `VRAM 7.2/12 GB  2.10 GHz  7.00 GHz  220 W  1.050 V  HS 75°C`)
   - A sublinha fica oculta quando nenhum dos valores está disponível.
 - **Linhas Opcionais com Auto-Revelação:** NET, FAN e MB só aparecem depois do primeiro dado real do sensor — sem poluir o OSD em máquinas que não expõem esses sensores.
-- **Estatísticas de FPS:** Sublinha compacta com `AVG` e `1% Low`
+- **Estatísticas de FPS:** Sublinha compacta com `AVG`, `1% Low`, `0.1% Low` e `MAX` (quebra em linha automaticamente se não couber)
 - **Gráfico de Frametime Slim:** Mini-gráfico de 24px (18px no modo compacto) com linha guia de 60 FPS (16.6ms) para detecção instantânea de stuttering
 - **Tipografia:** Fonte monoespaçada (`Consolas / Cascadia Mono`) para evitar que os números fiquem oscilando ou pulando de posição na tela
 - **Cores Dinâmicas:** Alerta automático de temperatura e uso (Normal / Amarelo / Vermelho)

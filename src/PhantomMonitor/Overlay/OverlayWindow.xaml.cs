@@ -406,7 +406,8 @@ public partial class OverlayWindow : Window
             Foreground = MutedBrush,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Text = "AVG: --  1%: --"
+            Text = "AVG: --  1%: --  0.1%: --  MAX: --",
+            TextWrapping = TextWrapping.Wrap
         };
         Grid.SetColumn(statsBlock, 1);
         statsGrid.Children.Add(statsBlock);
@@ -442,7 +443,9 @@ public partial class OverlayWindow : Window
 
             string avg = data.FpsAvg > 0 ? $"{data.FpsAvg:F0}" : "--";
             string low = data.Fps1Low > 0 ? $"{data.Fps1Low:F0}" : "--";
-            statsBlock.Text = $"AVG: {avg}  1%: {low}";
+            string low01 = data.Fps01Low > 0 ? $"{data.Fps01Low:F0}" : "--";
+            string max = data.FpsMax > 0 ? $"{data.FpsMax:F0}" : "--";
+            statsBlock.Text = $"AVG: {avg}  1%: {low}  0.1%: {low01}  MAX: {max}";
         });
     }
 

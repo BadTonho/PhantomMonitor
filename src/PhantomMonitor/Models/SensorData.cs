@@ -41,6 +41,8 @@ public sealed class SensorData
     public double FpsAvg => GetValue(SensorType.FpsAvg);
     public double FpsMin => GetValue(SensorType.FpsMin);
     public double Fps1Low => GetValue(SensorType.Fps1Low);
+    public double Fps01Low => GetValue(SensorType.Fps01Low);
+    public double FpsMax => GetValue(SensorType.FpsMax);
     [JsonIgnore]
     public float[] FrametimeHistory { get; set; } = [];
 }

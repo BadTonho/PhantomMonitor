@@ -72,6 +72,8 @@ public sealed class LinuxSensorService : ISensorService
                 data.Values[SensorType.FpsAvg] = _fpsMonitor.FpsAvg;
                 data.Values[SensorType.FpsMin] = _fpsMonitor.FpsMin;
                 data.Values[SensorType.Fps1Low] = _fpsMonitor.Fps1Low;
+                data.Values[SensorType.Fps01Low] = _fpsMonitor.Fps01Low;
+                data.Values[SensorType.FpsMax] = _fpsMonitor.FpsMax;
                 data.FrametimeHistory = _fpsMonitor.FrametimeHistory.ToArray();
             }
 

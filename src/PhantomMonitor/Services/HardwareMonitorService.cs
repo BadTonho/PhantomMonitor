@@ -143,6 +143,8 @@ public sealed class HardwareMonitorService : ISensorService
             data.Values[SType.FpsAvg] = _fpsMonitor.FpsAvg;
             data.Values[SType.FpsMin] = _fpsMonitor.FpsMin;
             data.Values[SType.Fps1Low] = _fpsMonitor.Fps1Low;
+            data.Values[SType.Fps01Low] = _fpsMonitor.Fps01Low;
+            data.Values[SType.FpsMax] = _fpsMonitor.FpsMax;
             data.FrametimeHistory = _fpsMonitor.FrametimeHistory.ToArray();
         }
 

@@ -8,9 +8,10 @@ namespace PhantomMonitor.Services;
 
 public sealed class FpsMonitor : IFpsMonitor
 {
-    private const int MaxSamples = 600;
-    private readonly FrametimeBuffer _frametimeHistory = new(MaxSamples);
-    private readonly Queue<double> _fpsSamples = new(MaxSamples);
+    private const int MaxGraphSamples = 600;   // janela do mini-gráfico de frametime
+    private const int MaxStatsSamples = 3600;  // janela das estatísticas (~60 s rodando a 60 FPS)
+    private readonly FrametimeBuffer _frametimeHistory = new(MaxGraphSamples);
+    private readonly Queue<double> _fpsSamples = new(MaxStatsSamples);
     private readonly object _lock = new();
 
     private Process? _presentMonProcess;
@@ -20,6 +21,8 @@ public sealed class FpsMonitor : IFpsMonitor
     private volatile float _fpsAvg;
     private volatile float _fpsMin = float.MaxValue;
     private volatile float _fps1Low;
+    private volatile float _fps01Low;
+    private volatile float _fpsMax;
     private volatile float _lastFrametimeMs;
     private volatile bool _hasData;
     private volatile string _debugInfo = "Inicializando...";
@@ -53,6 +56,8 @@ public sealed class FpsMonitor : IFpsMonitor
     public float FpsAvg => _fpsAvg;
     public float FpsMin => _fpsMin == float.MaxValue ? 0 : _fpsMin;
     public float Fps1Low => _fps1Low;
+    public float Fps01Low => _fps01Low;
+    public float FpsMax => _fpsMax;
     public bool HasData => _hasData;
     public FrametimeBuffer FrametimeHistory => _frametimeHistory;
     public string DebugInfo => _debugInfo;
@@ -249,7 +254,7 @@ public sealed class FpsMonitor : IFpsMonitor
 
                 _fps = (float)_emaFps;
                 _fpsSamples.Enqueue(instantFps);
-                if (_fpsSamples.Count > MaxSamples)
+                if (_fpsSamples.Count > MaxStatsSamples)
                 {
                     _fpsSamples.Dequeue();
                 }
@@ -266,6 +271,9 @@ public sealed class FpsMonitor : IFpsMonitor
                     _fpsMin = (float)sorted[0];
                     int idx1Low = Math.Max(0, (int)(sorted.Count * 0.01));
                     _fps1Low = (float)sorted[idx1Low];
+                    int idx01Low = Math.Max(0, (int)(sorted.Count * 0.001));
+                    _fps01Low = (float)sorted[idx01Low];
+                    _fpsMax = (float)sorted[^1];
                     _lastStatsCalc = now;
                 }
 
@@ -382,6 +390,8 @@ public sealed class FpsMonitor : IFpsMonitor
             _fpsMin = float.MaxValue;
             _fpsAvg = 0;
             _fps1Low = 0;
+            _fps01Low = 0;
+            _fpsMax = 0;
             _lastFrametimeMs = 0;
             _hasData = false;
             _emaFps = 0;

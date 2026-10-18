@@ -10,7 +10,7 @@ Enumeração com todos os tipos de sensores suportados:
 - **Disco**: DiskUsage, DiskRead, DiskWrite
 - **Rede**: NetworkUp, NetworkDown
 - **Outros**: MotherboardTemp, FanSpeed
-- **FPS**: Fps, FrametimeMs, FpsAvg, FpsMin, Fps1Low
+- **FPS**: Fps, FrametimeMs, FpsAvg, FpsMin, Fps1Low, Fps01Low, FpsMax
 
 ## SensorData
 
@@ -26,7 +26,7 @@ Modelo principal que carrega todos os dados de sensores em um snapshot:
 ### Propriedades calculadas
 - `CpuUsage`, `CpuTemp`, `GpuUsage`, `GpuTemp`
 - `RamUsagePercent`, `RamAvailableGB`
-- `Fps`, `FrametimeMs`, `FpsAvg`, `FpsMin`, `Fps1Low`
+- `Fps`, `FrametimeMs`, `FpsAvg`, `FpsMin`, `Fps1Low`, `Fps01Low`, `FpsMax`
 
 ## GpuProcessInfo
 

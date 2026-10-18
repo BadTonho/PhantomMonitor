@@ -71,7 +71,7 @@ Para capturar taxas de quadros sem depender do MangoHud ou de injeções arrisca
 3. **Comunicação por Memória Compartilhada (IPC):**
    Os dados do quadro ativo são escritos em memória compartilhada POSIX (`/dev/shm/phantom_fps` com fallback para `/tmp/phantom_fps.bin`).
 4. **Consumo no C# (`LinuxFpsMonitor`):**
-   O monitor C# lê os cabeçalhos diretamente da memória compartilhada, calcula médias móveis (EMA), 1% Low e alimenta o buffer circular de 600 amostras (`FrametimeBuffer`).
+   O monitor C# lê os cabeçalhos diretamente da memória compartilhada, calcula médias móveis (EMA), 1% Low, 0.1% Low, máximo e alimenta o buffer circular de 600 amostras (`FrametimeBuffer`).
 
 ---
 

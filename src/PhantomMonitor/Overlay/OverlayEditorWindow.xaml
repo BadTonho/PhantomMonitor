@@ -250,6 +250,25 @@
                         <CheckBox x:Name="CheckMotherboard" Content="Placa-mãe (Temperatura)" IsChecked="False" 
                                   Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
 
+                        <!-- Section: Séries por Instância -->
+                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,14,0,14"/>
+
+                        <TextBlock Text="SÉRIES POR INSTÂNCIA" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Linhas extras do OSD (multi-GPU, ventoinhas, discos, VRM). Criadas quando o hardware informa o sensor." 
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <CheckBox x:Name="CheckSeriesGpu" Content="GPUs múltiplas (Gpu*)" IsChecked="True"/>
+                        <CheckBox x:Name="CheckSeriesFans" Content="Ventoinhas extras (FanSpeed*)" IsChecked="True"/>
+                        <CheckBox x:Name="CheckSeriesDisks" Content="Discos por drive (Disk*)" IsChecked="True"/>
+                        <CheckBox x:Name="CheckSeriesCpuCores" Content="CPU por núcleo (temp/use/clock)" IsChecked="False"/>
+                        <CheckBox x:Name="CheckSeriesCpuPower" Content="Potência da CPU por domínio" IsChecked="False"/>
+                        <CheckBox x:Name="CheckSeriesMbTemps" Content="Placa-mãe por sensor" IsChecked="False"/>
+                        <CheckBox x:Name="CheckSeriesVrm" Content="Zonas VRM (VrmTemperature*)" IsChecked="False"/>
+                        <CheckBox x:Name="CheckSeriesRails" Content="Rails de tensão (RailVoltage*)" IsChecked="False"/>
+                        <CheckBox x:Name="CheckSeriesNet" Content="Rede por interface + totais" IsChecked="False"/>
+                        <CheckBox x:Name="CheckSeriesRamTemps" Content="Temps de módulos RAM" IsChecked="False"/>
+
                         <!-- Section: Aparência -->
                         <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,14,0,14"/>
 

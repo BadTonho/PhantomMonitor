@@ -16,6 +16,13 @@ public partial class OverlayWindow : Window
     private bool _showFps;
     private readonly double _detailMaxWidth = 160;
 
+    // Séries por instância (multi-GPU, núcleos, ventoinhas, discos...): as linhas
+    // são criadas no primeiro snapshot que as contiver, filtradas pela whitelist
+    // overlay.shownSeries e limitadas para não explodir o OSD em máquinas cheias.
+    private static readonly int MaxAdvancedRows = 24;
+    private readonly List<string> _seriesPatterns;
+    private readonly Dictionary<SensorKey, Grid> _dynamicRows = [];
+
     // Aparência configurável (compactMode / fontSize / accentColor)
     private double _baseFontSize = 11.5;
     private double _rowMargin = 1.5;
@@ -157,6 +164,7 @@ public partial class OverlayWindow : Window
 
         _offsetX = left;
         _offsetY = top;
+        _seriesPatterns = [.. (config.Overlay.ShownSeries ?? ["Gpu*", "FanSpeed*", "Disk*"])];
         _positionTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
         _positionTimer.Tick += (s, e) => UpdatePosition();
         _positionTimer.Start();
@@ -489,6 +497,8 @@ public partial class OverlayWindow : Window
 
     public void Update(SensorData data)
     {
+        EnsureDynamicRows(data);
+
         foreach (var updater in _updaters)
         {
             updater(data);
@@ -548,6 +558,194 @@ public partial class OverlayWindow : Window
             _frametimeGraph.Children.Add(poly);
         }
     }
+
+    // ---------- Séries dinâmicas por instância ----------
+
+    /// <summary>
+    /// Cria as linhas por instância (GPU 1..n, ventoinhas, discos...) no primeiro
+    /// snapshot em que aparecerem. Linhas novas vão para o fim do painel, depois
+    /// do bloco de FPS.
+    /// </summary>
+    private void EnsureDynamicRows(SensorData data)
+    {
+        // Padrões do config conferidos por série; ordenação por família evita que um
+        // hardware abundante (núcleos de CPU) capture o teto de linhas primeiro.
+        var keys = data.Series.Keys
+            .Where(k => _seriesPatterns.Any(p => k.MatchesPattern(p)))
+            .ToList();
+        keys.Sort((a, b) =>
+        {
+            var byFamily = FamilyOrder(a.Type).CompareTo(FamilyOrder(b.Type));
+            return byFamily != 0 ? byFamily : a.CompareTo(b);
+        });
+
+        foreach (var key in keys)
+        {
+            if (_dynamicRows.Count >= MaxAdvancedRows) break;
+            if (_dynamicRows.ContainsKey(key)) continue;
+            AddAdvancedRow(key, data);
+        }
+    }
+
+    private void AddAdvancedRow(SensorKey key, SensorData data)
+    {
+        var grid = new Grid { Margin = new Thickness(0, _rowMargin, 0, _rowMargin) };
+
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) });  // Tag
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });   // :
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });  // Valor
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Instância
+
+        var tagBlock = new TextBlock
+        {
+            Text = TagFor(key),
+            FontFamily = OsdFont,
+            FontSize = _baseFontSize,
+            FontWeight = FontWeights.Bold,
+            Foreground = PinFrozenBrush(TagColorFor(key.Type)),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(tagBlock, 0);
+        grid.Children.Add(tagBlock);
+
+        var colonBlock = new TextBlock
+        {
+            Text = ":",
+            FontFamily = OsdFont,
+            FontSize = _baseFontSize,
+            Foreground = ColonBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        Grid.SetColumn(colonBlock, 1);
+        grid.Children.Add(colonBlock);
+
+        var valueBlock = new TextBlock
+        {
+            FontFamily = OsdFont,
+            FontSize = _baseFontSize,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = NormalBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        Grid.SetColumn(valueBlock, 2);
+        grid.Children.Add(valueBlock);
+
+        var labelBlock = new TextBlock
+        {
+            FontFamily = OsdFont,
+            FontSize = _baseFontSize - 2,
+            Foreground = MutedBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        Grid.SetColumn(labelBlock, 3);
+        grid.Children.Add(labelBlock);
+
+        labelBlock.Text = data.GetLabel(key);
+        valueBlock.Text = SensorFormatter.FormatSeries(key, data.GetValue(key));
+
+        var gridRef = grid;
+
+        // O updater refresca valor e rótulo: nomes de hardware podem mudar quando o
+        // driver enumera de novo (ex.: troca de nome de NIC). Série ausente = linha oculta
+        // (hardware sumiu; reaparece quando o driver o re-enumerar).
+        _updaters.Add(d =>
+        {
+            if (!d.Series.ContainsKey(key))
+            {
+                gridRef.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            gridRef.Visibility = Visibility.Visible;
+            valueBlock.Text = SensorFormatter.FormatSeries(key, d.GetValue(key));
+            labelBlock.Text = d.GetLabel(key);
+        });
+
+        _dynamicRows[key] = grid;
+        SensorPanel.Children.Add(grid);
+    }
+
+    private static Brush PinFrozenBrush(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
+
+    private static string TagFor(SensorKey key)
+    {
+        var num = key.Index > 0 ? key.Index.ToString() : "";
+        return key.Type switch
+        {
+            SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.CpuTemperature or
+            SensorType.CpuClock or SensorType.CpuVoltage or SensorType.CpuPower => "CPU" + num,
+
+            SensorType.GpuCore or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal or
+            SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuCoreClock or
+            SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan or SensorType.GpuPower =>
+                "GPU" + num,
+
+            SensorType.FanSpeed => "FAN" + num,
+            SensorType.RamUsage or SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal or
+            SensorType.RamTemperature => "RAM" + num,
+            SensorType.DiskUsage or SensorType.DiskRead or SensorType.DiskWrite or
+            SensorType.DiskTemperature or SensorType.DiskHealth or
+            SensorType.DiskTotalRead or SensorType.DiskTotalWritten => "DSK" + num,
+            SensorType.NetworkUp or SensorType.NetworkDown => "NET" + num,
+            SensorType.MotherboardTemp => "MB" + num,
+            SensorType.VrmTemperature => "VRM" + num,
+            SensorType.RailVoltage => "RL" + num,
+            _ => key.Type.ToString() + num
+        };
+    }
+
+    private static Color TagColorFor(SensorType type) => type switch
+    {
+        SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.CpuTemperature or
+        SensorType.CpuClock or SensorType.CpuVoltage or SensorType.CpuPower => Color.FromRgb(0x00, 0xD2, 0xFF),
+
+        SensorType.GpuCore or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal or
+        SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuCoreClock or
+        SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan or SensorType.GpuPower =>
+            Color.FromRgb(0xFF, 0x8A, 0x00),
+
+        SensorType.RamUsage or SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal or
+        SensorType.RamTemperature => Color.FromRgb(0xC0, 0x84, 0xFC),
+
+        SensorType.DiskUsage or SensorType.DiskRead or SensorType.DiskWrite or
+        SensorType.DiskTemperature or SensorType.DiskHealth or
+        SensorType.DiskTotalRead or SensorType.DiskTotalWritten => Color.FromRgb(0x60, 0xA5, 0xFA),
+
+        SensorType.NetworkUp or SensorType.NetworkDown => Color.FromRgb(0x34, 0xD3, 0x99),
+        SensorType.FanSpeed => Color.FromRgb(0xF4, 0x72, 0xB6),
+        _ => Color.FromRgb(0xCB, 0xD5, 0xE1)
+    };
+
+    private static int FamilyOrder(SensorType type) => type switch
+    {
+        SensorType.GpuCore or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal or
+        SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuCoreClock or
+        SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan or SensorType.GpuPower => 0,
+
+        SensorType.FanSpeed => 1,
+
+        SensorType.DiskUsage or SensorType.DiskRead or SensorType.DiskWrite or
+        SensorType.DiskTemperature or SensorType.DiskHealth or
+        SensorType.DiskTotalRead or SensorType.DiskTotalWritten => 2,
+
+        SensorType.RamTemperature => 3,
+
+        SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.CpuTemperature or
+        SensorType.CpuClock or SensorType.CpuVoltage or SensorType.CpuPower => 4,
+
+        SensorType.NetworkUp or SensorType.NetworkDown => 5,
+
+        _ => 6
+    };
 
     protected override void OnClosed(EventArgs e)
     {

@@ -23,6 +23,23 @@ public partial class OverlayEditorWindow : Window
     private double _configStartY;
     private DrawingBrush? _gridBrush;
 
+    private static readonly string[] DefaultSeries = ["Gpu*", "FanSpeed*", "Disk*"];
+
+    /// <summary>Checkbox de séries por instância → padrões wildcard liberados em overlay.shownSeries.</summary>
+    private (CheckBox box, string[] patterns)[] SeriesOptions => new[]
+    {
+        (CheckSeriesGpu, new[] { "Gpu*" }),
+        (CheckSeriesFans, new[] { "FanSpeed*" }),
+        (CheckSeriesDisks, new[] { "Disk*" }),
+        (CheckSeriesCpuCores, new[] { "CpuTemperature#*", "CpuPerCore#*", "CpuClock#*" }),
+        (CheckSeriesCpuPower, new[] { "CpuPower*" }),
+        (CheckSeriesMbTemps, new[] { "MotherboardTemp#*" }),
+        (CheckSeriesVrm, new[] { "VrmTemperature*" }),
+        (CheckSeriesRails, new[] { "RailVoltage*" }),
+        (CheckSeriesNet, new[] { "Network*" }),
+        (CheckSeriesRamTemps, new[] { "RamTemperature*" })
+    };
+
     public OverlayEditorWindow(AppConfig config, string configPath)
     {
         _config = config;
@@ -106,6 +123,12 @@ public partial class OverlayEditorWindow : Window
         if (AccentLabel != null) AccentLabel.Text = _config.Overlay.AccentColor;
 
         if (HotkeyCombo != null) HotkeyCombo.Text = _config.ToggleOverlayHotkey;
+
+        if (_config.Overlay.ShownSeries is { Count: > 0 } series)
+        {
+            foreach (var (box, patterns) in SeriesOptions)
+                box.IsChecked = patterns.Any(p => series.Contains(p, StringComparer.OrdinalIgnoreCase));
+        }
 
         UpdateLayersVisibility();
     }
@@ -356,6 +379,24 @@ public partial class OverlayEditorWindow : Window
         if (CheckCompact != null) _config.Overlay.CompactMode = CheckCompact.IsChecked == true;
         if (FontSizeSlider != null) _config.Overlay.FontSize = FontSizeSlider.Value;
 
+        // Séries por instância: padrões marcados entram na whitelist; os desmarcados saem.
+        // Padrões manuais do config que nenhuma checkbox cobre são preservados.
+        var covered = SeriesOptions.SelectMany(o => o.patterns).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var series = (_config.Overlay.ShownSeries ?? [])
+            .Where(p => !covered.Contains(p))
+            .ToList();
+        foreach (var (box, patterns) in SeriesOptions)
+        {
+            if (box.IsChecked != true) continue;
+            foreach (var pattern in patterns)
+            {
+                if (!series.Contains(pattern, StringComparer.OrdinalIgnoreCase))
+                    series.Add(pattern);
+            }
+        }
+
+        _config.Overlay.ShownSeries = series;
+
         // Atalho global: valida antes de salvar (vazio = desativado)
         if (HotkeyCombo != null)
         {
@@ -405,6 +446,7 @@ public partial class OverlayEditorWindow : Window
         _config.Overlay.CompactMode = false;
         _config.Overlay.AccentColor = "#1E90FF";
         _config.Overlay.FontSize = 11.5;
+        _config.Overlay.ShownSeries = [.. DefaultSeries];
 
         _config.ToggleOverlayHotkey = "";
 

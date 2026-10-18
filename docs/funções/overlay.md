@@ -19,6 +19,14 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no v
   - GPU: VRAM usada/total, clock core/memória, potência, voltagem e hotspot (ex.: `VRAM 7.2/12 GB  2.10 GHz  7.00 GHz  220 W  1.050 V  HS 75°C`)
   - A sublinha fica oculta quando nenhum dos valores está disponível.
 - **Linhas Opcionais com Auto-Revelação:** NET, FAN e MB só aparecem depois do primeiro dado real do sensor — sem poluir o OSD em máquinas que não expõem esses sensores.
+- **Linhas por Instância (Séries Dinâmicas):** além das linhas fixas, o OSD cria linhas por instância no primeiro snapshot em que surgirem, com tags próprias e cor da família:
+  - `GPU1`/`GPU2...` — multi-GPU: temp, uso, VRAM, clocks, hotspot, potência (a dedicada é a GPU 1);
+  - `FAN1..` — ventoinhas por slot da placa-mãe/SuperIO;
+  - `DSK1..` — uso, R/W, temperatura e saúde/endurance por disco;
+  - `CPU1..` — temperatura, uso e clock por núcleo (desligado por padrão, poluído em CPUs com 32 núcleos);
+  - `MB1..`, `VRM1..`, `RL1..` — temperaturas por sensor, zonas VRM e rails de tensão;
+  - `NET1..` — rede por interface com velocidade e totais da sessão.
+  - Filtradas pela whitelist `overlay.shownSeries` (wildcards, ver [configuracao.md](configuracao.md)), ordenadas por família (GPU → ventoinhas → discos → RAM → CPU → rede → placa-mãe) e limitadas a 24 linhas para não explodir o OSD em máquinas cheias; hardware que some esconde a linha até reenumerar.
 - **Estatísticas de FPS:** Sublinha compacta com `AVG`, `1% Low`, `0.1% Low` e `MAX` (quebra em linha automaticamente se não couber)
 - **Gráfico de Frametime Slim:** Mini-gráfico de 24px (18px no modo compacto) com linha guia de 60 FPS (16.6ms) para detecção instantânea de stuttering
 - **Tipografia:** Fonte monoespaçada (`Consolas / Cascadia Mono`) para evitar que os números fiquem oscilando ou pulando de posição na tela
@@ -34,6 +42,7 @@ Inspirado diretamente no editor de layouts OSD do RTSS (`Editor de informações
   - Ajuste de coordenadas absolutas de tela (`X`, `Y`) com predefinições de cantos rápidos (Superior Esquerdo, Superior Direito, Inferior Esquerdo, Inferior Direito).
   - Seleção individual de camadas ativas (habilitar/desabilitar cada sensor ou gráfico).
   - Ajuste fino de opacidade, largura do painel, modo compacto, tamanho da fonte (8–20 pt) e cor de destaque (paleta de presets ou edição direta do `config.json`).
+  - Seção "SÉRIES POR INSTÂNCIA": checkboxes que ligam/desligam padrões na whitelist `overlay.shownSeries` (GPUs múltiplas, ventoinhas extras, discos por drive, CPU por núcleo, potência por domínio, placa-mãe por sensor, VRM, rails, rede por interface e temps de RAM). Padrões manuais do `config.json` que nenhuma checkbox cobre são preservados ao salvar.
   - Atalho global para mostrar/ocultar o OSD em qualquer aplicativo (seção "ATALHO GLOBAL", ver [hotkey.md](hotkey.md)).
 - **Aplicação Imediata:** Botão "Aplicar & Salvar" que grava as alterações no `config.json` e atualiza a sobreposição em execução sem necessidade de reiniciar o programa.
 

@@ -27,6 +27,11 @@ Registro de erros internos (substitui os antigos `catch` vazios). Fica em `logs/
 - Mensagens idênticas consecutivas são suprimidas; o arquivo é zerado ao passar de ~1 MB
 - Nunca lança exceção (falha de log não derruba o app)
 
+Também é o destino de todos os tratadores globais de exceção do app:
+- `Dispatcher.UnhandledException` — falhas na UI thread (modal só é aberto para erros diferentes do anterior; repetidos ficam apenas no log)
+- `AppDomain.UnhandledException` — encaminha erros de threads de fundo
+- `TaskScheduler.UnobservedTaskException` — exceções não observadas em tasks (marcadas como observadas)
+
 ## Ativação
 
 Controlado pelo `config.json`:

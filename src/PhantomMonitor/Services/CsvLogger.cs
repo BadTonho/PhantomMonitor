@@ -30,14 +30,23 @@ public sealed class CsvLogger : IDisposable
         {
             if (_disposed) return;
 
-            var values = new string[_types.Length + 1];
-            values[0] = data.Timestamp.ToString("O", CultureInfo.InvariantCulture);
-            for (int i = 0; i < _types.Length; i++)
+            // Write roda a cada snapshot na UI thread: falha de I/O (disco cheio, antivírus,
+            // arquivo bloqueado) não deve propagar exceção para o app.
+            try
             {
-                values[i + 1] = data.GetValue(_types[i]).ToString("F2", CultureInfo.InvariantCulture);
+                var values = new string[_types.Length + 1];
+                values[0] = data.Timestamp.ToString("O", CultureInfo.InvariantCulture);
+                for (int i = 0; i < _types.Length; i++)
+                {
+                    values[i + 1] = data.GetValue(_types[i]).ToString("F2", CultureInfo.InvariantCulture);
+                }
+                _writer.WriteLine(string.Join(",", values));
+                _writer.Flush();
             }
-            _writer.WriteLine(string.Join(",", values));
-            _writer.Flush();
+            catch (Exception ex)
+            {
+                ErrorLog.Write("CsvLogger.Write", ex);
+            }
         }
     }
 

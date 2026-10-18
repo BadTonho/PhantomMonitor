@@ -134,7 +134,13 @@ public sealed class TrayIconService : IDisposable
     {
         if (msg != CallbackMessage) return IntPtr.Zero;
 
-        int evt = (int)(lParam.ToInt64() & 0xFFFF);
+        // Com a versão 4 da tray, o clique direito chega como WM_CONTEXTMENU e o
+        // lParam carrega COORDENADAS do mouse (X empacotado na loword) — não um código
+        // de mensagem. Por isso a comparação usa o valor completo de lParam: comparar
+        // a loword mascarada contra 0x007B só casava se o ponteiro estivesse a X = 123 px,
+        // deixando o menu de contexto inacessível na prática.
+        long evt = lParam.ToInt64();
+
         if (evt is NinSelect or WmLButtonUp or WmLButtonDblClk)
         {
             ActivateRequested?.Invoke();
@@ -346,7 +352,7 @@ public sealed class TrayIconService : IDisposable
         public RGBQUAD bmiColors;
     }
 
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool Shell_NotifyIcon(uint dwMessage, ref NOTIFYICONDATA lpData);
 
     [DllImport("user32.dll")]

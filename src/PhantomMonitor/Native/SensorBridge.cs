@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace RivaMonitor.Native;
+namespace PhantomMonitor.Native;
 
-/// <summary>Índices de sensores expostos por RivaSensor_GetSensorValue (mesma ordem do C++).</summary>
+/// <summary>Índices de sensores expostos por PhantomSensor_GetSensorValue (mesma ordem do C++).</summary>
 public enum NativeSensorType
 {
     CpuUsage = 0,
@@ -25,7 +25,7 @@ public enum NativeSensorType
 }
 
 /// <summary>
-/// Layout idêntico a struct NativeSensorSnapshot em RivaSensorLib.h (16 doubles = 128 bytes).
+/// Layout idêntico a struct NativeSensorSnapshot em PhantomSensorLib.h (16 doubles = 128 bytes).
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct NativeSensorSnapshot
@@ -50,26 +50,26 @@ public struct NativeSensorSnapshot
 
 public static class SensorBridge
 {
-    private const string DllName = "RivaSensorLib.dll";
+    private const string DllName = "PhantomSensorLib.dll";
     private const int ExpectedSnapshotSize = 16 * sizeof(double);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int RivaSensor_Init();
+    public static extern int PhantomSensor_Init();
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int RivaSensor_ReadSnapshot(ref NativeSensorSnapshot snapshot);
+    public static extern int PhantomSensor_ReadSnapshot(ref NativeSensorSnapshot snapshot);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int RivaSensor_GetSensorCount();
+    public static extern int PhantomSensor_GetSensorCount();
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int RivaSensor_GetSensorName(int index, IntPtr buffer, int bufferSize);
+    public static extern int PhantomSensor_GetSensorName(int index, IntPtr buffer, int bufferSize);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int RivaSensor_GetSensorValue(int index, ref double value);
+    public static extern int PhantomSensor_GetSensorValue(int index, ref double value);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void RivaSensor_Shutdown();
+    public static extern void PhantomSensor_Shutdown();
 
     public static bool IsAvailable { get; private set; }
 
@@ -83,7 +83,7 @@ public static class SensorBridge
                 return false;
             }
 
-            IsAvailable = RivaSensor_Init() == 0;
+            IsAvailable = PhantomSensor_Init() == 0;
             return IsAvailable;
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
@@ -97,7 +97,7 @@ public static class SensorBridge
     {
         if (!IsAvailable) return null;
         var snap = new NativeSensorSnapshot();
-        return RivaSensor_ReadSnapshot(ref snap) == 0 ? snap : null;
+        return PhantomSensor_ReadSnapshot(ref snap) == 0 ? snap : null;
     }
 
     public static string? GetSensorName(int index)
@@ -106,7 +106,7 @@ public static class SensorBridge
         var ptr = Marshal.AllocHGlobal(128);
         try
         {
-            if (RivaSensor_GetSensorName(index, ptr, 128) != 0) return null;
+            if (PhantomSensor_GetSensorName(index, ptr, 128) != 0) return null;
             return Marshal.PtrToStringAnsi(ptr);
         }
         finally
@@ -118,7 +118,7 @@ public static class SensorBridge
     public static void Unload()
     {
         if (!IsAvailable) return;
-        try { RivaSensor_Shutdown(); } catch { }
+        try { PhantomSensor_Shutdown(); } catch { }
         IsAvailable = false;
     }
 }

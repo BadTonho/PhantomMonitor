@@ -5,11 +5,11 @@ using System.Security.Principal;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using RivaMonitor.Models;
-using RivaMonitor.Overlay;
-using RivaMonitor.Services;
+using PhantomMonitor.Models;
+using PhantomMonitor.Overlay;
+using PhantomMonitor.Services;
 
-namespace RivaMonitor;
+namespace PhantomMonitor;
 
 public partial class MainWindow : Window
 {
@@ -79,7 +79,7 @@ public partial class MainWindow : Window
         {
             ErrorLog.Write("RestartAsAdmin", ex);
             MessageBox.Show("Não foi possível elevar o aplicativo. Execute manualmente como Administrador.",
-                "Riva Monitor", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Phantom Monitor", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -277,7 +277,7 @@ public partial class MainWindow : Window
         {
             ErrorLog.Write("OpenOverlayEditor", ex.ToString());
             MessageBox.Show($"Não foi possível abrir o editor do overlay:\n\n{ex.Message}",
-                "Riva Monitor", MessageBoxButton.OK, MessageBoxImage.Error);
+                "Phantom Monitor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

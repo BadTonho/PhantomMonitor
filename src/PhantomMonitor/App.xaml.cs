@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace RivaMonitor;
+namespace PhantomMonitor;
 
 public partial class App : Application
 {
@@ -11,7 +11,7 @@ public partial class App : Application
         DispatcherUnhandledException += (s, args) =>
         {
             MessageBox.Show($"Erro inesperado:\n\n{args.Exception.Message}\n\n{args.Exception.StackTrace}",
-                "Riva Monitor - Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                "Phantom Monitor - Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
     }

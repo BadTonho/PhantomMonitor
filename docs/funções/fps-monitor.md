@@ -7,15 +7,15 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 - Leitura de FPS e Frametime (ms) em tempo real da janela/jogo em primeiro plano
 - Histórico circular de frametime para gráficos em tempo real (600 amostras)
 - Estatísticas dinâmicas: FPS instantâneo (com suavização EMA), FPS médio, mínimo e 1% Low
-- Detecção automática de jogos em primeiro plano (ignora explorer, tarefas do sistema e a própria janela do RivaMonitor)
+- Detecção automática de jogos em primeiro plano (ignora explorer, tarefas do sistema e a própria janela do PhantomMonitor)
 - Encerramento automático e limpo do processo do PresentMon ao fechar o app
 
 ## Arquitetura & Integração
 
 - **Contrato Multiplataforma (`IFpsMonitor`):** Interface unificada que abstrai a captura de taxas de quadros entre Windows (`FpsMonitor`) e Linux (`LinuxFpsMonitor`).
 - **Motor Windows:** `PresentMon.exe` (standalone oficial v2.6.0 da Intel, armazenado em `tools/` e copiado automaticamente para a pasta de saída)
-- **Motor Linux:** `RivaVulkanLayer` (camada Vulkan nativa em C++ que intercepta `vkQueuePresentKHR` e transmite dados via memória compartilhada `/dev/shm/riva_fps`, dispensando softwares como MangoHud)
-- **Comunicação no Windows:** o serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats --stop_existing_session --session_name RivaMonitorFps --exclude RivaMonitor.exe --no_track_input --no_track_gpu --exclude_dropped`) e analisa o CSV em tempo real. Os argumentos precisam existir no PresentMon 2.x (por exemplo, `--no_track_gpu_video` **não existe** e faz o processo encerrar imediatamente).
+- **Motor Linux:** `PhantomVulkanLayer` (camada Vulkan nativa em C++ que intercepta `vkQueuePresentKHR` e transmite dados via memória compartilhada `/dev/shm/phantom_fps`, dispensando softwares como MangoHud)
+- **Comunicação no Windows:** o serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats --stop_existing_session --session_name PhantomMonitorFps --exclude PhantomMonitor.exe --no_track_input --no_track_gpu --exclude_dropped`) e analisa o CSV em tempo real. Os argumentos precisam existir no PresentMon 2.x (por exemplo, `--no_track_gpu_video` **não existe** e faz o processo encerrar imediatamente).
 - **Parse Dinâmico:** mapeia as colunas do PresentMon (`ProcessID`, `Application`, `msBetweenPresents` / `FrameTime`) e trata campos CSV entre aspas
 - **Detecção de Foco:** `GetForegroundWindow` e `GetWindowThreadProcessId` via P/Invoke identificam o jogo ativo a cada 500ms
 - **Privilégios:** o PresentMon exige Administrador (ou o grupo "Performance Log Users"). Sem isso, `EtwDiag` mostra "Requer Administrador" e o motivo completo vai para `logs/errors.log`

@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.IO;
-using RivaMonitor.Models;
+using PhantomMonitor.Models;
 
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 public sealed class CsvLogger : IDisposable
 {

@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using RivaMonitor.Services;
+using PhantomMonitor.Services;
 
-namespace RivaMonitor.Overlay;
+namespace PhantomMonitor.Overlay;
 
 public partial class OverlayEditorWindow : Window
 {

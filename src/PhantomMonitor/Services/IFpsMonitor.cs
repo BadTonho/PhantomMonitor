@@ -1,8 +1,8 @@
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 /// <summary>
 /// Contrato unificado para monitoramento de taxas de quadros (FPS, frametime, 1% low)
-/// em múltiplos sistemas operacionais (Windows via PresentMon/ETW, Linux via RivaVulkanLayer).
+/// em múltiplos sistemas operacionais (Windows via PresentMon/ETW, Linux via PhantomVulkanLayer).
 /// </summary>
 public interface IFpsMonitor : IDisposable
 {

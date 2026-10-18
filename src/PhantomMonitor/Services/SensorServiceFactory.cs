@@ -1,4 +1,4 @@
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 /// <summary>
 /// Fábrica multiplataforma que inicializa o provedor de sensores correto

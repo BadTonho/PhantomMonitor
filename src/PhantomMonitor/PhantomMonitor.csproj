@@ -6,11 +6,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <RootNamespace>PhantomMonitor</RootNamespace>
+    <AssemblyName>PhantomMonitor</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup>
-    <NativeLibDir>$(MSBuildProjectDirectory)\..\RivaSensorLib\</NativeLibDir>
-    <NativeLibDirNoSlash>$(MSBuildProjectDirectory)\..\RivaSensorLib</NativeLibDirNoSlash>
+    <NativeLibDir>$(MSBuildProjectDirectory)\..\PhantomSensorLib\</NativeLibDir>
+    <NativeLibDirNoSlash>$(MSBuildProjectDirectory)\..\PhantomSensorLib</NativeLibDirNoSlash>
     <!-- Caminho do vcvars64.bat: pode ser sobrescrito via -p:VcVarsPath=... -->
     <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
     <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
@@ -39,20 +41,20 @@
   </ItemGroup>
 
   <!-- A DLL nativa é opcional (stub): o app funciona sem ela. Falhas viram aviso, não erro. -->
-  <Target Name="BuildRivaSensorLib" BeforeTargets="BeforeBuild"
-          Inputs="$(NativeLibDir)RivaSensorLib.cpp;$(NativeLibDir)RivaSensorLib.h"
-          Outputs="$(NativeLibDir)RivaSensorLib.dll">
+  <Target Name="BuildPhantomSensorLib" BeforeTargets="BeforeBuild"
+          Inputs="$(NativeLibDir)PhantomSensorLib.cpp;$(NativeLibDir)PhantomSensorLib.h"
+          Outputs="$(NativeLibDir)PhantomSensorLib.dll">
     <Warning Condition="'$(VcVarsPath)' == ''"
-             Text="vcvars64.bat não encontrado (use -p:VcVarsPath=...). RivaSensorLib.dll não será compilada; o app funciona sem ela." />
+             Text="vcvars64.bat não encontrado (use -p:VcVarsPath=...). PhantomSensorLib.dll não será compilada; o app funciona sem ela." />
     <Exec Condition="'$(VcVarsPath)' != ''"
-          Command="call &quot;$(VcVarsPath)&quot; &amp;&amp; cd /d &quot;$(NativeLibDirNoSlash)&quot; &amp;&amp; cl /LD /EHsc /std:c++17 /DRIVASENSORLIB_EXPORTS /I. RivaSensorLib.cpp /Fe:RivaSensorLib.dll /nologo"
+          Command="call &quot;$(VcVarsPath)&quot; &amp;&amp; cd /d &quot;$(NativeLibDirNoSlash)&quot; &amp;&amp; cl /LD /EHsc /std:c++17 /DPHANTOMSENSORLIB_EXPORTS /I. PhantomSensorLib.cpp /Fe:PhantomSensorLib.dll /nologo"
           ConsoleToMSBuild="true" StandardOutputImportance="low"
           ContinueOnError="WarnAndContinue" />
   </Target>
 
-  <Target Name="CopyRivaSensorLib" AfterTargets="BuildRivaSensorLib" BeforeTargets="BeforeBuild">
-    <Copy SourceFiles="$(NativeLibDir)RivaSensorLib.dll" DestinationFolder="$(OutDir)"
-          Condition="Exists('$(NativeLibDir)RivaSensorLib.dll')" />
+  <Target Name="CopyPhantomSensorLib" AfterTargets="BuildPhantomSensorLib" BeforeTargets="BeforeBuild">
+    <Copy SourceFiles="$(NativeLibDir)PhantomSensorLib.dll" DestinationFolder="$(OutDir)"
+          Condition="Exists('$(NativeLibDir)PhantomSensorLib.dll')" />
   </Target>
 
 </Project>

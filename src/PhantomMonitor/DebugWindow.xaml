@@ -1,4 +1,4 @@
-<Window x:Class="RivaMonitor.DebugWindow"
+<Window x:Class="PhantomMonitor.DebugWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Sensores Detectados" Height="550" Width="780"

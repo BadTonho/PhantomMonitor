@@ -1,4 +1,4 @@
-namespace RivaMonitor.Models;
+namespace PhantomMonitor.Models;
 
 public enum SensorType
 {

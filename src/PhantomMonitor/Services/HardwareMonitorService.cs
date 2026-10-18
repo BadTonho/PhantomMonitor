@@ -4,11 +4,11 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using LibreHardwareMonitor.Hardware;
-using RivaMonitor.Models;
+using PhantomMonitor.Models;
 using LhmSensorType = LibreHardwareMonitor.Hardware.SensorType;
-using SType = RivaMonitor.Models.SensorType;
+using SType = PhantomMonitor.Models.SensorType;
 
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 public sealed class HardwareMonitorService : ISensorService
 {

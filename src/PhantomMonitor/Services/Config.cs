@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 public sealed class AppConfig
 {

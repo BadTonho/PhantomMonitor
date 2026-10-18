@@ -4,10 +4,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using RivaMonitor.Models;
-using RivaMonitor.Services;
+using PhantomMonitor.Models;
+using PhantomMonitor.Services;
 
-namespace RivaMonitor.Overlay;
+namespace PhantomMonitor.Overlay;
 
 public partial class OverlayWindow : Window
 {

@@ -1,4 +1,4 @@
-#include "RivaVulkanLayer.h"
+#include "PhantomVulkanLayer.h"
 #include <cstring>
 #include <ctime>
 #include <unordered_map>
@@ -35,7 +35,7 @@ std::unordered_map<void*, InstanceDispatch> g_instance_dispatch;
 std::unordered_map<void*, DeviceDispatch> g_device_dispatch;
 
 // Telemetria e memória compartilhada
-std::atomic<RivaVulkanTelemetryHeader*> g_telemetry_shm{nullptr};
+std::atomic<PhantomVulkanTelemetryHeader*> g_telemetry_shm{nullptr};
 int g_shm_fd = -1;
 std::atomic<uint64_t> g_frame_counter{0};
 std::atomic<uint64_t> g_last_present_ns{0};
@@ -60,23 +60,23 @@ void init_shared_memory() {
     if (g_telemetry_shm.load() != nullptr) return;
 
 #if !defined(_WIN32)
-    // 0600: apenas o mesmo usuário (jogo e RivaMonitor) acessa a telemetria.
-    // 1. Tentar POSIX shared memory (/dev/shm/riva_fps)
-    g_shm_fd = shm_open(RIVA_SHM_NAME, O_CREAT | O_RDWR, 0600);
+    // 0600: apenas o mesmo usuário (jogo e PhantomMonitor) acessa a telemetria.
+    // 1. Tentar POSIX shared memory (/dev/shm/phantom_fps)
+    g_shm_fd = shm_open(PHANTOM_SHM_NAME, O_CREAT | O_RDWR, 0600);
     if (g_shm_fd < 0) {
-        // Fallback para arquivo comum em /tmp/riva_fps.bin
-        g_shm_fd = open(RIVA_FALLBACK_FILE, O_CREAT | O_RDWR, 0600);
+        // Fallback para arquivo comum em /tmp/phantom_fps.bin
+        g_shm_fd = open(PHANTOM_FALLBACK_FILE, O_CREAT | O_RDWR, 0600);
     }
 
     if (g_shm_fd >= 0) {
-        size_t size = sizeof(RivaVulkanTelemetryHeader);
+        size_t size = sizeof(PhantomVulkanTelemetryHeader);
         if (ftruncate(g_shm_fd, size) == 0) {
             void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, g_shm_fd, 0);
             if (addr != MAP_FAILED) {
-                auto* shm = static_cast<RivaVulkanTelemetryHeader*>(addr);
-                std::memset(shm, 0, sizeof(RivaVulkanTelemetryHeader));
-                shm->magic = RIVA_TELEMETRY_MAGIC;
-                shm->version = RIVA_TELEMETRY_VERSION;
+                auto* shm = static_cast<PhantomVulkanTelemetryHeader*>(addr);
+                std::memset(shm, 0, sizeof(PhantomVulkanTelemetryHeader));
+                shm->magic = PHANTOM_TELEMETRY_MAGIC;
+                shm->version = PHANTOM_TELEMETRY_VERSION;
                 shm->pid = static_cast<uint32_t>(getpid());
 
                 // Ler nome do processo em /proc/self/comm
@@ -103,9 +103,9 @@ void cleanup_shared_memory() {
     std::lock_guard<std::mutex> lock(g_shm_mutex);
 #if !defined(_WIN32)
     // Zera o ponteiro antes de desmapear para que o present não escreva em memória liberada.
-    RivaVulkanTelemetryHeader* shm = g_telemetry_shm.exchange(nullptr);
+    PhantomVulkanTelemetryHeader* shm = g_telemetry_shm.exchange(nullptr);
     if (shm != nullptr) {
-        munmap(shm, sizeof(RivaVulkanTelemetryHeader));
+        munmap(shm, sizeof(PhantomVulkanTelemetryHeader));
     }
     if (g_shm_fd >= 0) {
         close(g_shm_fd);
@@ -122,7 +122,7 @@ void* get_dispatch_key(void* object) {
 } // namespace
 
 // Interceptação de vkQueuePresentKHR: o coração da medição de quadros
-static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkQueuePresentKHR(
+static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
     VkQueue queue,
     const VkPresentInfoKHR* pPresentInfo)
 {
@@ -146,7 +146,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkQueuePresentKHR(
         float fps = (ft_ms > 0.001f) ? (1000.0f / ft_ms) : 0.0f;
 
         // Lê o ponteiro uma única vez (cleanup pode zerá-lo em outro thread).
-        RivaVulkanTelemetryHeader* shm = g_telemetry_shm.load();
+        PhantomVulkanTelemetryHeader* shm = g_telemetry_shm.load();
         if (shm != nullptr) {
             uint64_t frame = ++g_frame_counter;
             shm->frame_count = frame;
@@ -163,7 +163,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkQueuePresentKHR(
     return VK_SUCCESS;
 }
 
-static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkCreateInstance(
+static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateInstance(
     const VkInstanceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance)
@@ -199,7 +199,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkCreateInstance(
     return res;
 }
 
-static VKAPI_ATTR void VKAPI_CALL Riva_vkDestroyInstance(
+static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyInstance(
     VkInstance instance,
     const VkAllocationCallbacks* pAllocator)
 {
@@ -222,7 +222,7 @@ static VKAPI_ATTR void VKAPI_CALL Riva_vkDestroyInstance(
     }
 }
 
-static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkCreateDevice(
+static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -259,7 +259,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkCreateDevice(
     return res;
 }
 
-static VKAPI_ATTR void VKAPI_CALL Riva_vkDestroyDevice(
+static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyDevice(
     VkDevice device,
     const VkAllocationCallbacks* pAllocator)
 {
@@ -282,18 +282,18 @@ static VKAPI_ATTR void VKAPI_CALL Riva_vkDestroyDevice(
 
 extern "C" {
 
-RIVA_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Riva_vkGetInstanceProcAddr(
+PHANTOM_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetInstanceProcAddr(
     VkInstance instance,
     const char* pName)
 {
     if (std::strcmp(pName, "vkGetInstanceProcAddr") == 0)
-        return reinterpret_cast<PFN_vkVoidFunction>(Riva_vkGetInstanceProcAddr);
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkGetInstanceProcAddr);
     if (std::strcmp(pName, "vkCreateInstance") == 0)
-        return reinterpret_cast<PFN_vkVoidFunction>(Riva_vkCreateInstance);
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkCreateInstance);
     if (std::strcmp(pName, "vkDestroyInstance") == 0)
-        return reinterpret_cast<PFN_vkVoidFunction>(Riva_vkDestroyInstance);
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkDestroyInstance);
     if (std::strcmp(pName, "vkCreateDevice") == 0)
-        return reinterpret_cast<PFN_vkVoidFunction>(Riva_vkCreateDevice);
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkCreateDevice);
 
     if (instance == VK_NULL_HANDLE) return nullptr;
 
@@ -306,16 +306,16 @@ RIVA_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Riva_vkGetInstanceProcAddr(
     return nullptr;
 }
 
-RIVA_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Riva_vkGetDeviceProcAddr(
+PHANTOM_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetDeviceProcAddr(
     VkDevice device,
     const char* pName)
 {
     if (std::strcmp(pName, "vkGetDeviceProcAddr") == 0)
-        return reinterpret_cast<PFN_vkVoidFunction>(Riva_vkGetDeviceProcAddr);
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkGetDeviceProcAddr);
     if (std::strcmp(pName, "vkDestroyDevice") == 0)
-        return reinterpret_cast<PFN_vkVoidFunction>(Riva_vkDestroyDevice);
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkDestroyDevice);
     if (std::strcmp(pName, "vkQueuePresentKHR") == 0)
-        return reinterpret_cast<PFN_vkVoidFunction>(Riva_vkQueuePresentKHR);
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkQueuePresentKHR);
 
     if (device == VK_NULL_HANDLE) return nullptr;
 
@@ -328,15 +328,15 @@ RIVA_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Riva_vkGetDeviceProcAddr(
     return nullptr;
 }
 
-RIVA_EXPORT VKAPI_ATTR VkResult VKAPI_CALL Riva_vkNegotiateLoaderLayerInterfaceVersion(
+PHANTOM_EXPORT VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkNegotiateLoaderLayerInterfaceVersion(
     VkNegotiateLayerInterface* pVersionStruct)
 {
     if (!pVersionStruct || pVersionStruct->sType != LAYER_NEGOTIATE_INTERFACE_STRUCT)
         return VK_ERROR_INITIALIZATION_FAILED;
 
     if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
-        pVersionStruct->pfnGetInstanceProcAddr = Riva_vkGetInstanceProcAddr;
-        pVersionStruct->pfnGetDeviceProcAddr = Riva_vkGetDeviceProcAddr;
+        pVersionStruct->pfnGetInstanceProcAddr = Phantom_vkGetInstanceProcAddr;
+        pVersionStruct->pfnGetDeviceProcAddr = Phantom_vkGetDeviceProcAddr;
         pVersionStruct->pfnGetPhysicalDeviceProcAddr = nullptr;
     }
 

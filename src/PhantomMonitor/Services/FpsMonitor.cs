@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 public sealed class FpsMonitor : IFpsMonitor
 {
@@ -112,7 +112,7 @@ public sealed class FpsMonitor : IFpsMonitor
             {
                 FileName = presentMonPath,
                 // PresentMon 2.x: --no_track_gpu_video não existe (rejeitado como opção desconhecida).
-                Arguments = "--output_stdout --no_console_stats --stop_existing_session --session_name RivaMonitorFps --exclude RivaMonitor.exe --no_track_input --no_track_gpu --exclude_dropped",
+                Arguments = "--output_stdout --no_console_stats --stop_existing_session --session_name PhantomMonitorFps --exclude PhantomMonitor.exe --no_track_input --no_track_gpu --exclude_dropped",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -360,7 +360,7 @@ public sealed class FpsMonitor : IFpsMonitor
 
     private static bool IsIgnoredProcess(string name)
     {
-        return name.Equals("RivaMonitor", StringComparison.OrdinalIgnoreCase) ||
+        return name.Equals("PhantomMonitor", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("explorer", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("ShellExperienceHost", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("StartMenuExperienceHost", StringComparison.OrdinalIgnoreCase) ||

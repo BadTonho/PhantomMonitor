@@ -1,18 +1,18 @@
 {
     "file_format_version": "1.0.0",
     "layer": {
-        "name": "VK_LAYER_RIVA_monitor",
+        "name": "VK_LAYER_PHANTOM_monitor",
         "type": "GLOBAL",
-        "library_path": "./libVkLayer_riva_monitor.so",
+        "library_path": "./libVkLayer_phantom_monitor.so",
         "api_version": "1.3.0",
         "implementation_version": "1",
-        "description": "RivaShopee Native Vulkan Frametime & FPS Telemetry Layer",
+        "description": "PhantomMonitor Native Vulkan Frametime & FPS Telemetry Layer",
         "functions": {
-            "vkGetInstanceProcAddr": "Riva_vkGetInstanceProcAddr",
-            "vkGetDeviceProcAddr": "Riva_vkGetDeviceProcAddr"
+            "vkGetInstanceProcAddr": "Phantom_vkGetInstanceProcAddr",
+            "vkGetDeviceProcAddr": "Phantom_vkGetDeviceProcAddr"
         },
         "enable_environment": {
-            "ENABLE_RIVA_OVERLAY": "1"
+            "ENABLE_PHANTOM_OVERLAY": "1"
         }
     }
 }

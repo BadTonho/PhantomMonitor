@@ -2,16 +2,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace RivaMonitor.Services.Linux;
+namespace PhantomMonitor.Services.Linux;
 
 /// <summary>
-/// Estrutura binária de telemetria compartilhada entre o RivaVulkanLayer (nativo C++)
-/// e o RivaMonitor via memória compartilhada (/dev/shm/riva_fps ou /tmp/riva_fps.bin).
+/// Estrutura binária de telemetria compartilhada entre o PhantomVulkanLayer (nativo C++)
+/// e o PhantomMonitor via memória compartilhada (/dev/shm/phantom_fps ou /tmp/phantom_fps.bin).
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct RivaVulkanTelemetryHeader
+public struct PhantomVulkanTelemetryHeader
 {
-    public const uint ExpectedMagic = 0x52495641; // "RIVA"
+    public const uint ExpectedMagic = 0x50484E54; // "PHNT"
 
     public uint Magic;
     public uint Version;
@@ -26,7 +26,7 @@ public struct RivaVulkanTelemetryHeader
 }
 
 /// <summary>
-/// Monitor de FPS nativo para Linux que consome telemetria do RivaVulkanLayer
+/// Monitor de FPS nativo para Linux que consome telemetria do PhantomVulkanLayer
 /// diretamente da memória compartilhada sem intermediários ou aplicações de terceiros.
 /// </summary>
 public sealed class LinuxFpsMonitor : IFpsMonitor
@@ -38,8 +38,8 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     private readonly Timer _pollTimer;
     private readonly string[] _sharedMemoryPaths =
     [
-        "/dev/shm/riva_fps",
-        "/tmp/riva_fps.bin"
+        "/dev/shm/phantom_fps",
+        "/tmp/phantom_fps.bin"
     ];
 
     private volatile float _fps;
@@ -48,7 +48,7 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     private volatile float _fps1Low;
     private volatile float _lastFrametimeMs;
     private volatile bool _hasData;
-    private volatile string _debugInfo = "Aguardando RivaVulkanLayer...";
+    private volatile string _debugInfo = "Aguardando PhantomVulkanLayer...";
 
     private ulong _lastFrameCount;
     private uint _lastPid;
@@ -103,7 +103,7 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
             _lastFrameCount = 0;
             _lastPid = 0;
             _currentProcessName = "";
-            _debugInfo = "Aguardando RivaVulkanLayer...";
+            _debugInfo = "Aguardando PhantomVulkanLayer...";
         }
     }
 
@@ -131,7 +131,7 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
             }
 
             // Ler cabeçalho estruturado
-            byte[] buffer = new byte[Marshal.SizeOf<RivaVulkanTelemetryHeader>()];
+            byte[] buffer = new byte[Marshal.SizeOf<PhantomVulkanTelemetryHeader>()];
             using (var fs = new FileStream(activePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 int read = fs.Read(buffer, 0, buffer.Length);
@@ -139,17 +139,17 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
             }
 
             var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-            RivaVulkanTelemetryHeader telemetry;
+            PhantomVulkanTelemetryHeader telemetry;
             try
             {
-                telemetry = Marshal.PtrToStructure<RivaVulkanTelemetryHeader>(handle.AddrOfPinnedObject());
+                telemetry = Marshal.PtrToStructure<PhantomVulkanTelemetryHeader>(handle.AddrOfPinnedObject());
             }
             finally
             {
                 handle.Free();
             }
 
-            if (telemetry.Magic != RivaVulkanTelemetryHeader.ExpectedMagic)
+            if (telemetry.Magic != PhantomVulkanTelemetryHeader.ExpectedMagic)
             {
                 return;
             }

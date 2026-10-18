@@ -1,13 +1,13 @@
 #pragma once
 
 #if defined(_WIN32)
-    #ifdef RIVASENSORLIB_EXPORTS
-        #define RIVA_API __declspec(dllexport)
+    #ifdef PHANTOMSENSORLIB_EXPORTS
+        #define PHANTOM_API __declspec(dllexport)
     #else
-        #define RIVA_API __declspec(dllimport)
+        #define PHANTOM_API __declspec(dllimport)
     #endif
 #else
-    #define RIVA_API __attribute__((visibility("default")))
+    #define PHANTOM_API __attribute__((visibility("default")))
 #endif
 
 // Layout deve ser idêntico ao NativeSensorSnapshot em Native/SensorBridge.cs
@@ -35,14 +35,14 @@ struct NativeSensorSnapshot
 static_assert(sizeof(NativeSensorSnapshot) == 16 * sizeof(double),
               "NativeSensorSnapshot deve ter 128 bytes (compatível com o C#)");
 
-#define RIVA_SENSOR_COUNT 16
+#define PHANTOM_SENSOR_COUNT 16
 
 extern "C"
 {
-    RIVA_API int RivaSensor_Init();
-    RIVA_API int RivaSensor_ReadSnapshot(NativeSensorSnapshot* snapshot);
-    RIVA_API int RivaSensor_GetSensorCount();
-    RIVA_API int RivaSensor_GetSensorName(int index, char* buffer, int bufferSize);
-    RIVA_API int RivaSensor_GetSensorValue(int index, double* value);
-    RIVA_API void RivaSensor_Shutdown();
+    PHANTOM_API int PhantomSensor_Init();
+    PHANTOM_API int PhantomSensor_ReadSnapshot(NativeSensorSnapshot* snapshot);
+    PHANTOM_API int PhantomSensor_GetSensorCount();
+    PHANTOM_API int PhantomSensor_GetSensorName(int index, char* buffer, int bufferSize);
+    PHANTOM_API int PhantomSensor_GetSensorValue(int index, double* value);
+    PHANTOM_API void PhantomSensor_Shutdown();
 }

@@ -1,5 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/RivaMonitor/RivaMonitor.csproj" />
+    <Project Path="src/PhantomMonitor/PhantomMonitor.csproj" />
   </Folder>
 </Solution>

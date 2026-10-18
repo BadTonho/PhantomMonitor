@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.IO;
-using RivaMonitor.Models;
+using PhantomMonitor.Models;
 
-namespace RivaMonitor.Services.Linux;
+namespace PhantomMonitor.Services.Linux;
 
 /// <summary>
 /// Provedor nativo de telemetria e sensores para Linux.

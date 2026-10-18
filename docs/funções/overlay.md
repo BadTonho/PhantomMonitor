@@ -2,7 +2,7 @@
 
 Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no visual clássico do **RivaTuner Statistics Server (RTSS)**. É compacta, clicável (click-through), sem impacto visual excessivo sobre os jogos e sempre visível no topo.
 
-## Estilo Visual RivaTuner (RTSS)
+## Estilo Visual Phantom OSD (Estilo RTSS)
 
 - **Layout Inline Compacto:** Elimina cards volumosos e barras de progresso grossas. Cada dispositivo ocupa uma única linha com alinhamento tabular perfeito.
 - **Cores Oficiais por Dispositivo:**

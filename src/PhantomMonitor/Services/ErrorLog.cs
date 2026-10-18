@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 /// <summary>
 /// Registro de erros/diagnósticos internos (substitui os antigos catch vazios).

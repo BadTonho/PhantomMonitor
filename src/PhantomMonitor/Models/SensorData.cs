@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RivaMonitor.Models;
+namespace PhantomMonitor.Models;
 
 public sealed class SensorData
 {

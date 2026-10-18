@@ -1,6 +1,6 @@
 # MainWindow
 
-Interface gráfica principal do Riva Monitor. Utiliza WPF com tema escuro e layout de sidebar + conteúdo.
+Interface gráfica principal do Phantom Monitor. Utiliza WPF com tema escuro e layout de sidebar + conteúdo.
 
 ## Funcionalidades
 

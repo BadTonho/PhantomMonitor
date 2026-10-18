@@ -1,13 +1,13 @@
 # Suporte Nativo a Linux (Multiplataforma)
 
-O **Riva Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, RTSS, GOverlay ou drivers proprietários adicionais).
+O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, RTSS, GOverlay ou drivers proprietários adicionais).
 
 > [!IMPORTANT]
-> **Escopo atual:** o app WPF (`RivaMonitor.csproj`, `net10.0-windows`) só executa no Windows. O código em `Services/Linux/` e a camada `RivaVulkanLayer` são a base de suporte a Linux, mas **ainda não há um front-end Linux executável** (seria necessário um projeto multiplataforma ou multi-target). O `RivaVulkanLayer` é construído por CMake/`install_layer.sh` e **não faz parte do `RivaMonitor.slnx`** (a solução só lista projetos MSBuild).
+> **Escopo atual:** o app WPF (`PhantomMonitor.csproj`, `net10.0-windows`) só executa no Windows. O código em `Services/Linux/` e a camada `PhantomVulkanLayer` são a base de suporte a Linux, mas **ainda não há um front-end Linux executável** (seria necessário um projeto multiplataforma ou multi-target). O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e **não faz parte do `PhantomMonitor.slnx`** (a solução só lista projetos MSBuild).
 
 ### Camada Vulkan: notas técnicas
 
-- A memória compartilhada (`/dev/shm/riva_fps`, fallback `/tmp/riva_fps.bin`) é criada com permissão `0600` (apenas o mesmo usuário).
+- A memória compartilhada (`/dev/shm/phantom_fps`, fallback `/tmp/phantom_fps.bin`) é criada com permissão `0600` (apenas o mesmo usuário).
 - O cabeçalho usa `#pragma pack(1)` e o `LinuxFpsMonitor` usa `StructLayout(Pack = 1)`: os layouts precisam permanecer idênticos (campos `uint64` ficam desalinhados, o que é aceito em x86-64/ARM64).
 - O estado global é atômico (`g_last_present_ns`, `g_telemetry_shm`) e `init/cleanup` da memória compartilhada é protegido por mutex.
 - Limitação: há um único bloco de telemetria compartilhado. Se vários processos Vulkan com a camada ativa rodarem ao mesmo tempo, o último a inicializar prevalece.
@@ -20,7 +20,7 @@ O sistema emprega uma arquitetura desacoplada via `ISensorService` e `IFpsMonito
 
 ```
                     ┌─────────────────────────┐
-                    │    RivaMonitor (UI)     │
+                    │   PhantomMonitor (UI)   │
                     └────────────┬────────────┘
                                  │
                      ISensorService / IFpsMonitor
@@ -35,7 +35,7 @@ O sistema emprega uma arquitetura desacoplada via `ISensorService` e `IFpsMonito
                                             │   ├── /sys/class/drm (GPU usage/VRAM)
                                             │   └── /proc/diskstats (I/O)
                                             └── LinuxFpsMonitor
-                                                └── RivaVulkanLayer (shared memory)
+                                                └── PhantomVulkanLayer (shared memory)
 ```
 
 ---
@@ -60,16 +60,16 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
 
 ---
 
-## 3. Monitoramento de FPS e Frametime Sem Terceiros (`RivaVulkanLayer`)
+## 3. Monitoramento de FPS e Frametime Sem Terceiros (`PhantomVulkanLayer`)
 
-Para capturar taxas de quadros sem depender do MangoHud ou de injeções arriscadas, o projeto implementa uma **camada Vulkan explícita nativa em C++** (`src/RivaVulkanLayer/`):
+Para capturar taxas de quadros sem depender do MangoHud ou de injeções arriscadas, o projeto implementa uma **camada Vulkan explícita nativa em C++** (`src/PhantomVulkanLayer/`):
 
 1. **Interceptação Transparente:**
    A camada intercepta chamadas de `vkQueuePresentKHR` diretamente na cadeia do Vulkan Loader.
 2. **Cálculo de Frametime de Ultra Baixa Latência:**
    Medição com `clock_gettime(CLOCK_MONOTONIC)` calculando o delta em microssegundos sem overhead perceptível (< 2 µs por quadro).
 3. **Comunicação por Memória Compartilhada (IPC):**
-   Os dados do quadro ativo são escritos em memória compartilhada POSIX (`/dev/shm/riva_fps` com fallback para `/tmp/riva_fps.bin`).
+   Os dados do quadro ativo são escritos em memória compartilhada POSIX (`/dev/shm/phantom_fps` com fallback para `/tmp/phantom_fps.bin`).
 4. **Consumo no C# (`LinuxFpsMonitor`):**
    O monitor C# lê os cabeçalhos diretamente da memória compartilhada, calcula médias móveis (EMA), 1% Low e alimenta o buffer circular de 600 amostras (`FrametimeBuffer`).
 
@@ -79,18 +79,18 @@ Para capturar taxas de quadros sem depender do MangoHud ou de injeções arrisca
 
 ### Compilação:
 ```bash
-cd src/RivaVulkanLayer
+cd src/PhantomVulkanLayer
 ./install_layer.sh
 ```
-O script compilará a biblioteca `libVkLayer_riva_monitor.so` e registrará o manifesto em `~/.local/share/vulkan/explicit_layers.d/riva_vulkan_layer.json`.
+O script compilará a biblioteca `libVkLayer_phantom_monitor.so` e registrará o manifesto em `~/.local/share/vulkan/explicit_layers.d/phantom_vulkan_layer.json`.
 
 ### Ativação em Jogos:
 * **Steam:**
   Nas propriedades do jogo, defina as Opções de Inicialização:
   ```bash
-  ENABLE_RIVA_OVERLAY=1 %command%
+  ENABLE_PHANTOM_OVERLAY=1 %command%
   ```
 * **Lutris / Heroic / Terminal:**
   ```bash
-  ENABLE_RIVA_OVERLAY=1 ./executavel_do_jogo
+  ENABLE_PHANTOM_OVERLAY=1 ./executavel_do_jogo
   ```

@@ -1,6 +1,6 @@
-using RivaMonitor.Models;
+using PhantomMonitor.Models;
 
-namespace RivaMonitor.Services;
+namespace PhantomMonitor.Services;
 
 public interface ISensorService : IDisposable
 {

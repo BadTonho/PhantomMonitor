@@ -44,8 +44,9 @@ Antes de realizar qualquer commit ou push:
 
 ## 3. Estrutura do Projeto e Compilação
 
-* **`src/RivaMonitor/`**: Aplicação desktop WPF em .NET 10.
-* **`src/RivaSensorLib/`**: Biblioteca nativa em C++ para leitura de sensores de baixo nível.
+* **`src/PhantomMonitor/`**: Aplicação desktop WPF em .NET 10.
+* **`src/PhantomSensorLib/`**: Biblioteca nativa em C++ para leitura de sensores de baixo nível.
+* **`src/PhantomVulkanLayer/`**: Camada Vulkan nativa em C++ para Linux.
 * **`tools/`**: Ferramentas auxiliares externas (ex.: `PresentMon.exe`).
 * **`docs/`**: Documentação de arquitetura e funcionalidades.
 

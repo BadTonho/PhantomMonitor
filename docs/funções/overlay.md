@@ -28,7 +28,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no v
 
 Inspirado diretamente no editor de layouts OSD do RTSS (`Editor de informações na tela`):
 - **Área de Edição com Grade (Grid Canvas):** Canvas com malha ortogonal escura onde os blocos de métricas (FPS, Gráfico de Frametime, CPU, GPU, RAM, Disco, Rede, Ventoinhas e Placa-mãe) são visualizados e manipulados.
-- **Arrastar e Soltar Interativo:** Suporte a movimentação livre dos blocos com o mouse e opção de alinhamento à grade (*Snap to Grid* de 10px).
+- **Arrastar e Soltar Interativo:** Suporte a movimentação livre dos blocos com o mouse e opção de alinhamento à grade (*Snap to Grid* de 10px). Arrastar um bloco desloca **o offset global do overlay** pela mesma quantidade (os campos X/Y acompanham em tempo real e o valor é persistido ao Salvar).
 - **Seleção de Camadas:** Destaque visual da camada selecionada com moldura wireframe e indicação de coordenadas em tempo real.
 - **Painel Inspetor Lateral:**
   - Ajuste de coordenadas absolutas de tela (`X`, `Y`) com predefinições de cantos rápidos (Superior Esquerdo, Superior Direito, Inferior Esquerdo, Inferior Direito).

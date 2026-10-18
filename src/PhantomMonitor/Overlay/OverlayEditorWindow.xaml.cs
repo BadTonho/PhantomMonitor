@@ -19,6 +19,8 @@ public partial class OverlayEditorWindow : Window
     private Point _dragStartPoint;
     private double _initialLeft;
     private double _initialTop;
+    private double _configStartX;
+    private double _configStartY;
     private DrawingBrush? _gridBrush;
 
     public OverlayEditorWindow(AppConfig config, string configPath)
@@ -138,6 +140,11 @@ public partial class OverlayEditorWindow : Window
             _initialTop = Canvas.GetTop(block);
             if (double.IsNaN(_initialTop)) _initialTop = 0;
 
+            // Arrastar um bloco desloca o offset GLOBAL do overlay (mesma quantidade),
+            // então a base do offset no início do arraste é capturada aqui.
+            _configStartX = _config.OverlayPosition.X;
+            _configStartY = _config.OverlayPosition.Y;
+
             SelectBlock(block);
             block.CaptureMouse();
             e.Handled = true;
@@ -202,6 +209,15 @@ public partial class OverlayEditorWindow : Window
 
             Canvas.SetLeft(_draggedBlock, newLeft);
             Canvas.SetTop(_draggedBlock, newTop);
+
+            // O arraste persiste de verdade: o delta do bloco vira delta do offset do
+            // overlay. Escrever nos boxes dispara OnPositionBoxChanged, que já atualiza
+            // _config (antes o arraste mexia só no preview e nada era salvo).
+            if (PosXBox != null && PosYBox != null)
+            {
+                PosXBox.Text = Math.Clamp(_configStartX + deltaX, -5000, 5000).ToString("F0");
+                PosYBox.Text = Math.Clamp(_configStartY + deltaY, -5000, 5000).ToString("F0");
+            }
 
             if (StatusCoordinatesText != null)
                 StatusCoordinatesText.Text = $"X: {newLeft:F0} px | Y: {newTop:F0} px";
@@ -397,6 +413,25 @@ public partial class OverlayEditorWindow : Window
 
     private void OnPresetPositionsClick(object sender, RoutedEventArgs e)
     {
-        OnPosTopLeft(sender, e);
+        if (sender is not Button button) return;
+
+        // Menu com os 4 cantos: antes o botão da barra aplicava apenas o superior esquerdo
+        // (os demais só eram alcançáveis pela grade de botões na seção "POSIÇÃO").
+        var menu = new ContextMenu { PlacementTarget = button };
+
+        var topLeft = new MenuItem { Header = "Canto Superior Esquerdo" };
+        topLeft.Click += OnPosTopLeft;
+        var topRight = new MenuItem { Header = "Canto Superior Direito" };
+        topRight.Click += OnPosTopRight;
+        var bottomLeft = new MenuItem { Header = "Canto Inferior Esquerdo" };
+        bottomLeft.Click += OnPosBottomLeft;
+        var bottomRight = new MenuItem { Header = "Canto Inferior Direito" };
+        bottomRight.Click += OnPosBottomRight;
+
+        menu.Items.Add(topLeft);
+        menu.Items.Add(topRight);
+        menu.Items.Add(bottomLeft);
+        menu.Items.Add(bottomRight);
+        menu.IsOpen = true;
     }
 }

@@ -4,31 +4,28 @@ Interface gráfica principal do Riva Monitor. Utiliza WPF com tema escuro e layo
 
 ## Funcionalidades
 
-- Sidebar com status, navegação por sensores e controles
-- Cards de sensores na área principal (CPU, GPU, RAM, Disco)
-- Círculos de progresso com porcentagem e temperatura
-- Painel de processos da GPU
-- Expansor de debug com todos os sensores detectados
-- Botão de fechar (sobreposição no canto superior direito)
-- Aviso de administrador com botão para reiniciar como Admin
+- **Sidebar Compacta:** Status da execução, tempo ativo, contagem de sensores, navegação rápida e controles de exportação (CSV/JSON/Overlay).
+- **Cards de Métricas Clean:** Cards dedicados para Processador (CPU), Placa de Vídeo (GPU), Taxa de Quadros (FPS), Memória RAM e Armazenamento (Disco).
+- **Indicadores Visuais Sutis:** Barras de progresso horizontais finas (5px) e badges em pílula com borda translúcida para temperatura e frametime (sem efeitos neon ou círculos exagerados).
+- **Lista de Processos Ativos:** Visualização limpa em tabela de processos consumindo a GPU.
+- **Janela de Diagnóstico:** Acesso direto à visualização de sensores detectados em tempo real (`DebugWindow`).
+- **Aviso de Elevação:** Alerta discreto quando a aplicação não possui privilégios administrativos.
 
 ## Auto-inicialização
 
-O monitoramento inicia automaticamente ao abrir o aplicativo (não requer clique manual em "INICIAR").
+O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback seguro e suporte a controle manual via "Iniciar Monitor" e "Parar").
 
-## Cores dinâmicas
+## Cores e Tipografia
 
-- Uso < 50%: verde (#00FF88)
-- Uso < 80%: laranja (#FFBB00)
-- Uso ≥ 80%: vermelho (#FF4444)
-
-## Temperatura
-
-- ≤ 60°C: verde
-- ≤ 80°C: laranja
-- > 80°C: vermelho
-- Gradiente radial no fundo do círculo
+- **Paleta Base:** Neutros escuros (`#0F1117` para fundo, `#141720` para sidebar, `#181B24` para cards com borda 1px `#232734`).
+- **Tipografia Principal:** Textos em `#F1F5F9` (alto contraste sem saturação agressiva), rótulos em `#94A3B8` e legendas em `#64748B`.
+- **Acentos Funcionais:** Azul royal (`#2563EB` / `#3B82F6`) para ações principais e barras de progresso.
+- **Faixas de Temperatura e Uso Dinâmico:**
+  - Uso < 75%: Branco/Slate neutro (`#F1F5F9`) para uso normal.
+  - Uso 75% a 90%: Âmbar suave (`#F59E0B`).
+  - Uso ≥ 90%: Coral (`#EF4444`).
+  - Temperatura: Pílulas discretas com tons esmeralda (≤ 65°C), âmbar (≤ 80°C) ou coral (> 80°C).
 
 ## Elevação de privilégio
 
-Se o app não estiver rodando como Administrador, exibe um aviso vermelho com botão para reiniciar com privilégios elevados (necessário para leitura completa de sensores de hardware).
+Se o aplicativo não estiver rodando como Administrador, exibe um banner com botão para reiniciar com privilégios elevados (necessário para a leitura irrestrita da CPU e rastreamento via PresentMon).

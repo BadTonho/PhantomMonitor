@@ -118,8 +118,9 @@ public partial class MainWindow : Window
         _startTime = DateTime.UtcNow;
         StartButton.IsEnabled = false;
         StopButton.IsEnabled = true;
-        StatusText.Text = "Monitorando...";
+        StatusText.Text = "Monitorando";
         StatusText.Foreground = FindResource("GreenBrush") as Brush;
+        StatusDot.Fill = FindResource("GreenBrush") as Brush;
     }
 
     private void OnStopClick(object sender, RoutedEventArgs e)
@@ -138,6 +139,7 @@ public partial class MainWindow : Window
         StopButton.IsEnabled = false;
         StatusText.Text = "Parado";
         StatusText.Foreground = FindResource("TextSecondaryBrush") as Brush;
+        StatusDot.Fill = FindResource("TextMutedBrush") as Brush;
     }
 
     private void OnOverlayToggled(object sender, RoutedEventArgs e)
@@ -161,16 +163,18 @@ public partial class MainWindow : Window
         {
             CpuUsageText.Text = $"{data.CpuUsage:F1}%";
             CpuUsageText.Foreground = GetUsageBrush(data.CpuUsage);
+            CpuProgressBar.Value = Math.Clamp(data.CpuUsage, 0, 100);
             CpuRingText.Text = $"{data.CpuUsage:F0}%";
             CpuTempText.Text = data.CpuTemp > 0 ? $"{data.CpuTemp:F0}°C" : "--°C";
-            CpuTempRingText.Text = data.CpuTemp > 0 ? $"{data.CpuTemp:F0}°" : "--°";
+            CpuTempRingText.Text = data.CpuTemp > 0 ? $"{data.CpuTemp:F0}°C" : "--°C";
             UpdateTempRing(CpuTempRing, CpuTempRingText, data.CpuTemp);
 
             GpuUsageText.Text = $"{data.GpuUsage:F1}%";
             GpuUsageText.Foreground = GetUsageBrush(data.GpuUsage);
+            GpuProgressBar.Value = Math.Clamp(data.GpuUsage, 0, 100);
             GpuRingText.Text = $"{data.GpuUsage:F0}%";
             GpuTempText.Text = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°C" : "--°C";
-            GpuTempRingText.Text = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°" : "--°";
+            GpuTempRingText.Text = data.GpuTemp > 0 ? $"{data.GpuTemp:F0}°C" : "--°C";
             UpdateTempRing(GpuTempRing, GpuTempRingText, data.GpuTemp);
 
             FpsText.Text = data.Fps > 0 ? $"{data.Fps:F0}" : "--";
@@ -181,6 +185,7 @@ public partial class MainWindow : Window
 
             RamUsageText.Text = $"{data.RamUsagePercent:F1}%";
             RamUsageText.Foreground = GetUsageBrush(data.RamUsagePercent);
+            RamProgressBar.Value = Math.Clamp(data.RamUsagePercent, 0, 100);
             RamRingText.Text = $"{data.RamUsagePercent:F0}%";
             RamAvailableText.Text = data.RamAvailableGB > 0
                 ? $"{data.RamAvailableGB:F1} GB disponível"
@@ -190,8 +195,10 @@ public partial class MainWindow : Window
                 ? $"Total: {ramTotal:F1} GB"
                 : "";
 
-            DiskUsageText.Text = $"{data.GetValue(SensorType.DiskUsage):F1}%";
-            DiskUsageText.Foreground = GetUsageBrush(data.GetValue(SensorType.DiskUsage));
+            var diskVal = data.GetValue(SensorType.DiskUsage);
+            DiskUsageText.Text = $"{diskVal:F1}%";
+            DiskUsageText.Foreground = GetUsageBrush(diskVal);
+            DiskProgressBar.Value = Math.Clamp(diskVal, 0, 100);
             var read = data.GetValue(SensorType.DiskRead);
             var write = data.GetValue(SensorType.DiskWrite);
             DiskIoText.Text = read > 0 || write > 0
@@ -201,7 +208,7 @@ public partial class MainWindow : Window
             GpuProcessList.ItemsSource = data.GpuProcesses;
 
             var uptime = DateTime.UtcNow - _startTime;
-            UptimeText.Text = $"{(int)uptime.TotalMinutes}m {uptime.Seconds}s";
+            UptimeText.Text = $"Tempo: {(int)uptime.TotalMinutes}m {uptime.Seconds}s";
 
             SensorCountText.Text = $"Sensores: {data.SensorDebugInfo.Count} detectados";
             if (data.CpuTemp <= 0)
@@ -209,7 +216,7 @@ public partial class MainWindow : Window
 
             _debugWindow?.Update(data);
 
-            LastUpdateText.Text = $"Última leitura: {data.Timestamp:HH:mm:ss}";
+            LastUpdateText.Text = $"Atualizado às {data.Timestamp:HH:mm:ss}";
 
             _overlay?.Update(data);
             _csvLogger?.Write(data);
@@ -240,46 +247,26 @@ public partial class MainWindow : Window
 
     private static Brush GetUsageBrush(double percent) => percent switch
     {
-        < 50 => new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x88)),
-        < 80 => new SolidColorBrush(Color.FromRgb(0xFF, 0xBB, 0x00)),
-        _ => new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44))
+        < 75 => new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9)),
+        < 90 => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)),
+        _ => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44))
     };
 
     private static Color GetTempColor(double temp)
     {
-        if (temp <= 0) return Color.FromRgb(0xFF, 0x66, 0x00);
-        if (temp <= 60) return Color.FromRgb(0x00, 0xFF, 0x88);
-        if (temp <= 80) return Color.FromRgb(0xFF, 0xBB, 0x00);
-        return Color.FromRgb(0xFF, 0x44, 0x44);
+        if (temp <= 0) return Color.FromRgb(0x64, 0x74, 0x8B);
+        if (temp <= 65) return Color.FromRgb(0x10, 0xB9, 0x81);
+        if (temp <= 80) return Color.FromRgb(0xF5, 0x9E, 0x0B);
+        return Color.FromRgb(0xEF, 0x44, 0x44);
     }
 
-    private static void UpdateTempRing(Border ring, TextBlock text, double temp)
+    private static void UpdateTempRing(Border pill, TextBlock text, double temp)
     {
         var color = GetTempColor(temp);
-        ring.BorderBrush = new SolidColorBrush(color);
-
-        if (temp > 0)
-        {
-            var inner = Color.FromArgb(0x1A, color.R, color.G, color.B);
-            var mid = Color.FromArgb(0x30, color.R, color.G, color.B);
-            ring.Background = new RadialGradientBrush(inner, mid);
-
-            text.Foreground = new SolidColorBrush(color);
-
-            ring.Effect = new System.Windows.Media.Effects.DropShadowEffect
-            {
-                BlurRadius = 12,
-                ShadowDepth = 0,
-                Opacity = 0.4,
-                Color = color
-            };
-        }
-        else
-        {
-            ring.Background = new SolidColorBrush(Color.FromArgb(0x1A, 0x66, 0x66, 0x66));
-            text.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66));
-            ring.Effect = null;
-        }
+        pill.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, color.R, color.G, color.B));
+        pill.Background = new SolidColorBrush(Color.FromArgb(0x18, color.R, color.G, color.B));
+        text.Foreground = new SolidColorBrush(color);
+        pill.Effect = null;
     }
 
     private static string FormatBytes(double bytes)

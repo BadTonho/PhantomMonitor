@@ -13,7 +13,7 @@ namespace RivaMonitor;
 
 public partial class MainWindow : Window
 {
-    private HardwareMonitorService? _sensorService;
+    private ISensorService? _sensorService;
     private OverlayWindow? _overlay;
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
@@ -92,7 +92,7 @@ public partial class MainWindow : Window
     {
         if (_sensorService != null) return;
 
-        _sensorService = new HardwareMonitorService(_config.UpdateIntervalMs);
+        _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs);
         _sensorService.SensorUpdated += OnSensorData;
         _sensorService.Start();
 

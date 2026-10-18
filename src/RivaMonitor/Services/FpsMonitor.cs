@@ -6,7 +6,7 @@ using System.Text;
 
 namespace RivaMonitor.Services;
 
-public sealed class FpsMonitor : IDisposable
+public sealed class FpsMonitor : IFpsMonitor
 {
     private readonly FrametimeBuffer _frametimeHistory = new(600);
     private readonly List<double> _fpsSamples = new(600);

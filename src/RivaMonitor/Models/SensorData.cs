@@ -16,6 +16,15 @@ public sealed class SensorData
     public double GetValue(SensorType type) =>
         Values.TryGetValue(type, out var v) ? v : 0;
 
+    public void SetValue(SensorType type, double value, string? label = null)
+    {
+        Values[type] = value;
+        if (!string.IsNullOrEmpty(label))
+        {
+            Labels[type] = label;
+        }
+    }
+
     public string GetLabel(SensorType type) =>
         Labels.TryGetValue(type, out var l) ? l : type.ToString();
 

@@ -1,6 +1,6 @@
 # HardwareMonitorService
-
-Serviço principal de leitura de sensores do hardware. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário.
+ 
+Serviço de leitura de sensores de hardware para ambiente Windows, implementando a interface `ISensorService`. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário. No Linux, a `SensorServiceFactory` instancia automaticamente o `LinuxSensorService`.
 
 ## Funcionalidades
 

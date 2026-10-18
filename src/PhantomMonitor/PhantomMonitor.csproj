@@ -10,16 +10,6 @@
     <AssemblyName>PhantomMonitor</AssemblyName>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <NativeLibDir>$(MSBuildProjectDirectory)\..\PhantomSensorLib\</NativeLibDir>
-    <NativeLibDirNoSlash>$(MSBuildProjectDirectory)\..\PhantomSensorLib</NativeLibDirNoSlash>
-    <!-- Caminho do vcvars64.bat: pode ser sobrescrito via -p:VcVarsPath=... -->
-    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
-    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
-    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
-    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
   </ItemGroup>
@@ -39,22 +29,5 @@
   <ItemGroup>
     <Reference Include="System.Management" />
   </ItemGroup>
-
-  <!-- A DLL nativa é opcional (stub): o app funciona sem ela. Falhas viram aviso, não erro. -->
-  <Target Name="BuildPhantomSensorLib" BeforeTargets="BeforeBuild"
-          Inputs="$(NativeLibDir)PhantomSensorLib.cpp;$(NativeLibDir)PhantomSensorLib.h"
-          Outputs="$(NativeLibDir)PhantomSensorLib.dll">
-    <Warning Condition="'$(VcVarsPath)' == ''"
-             Text="vcvars64.bat não encontrado (use -p:VcVarsPath=...). PhantomSensorLib.dll não será compilada; o app funciona sem ela." />
-    <Exec Condition="'$(VcVarsPath)' != ''"
-          Command="call &quot;$(VcVarsPath)&quot; &amp;&amp; cd /d &quot;$(NativeLibDirNoSlash)&quot; &amp;&amp; cl /LD /EHsc /std:c++17 /DPHANTOMSENSORLIB_EXPORTS /I. PhantomSensorLib.cpp /Fe:PhantomSensorLib.dll /nologo"
-          ConsoleToMSBuild="true" StandardOutputImportance="low"
-          ContinueOnError="WarnAndContinue" />
-  </Target>
-
-  <Target Name="CopyPhantomSensorLib" AfterTargets="BuildPhantomSensorLib" BeforeTargets="BeforeBuild">
-    <Copy SourceFiles="$(NativeLibDir)PhantomSensorLib.dll" DestinationFolder="$(OutDir)"
-          Condition="Exists('$(NativeLibDir)PhantomSensorLib.dll')" />
-  </Target>
 
 </Project>

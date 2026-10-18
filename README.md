@@ -114,7 +114,7 @@ Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 ## Build e notas
 
 - O app WPF (`net10.0-windows`) executa **somente no Windows**. O suporte a Linux (`Services/Linux/` + `PhantomVulkanLayer`) é a base para um futuro front-end multiplataforma (ver [suporte-linux.md](docs/funções/suporte-linux.md)).
-- A `PhantomSensorLib.dll` (stub opcional) é compilada pelo `.csproj` quando o MSVC é encontrado; caso contrário o build apenas emite um aviso. Use `-p:VcVarsPath=...` para apontar o `vcvars64.bat`.
+- Os fontes de `PhantomSensorLib` (C++, stub) ficam no repositório como extensão futura, **sem pipeline de build ativo** — nenhum código consome a DLL hoje (ver [sensor-nativo.md](docs/funções/sensor-nativo.md)).
 - O FPS no Windows requer **Administrador** (PresentMon/ETW). Erros internos ficam em `logs/errors.log`.
 - O `PhantomVulkanLayer` é compilado via CMake/`install_layer.sh` e não faz parte do `PhantomMonitor.slnx`.
 

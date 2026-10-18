@@ -25,9 +25,6 @@ public sealed class SensorData
         }
     }
 
-    public string GetLabel(SensorType type) =>
-        Labels.TryGetValue(type, out var l) ? l : type.ToString();
-
     public double CpuUsage => GetValue(SensorType.CpuTotal);
     public double CpuTemp => GetValue(SensorType.CpuTemperature);
     public double GpuUsage => GetValue(SensorType.GpuCore);

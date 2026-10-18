@@ -351,8 +351,6 @@ public partial class MainWindow : Window
     private DebugWindow? _debugWindow;
     private OverlayEditorWindow? _overlayEditor;
 
-    public void OpenDebugWindow() => ShowDebugWindow();
-
     private void OnOpenDebugWindow(object sender, RoutedEventArgs e) => ShowDebugWindow();
 
     private void ShowDebugWindow()
@@ -409,8 +407,6 @@ public partial class MainWindow : Window
         if (OverlayToggle.IsChecked == true)
             _overlay.Show();
     }
-
-    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
     private static readonly object TempBrushLock = new();
     private static readonly Dictionary<Color, SolidColorBrush> TempBrushCache = new();

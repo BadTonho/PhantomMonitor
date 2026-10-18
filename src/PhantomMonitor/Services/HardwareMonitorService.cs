@@ -262,7 +262,8 @@ public sealed class HardwareMonitorService : ISensorService
     {
         using var searcher = new ManagementObjectSearcher(
             @"root\WMI", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
-        foreach (var obj in searcher.Get())
+        using var results = searcher.Get(); // coleção COM do WMI também precisa ser descartada
+        foreach (var obj in results)
         {
             using (obj)
             {
@@ -279,7 +280,8 @@ public sealed class HardwareMonitorService : ISensorService
         // Temperatura em Kelvin (inteiro) nesta classe de desempenho.
         using var searcher = new ManagementObjectSearcher(
             "SELECT Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation");
-        foreach (var obj in searcher.Get())
+        using var results = searcher.Get(); // coleção COM do WMI também precisa ser descartada
+        foreach (var obj in results)
         {
             using (obj)
             {
@@ -295,7 +297,8 @@ public sealed class HardwareMonitorService : ISensorService
     {
         using var searcher = new ManagementObjectSearcher(
             "SELECT FreePhysicalMemory, TotalVisibleMemorySize FROM Win32_OperatingSystem");
-        foreach (var obj in searcher.Get())
+        using var results = searcher.Get(); // coleção COM do WMI também precisa ser descartada
+        foreach (var obj in results)
         {
             using (obj)
             {
@@ -547,7 +550,8 @@ public sealed class HardwareMonitorService : ISensorService
 
             using var searcher = new ManagementObjectSearcher(
                 "SELECT Name, UtilizationPercentage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine");
-            foreach (var obj in searcher.Get())
+            using var results = searcher.Get(); // coleção COM do WMI também precisa ser descartada (query a cada 3 s)
+            foreach (var obj in results)
             {
                 using (obj)
                 {

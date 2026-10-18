@@ -96,7 +96,7 @@ public partial class DebugWindow : Window
         }
 
         // Order by priority
-        var order = new[] { "CPU", "GPU", "RAM", "DISCO", "REDE", "MOTHERBOARD", "FPS", "WMI", "PERF", "REG", "HWR", "SUB", "OUTROS" };
+        var order = new[] { "CPU", "GPU", "RAM", "DISCO", "REDE", "MOTHERBOARD", "FAN", "FPS", "WMI", "PERF", "REG", "HWR", "SUB", "OUTROS" };
         return order.Where(o => map.ContainsKey(o)).Select(o => (o, map[o])).ToList();
     }
 

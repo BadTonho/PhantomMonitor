@@ -32,5 +32,25 @@
     "disk": true,
     "network": false,
     "motherboard": false
+  },
+  "alerts": {
+    "enabled": true,
+    "cooldownSeconds": 60,
+    "allowShutdown": false,
+    "rules": [
+      {
+        "enabled": false,
+        "sensor": "CpuTemperature",
+        "comparison": "Above",
+        "threshold": 90,
+        "cooldownSeconds": 60,
+        "popup": true,
+        "sound": true,
+        "script": "",
+        "scriptArguments": "",
+        "shutdown": false,
+        "message": "CPU em {value} °C (limite {threshold} °C)"
+      }
+    ]
   }
 }

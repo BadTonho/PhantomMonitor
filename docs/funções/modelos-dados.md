@@ -28,6 +28,14 @@ Modelo principal que carrega todos os dados de sensores em um snapshot:
 - `RamUsagePercent`, `RamAvailableGB`
 - `Fps`, `FrametimeMs`, `FpsAvg`, `FpsMin`, `Fps1Low`, `Fps01Low`, `FpsMax`
 
+## AlertRule / AlertsConfig
+
+Regras de alerta sobre sensores (ver [alertas.md](alertas.md)):
+
+- `AlertComparison` - `Above` (acima do limiar) ou `Below` (abaixo do limiar)
+- `AlertRule` - `Enabled`, `Sensor` (qualquer `SensorType`), `Comparison`, `Threshold`, `CooldownSeconds` (0 = global), `Popup`, `Sound`, `Script`, `ScriptArguments`, `Shutdown`, `Message`
+- `AlertsConfig` - `Enabled`, `CooldownSeconds` (padrão global), `AllowShutdown` (trava da ação de desligar) e `Rules`
+
 ## GpuProcessInfo
 
 Modelo para processos que estão usando a GPU:

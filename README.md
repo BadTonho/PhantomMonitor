@@ -13,6 +13,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Bandeja do sistema**: Ícone na bandeja (Win32 puro, sem WinForms) com menu de contexto — mostrar janela, alternar OSD, iniciar com o Windows e sair — e opção de autostart via registro do usuário
 - **Gráfico de frametime**: Visualização em tempo real da variação de frametime com buffer circular
 - **Estatísticas avançadas**: FPS instantâneo, médio, mínimo, máximo, 1% Low e 0.1% Low
+- **Alertas com ações**: Regras por sensor (acima/abaixo de um limiar) com popup, som, script externo e desligamento agendado (com trava de segurança `allowShutdown`)
 - **Logging**: Exportação contínua para CSV e JSON
 - **Visual Clean**: Design profissional refinado (paleta Slate Dark), eliminando efeitos excessivos de neon
 - **Configurável**: `config.json` com fallback automático para `config.example.json`
@@ -126,6 +127,7 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Editor Visual de Overlay](docs/funções/overlay.md)
 - [Atalho Global do OSD](docs/funções/hotkey.md)
 - [Bandeja do Sistema e Autostart](docs/funções/tray.md)
+- [Alertas com Ações](docs/funções/alertas.md)
 - [Hardware Monitor Service](docs/funções/hardware-monitor.md)
 - [Configuração](docs/funções/configuracao.md)
 - [Logging e ErrorLog](docs/funções/logging.md)

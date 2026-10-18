@@ -14,6 +14,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `overlayPosition` - Posição inicial do overlay (X, Y)
 - `Overlay` - Configurações específicas do overlay
 - `Sensors` - Quais sensores estão habilitados
+- `alerts` - Regras de alerta com ações (popup/som/script/desligar) — ver [alertas.md](alertas.md)
 
 ### OverlayConfig
 - `width` - Largura do overlay em pixels

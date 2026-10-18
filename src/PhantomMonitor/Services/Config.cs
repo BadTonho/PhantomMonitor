@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using PhantomMonitor.Models;
 
 namespace PhantomMonitor.Services;
 
@@ -14,6 +15,7 @@ public sealed class AppConfig
     public OverlayPositionConfig OverlayPosition { get; set; } = new();
     public OverlayConfig Overlay { get; set; } = new();
     public SensorConfig Sensors { get; set; } = new();
+    public AlertsConfig Alerts { get; set; } = new();
 
     public static AppConfig Load(string path)
     {
@@ -70,6 +72,18 @@ public sealed class AppConfig
         if (!IsValidHexColor(Overlay.AccentColor)) Overlay.AccentColor = "#1E90FF";
 
         ToggleOverlayHotkey = (ToggleOverlayHotkey ?? "").Trim();
+
+        Alerts ??= new();
+        Alerts.CooldownSeconds = Math.Clamp(Alerts.CooldownSeconds, 1, 3600);
+        Alerts.Rules ??= new();
+        Alerts.Rules.RemoveAll(rule => rule is null);
+        foreach (var rule in Alerts.Rules)
+        {
+            rule.CooldownSeconds = Math.Clamp(rule.CooldownSeconds, 0, 3600);
+            rule.Script ??= "";
+            rule.ScriptArguments ??= "";
+            rule.Message ??= "";
+        }
     }
 
     private static bool IsValidHexColor(string? value) =>
@@ -131,4 +145,15 @@ public sealed class SensorConfig
     public bool Disk { get; set; } = true;
     public bool Network { get; set; } = false;
     public bool Motherboard { get; set; } = false;
+}
+
+public sealed class AlertsConfig
+{
+    public bool Enabled { get; set; } = true;
+    public int CooldownSeconds { get; set; } = 60;
+
+    /// <summary>Trava de segurança: sem true, regras com a ação "shutdown" são ignoradas.</summary>
+    public bool AllowShutdown { get; set; }
+
+    public List<AlertRule> Rules { get; set; } = [];
 }

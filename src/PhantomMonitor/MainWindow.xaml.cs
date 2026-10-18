@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private JsonLogger? _jsonLogger;
     private readonly HotkeyService _hotkeys = new();
     private TrayIconService? _tray;
+    private AlertService? _alerts;
     private DateTime _startTime;
     private string _logDir = "";
     private AppConfig _config = new();
@@ -48,6 +49,7 @@ public partial class MainWindow : Window
 
         StartMonitoring();
         ApplyHotkey();
+        ApplyAlertsConfig();
         InitTrayIcon();
 
         StartupToggle.IsChecked = StartupManager.IsEnabled();
@@ -81,6 +83,16 @@ public partial class MainWindow : Window
         {
             ErrorLog.Write("TrayIcon.Init", ex);
         }
+    }
+
+    /// <summary>(Re)cria o avaliador de alertas conforme o config atual; popups aparecem no canto da tela.</summary>
+    private void ApplyAlertsConfig()
+    {
+        _alerts = new AlertService(_config.Alerts)
+        {
+            ShowPopup = (title, message) =>
+                Dispatcher.InvokeAsync(() => AlertPopupWindow.ShowAlert(title, message))
+        };
     }
 
     private void OnStartupToggled(object sender, RoutedEventArgs e)
@@ -311,6 +323,7 @@ public partial class MainWindow : Window
             LastUpdateText.Text = $"Atualizado às {data.Timestamp:HH:mm:ss}";
 
             _overlay?.Update(data);
+            _alerts?.Evaluate(data);
             _csvLogger?.Write(data);
             _jsonLogger?.Write(data);
         });
@@ -367,6 +380,7 @@ public partial class MainWindow : Window
     {
         _config = newConfig;
         ApplyHotkey();
+        ApplyAlertsConfig();
 
         // Só recria se o monitoramento está ativo; respeita o estado do toggle (visível/oculto).
         if (_sensorService == null) return;

@@ -8,7 +8,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Overlay configurável & transparente**: Janela flutuante sempre visível sobre jogos com informações em tempo real, sublinhas de detalhes (CPU/GPU) e linhas opcionais NET/FAN/MB com auto-revelação, além do Editor Visual (grid canvas, drag-and-drop, modo compacto, cor de destaque e tamanho de fonte)
 - **FPS 100% independente de terceiros**:
   - **Windows**: Leitura de FPS e frametime de alta precisão via Intel PresentMon (ETW nativo, sem injetar DLLs, imune a banimentos de anti-cheat)
-  - **Linux**: Camada nativa em C++ `PhantomVulkanLayer` interceptando `vkQueuePresentKHR` com comunicação por memória compartilhada (`/dev/shm/phantom_fps`)
+  - **Linux**: Camada nativa em C++ `PhantomVulkanLayer` interceptando `vkQueuePresentKHR` com comunicação por memória compartilhada (`/dev/shm/phantom_fps_<pid>`, um objeto por processo)
 - **Atalho global do OSD**: Mostrar/ocultar o overlay de qualquer aplicativo via Win32 `RegisterHotKey` (ex.: `Ctrl+Shift+O`), sem injeção de DLL
 - **Bandeja do sistema**: Ícone na bandeja (Win32 puro, sem WinForms) com menu de contexto — mostrar janela, alternar OSD, iniciar com o Windows e sair — e opção de autostart via registro do usuário
 - **Gráfico de frametime**: Visualização em tempo real da variação de frametime com buffer circular

@@ -6,7 +6,8 @@ namespace PhantomMonitor.Services.Linux;
 
 /// <summary>
 /// Estrutura binária de telemetria compartilhada entre o PhantomVulkanLayer (nativo C++)
-/// e o PhantomMonitor via memória compartilhada (/dev/shm/phantom_fps ou /tmp/phantom_fps.bin).
+/// e o PhantomMonitor via memória compartilhada (/dev/shm/phantom_fps_&lt;pid&gt; ou
+/// /tmp/phantom_fps_&lt;pid&gt;.bin — um objeto por processo Vulkan com a layer ativa).
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PhantomVulkanTelemetryHeader
@@ -39,11 +40,12 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     private readonly object _lock = new();
 
     private readonly Timer _pollTimer;
-    private readonly string[] _sharedMemoryPaths =
-    [
-        "/dev/shm/phantom_fps",
-        "/tmp/phantom_fps.bin"
-    ];
+
+    // A layer cria UM objeto de SHM por processo: /dev/shm/phantom_fps_<pid> (ou
+    // /tmp/phantom_fps_<pid>.bin no fallback). Enumerar e validar o PID vivo evita
+    // "FPS fantasma" do processo anterior (a layer agora faz shm_unlink, mas o
+    // leitor também se defende de objetos órfãos de versões antigas/crash).
+    private static readonly string[] ShmDirectories = ["/dev/shm", "/tmp"];
 
     private volatile float _fps;
     private volatile float _fpsAvg;
@@ -120,17 +122,20 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     {
         try
         {
-            string? activePath = null;
-            foreach (var path in _sharedMemoryPaths)
+            PhantomVulkanTelemetryHeader? telemetry = null;
+            foreach (var path in EnumerateSharedMemoryPaths())
             {
-                if (File.Exists(path))
+                // Objeto válido = magic correto + PID autoral vivo (ou o PID que já
+                // rastreamos, para tolerar o instante entre encerramento e reset).
+                if (TryReadHeader(path, out var header) &&
+                    (header.Pid == _lastPid || ProcessPidAlive(header.Pid)))
                 {
-                    activePath = path;
+                    telemetry = header;
                     break;
                 }
             }
 
-            if (activePath == null)
+            if (telemetry == null)
             {
                 if (_hasData && (DateTime.UtcNow - _lastFrameReceivedTime).TotalSeconds > 2.0)
                 {
@@ -139,39 +144,16 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                 return;
             }
 
-            // Ler cabeçalho estruturado
-            byte[] buffer = new byte[Marshal.SizeOf<PhantomVulkanTelemetryHeader>()];
-            using (var fs = new FileStream(activePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                int read = fs.Read(buffer, 0, buffer.Length);
-                if (read < buffer.Length) return;
-            }
-
-            var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-            PhantomVulkanTelemetryHeader telemetry;
-            try
-            {
-                telemetry = Marshal.PtrToStructure<PhantomVulkanTelemetryHeader>(handle.AddrOfPinnedObject());
-            }
-            finally
-            {
-                handle.Free();
-            }
-
-            if (telemetry.Magic != PhantomVulkanTelemetryHeader.ExpectedMagic)
-            {
-                return;
-            }
-
+            var head = telemetry.Value;
             lock (_lock)
             {
                 // Se trocou de processo alvo
-                if (telemetry.Pid != _lastPid && telemetry.Pid > 0)
+                if (head.Pid != _lastPid && head.Pid > 0)
                 {
-                    _lastPid = telemetry.Pid;
-                    _currentProcessName = string.IsNullOrWhiteSpace(telemetry.ProcessName)
-                        ? $"pid:{telemetry.Pid}"
-                        : telemetry.ProcessName;
+                    _lastPid = head.Pid;
+                    _currentProcessName = string.IsNullOrWhiteSpace(head.ProcessName)
+                        ? $"pid:{head.Pid}"
+                        : head.ProcessName;
                     _fpsSamples.Clear();
                     _frametimeHistory.Clear();
                     _fpsMin = float.MaxValue;
@@ -179,14 +161,14 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                 }
 
                 // Houve apresentação de novo quadro
-                if (telemetry.FrameCount > _lastFrameCount)
+                if (head.FrameCount > _lastFrameCount)
                 {
-                    _lastFrameCount = telemetry.FrameCount;
+                    _lastFrameCount = head.FrameCount;
                     _lastFrameReceivedTime = DateTime.UtcNow;
                     _hasData = true;
 
-                    float ftMs = telemetry.FrametimeMs;
-                    float instantFps = telemetry.InstantFps;
+                    float ftMs = head.FrametimeMs;
+                    float instantFps = head.InstantFps;
 
                     if (ftMs > 0 && ftMs < 1000f)
                     {
@@ -248,5 +230,75 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     public void Dispose()
     {
         _pollTimer.Dispose();
+    }
+
+    private static IEnumerable<string> EnumerateSharedMemoryPaths()
+    {
+        foreach (var dir in ShmDirectories)
+        {
+            string[] files;
+            try
+            {
+                files = Directory.GetFiles(dir, "phantom_fps*");
+            }
+            catch
+            {
+                continue; // diretório inacessível: segue para o próximo
+            }
+
+            foreach (var file in files)
+                yield return file;
+        }
+    }
+
+    private static bool ProcessPidAlive(uint pid)
+    {
+        if (pid == 0) return false;
+        try
+        {
+            return Directory.Exists($"/proc/{pid}");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryReadHeader(string path, out PhantomVulkanTelemetryHeader header)
+    {
+        header = default;
+        try
+        {
+            var size = Marshal.SizeOf<PhantomVulkanTelemetryHeader>();
+            byte[] buffer = new byte[size];
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                int read = 0;
+                while (read < size)
+                {
+                    int n = fs.Read(buffer, read, size - read);
+                    if (n <= 0) break;
+                    read += n;
+                }
+                if (read < size) return false;
+            }
+
+            var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+            try
+            {
+                header = Marshal.PtrToStructure<PhantomVulkanTelemetryHeader>(handle.AddrOfPinnedObject());
+            }
+            finally
+            {
+                handle.Free();
+            }
+
+            return header.Magic == PhantomVulkanTelemetryHeader.ExpectedMagic;
+        }
+        catch
+        {
+            // Leitura concorrente transitória (a layer reescreve a cada frame): tenta no próximo ciclo
+            return false;
+        }
     }
 }

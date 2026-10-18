@@ -40,14 +40,17 @@ public sealed class AlertService
             var rule = _config.Rules[i];
             if (rule is not { Enabled: true }) continue;
 
-            double value = data.GetValue(rule.Sensor);
-
-            // Sem leitura (0) o sensor é considerado ausente: não dispara nem mantém o estado ativo.
-            if (value <= 0)
+            // Sensor ausente = chave não presente no snapshot (a leitura nunca ocorreu).
+            // Um 0 PRESENTE é leitura real: regras "Below" devem disparar com ele —
+            // ex.: ventoinha parada (0 RPM) silenciava o alerta de RPM baixo, e uso
+            // de disco em repouso (0%) nunca disparava "disco ocioso".
+            if (!data.Values.ContainsKey(rule.Sensor))
             {
                 _active.Remove(i);
                 continue;
             }
+
+            double value = data.GetValue(rule.Sensor);
 
             bool condition = rule.Comparison == AlertComparison.Above
                 ? value > rule.Threshold
@@ -55,21 +58,29 @@ public sealed class AlertService
 
             if (!condition)
             {
-                _active.Remove(i);
+                _active.Remove(ActiveKey(rule));
                 continue;
             }
 
-            bool cooldownElapsed = !_lastTriggered.TryGetValue(i, out var last)
+            int key = ActiveKey(rule);
+            bool cooldownElapsed = !_lastTriggered.TryGetValue(key, out var last)
                 || (DateTime.UtcNow - last).TotalSeconds >= EffectiveCooldown(rule);
 
-            if (!_active.Contains(i) || cooldownElapsed)
+            if (!_active.Contains(key) || cooldownElapsed)
             {
-                _lastTriggered[i] = DateTime.UtcNow;
-                _active.Add(i);
+                _lastTriggered[key] = DateTime.UtcNow;
+                _active.Add(key);
                 Trigger(rule, value);
             }
         }
     }
+
+    /// <summary>
+    /// Chave de estado por CONTEÚDO da regra (não por índice): reordenar regras no
+    /// runtime não desloca cooldowns/estado ativo para outra regra.
+    /// </summary>
+    private static int ActiveKey(AlertRule rule) =>
+        HashCode.Combine(rule.Sensor, rule.Comparison, rule.Threshold, rule.Message, rule.CooldownSeconds);
 
     private int EffectiveCooldown(AlertRule rule) =>
         rule.CooldownSeconds > 0 ? rule.CooldownSeconds : Math.Max(1, _config.CooldownSeconds);

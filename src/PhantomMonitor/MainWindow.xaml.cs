@@ -196,8 +196,8 @@ public partial class MainWindow : Window
         StartButton.IsEnabled = false;
         StopButton.IsEnabled = true;
         StatusText.Text = "Monitorando";
-        StatusText.Foreground = FindResource("GreenBrush") as Brush;
-        StatusDot.Fill = FindResource("GreenBrush") as Brush;
+        StatusText.Foreground = TryFindResource("GreenBrush") as Brush;
+        StatusDot.Fill = TryFindResource("GreenBrush") as Brush;
 
         // Inicia o serviço por último, com loggers/overlay já prontos para o primeiro evento.
         _sensorService.Start();
@@ -222,12 +222,19 @@ public partial class MainWindow : Window
         StartButton.IsEnabled = true;
         StopButton.IsEnabled = false;
         StatusText.Text = "Parado";
-        StatusText.Foreground = FindResource("TextSecondaryBrush") as Brush;
-        StatusDot.Fill = FindResource("TextMutedBrush") as Brush;
+        StatusText.Foreground = TryFindResource("TextSecondaryBrush") as Brush;
+        StatusDot.Fill = TryFindResource("TextMutedBrush") as Brush;
     }
 
     private void OnOverlayToggled(object sender, RoutedEventArgs e)
     {
+        if (!IsLoaded) return; // ignora o ajuste inicial do checkbox
+
+        // O toggle agora persiste no config (antes mudava só o estado vivo e voltava
+        // ao valor do config.json no próximo boot).
+        _config.ShowOverlay = OverlayToggle.IsChecked == true;
+        SaveConfig();
+
         if (_overlay == null) return;
         if (OverlayToggle.IsChecked == true)
         {
@@ -240,6 +247,18 @@ public partial class MainWindow : Window
             _overlay.Visibility = Visibility.Collapsed;
         }
     }
+
+    private void OnLoggingToggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return; // ignora o ajuste inicial dos checkboxes
+
+        _config.LogToCsv = CsvToggle.IsChecked == true;
+        _config.LogToJson = JsonToggle.IsChecked == true;
+        SaveConfig();
+        // Os loggers são (re)criados pelo BeginMonitoring na próxima sessão de monitoramento.
+    }
+
+    private void SaveConfig() => _config.Save(ConfigPaths.ConfigFile);
 
     private void OnSensorData(SensorData data)
     {
@@ -306,7 +325,7 @@ public partial class MainWindow : Window
 
             var mbTemp = data.GetValue(SensorType.MotherboardTemp);
             MotherboardTempText.Text = mbTemp > 0 ? $"{mbTemp:F0}°C" : "--°C";
-            MotherboardTempText.Foreground = new SolidColorBrush(GetTempColor(mbTemp));
+            MotherboardTempText.Foreground = PinBrush(GetTempColor(mbTemp));
             FanSpeedsText.Text = SensorFormatter.BuildFanSummary(data);
 
             GpuProcessList.ItemsSource = data.GpuProcesses;
@@ -393,11 +412,33 @@ public partial class MainWindow : Window
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
+    private static readonly object TempBrushLock = new();
+    private static readonly Dictionary<Color, SolidColorBrush> TempBrushCache = new();
+
+    /// <summary>Escova congelada por cor, reutilizada nos ticks (criava SolidColorBrush a cada snapshot).</summary>
+    private static Brush PinBrush(Color color)
+    {
+        lock (TempBrushLock)
+        {
+            if (!TempBrushCache.TryGetValue(color, out var brush))
+            {
+                brush = new SolidColorBrush(color);
+                brush.Freeze();
+                TempBrushCache[color] = brush;
+            }
+            return brush;
+        }
+    }
+
+    private static readonly Brush UsageNormalBrush = PinBrush(Color.FromRgb(0xF1, 0xF5, 0xF9));
+    private static readonly Brush UsageWarmBrush = PinBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
+    private static readonly Brush UsageHotBrush = PinBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+
     private static Brush GetUsageBrush(double percent) => percent switch
     {
-        < 75 => new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9)),
-        < 90 => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)),
-        _ => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44))
+        < 75 => UsageNormalBrush,
+        < 90 => UsageWarmBrush,
+        _ => UsageHotBrush
     };
 
     private static Color GetTempColor(double temp)
@@ -411,9 +452,9 @@ public partial class MainWindow : Window
     private static void UpdateTempRing(Border pill, TextBlock text, double temp)
     {
         var color = GetTempColor(temp);
-        pill.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, color.R, color.G, color.B));
-        pill.Background = new SolidColorBrush(Color.FromArgb(0x18, color.R, color.G, color.B));
-        text.Foreground = new SolidColorBrush(color);
+        pill.BorderBrush = PinBrush(Color.FromArgb(0x40, color.R, color.G, color.B));
+        pill.Background = PinBrush(Color.FromArgb(0x18, color.R, color.G, color.B));
+        text.Foreground = PinBrush(color);
         pill.Effect = null;
     }
 

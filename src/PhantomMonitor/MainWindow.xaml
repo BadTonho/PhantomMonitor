@@ -78,8 +78,10 @@
                                 Click="OnOpenOverlayEditor"
                                 Padding="8,5" Margin="0,2,0,8" FontSize="11"
                                 HorizontalAlignment="Stretch"/>
-                        <CheckBox x:Name="CsvToggle" Content="Exportar CSV"/>
-                        <CheckBox x:Name="JsonToggle" Content="Exportar JSON"/>
+                        <CheckBox x:Name="CsvToggle" Content="Exportar CSV"
+                                  Checked="OnLoggingToggled" Unchecked="OnLoggingToggled"/>
+                        <CheckBox x:Name="JsonToggle" Content="Exportar JSON"
+                                  Checked="OnLoggingToggled" Unchecked="OnLoggingToggled"/>
                         <CheckBox x:Name="StartupToggle" Content="Iniciar com o Windows"
                                   Checked="OnStartupToggled" Unchecked="OnStartupToggled"/>
                     </StackPanel>

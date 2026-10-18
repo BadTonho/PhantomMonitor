@@ -71,6 +71,11 @@ public sealed class AppConfig
         Overlay.FontSize = Math.Clamp(Overlay.FontSize, 8, 20);
         if (!IsValidHexColor(Overlay.AccentColor)) Overlay.AccentColor = "#1E90FF";
 
+        // Offset do overlay relativo à janela em foco: extremos digitados à mão no editor
+        // deixavam o overlay nascendo fora da área de trabalho, invisível e irrecuperável.
+        OverlayPosition.X = Math.Clamp(OverlayPosition.X, -5000, 5000);
+        OverlayPosition.Y = Math.Clamp(OverlayPosition.Y, -5000, 5000);
+
         ToggleOverlayHotkey = (ToggleOverlayHotkey ?? "").Trim();
 
         Alerts ??= new();

@@ -31,9 +31,12 @@ config*.local.json
 .env
 .env.*
 
+## Notas locais / anotaÃ§Ãµes pessoais
+ideias.md
+
 ## IDE & Editors
 .idea/
 *.swp
 
-## Temporários de escrita atômica
+## Temporï¿½rios de escrita atï¿½mica
 *.tmp

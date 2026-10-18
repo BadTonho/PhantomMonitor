@@ -20,6 +20,8 @@ Regras de alerta sobre sensores com ações automáticas — **popup, som, scrip
     {
       "enabled": true,
       "sensor": "CpuTemperature",   // qualquer SensorType (ver modelos-dados.md)
+      "sensorIndex": 0,             // 0 = série canônica; ≥ 1 = série por instância
+                                    // (ex.: GpuTemperature índice 1 = GPU dedicada)
       "comparison": "Above",        // Above | Below
       "threshold": 90,
       "cooldownSeconds": 60,        // 0 = usa o cooldown global
@@ -35,6 +37,15 @@ Regras de alerta sobre sensores com ações automáticas — **popup, som, scrip
 ```
 
 O `config.example.json` traz uma regra de exemplo **desabilitada** com todos os campos.
+
+## Alertas por instância
+
+`sensorIndex` (padrão 0) mira séries **por instância**: `"sensor": "GpuTemperature",
+"sensorIndex": 1` alerta sobre a GPU dedicada; `"sensor": "CpuTemperature",
+"sensorIndex": 2` sobre o núcleo 2. O índice segue a numeração documentada em
+[hardware-monitor.md](hardware-monitor.md) (dedicada = GPU 1; núcleos/heranças
+seguem o número do sensor no hardware). A mensagem usa o sensor com sufixo
+(`GpuTemperature#1`) e o placeholder `{sensor}` nos scripts também o inclui.
 
 ## Ações
 

@@ -44,13 +44,17 @@ public sealed class AlertService
             // Um 0 PRESENTE é leitura real: regras "Below" devem disparar com ele —
             // ex.: ventoinha parada (0 RPM) silenciava o alerta de RPM baixo, e uso
             // de disco em repouso (0%) nunca disparava "disco ocioso".
-            if (!data.Values.ContainsKey(rule.Sensor))
+            var seriesKey = new SensorKey(rule.Sensor, rule.SensorIndex);
+            bool sensorPresent = seriesKey.IsPrimary
+                ? data.Values.ContainsKey(rule.Sensor)
+                : data.Series.ContainsKey(seriesKey);
+            if (!sensorPresent)
             {
-                _active.Remove(i);
+                _active.Remove(ActiveKey(rule));
                 continue;
             }
 
-            double value = data.GetValue(rule.Sensor);
+            double value = data.GetValue(seriesKey);
 
             bool condition = rule.Comparison == AlertComparison.Above
                 ? value > rule.Threshold
@@ -80,7 +84,7 @@ public sealed class AlertService
     /// runtime não desloca cooldowns/estado ativo para outra regra.
     /// </summary>
     private static int ActiveKey(AlertRule rule) =>
-        HashCode.Combine(rule.Sensor, rule.Comparison, rule.Threshold, rule.Message, rule.CooldownSeconds);
+        HashCode.Combine(rule.Sensor, rule.SensorIndex, rule.Comparison, rule.Threshold, rule.Message, rule.CooldownSeconds);
 
     private int EffectiveCooldown(AlertRule rule) =>
         rule.CooldownSeconds > 0 ? rule.CooldownSeconds : Math.Max(1, _config.CooldownSeconds);
@@ -104,7 +108,7 @@ public sealed class AlertService
                         "Ação 'shutdown' ignorada: defina alerts.allowShutdown=true no config para permiti-la.");
             }
 
-            ErrorLog.Write("AlertService", $"Alerta disparado: {rule.Sensor} {rule.Comparison} {rule.Threshold} (valor {value:F1})");
+            ErrorLog.Write("AlertService", $"Alerta disparado: {SensorName(rule)} {rule.Comparison} {rule.Threshold} (valor {value:F1})");
             Triggered?.Invoke(rule, message);
         }
         catch (Exception ex)
@@ -113,6 +117,10 @@ public sealed class AlertService
         }
     }
 
+    /// <summary>Nome da série alvo, com índice de instância quando configurado ("GpuTemperature#1").</summary>
+    private static string SensorName(AlertRule rule) =>
+        rule.SensorIndex > 0 ? $"{rule.Sensor}#{rule.SensorIndex}" : rule.Sensor.ToString();
+
     private static string BuildMessage(AlertRule rule, double value)
     {
         string template = string.IsNullOrWhiteSpace(rule.Message)
@@ -120,7 +128,7 @@ public sealed class AlertService
             : rule.Message;
 
         return template
-            .Replace("{sensor}", rule.Sensor.ToString())
+            .Replace("{sensor}", SensorName(rule))
             .Replace("{value}", value.ToString("F1"))
             .Replace("{threshold}", rule.Threshold.ToString("F1"));
     }
@@ -136,7 +144,7 @@ public sealed class AlertService
         var args = (rule.ScriptArguments ?? "")
             // Cultura invariante: o cmd trata vírgula como separador de argumentos.
             .Replace("{value}", value.ToString("F1", CultureInfo.InvariantCulture))
-            .Replace("{sensor}", rule.Sensor.ToString());
+            .Replace("{sensor}", SensorName(rule));
 
         Process.Start(new ProcessStartInfo
         {

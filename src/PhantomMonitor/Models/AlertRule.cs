@@ -22,6 +22,13 @@ public sealed class AlertRule
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public SensorType Sensor { get; set; } = SensorType.CpuTemperature;
 
+    /// <summary>
+    /// Índice da série alvo: 0 (padrão) usa a série canônica/agregada; ≥ 1 mira uma
+    /// série por instância específica (ex.: sensor "GpuTemperature", sensorIndex 1
+    /// = temperatura da GPU dedicada; "CpuTemperature" índice 2 = núcleo 2).
+    /// </summary>
+    public int SensorIndex { get; set; }
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public AlertComparison Comparison { get; set; } = AlertComparison.Above;
 

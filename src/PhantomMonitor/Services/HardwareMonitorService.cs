@@ -29,6 +29,21 @@ public sealed class HardwareMonitorService : ISensorService
     // Prioridade do sensor escolhido por tipo na rodada atual (acessado só dentro de _sync).
     private readonly Dictionary<SType, int> _priority = [];
 
+    // Instância "#i" por nó de hardware: GPU (dedicada = 1), discos e interfaces de rede
+    // (cursores por família, resetados a cada ciclo — a ordem do enumerador do LHM é estável).
+    private readonly Dictionary<IHardware, int> _hardwareInstanceFor = [];
+    private int _diskInstanceCursor;
+    private int _netInstanceCursor;
+
+    // Slots por nome para series que não têm instância numérica clara
+    // (rails "+12V", ventoinhas "Fan #2", zonas VRM, dominios de potência da CPU...).
+    private readonly Dictionary<string, int> _seriesSlots = new(StringComparer.Ordinal);
+
+    // Total acumulado de rede na sessão (NetworkUpTotal/NetworkDownTotal).
+    private DateTime? _lastNetSampleUtc;
+    private double _netUpSessionBytes;
+    private double _netDownSessionBytes;
+
     // Fallbacks e caches (evitam consultas WMI pesadas a cada ciclo)
     private PerformanceCounter? _ramCounter;
     private DateTime _lastWmiTemp = DateTime.MinValue;
@@ -122,10 +137,41 @@ public sealed class HardwareMonitorService : ISensorService
         var debugInfo = new List<string>();
         data.SensorDebugInfo = debugInfo;
 
-        // GPUs integradas primeiro: a GPU dedicada (processada depois) prevalece nos valores.
+        // GPUs integradas primeiro: a GPU dedicada (processada depois) prevalece nos valores
+        // canônicos (índice 0). Para os índices de instância (#1, #2...), a dedicada é a GPU 1.
+        _hardwareInstanceFor.Clear();
+        _diskInstanceCursor = 0;
+        _netInstanceCursor = 0;
+        var instance = 1;
+        foreach (var gpu in _computer.Hardware
+                     .OrderBy(h => h.HardwareType == HardwareType.GpuIntel ? 1 : 0)
+                     .Where(h => h.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel))
+        {
+            _hardwareInstanceFor[gpu] = instance++;
+        }
+
         foreach (var hardware in _computer.Hardware.OrderBy(h => h.HardwareType == HardwareType.GpuIntel ? 0 : 1))
         {
             ProcessHardware(hardware, data, debugInfo, depth: 0);
+        }
+
+        ApplyCpuTempFallback(data, debugInfo);
+        ApplyRamFallbacks(data, debugInfo);
+
+        data.GpuProcesses = GetGpuProcesses();
+
+        // Totais de rede da sessão: acumula velocidade observada x tempo desde a amostra anterior.
+        if (_lastNetSampleUtc is { } last && data.GetValue(SType.NetworkUp) + data.GetValue(SType.NetworkDown) > 0)
+        {
+            var elapsed = DateTime.UtcNow - last;
+            _netUpSessionBytes += data.GetValue(SType.NetworkUp) * elapsed.TotalSeconds;
+            _netDownSessionBytes += data.GetValue(SType.NetworkDown) * elapsed.TotalSeconds;
+        }
+        _lastNetSampleUtc = DateTime.UtcNow;
+        if (_netUpSessionBytes > 0 || _netDownSessionBytes > 0)
+        {
+            data.SetValue(SType.NetworkUpTotal, _netUpSessionBytes, "Total enviado (sessão)");
+            data.SetValue(SType.NetworkDownTotal, _netDownSessionBytes, "Total recebido (sessão)");
         }
 
         ApplyCpuTempFallback(data, debugInfo);
@@ -155,6 +201,13 @@ public sealed class HardwareMonitorService : ISensorService
     {
         var indent = new string(' ', depth * 2);
         debugInfo.Add($"{indent}[HWR] {hardware.HardwareType}: {hardware.Name}");
+
+        // Instância "#i" quando o nó de topo for disco ou interface de rede
+        // (GPUs já têm índice pré-computado: a dedicada é a GPU 1).
+        if (depth == 0 && hardware.HardwareType == HardwareType.Storage)
+            _hardwareInstanceFor[hardware] = ++_diskInstanceCursor;
+        if (depth == 0 && hardware.HardwareType == HardwareType.Network)
+            _hardwareInstanceFor[hardware] = ++_netInstanceCursor;
 
         foreach (var sensor in hardware.Sensors)
         {
@@ -333,6 +386,24 @@ public sealed class HardwareMonitorService : ISensorService
         Put(data, type, old + val, label);
     }
 
+    /// <summary>
+    /// Série por instância ("Categoria#i", i ≥ 1): multi-GPU, núcleos, ventoinhas, discos...
+    /// Não mexe na série canônica de índice 0 (compatibilidade com painel/alertas legados).
+    /// </summary>
+    private static void PutInstance(SensorData data, SType type, int instance, double val, string label)
+    {
+        if (instance <= 0) return;
+        data.SetValue(new SensorKey(type, instance), val, label);
+    }
+
+    /// <summary>Slot estável por nome para séries que não têm número natural ("+12V", "Fan #2"...).</summary>
+    private int SlotFor(string name)
+    {
+        if (!_seriesSlots.TryGetValue(name, out var slot))
+            slot = _seriesSlots[name] = _seriesSlots.Count + 1;
+        return slot;
+    }
+
     /// <summary>Só substitui o valor atual se este sensor tiver prioridade maior ou igual.</summary>
     private void PutPreferred(SensorData data, SType type, double val, string label, int priority)
     {
@@ -349,6 +420,9 @@ public sealed class HardwareMonitorService : ISensorService
         double v = val.Value;
         var label = $"{sensor.Name} ({sensor.SensorType})";
 
+        // Índice de instância do nó (GPU 1..n, disco 1..n, interface 1..n; 0 = sem série extra).
+        var instance = _hardwareInstanceFor.GetValueOrDefault(sensor.Hardware);
+
         switch (sensor.Hardware.HardwareType)
         {
             case HardwareType.Cpu:
@@ -357,21 +431,21 @@ public sealed class HardwareMonitorService : ISensorService
             case HardwareType.GpuNvidia:
             case HardwareType.GpuAmd:
             case HardwareType.GpuIntel:
-                MapGpuSensor(sensor, v, label, data);
+                MapGpuSensor(sensor, v, label, data, instance, sensor.Hardware.Name);
                 break;
             case HardwareType.Memory:
                 MapMemorySensor(sensor, v, label, data);
                 break;
             case HardwareType.Storage:
-                MapStorageSensor(sensor, v, label, data);
+                MapStorageSensor(sensor, v, label, data, instance, sensor.Hardware.Name);
                 break;
             case HardwareType.Network:
-                MapNetworkSensor(sensor, v, label, data);
+                MapNetworkSensor(sensor, v, label, data, instance, sensor.Hardware.Name);
                 break;
             case HardwareType.Motherboard:
             case HardwareType.SuperIO:
             case HardwareType.EmbeddedController:
-                MapMotherboardSensor(sensor, v, label, data);
+                MapMotherboardSensor(sensor, v, label, data, sensor.Hardware.Name);
                 break;
         }
     }
@@ -390,6 +464,10 @@ public sealed class HardwareMonitorService : ISensorService
 
     private void MapCpuSensor(ISensor sensor, double val, string label, SensorData data)
     {
+        // Índice do núcleo no nome ("CPU Core #3", "Core #1 Max"); 0 = sensor global
+        // (Package, Tctl/Tdie, Average, VCore...), que não vira série por núcleo.
+        int core = ParseCoreIndex(sensor.Name);
+
         switch (sensor.SensorType)
         {
             case LhmSensorType.Load when sensor.Name.Contains("Total", StringComparison.OrdinalIgnoreCase):
@@ -397,12 +475,15 @@ public sealed class HardwareMonitorService : ISensorService
                 break;
             case LhmSensorType.Load:
                 PutMax(data, SType.CpuPerCore, val, label);
+                PutInstance(data, SType.CpuPerCore, core, val, label);
                 break;
             case LhmSensorType.Temperature:
                 PutPreferred(data, SType.CpuTemperature, val, label, CpuTempPriority(sensor.Name));
+                PutInstance(data, SType.CpuTemperature, core, val, label);
                 break;
             case LhmSensorType.Clock:
                 PutMax(data, SType.CpuClock, val, label);
+                PutInstance(data, SType.CpuClock, core, val, label);
                 break;
             case LhmSensorType.Voltage:
                 Put(data, SType.CpuVoltage, val, label);
@@ -412,61 +493,84 @@ public sealed class HardwareMonitorService : ISensorService
                 break;
             case LhmSensorType.Power:
                 PutPreferred(data, SType.CpuPower, val, label, 1);
+                PutInstance(data, SType.CpuPower, SlotFor(sensor.Name), val, label);
                 break;
         }
     }
 
-    private void MapGpuSensor(ISensor sensor, double val, string label, SensorData data)
+    /// <summary>Número do núcleo num nome de sensor ("CPU Core #2" → 2; nomes globais → 0).</summary>
+    private static int ParseCoreIndex(string name)
+    {
+        var match = CoreIndexRegex.Match(name);
+        return match.Success && int.TryParse(match.Groups[1].Value, out var idx) && idx > 0 ? idx : 0;
+    }
+
+    private static readonly Regex CoreIndexRegex = new(@"#(\d+)", RegexOptions.Compiled);
+
+    private void MapGpuSensor(ISensor sensor, double val, string label, SensorData data, int instance, string gpuName)
     {
         switch (sensor.SensorType)
         {
             case LhmSensorType.Load when sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuCore, val, label);
+                PutInstance(data, SType.GpuCore, instance, val, gpuName);
                 break;
             case LhmSensorType.Load when sensor.Name.Contains("Memory", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuMemory, val, label);
+                PutInstance(data, SType.GpuMemory, instance, val, gpuName);
                 break;
             // SmallData: VRAM real em MB (GPU Memory total/usada). "D3D Dedicated" serve de reserva
             // (GPUs integradas costumam expor só a variante D3D).
             case LhmSensorType.SmallData when sensor.Name.Contains("GPU Memory Total", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryTotal, val, label, 2);
+                PutInstance(data, SType.GpuMemoryTotal, instance, val, gpuName);
                 break;
             case LhmSensorType.SmallData when sensor.Name.Contains("D3D Dedicated Memory Total", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryTotal, val, label, 1);
+                PutInstance(data, SType.GpuMemoryTotal, instance, val, gpuName);
                 break;
             case LhmSensorType.SmallData when sensor.Name.Contains("GPU Memory Used", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryUsed, val, label, 2);
+                PutInstance(data, SType.GpuMemoryUsed, instance, val, gpuName);
                 break;
             case LhmSensorType.SmallData when sensor.Name.Contains("D3D Dedicated Memory Used", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryUsed, val, label, 1);
+                PutInstance(data, SType.GpuMemoryUsed, instance, val, gpuName);
                 break;
             case LhmSensorType.Clock when sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuCoreClock, val, label);
+                PutInstance(data, SType.GpuCoreClock, instance, val, gpuName);
                 break;
             case LhmSensorType.Clock when sensor.Name.Contains("Memory", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuMemoryClock, val, label);
+                PutInstance(data, SType.GpuMemoryClock, instance, val, gpuName);
                 break;
             case LhmSensorType.Temperature when sensor.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuHotSpot, val, label);
+                PutInstance(data, SType.GpuHotSpot, instance, val, gpuName);
                 break;
             case LhmSensorType.Temperature:
                 // "GPU Core" tem prioridade sobre "Memory Junction", etc.
                 PutPreferred(data, SType.GpuTemperature, val, label,
                     sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ? 2 : 1);
+                PutInstance(data, SType.GpuTemperature, instance, val, gpuName);
                 break;
             case LhmSensorType.Voltage:
                 Put(data, SType.GpuVoltage, val, label);
+                PutInstance(data, SType.GpuVoltage, instance, val, gpuName);
                 break;
             case LhmSensorType.Fan:
                 Put(data, SType.GpuFan, val, label);
+                PutInstance(data, SType.GpuFan, instance, val, gpuName);
                 break;
             case LhmSensorType.Power:
                 Put(data, SType.GpuPower, val, label);
+                PutInstance(data, SType.GpuPower, instance, val, gpuName);
                 break;
         }
     }
 
-    private static void MapMemorySensor(ISensor sensor, double val, string label, SensorData data)
+    private void MapMemorySensor(ISensor sensor, double val, string label, SensorData data)
     {
         // Ignora a memória virtual (pagefile): só a RAM física interessa.
         if (sensor.Hardware.Name.Contains("Virtual", StringComparison.OrdinalIgnoreCase))
@@ -484,51 +588,109 @@ public sealed class HardwareMonitorService : ISensorService
             case LhmSensorType.Data when sensor.Name.Contains("Used", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.RamUsed, val, label);
                 break;
+            case LhmSensorType.Temperature:
+                // Temperatura de módulos de RAM (poucas placas/EC expõem; ex.: "RAM Temperature").
+                data.SetValue(new SensorKey(SType.RamTemperature, SlotFor(sensor.Hardware.Name)), val, sensor.Hardware.Name);
+                break;
         }
     }
 
-    private static void MapStorageSensor(ISensor sensor, double val, string label, SensorData data)
+    private static void MapStorageSensor(ISensor sensor, double val, string label, SensorData data, int instance, string diskName)
     {
         switch (sensor.SensorType)
         {
             // "Total Activity" = % de uso do disco; "Used Space" (capacidade ocupada) é ignorado.
             case LhmSensorType.Load when sensor.Name.Contains("Activity", StringComparison.OrdinalIgnoreCase):
                 PutMax(data, SType.DiskUsage, val, label);
+                PutInstance(data, SType.DiskUsage, instance, val, diskName);
+                break;
+            case LhmSensorType.Load when sensor.Name.Contains("Remaining Life", StringComparison.OrdinalIgnoreCase):
+                // Saúde do SSD/pendrive em % sobrevivência (100 = novo).
+                PutMax(data, SType.DiskHealth, val, label);
+                PutInstance(data, SType.DiskHealth, instance, val, diskName);
                 break;
             case LhmSensorType.Throughput when sensor.Name.Contains("Read", StringComparison.OrdinalIgnoreCase):
                 PutSum(data, SType.DiskRead, val, label);
+                PutInstance(data, SType.DiskRead, instance, val, diskName);
                 break;
             case LhmSensorType.Throughput when sensor.Name.Contains("Write", StringComparison.OrdinalIgnoreCase):
                 PutSum(data, SType.DiskWrite, val, label);
+                PutInstance(data, SType.DiskWrite, instance, val, diskName);
+                break;
+            case LhmSensorType.Temperature:
+                // NVMe/HD reportam "Temperature"; alguns SSDs também expõem "Temperature Ambient".
+                if (sensor.Name.Contains("Ambient", StringComparison.OrdinalIgnoreCase)) break;
+                PutMax(data, SType.DiskTemperature, val, label);
+                PutInstance(data, SType.DiskTemperature, instance, val, diskName);
+                break;
+            case LhmSensorType.Data when sensor.Name.Contains("Total Host Read", StringComparison.OrdinalIgnoreCase):
+                PutInstance(data, SType.DiskTotalRead, instance, val, diskName);
+                break;
+            case LhmSensorType.Data when sensor.Name.Contains("Total Host Write", StringComparison.OrdinalIgnoreCase):
+                // Endurance do SSD (escritas acumuladas de fábrica, em GB).
+                PutInstance(data, SType.DiskTotalWritten, instance, val, diskName);
+                PutMax(data, SType.DiskTotalWritten, val, label);
+                break;
+            case LhmSensorType.Data when sensor.Name.Contains("Data Read", StringComparison.OrdinalIgnoreCase) && !sensor.Name.Contains("Total", StringComparison.OrdinalIgnoreCase):
+                PutInstance(data, SType.DiskTotalRead, instance, val, diskName);
+                PutMax(data, SType.DiskTotalRead, val, label);
+                break;
+            case LhmSensorType.Data when sensor.Name.Contains("Data Written", StringComparison.OrdinalIgnoreCase):
+                PutInstance(data, SType.DiskTotalWritten, instance, val, diskName);
+                PutMax(data, SType.DiskTotalWritten, val, label);
                 break;
         }
     }
 
-    private static void MapNetworkSensor(ISensor sensor, double val, string label, SensorData data)
+    private static void MapNetworkSensor(ISensor sensor, double val, string label, SensorData data, int instance, string nicName)
     {
         switch (sensor.SensorType)
         {
             case LhmSensorType.Throughput when sensor.Name.Contains("Upload", StringComparison.OrdinalIgnoreCase):
                 PutSum(data, SType.NetworkUp, val, label);
+                PutInstance(data, SType.NetworkUp, instance, val, nicName);
                 break;
             case LhmSensorType.Throughput when sensor.Name.Contains("Download", StringComparison.OrdinalIgnoreCase):
                 PutSum(data, SType.NetworkDown, val, label);
+                PutInstance(data, SType.NetworkDown, instance, val, nicName);
                 break;
         }
     }
 
-    private static void MapMotherboardSensor(ISensor sensor, double val, string label, SensorData data)
+    private void MapMotherboardSensor(ISensor sensor, double val, string label, SensorData data, string boardName)
     {
         switch (sensor.SensorType)
         {
             case LhmSensorType.Temperature:
                 PutMax(data, SType.MotherboardTemp, val, label);
+                var kind = IsVrmSensor(sensor.Name)
+                    ? SType.VrmTemperature
+                    : SType.MotherboardTemp;
+                data.SetValue(
+                    new SensorKey(kind, SlotFor($"{boardName}\\{sensor.Name}")),
+                    val,
+                    $"{boardName} — {sensor.Name}");
+                break;
+            case LhmSensorType.Voltage:
+                // Rails da placa-mãe (+12V, +5V, VCore...): só instância, sem série canônica.
+                data.SetValue(
+                    new SensorKey(SType.RailVoltage, SlotFor($"{boardName}\\{sensor.Name}")),
+                    val,
+                    $"{boardName} — {sensor.Name}");
                 break;
             case LhmSensorType.Fan:
                 PutMax(data, SType.FanSpeed, val, label);
+                PutInstance(data, SType.FanSpeed, SlotFor($"{boardName}\\{sensor.Name}"), val, $"{boardName} — {sensor.Name}");
                 break;
         }
     }
+
+    /// <summary>Reconhece sensores de zona VRM/VCore (o rótulo vai para a série VrmTemperature).</summary>
+    private static bool IsVrmSensor(string name) =>
+        name.Contains("VRM", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("VR ", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("VSoC", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("VCore", StringComparison.OrdinalIgnoreCase);
 
     // ---------- Processos na GPU ----------
 

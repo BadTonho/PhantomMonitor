@@ -23,6 +23,29 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - **Disco (`DiskUsage`):** usa o sensor `Total Activity` (% de atividade), não `Used Space`.
 - **RAM:** somente memória física (ignora `Virtual Memory`). Os sensores `Data` do LibreHardwareMonitor já vêm em **GB**; `RamTotal` = usada + disponível.
 
+## Séries por instância (`SensorKey`)
+
+Além das séries canônicas (índice 0, acima), cada ciclo também publica séries
+**por instância** com chaves `Categoria#índice` (`GpuCore#1`, `CpuTemperature#3`,
+`DiskRead#2`...). A dedicada é sempre a GPU 1; discos e interfaces recebem
+índice na ordem em que o LibreHardwareMonitor os enumera.
+
+| Categoria | Instância | Fonte |
+|---|---|---|
+| `CpuPerCore#i`, `CpuTemperature#i`, `CpuClock#i` | núcleo índice `i` (`#` no nome do sensor) | CPU |
+| `CpuPower#i` | dominio de potência extra ("IA Cores", "GT Cores"...) | CPU/MSR |
+| `GpuCore#i`... (todas as séries de GPU) | GPU dedicada = 1, integrada = 2, 3... | GPU |
+| `FanSpeed#i` | ventoinha por slot (placa-mãe/SuperIO/EC) | "Fan #N"/nome |
+| `DiskUsage/DiskRead/DiskWrite/DiskTemperature/DiskHealth/DiskTotalRead/DiskTotalWritten#i` | disco por nó | NVMe/HD SMART |
+| `NetworkUp/NetworkDown#i` | interface por nó (nickname do adaptador no rótulo) | NIC |
+| `MotherboardTemp#i`, `VrmTemperature#i`, `RailVoltage#i`, `RamTemperature#i` | slot estável por nome do sensor | Placa-mãe/SuperIO/EC |
+| `NetworkUpTotal`, `NetworkDownTotal` (canônicas) | somatório da sessão (velocidade × tempo entre amostras) | NIC |
+
+Consumidores:
+- **CSV/JSON:** colunas/entradas `Categoria#i` automáticas (ver [logging.md](logging.md)).
+- **OSD:** linhas por série filtradas pela whitelist `overlay.shownSeries` (ver [configuracao.md](configuracao.md)).
+- **Alertas:** `rules[].sensorIndex` mira uma instância (`GpuTemperature` + índice 1, ver [alertas.md](alertas.md)).
+
 ## Concorrência e ciclo de vida
 
 - `Start/Stop/Update/Dispose` são serializados por um lock; um tick que chega durante outro ciclo é descartado.

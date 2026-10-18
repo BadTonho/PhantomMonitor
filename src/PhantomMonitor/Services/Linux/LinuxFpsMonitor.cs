@@ -21,6 +21,8 @@ public struct PhantomVulkanTelemetryHeader
     public float FrametimeMs;
     public float InstantFps;
 
+    // ByValTStr sem CharSet = Ansi; no .NET/CoreCLR Unix Ansi resolve para UTF-8 —
+    // exatamente os bytes UTF-8 gravados pela layer via /proc/self/comm.
     [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
     public string ProcessName;
 }
@@ -33,7 +35,7 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
 {
     private const int MaxStatsSamples = 3600; // janela das estatísticas (~60 s rodando a 60 FPS)
     private readonly FrametimeBuffer _frametimeHistory = new(600);
-    private readonly List<double> _fpsSamples = new(MaxStatsSamples);
+    private readonly Queue<double> _fpsSamples = new(MaxStatsSamples);
     private readonly object _lock = new();
 
     private readonly Timer _pollTimer;
@@ -205,10 +207,10 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                         }
 
                         _fps = (float)Math.Round(_emaFps, 1);
-                        _fpsSamples.Add(instantFps);
+                        _fpsSamples.Enqueue(instantFps);
 
                         if (_fpsSamples.Count > MaxStatsSamples)
-                            _fpsSamples.RemoveAt(0);
+                            _fpsSamples.Dequeue();
 
                         if (instantFps < _fpsMin)
                             _fpsMin = instantFps;

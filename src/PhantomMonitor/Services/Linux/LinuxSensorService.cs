@@ -14,6 +14,7 @@ public sealed class LinuxSensorService : ISensorService
     private readonly Timer _timer;
     private readonly int _updateIntervalMs;
     private readonly LinuxFpsMonitor _fpsMonitor = new();
+    private readonly object _updateLock = new();
     private SensorData _current = new();
 
     // CPU calculation state
@@ -52,6 +53,9 @@ public sealed class LinuxSensorService : ISensorService
 
     private void Update()
     {
+        // Um tick demorado (leitura de /sys lenta em RAID/NFS) não pode se sobrepor ao
+        // próximo: corrompia os contadores _prevCpu*/_prevDisk* (uso sugerindo ~100%).
+        if (!Monitor.TryEnter(_updateLock)) return;
         try
         {
             var data = new SensorData
@@ -78,11 +82,16 @@ public sealed class LinuxSensorService : ISensorService
             }
 
             _current = data;
-            SensorUpdated?.Invoke(data);
+            if (IsRunning)
+                SensorUpdated?.Invoke(data); // callbacks pendentes do timer não sobrevivem ao Stop
         }
         catch
         {
             // Proteção contra leitura em momentos de desligamento ou falta de arquivos
+        }
+        finally
+        {
+            Monitor.Exit(_updateLock);
         }
     }
 
@@ -214,48 +223,73 @@ public sealed class LinuxSensorService : ISensorService
 
             foreach (var dir in Directory.GetDirectories(hwmonBase))
             {
-                string name = "";
-                var namePath = Path.Combine(dir, "name");
-                if (File.Exists(namePath))
+                // Por diretório: um hwmon sumindo entre a listagem e a leitura
+                // (permission denied comum em alguns sensores) não pode abortar o restante.
+                try
                 {
-                    name = File.ReadAllText(namePath).Trim().ToLowerInvariant();
-                }
-
-                bool isCpuHwmon = name.Contains("coretemp") || name.Contains("k10temp") || name.Contains("zenpower");
-                bool isGpuHwmon = name.Contains("amdgpu") || name.Contains("nouveau") || name.Contains("nvidia");
-
-                // Ler temperaturas do diretório
-                foreach (var tempFile in Directory.GetFiles(dir, "temp*_input"))
-                {
-                    if (double.TryParse(File.ReadAllText(tempFile).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var milliDeg))
+                    string name = "";
+                    var namePath = Path.Combine(dir, "name");
+                    if (TryReadSysfsFile(namePath, out var nameRaw))
                     {
-                        double deg = milliDeg / 1000.0;
+                        name = nameRaw.ToLowerInvariant();
+                    }
 
-                        if (isCpuHwmon && (data.CpuTemp <= 0 || deg > data.CpuTemp))
+                    bool isCpuHwmon = name.Contains("coretemp") || name.Contains("k10temp") || name.Contains("zenpower");
+                    bool isGpuHwmon = name.Contains("amdgpu") || name.Contains("nouveau") || name.Contains("nvidia");
+
+                    // Ler temperaturas do diretório
+                    foreach (var tempFile in Directory.GetFiles(dir, "temp*_input"))
+                    {
+                        if (TryReadSysfsFile(tempFile, out var tempRaw) &&
+                            double.TryParse(tempRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var milliDeg))
                         {
-                            data.SetValue(SensorType.CpuTemperature, deg, "CPU Temp");
+                            double deg = milliDeg / 1000.0;
+
+                            if (isCpuHwmon && (data.CpuTemp <= 0 || deg > data.CpuTemp))
+                            {
+                                data.SetValue(SensorType.CpuTemperature, deg, "CPU Temp");
+                            }
+                            else if (isGpuHwmon && (data.GpuTemp <= 0 || deg > data.GpuTemp))
+                            {
+                                data.SetValue(SensorType.GpuTemperature, deg, "GPU Temp");
+                            }
                         }
-                        else if (isGpuHwmon && (data.GpuTemp <= 0 || deg > data.GpuTemp))
+                    }
+
+                    // Ler RPM de Fan se disponível
+                    foreach (var fanFile in Directory.GetFiles(dir, "fan*_input"))
+                    {
+                        if (TryReadSysfsFile(fanFile, out var fanRaw) &&
+                            double.TryParse(fanRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var rpm))
                         {
-                            data.SetValue(SensorType.GpuTemperature, deg, "GPU Temp");
+                            if (isGpuHwmon)
+                                data.SetValue(SensorType.GpuFan, rpm);
                         }
                     }
                 }
-
-                // Ler RPM de Fan se disponível
-                foreach (var fanFile in Directory.GetFiles(dir, "fan*_input"))
+                catch
                 {
-                    if (double.TryParse(File.ReadAllText(fanFile).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var rpm))
-                    {
-                        if (isGpuHwmon)
-                            data.SetValue(SensorType.GpuFan, rpm);
-                    }
+                    // Segue para o próximo diretório de hwmon
                 }
             }
         }
         catch
         {
             // Ignora falhas de leitura
+        }
+    }
+
+    private static bool TryReadSysfsFile(string path, out string content)
+    {
+        try
+        {
+            content = File.ReadAllText(path).Trim();
+            return true;
+        }
+        catch
+        {
+            content = "";
+            return false;
         }
     }
 

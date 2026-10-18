@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 
 namespace PhantomMonitor.Overlay;
@@ -129,6 +130,8 @@ public partial class OverlayEditorWindow : Window
             foreach (var (box, patterns) in SeriesOptions)
                 box.IsChecked = patterns.Any(p => series.Contains(p, StringComparer.OrdinalIgnoreCase));
         }
+
+        RebuildProfilesPanel();
 
         UpdateLayersVisibility();
     }
@@ -359,6 +362,170 @@ public partial class OverlayEditorWindow : Window
         }
     }
 
+    // ---------- Perfis por aplicativo (cartões editáveis) ----------
+
+    private readonly List<(TextBox Box, Action<string> Apply)> _profileBindings = [];
+
+    private void RebuildProfilesPanel()
+    {
+        if (ProfilesPanel == null) return;
+        ProfilesPanel.Children.Clear();
+        _profileBindings.Clear();
+
+        for (int i = 0; i < _config.Profiles.Count; i++)
+        {
+            var profile = _config.Profiles[i];
+            var card = new Border
+            {
+                BorderBrush = (System.Windows.Media.Brush)TryFindResource("BorderBrush")!,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(8),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            var stack = new StackPanel();
+
+            // Cabeçalho: nome atual + remover
+            var header = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            header.Children.Add(new TextBlock
+            {
+                Text = $"Perfil {i + 1}",
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            var remove = new Button
+            {
+                Content = "Remover",
+                Padding = new Thickness(8, 2, 8, 2),
+                FontSize = 10,
+                Tag = profile
+            };
+            if (TryFindResource("SecondaryButton") is System.Windows.Style removeStyle) remove.Style = removeStyle;
+            remove.Click += OnRemoveProfileClicked;
+            Grid.SetColumn(remove, 1);
+            header.Children.Add(remove);
+            stack.Children.Add(header);
+
+            AddProfileField(stack, "Nome do perfil", profile.Name, v => profile.Name = v.Trim());
+
+            var appRow = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            appRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var appBox = new TextBox { Text = profile.AppMatch, VerticalContentAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(appBox, 0);
+            appRow.Children.Add(appBox);
+            var capture = new Button
+            {
+                Content = "Capturar",
+                Padding = new Thickness(8, 2, 8, 2),
+                FontSize = 10,
+                Margin = new Thickness(6, 0, 0, 0),
+                Tag = appBox
+            };
+            if (TryFindResource("SecondaryButton") is System.Windows.Style captureStyle) capture.Style = captureStyle;
+            capture.Click += OnCaptureAppClicked;
+            Grid.SetColumn(capture, 1);
+            appRow.Children.Add(capture);
+            stack.Children.Add(new TextBlock { Text = "Executável (AppMatch) — vazio/* casam com qualquer app", FontSize = 10, Opacity = 0.75 });
+            stack.Children.Add(appRow);
+            _profileBindings.Add((appBox, v => profile.AppMatch = v.Trim()));
+
+            AddProfileField(stack, "Offset X (vazio = padrão)", profile.OffsetX?.ToString("F0") ?? "", v => profile.OffsetX = ParseDoubleOrNull(v));
+            AddProfileField(stack, "Offset Y (vazio = padrão)", profile.OffsetY?.ToString("F0") ?? "", v => profile.OffsetY = ParseDoubleOrNull(v));
+            AddProfileField(stack, "Largura px (vazio = padrão)", profile.Width?.ToString("F0") ?? "", v => profile.Width = ParseIntOrNull(v));
+            AddProfileField(stack, "Fonte pt (vazio = padrão)", profile.FontSize?.ToString("F1") ?? "", v => profile.FontSize = ParseDoubleOrNull(v));
+            AddProfileField(stack, "Cor de acento #RRGGBB (vazio = padrão)", profile.AccentColor ?? "", v => profile.AccentColor = string.IsNullOrWhiteSpace(v) ? null : v.Trim());
+
+            card.Child = stack;
+            ProfilesPanel.Children.Add(card);
+        }
+    }
+
+    private void AddProfileField(StackPanel stack, string label, string value, Action<string> apply)
+    {
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 10, Opacity = 0.75 });
+        var box = new TextBox { Text = value, Margin = new Thickness(0, 0, 0, 4) };
+        stack.Children.Add(box);
+        _profileBindings.Add((box, apply));
+    }
+
+    private static double? ParseDoubleOrNull(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0) return null;
+        return double.TryParse(trimmed, out var value) ? value : null;
+    }
+
+    private static int? ParseIntOrNull(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0) return null;
+        return int.TryParse(trimmed, out var value) ? value : null;
+    }
+
+    private void ApplyProfileFields()
+    {
+        foreach (var (box, apply) in _profileBindings)
+        {
+            apply(box.Text ?? "");
+        }
+    }
+
+    private void OnRemoveProfileClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: OverlayProfile profile })
+        {
+            _config.Profiles.Remove(profile);
+            RebuildProfilesPanel();
+        }
+    }
+
+    private void OnAddProfileClicked(object sender, RoutedEventArgs e)
+    {
+        _config.Profiles.Add(new OverlayProfile
+        {
+            Name = $"Perfil {_config.Profiles.Count + 1}",
+            AppMatch = CaptureForegroundApp() ?? ""
+        });
+        RebuildProfilesPanel();
+    }
+
+    private void OnCaptureAppClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: TextBox box })
+        {
+            var app = CaptureForegroundApp();
+            box.Text = app ?? box.Text;
+        }
+    }
+
+    /// <summary>Nome do executável sem .exe da janela em foco (null se a captura falhar).</summary>
+    private static string? CaptureForegroundApp()
+    {
+        try
+        {
+            var hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return null;
+            GetWindowThreadProcessId(hwnd, out var pid);
+            using var process = System.Diagnostics.Process.GetProcessById((int)pid);
+            var name = process.ProcessName;
+            if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) name = name[..^4];
+            return name;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
         if (PosXBox != null && double.TryParse(PosXBox.Text, out var x)) _config.OverlayPosition.X = x;
@@ -411,6 +578,9 @@ public partial class OverlayEditorWindow : Window
             }
             _config.ToggleOverlayHotkey = hotkey;
         }
+
+        // Perfis por aplicativo: aplica o conteúdo dos campos aos objetos antes de salvar.
+        ApplyProfileFields();
 
         var saved = _config.Save(_configPath);
         ConfigApplied?.Invoke(_config);

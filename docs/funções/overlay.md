@@ -60,6 +60,42 @@ Configurado via `config.json` ou pelo Editor Visual:
 - `overlayOpacity` - Opacidade do fundo translúcido (padrão: 0.85)
 - `overlayPosition` - Coordenadas `x` e `y` na tela
 - `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex.: `Ctrl+Shift+O`; vazio = desativado)
+- `profiles` - Perfis por aplicativo (ver seção abaixo)
+
+## Perfis por aplicativo (P3)
+
+Cada entrada em `config.profiles` aplica **overrides** ao OSD quando o executável
+em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posição
+(30 ms) com cache de nomes de processo:
+
+```json
+"profiles": [
+  {
+    "name": "CS2",
+    "appMatch": "cs2",
+    "offsetX": 30,
+    "offsetY": 120,
+    "width": 260,
+    "fontSize": 13,
+    "accentColor": "#FFCC15"
+  }
+]
+```
+
+- `appMatch`: nome do executável **sem** `.exe`/caminho, case-insensitive,
+  por prefixo (`cs2` casa com `cs2.exe`). `""` ou `"*"` casam com **qualquer**
+  aplicativo (perfil universal).
+- Campos nulos/ausentes = usa o valor global (`overlayPosition`, `overlay.width`,
+  `overlay.fontSize`, `overlay.accentColor`). A `fontSize` reescala a árvore
+  inteira do OSD preservando os deltas por tipo de bloco.
+- **Fixar pela bandeja:** o menu do ícone de bandeja ganhou uma seção automática
+  com `Automático (por aplicativo)` + perfis; escolher um fixa o perfil
+  (sobrepõe o matcher; a fixação dura a sessão, não grava no config).
+- **Indicador:** com perfil ativo, o OSD mostra uma linha mínima no rodapé
+  (`◉ perfil: CS2`); sem perfil, nada aparece.
+- **Editor Visual:** seção "PERFIS POR APLICATIVO" com cartões editáveis
+  (nome, AppMatch com botão "Capturar" do app em foco, offsets, largura, fonte,
+  acento), adicionar/remover; "Aplicar & Salvar" grava em `config.profiles`.
 
 ## API Nativa
 

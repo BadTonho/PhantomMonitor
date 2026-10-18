@@ -341,6 +341,21 @@
                             <ComboBoxItem Content="F12"/>
                         </ComboBox>
 
+                        <!-- Section: Perfis por aplicativo -->
+                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,14,0,14"/>
+
+                        <TextBlock Text="PERFIS POR APLICATIVO" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Quando o executável em foco casar com “AppMatch”, o overlay aplica os overrides do perfil (X/Y, largura, fonte, acento). Fixe um perfil pela bandeja para ativar manualmente."
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <StackPanel x:Name="ProfilesPanel"/>
+
+                        <Button Content="+ Adicionar perfil (captura o app em foco)" 
+                                Style="{StaticResource SecondaryButton}"
+                                Padding="8,5" Margin="0,8,0,8" FontSize="11"
+                                HorizontalAlignment="Stretch" Click="OnAddProfileClicked"/>
+
                         <!-- Save & Apply -->
                         <Button Content="Aplicar &amp; Salvar Configuração" 
                                 Style="{StaticResource PrimaryButton}" 

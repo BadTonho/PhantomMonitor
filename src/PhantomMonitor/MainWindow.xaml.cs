@@ -79,6 +79,25 @@ public partial class MainWindow : Window
             _tray.ExitRequested += Close;
             _tray.IsOverlayVisible = () => OverlayToggle.IsChecked == true;
             _tray.IsStartupEnabled = StartupManager.IsEnabled;
+
+            // Seção dinâmica: perfis do OSD (fixar perfil / voltar ao automático).
+            _tray.SetDynamicItems(() =>
+            {
+                var entries = new List<TrayIconService.MenuEntry>
+                {
+                    new((int)TrayIconService.MenuDynamicBase, "Automático (por aplicativo)",
+                        _pinnedProfile == null)
+                };
+                for (int i = 0; i < _config.Profiles.Count; i++)
+                {
+                    var profile = _config.Profiles[i];
+                    entries.Add(new(
+                        (int)TrayIconService.MenuDynamicBase + i + 1,
+                        profile.Name,
+                        string.Equals(_pinnedProfile, profile.Name, StringComparison.OrdinalIgnoreCase)));
+                }
+                return entries;
+            }, ConfigurePinnedProfile);
         }
         catch (Exception ex)
         {
@@ -87,8 +106,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>(Re)cria o avaliador de alertas conforme o config atual; popups aparecem no canto da tela.</summary>
-    private void ApplyAlertsConfig()
-    {
+    private void ApplyAlertsConfig()    {
         _alerts = new AlertService(_config.Alerts)
         {
             ShowPopup = (title, message) =>
@@ -165,6 +183,27 @@ public partial class MainWindow : Window
 
     private void StartMonitoring() => BeginMonitoring();
 
+    // Perfil fixado pela bandeja (sessão; não persiste no config). null = automático.
+    private string? _pinnedProfile;
+
+    private void ConfigurePinnedProfile(int id)
+    {
+        if (id == (int)TrayIconService.MenuDynamicBase)
+        {
+            _pinnedProfile = null;
+        }
+        else
+        {
+            var index = id - (int)TrayIconService.MenuDynamicBase - 1;
+            if (index < 0 || index >= _config.Profiles.Count) return;
+            _pinnedProfile = _config.Profiles[index].Name;
+        }
+    }
+
+    /// <summary>Estado do matcher de perfis consultado pelo overlay a cada tick de posição.</summary>
+    private OverlayProfileState ResolveProfileState() =>
+        new() { Profiles = _config.Profiles, Pinned = _pinnedProfile };
+
     private void OnStartClick(object sender, RoutedEventArgs e) => BeginMonitoring();
 
     private void BeginMonitoring()
@@ -176,7 +215,8 @@ public partial class MainWindow : Window
 
         _overlay = new OverlayWindow(_config,
             _config.OverlayPosition.X,
-            _config.OverlayPosition.Y);
+            _config.OverlayPosition.Y,
+            ResolveProfileState);
 
         if (OverlayToggle.IsChecked == true)
             _overlay.Show();
@@ -430,7 +470,7 @@ public partial class MainWindow : Window
         if (_sensorService == null) return;
 
         _overlay?.Close();
-        _overlay = new OverlayWindow(_config, _config.OverlayPosition.X, _config.OverlayPosition.Y);
+        _overlay = new OverlayWindow(_config, _config.OverlayPosition.X, _config.OverlayPosition.Y, ResolveProfileState);
         if (OverlayToggle.IsChecked == true)
             _overlay.Show();
     }

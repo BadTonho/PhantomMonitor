@@ -166,6 +166,19 @@ public sealed class TrayIconService : IDisposable
         AppendMenu(menu, MfString, MenuShow, "Mostrar Phantom Monitor");
         AppendMenu(menu, MfString | (overlayChecked ? MfChecked : 0), MenuOverlay, "Overlay no Jogo");
         AppendMenu(menu, MfString | (startupChecked ? MfChecked : 0), MenuStartup, "Iniciar com o Windows");
+
+        // Seção dinâmica (perfis por aplicativo): itens e estados avaliados a cada
+        // abertura do menu pelos proveedores registrados na janela principal.
+        var dynamic = _dynamicItemsProvider?.Invoke();
+        if (dynamic is { Count: > 0 })
+        {
+            AppendMenu(menu, MfSeparator, 0, null);
+            foreach (var item in dynamic)
+            {
+                AppendMenu(menu, MfString | (item.Checked ? MfChecked : 0), (uint)item.Id, item.Title);
+            }
+        }
+
         AppendMenu(menu, MfSeparator, 0, null);
         AppendMenu(menu, MfString, MenuExit, "Sair");
 
@@ -183,11 +196,31 @@ public sealed class TrayIconService : IDisposable
                 case MenuOverlay: OverlayToggleRequested?.Invoke(); break;
                 case MenuStartup: StartupToggleRequested?.Invoke(); break;
                 case MenuExit: ExitRequested?.Invoke(); break;
+                default:
+                    if (cmd >= MenuDynamicBase) DynamicItemClicked?.Invoke((int)cmd);
+                    break;
             }
         }
 
         DestroyMenu(menu);
     }
+
+    /// <summary>Item injetado na bandeja por um provedor externo (ex.: perfis do OSD).</summary>
+    public sealed record MenuEntry(int Id, string Title, bool Checked);
+
+    /// <summary>Id base dos itens dinâmicos (>= que os fixos MenuShow..MenuExit).</summary>
+    public const uint MenuDynamicBase = 0x500;
+
+    private Func<IReadOnlyList<MenuEntry>>? _dynamicItemsProvider;
+
+    /// <summary>Registra a seção dinâmica do menu (avaliada a cada abertura) e o retorno do clique.</summary>
+    public void SetDynamicItems(Func<IReadOnlyList<MenuEntry>>? provider, Action<int>? onClicked)
+    {
+        _dynamicItemsProvider = provider;
+        DynamicItemClicked = onClicked;
+    }
+
+    private event Action<int>? DynamicItemClicked;
 
     /// <summary>Desenha o ícone do app (quadro escuro com gráfico ciano) e converte para HICON.</summary>
     private static IntPtr CreateAppIcon(int size)

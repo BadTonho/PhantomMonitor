@@ -14,7 +14,7 @@ public partial class OverlayWindow : Window
     private readonly List<Action<SensorData>> _updaters = new();
     private Canvas? _frametimeGraph;
     private bool _showFps;
-    private readonly double _detailMaxWidth = 160;
+    private double _detailMaxWidth = 160;
 
     // Séries por instância (multi-GPU, núcleos, ventoinhas, discos...): as linhas
     // são criadas no primeiro snapshot que as contiver, filtradas pela whitelist
@@ -38,9 +38,10 @@ public partial class OverlayWindow : Window
     private static readonly Brush GreenFpsBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x88));
     private static readonly Brush GuideBrush = MakeFrozenBrush(30, 255, 255, 255);
 
-    public OverlayWindow(AppConfig config, double left = 20, double top = 80)
+    public OverlayWindow(AppConfig config, double left = 20, double top = 80, Func<OverlayProfileState?>? profileState = null)
     {
         InitializeComponent();
+        _profileState = profileState;
         Left = left;
         Top = top;
         Opacity = config.OverlayOpacity;
@@ -48,6 +49,7 @@ public partial class OverlayWindow : Window
             MainBorder.MinWidth = config.Overlay.Width;
 
         _detailMaxWidth = Math.Max(120, (config.Overlay.Width > 0 ? config.Overlay.Width : 220) - 62);
+        _baseWidth = config.Overlay.Width > 0 ? config.Overlay.Width : 220;
 
         _baseFontSize = Math.Clamp(config.Overlay.FontSize, 8, 20);
         var accent = ParseAccentColor(config.Overlay.AccentColor);
@@ -164,6 +166,8 @@ public partial class OverlayWindow : Window
 
         _offsetX = left;
         _offsetY = top;
+        _baseOffsetX = left;
+        _baseOffsetY = top;
         _seriesPatterns = [.. (config.Overlay.ShownSeries ?? ["Gpu*", "FanSpeed*", "Disk*"])];
         _positionTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
         _positionTimer.Tick += (s, e) => UpdatePosition();
@@ -172,6 +176,18 @@ public partial class OverlayWindow : Window
 
     private double _offsetX;
     private double _offsetY;
+    private int _baseWidth = 220;
+    private double _baseOffsetX;
+    private double _baseOffsetY;
+
+    // Perfis por aplicativo: cascata AppMatch do processo em foco (ou fixado pela
+    // bandeja). Fonte de verdade continua sendo o config global; o perfil só faz
+    // override dos campos que definiu.
+    private readonly Func<OverlayProfileState?>? _profileState;
+    private OverlayProfile? _activeProfile;
+    private string? _pinnedProfile;
+    private TextBlock? _profileTag;
+    private readonly Dictionary<int, string> _foregroundNames = [];
 
     // Timers guardados no campo e parados no OnClosed: como variáveis locais eles
     // sobreviviam ao fechamento da janela (foreground check a cada 30 ms e SetWindowPos
@@ -208,6 +224,11 @@ public partial class OverlayWindow : Window
 
         if (pid == GetExplorerPid()) return;
 
+        // Perfil por aplicativo: resolve o processo em foco e aplica overrides (offset,
+        // largura, acento, fonte). Executa a cada 30 ms, mas o trabalho real só ocorre
+        // quando o perfil ativo muda.
+        RefreshProfileFor(pid);
+
         if (GetWindowRect(hwnd, out var rect))
         {
             if (rect.Left <= -32000) return;
@@ -221,6 +242,160 @@ public partial class OverlayWindow : Window
             Left = rect.Left / dpiScale + _offsetX;
             Top = rect.Top / dpiScale + _offsetY;
         }
+    }
+
+    // ---------- Perfis por aplicativo ----------
+
+    private void RefreshProfileFor(uint pid)
+    {
+        if (_profileState == null) return;
+
+        OverlayProfileState? state = null;
+        try { state = _profileState(); }
+        catch { /* config em recriação: mantém o perfil atual */ }
+        if (state == null) return;
+
+        OverlayProfile? target;
+        if (state.Pinned is { Length: > 0 } pinned)
+        {
+            // Fixado por bandeja: aplica mesmo em outro app, até o usuário desfixar.
+            target = state.Profiles.FirstOrDefault(p =>
+                string.Equals(p.Name, pinned, StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+            var processName = ResolveForegroundName(pid);
+            target = state.Profiles.FirstOrDefault(p => MatchesApp(p.AppMatch, processName));
+        }
+
+        if (string.Equals(_activeProfile?.Name, target?.Name, StringComparison.OrdinalIgnoreCase) &&
+            _pinnedProfile == state.Pinned)
+            return;
+
+        _pinnedProfile = state.Pinned;
+        _activeProfile = target;
+        ApplyProfile(target);
+        UpdateProfileTag();
+    }
+
+    private string? ResolveForegroundName(uint pid)
+    {
+        var key = (int)pid;
+        if (_foregroundNames.TryGetValue(key, out var cached)) return cached;
+
+        string name = "";
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById(key);
+            name = process.ProcessName;
+        }
+        catch
+        {
+            // Processo saiu entre GetForegroundWindow e a busca: sem match neste tick.
+        }
+
+        // Cache limitado (processos mudam bem menos que os ticks de 30 ms).
+        if (_foregroundNames.Count > 64) _foregroundNames.Clear();
+        _foregroundNames[key] = name;
+        return name;
+    }
+
+    /// <summary>Case-insensitive sem caminho/“— .exe”; "" ou "*" casa com qualquer app.</summary>
+    private static bool MatchesApp(string appMatch, string? processName)
+    {
+        var pattern = appMatch?.Trim();
+        if (string.IsNullOrEmpty(pattern) || pattern == "*") return true;
+        if (string.IsNullOrEmpty(processName)) return false;
+
+        if (processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            processName = processName[..^4];
+
+        return processName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyProfile(OverlayProfile? profile)
+    {
+        // Offsets: perfil > padrão capturado no construtor.
+        _offsetX = profile?.OffsetX ?? _baseOffsetX;
+        _offsetY = profile?.OffsetY ?? _baseOffsetY;
+
+        // Largura/redondagem do painel de detalhes.
+        var width = profile?.Width ?? _baseWidth;
+        if (width is int w && w > 0)
+        {
+            MainBorder.MinWidth = w;
+            _detailMaxWidth = Math.Max(120, w - 62);
+        }
+
+        // Acento: substitui a escova do gráfico e o contorno do painel.
+        if (!string.IsNullOrWhiteSpace(profile?.AccentColor))
+        {
+            var accent = ParseAccentColor(profile.AccentColor);
+            _accentBrush = new SolidColorBrush(accent);
+            MainBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x30, accent.R, accent.G, accent.B));
+        }
+
+        // Fonte: re-escala a árvore existente (os deltas por tipo de bloco são preservados).
+        if (profile?.FontSize is double font)
+        {
+            var old = _baseFontSize;
+            var target = Math.Clamp(font, 8, 20);
+            if (Math.Abs(old - target) > 0.05)
+            {
+                RescaleFont(MainBorder, old, target);
+                _baseFontSize = target;
+                _rowMargin = Math.Max(0.5, 1.5 - (target - 11.5) * 0.1);
+            }
+        }
+    }
+
+    /// <summary>Reescala TextBlocks da árvore preservando os deltas relativos (-2 dados, +0.5 FPS).</summary>
+    private static void RescaleFont(System.Windows.DependencyObject root, double oldBase, double newBase)
+    {
+        foreach (var text in FindTextBlocks(root))
+        {
+            var size = text.FontSize;
+            if (Math.Abs(size - oldBase) < 0.05) text.FontSize = newBase;
+            else if (Math.Abs(size - (oldBase - 2)) < 0.05) text.FontSize = newBase - 2;
+            else if (Math.Abs(size - (oldBase + 0.5)) < 0.05) text.FontSize = newBase + 0.5;
+        }
+    }
+
+    private static IEnumerable<TextBlock> FindTextBlocks(System.Windows.DependencyObject root)
+    {
+        int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is TextBlock block) yield return block;
+            foreach (var inner in FindTextBlocks(child)) yield return inner;
+        }
+    }
+
+    private void UpdateProfileTag()
+    {
+        var name = _activeProfile?.Name;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            if (_profileTag != null) _profileTag.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (_profileTag == null)
+        {
+            _profileTag = new TextBlock
+            {
+                FontFamily = OsdFont,
+                FontSize = _baseFontSize - 2.5,
+                Foreground = MutedBrush,
+                Margin = new Thickness(46, 1, 0, 0)
+            };
+            SensorPanel.Children.Add(_profileTag);
+        }
+
+        _profileTag.Text = $"◉ perfil: {_activeProfile!.Name}";
+        _profileTag.FontSize = _baseFontSize - 2.5;
+        _profileTag.Visibility = Visibility.Visible;
     }
 
     private static uint _explorerPid = 0;

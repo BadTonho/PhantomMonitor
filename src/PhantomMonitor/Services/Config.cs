@@ -17,6 +17,9 @@ public sealed class AppConfig
     public SensorConfig Sensors { get; set; } = new();
     public AlertsConfig Alerts { get; set; } = new();
 
+    /// <summary>Perfis por aplicativo do OSD (aplicam overrides quando o executável em foco casa).</summary>
+    public List<OverlayProfile> Profiles { get; set; } = [];
+
     public static AppConfig Load(string path)
     {
         try
@@ -105,6 +108,25 @@ public sealed class AppConfig
             rule.Script ??= "";
             rule.ScriptArguments ??= "";
             rule.Message ??= "";
+        }
+
+        // Perfis por aplicativo: nomes obrigatórios, faixas dos overrides, AppMatch limpo.
+        Profiles ??= new();
+        Profiles.RemoveAll(p => p is null);
+        foreach (var profile in Profiles)
+        {
+            if (string.IsNullOrWhiteSpace(profile.Name))
+                profile.Name = $"Perfil {Profiles.IndexOf(profile) + 1}";
+
+            profile.AppMatch = (profile.AppMatch ?? "").Trim('.').Trim();
+            if (profile.AppMatch.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                profile.AppMatch = profile.AppMatch[..^4].Trim();
+
+            if (profile.OffsetX is { } x) profile.OffsetX = Math.Clamp(x, -5000, 5000);
+            if (profile.OffsetY is { } y) profile.OffsetY = Math.Clamp(y, -5000, 5000);
+            if (profile.Width is { } w) profile.Width = Math.Clamp(w, 140, 700);
+            if (profile.FontSize is { } f) profile.FontSize = Math.Clamp(f, 8, 20);
+            if (profile.AccentColor is { } c && !IsValidHexColor(c)) profile.AccentColor = null;
         }
     }
 

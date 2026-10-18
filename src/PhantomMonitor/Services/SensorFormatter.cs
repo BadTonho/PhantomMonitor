@@ -55,8 +55,12 @@ public static class SensorFormatter
         }
         double clock = data.GetValue(SensorType.GpuCoreClock);
         if (clock > 0) parts.Add(FormatClock(clock));
+        double memClock = data.GetValue(SensorType.GpuMemoryClock);
+        if (memClock > 0) parts.Add(FormatClock(memClock));
         double power = data.GetValue(SensorType.GpuPower);
         if (power > 0) parts.Add($"{power:F0} W");
+        double voltage = data.GetValue(SensorType.GpuVoltage);
+        if (voltage > 0) parts.Add($"{voltage:F3} V");
         double hotspot = data.GetValue(SensorType.GpuHotSpot);
         if (hotspot > 0) parts.Add($"HS {hotspot:F0}°C");
         return parts.Count > 0 ? string.Join("  ", parts) : null;

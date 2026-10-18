@@ -9,7 +9,7 @@ Utilitário estático de formatação de métricas compartilhado entre a janela 
 - `FormatClock(mhz)` → `850 MHz` / `4.15 GHz`
 - `FormatFan(value)` → `--`, `45%` (valores ≤ 100, GPUs NVIDIA) ou `1450 RPM` (SuperIO/AMD)
 - `BuildCpuDetail(data)` → linha compacta com clock, potência e voltagem disponíveis (`null` quando não há nenhum)
-- `BuildGpuDetail(data)` → linha compacta com VRAM usada/total, clock, potência e hotspot (`null` quando não há nenhum)
+- `BuildGpuDetail(data)` → linha compacta com VRAM usada/total, clock core/memória, potência, voltagem e hotspot (`null` quando não há nenhum)
 - `BuildFanSummary(data)` → resumo de ventoinhas para os cards (`Ventoinhas: GPU 45% | Sistema 1200 RPM`)
 
 ## Consumidores

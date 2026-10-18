@@ -350,6 +350,7 @@ public partial class MainWindow : Window
 
     private DebugWindow? _debugWindow;
     private OverlayEditorWindow? _overlayEditor;
+    private InventoryWindow? _inventoryWindow;
 
     private void OnOpenDebugWindow(object sender, RoutedEventArgs e) => ShowDebugWindow();
 
@@ -365,6 +366,23 @@ public partial class MainWindow : Window
         else
         {
             _debugWindow.Activate();
+        }
+    }
+
+    private void OnOpenInventory(object sender, RoutedEventArgs e) => ShowInventoryWindow();
+
+    private void ShowInventoryWindow()
+    {
+        if (_inventoryWindow == null || !_inventoryWindow.IsVisible)
+        {
+            _inventoryWindow = new InventoryWindow(() => _sensorService?.GetCurrentSnapshot());
+            _inventoryWindow.Owner = this;
+            _inventoryWindow.Closed += (_, _) => _inventoryWindow = null;
+            _inventoryWindow.Show();
+        }
+        else
+        {
+            _inventoryWindow.Activate();
         }
     }
 

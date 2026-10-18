@@ -78,6 +78,11 @@
                                 Click="OnOpenOverlayEditor"
                                 Padding="8,5" Margin="0,2,0,8" FontSize="11"
                                 HorizontalAlignment="Stretch"/>
+                        <Button Content="🔎 Inventário de Hardware"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="OnOpenInventory"
+                                Padding="8,5" Margin="0,0,0,8" FontSize="11"
+                                HorizontalAlignment="Stretch"/>
                         <CheckBox x:Name="CsvToggle" Content="Exportar CSV"
                                   Checked="OnLoggingToggled" Unchecked="OnLoggingToggled"/>
                         <CheckBox x:Name="JsonToggle" Content="Exportar JSON"

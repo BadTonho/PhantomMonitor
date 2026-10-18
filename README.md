@@ -132,4 +132,5 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Logging e ErrorLog](docs/funções/logging.md)
 - [Biblioteca nativa (PhantomSensorLib)](docs/funções/sensor-nativo.md)
 - [Formatação de sensores (SensorFormatter)](docs/funções/sensor-formatter.md)
+- [Inventário de Hardware](docs/funções/inventário-hardware.md)
 - [Roadmap de paridade (RTSS/Afterburner · HWiNFO)](docs/roadmap-paridade.md)

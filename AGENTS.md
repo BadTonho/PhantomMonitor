@@ -45,10 +45,11 @@ Antes de realizar qualquer commit ou push:
 ## 3. Estrutura do Projeto e Compilação
 
 * **`src/RivaMonitor/`**: Aplicação desktop WPF em .NET 10.
-  * O build é gerenciado via `dotnet build src/RivaMonitor/RivaMonitor.csproj`.
 * **`src/RivaSensorLib/`**: Biblioteca nativa em C++ para leitura de sensores de baixo nível.
-  * O build pode ser acionado via CMake ou MSBuild Target.
 * **`tools/`**: Ferramentas auxiliares externas (ex.: `PresentMon.exe`).
 * **`docs/`**: Documentação de arquitetura e funcionalidades.
 
-Ao compilar o projeto, garanta que os binários de saída permaneçam restritos a seus diretórios de execução local e nunca sejam incluídos no índice de versionamento.
+### Flexibilidade de Build e Geração de Executáveis:
+* **Não travar o local de saída do executável:** Não restrinja nem engesse onde os executáveis ou builds são gerados (`bin/`, `publish/`, `dist/`, pasta customizada, etc.). O local de compilação, teste ou publicação é livre.
+* **Regra única sobre binários:** Independentemente de onde o executável ou DLL for compilado/gerado, apenas garanta que esses binários não sejam commitados no repositório Git (já cobertos pelas regras globais do `.gitignore`).
+

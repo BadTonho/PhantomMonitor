@@ -118,6 +118,15 @@ Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 - O FPS no Windows requer **Administrador** (PresentMon/ETW). Erros internos ficam em `logs/errors.log`.
 - O `PhantomVulkanLayer` é compilado via CMake/`install_layer.sh` e não faz parte do `PhantomMonitor.slnx`.
 
+### Políticas por design (anti-cheat)
+
+O monitor **não injeta DLLs nem faz hooks no processo dos jogos** — no Windows, seu OSD é uma
+janela própria (WS_EX_LAYERED), o FPS vem do ETW via PresentMon e a telemetria é publicada por
+memória compartilhada. É por isso que o projeto **não implementa** um OSD in-frame estilo RTSS
+no Windows: hooks de `Present`/DXGI são a assinatura clássica rastreada por EAC/BattlEye/Vanguard
+e podem derrubar contas. O estudo completo do caminho seguro (plugin OBS consumindo a SDK de
+telemetria) está em [docs/osd-in-frame-estudo.md](docs/osd-in-frame-estudo.md).
+
 ## Documentação
 
 Consulte os guias específicos em [docs/funções/](docs/funções/):
@@ -134,4 +143,5 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Formatação de sensores (SensorFormatter)](docs/funções/sensor-formatter.md)
 - [Inventário de Hardware](docs/funções/inventário-hardware.md)
 - [SDK de Telemetria (memória compartilhada)](docs/telemetry-sdk.md)
+- [Estudo: OSD in-frame no Windows (P4)](docs/osd-in-frame-estudo.md)
 - [Roadmap de paridade (RTSS/Afterburner · HWiNFO)](docs/roadmap-paridade.md)

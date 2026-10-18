@@ -2,8 +2,8 @@
 
 > O que fazer para o Phantom Monitor chegar perto dos rivais. Gerado a partir da
 > comparação com o código em fim de 2026 (pós a bateria de correções
-> `79913ed..6233267`). Marcas `[ ]` são tarefas exequíveis; os números de
-> prioridade são de valor/esforço, não de urgência rígida.
+> `79913ed..6233267`). **Status: P1–P4 implementados/entregues em
+> `6b5c148..` (série "paridade"); P5 é decisão de escopo, não tarefa.**
 
 ---
 
@@ -11,81 +11,82 @@
 
 - Frametime **por evento**: ETW/PresentMon (Windows) + hook próprio `vkQueuePresentKHR` + SHM por PID (Linux).
 - 1% / 0.1% Low, min/max/avg, gráfico circular de 600 amostras.
-- Alertas acionáveis (popup, som, script externo, desligamento com trava).
+- Alertas acionáveis (popup, som, script externo, desligamento com trava) — incluindo alvos por instância (`sensorIndex`).
 - Overlay configurável (editor visual, presets, hotkey, tray), instância única.
 - Export CSV/JSON + `errors.log`; sem injeção → sem risco de ban.
 - Camada Vulkan implícita com gating por env (Linux).
 
 ---
 
-## P1 — Framework de sensores dinâmico (efeito "HWiNFO") — VALOR MÁXIMO, CUSTO BAIXO
+## P1 — Framework de sensores dinâmico (efeito "HWiNFO") — ✅ CONCLUÍDO (`6b5c148`, `a6cbac5`, `9ee36fb`, `f6567a9`, `df6db76`)
 
-> O LibreHardwareMonitor **já entrega** esses valores; o trabalho está no modelo de
-> dados (o `SensorType` enum fixo de ~30 itens vira chave de série/instância) e na
-> exibição (`OverlayWindow.AddMetricRow` e o painel de métricas do `MainWindow`).
+> Fundação: `SensorKey` ("Categoria#índice") + `SensorData.Series/SeriesLabels`.
+> O LibreHardwareMonitor **já entregava** os valores; o trabalho foi de modelagem
+> na coleta (Windows e Linux), exibição e exportação.
 
-- [ ] Multi-GPU: `Gpu0/Gpu1/…` (hoje o loop de `HardwareMonitorService` deixa a
-      última sobrescrever — comentário nas linhas ~125: "a dedicada prevalece").
-      = iGPU + dGPU visíveis ao mesmo tempo.
-- [ ] CPU real por núcleo: temp/load/clock de cada core (hoje `CpuPerCore` é só o
-      **max** — `PutMax`). Overlay: linha expansível ou "mais quente + média".
-- [ ] Ventoinhas N slots: CPU fan, chassis 1..N, GPU fan (hoje 1 `FanSpeed` + `GpuFan`).
-- [ ] Disco por drive: read/write/usage **com nome do disco** (hoje agregado),
-      NVMe: temperatura, % de saúde (SMART), total gravado (TBW).
-- [ ] VRM e rails: temps VRM (VROUT/VRIN), +12V/+5V/+3.3V, chipset, EC de laptop.
-- [ ] Energia: réguas de CPU package + por dominio, power limit ativo/motivo.
-      (Enum já tem `CpuPower`/`GpuPower`; mapear de fato.)
-- [ ] Rede por interface com total acumulado da sessão (hoje agregado).
-- [ ] `HardwareInventory`: relatório de hardware detectado (nomes/versões/SMART/SPD) —
-      só uma tela de inventário, mesma fonte LHM.
-- [ ] Overlay/painel: linhas configuráveis por série (checkbox inline no overlay
-      editor por "Gpu0 Core", "NVMe #0 Temp"…) em vez de seção fixa.
+- [x] Multi-GPU: séries `GpuCore#i`, `GpuTemperature#i`, VRAM etc. por card
+      (dedicada = GPU 1; canônicas de índice 0 preservadas).
+- [x] CPU real por núcleo: `CpuPerCore#i`, `CpuTemperature#i`, `CpuClock#i`
+      (índice derivado do próprio sensor; canônicas continuam max/preferido).
+- [x] Ventoinhas N slots: `FanSpeed#i` por slot (placa-mãe/SuperIO/EC/hwmon).
+- [x] Disco por drive: `DiskRead/Write/Usage/Temperature/Health/TotalRead/TotalWritten#i`
+      com rótulo do disco (NVMe SMART: saúde via "Remaining Life", endurance "Data Read/Written").
+- [x] VRM e rails: `VrmTemperature#i` (VRM/VSoC/VCore), `RailVoltage#i` (+12V/+5V/VCore...),
+      `MotherboardTemp#i` por sensor, `RamTemperature#i` (Windows); EC via mesmo caminho.
+- [x] Energia: `CpuPower#i` por domínio (IA/GT/...); canônicas `CpuPower`/`GpuPower` mantidas.
+- [x] Rede por interface: `NetworkUp/Down#i` + totais da sessão `NetworkUpTotal/DownTotal` (Windows e Linux).
+- [x] `HardwareInventory`: [Janela de Inventário](funções/inventário-hardware.md)
+      (séries publicadas + árvore de hardware) na sidebar.
+- [x] Overlay: linhas por série com whitelist configurável (`overlay.shownSeries`,
+      editor com checkboxes) — abordagem "por família+wildcard" no lugar de checkbox
+      individual por sensor; ordem por família e teto de 24 linhas.
+- [x] Linux no mesmo modelo: per-core (`/proc/stat`), por-disco (`/proc/diskstats`),
+      por-NIC (`/proc/net/dev`), multi-card DRM e slots de hwmon.
 
-## P2 — SDK de telemetria via memória compartilhada ("efeito RTSS/HWiNFO SDK")
+## P2 — SDK de telemetria via memória compartilhada — ✅ CONCLUÍDO (`c7b42a2`)
 
-> Terceiros (AHK, dashboards, plugins OBS) consumindo você, não só o inverso.
+- [x] `MemoryMappedFile` versionada `phantom_monitor_telemetry_v1` (header
+      magic `PMTS`/version/seq/count/timestamp) publicada a cada ciclo do monitoramento.
+- [x] Tabela de 256 entradas fixas (key[40] | double | label[32]) com o mesmo
+      `SensorKey` do CSV/JSON; leitor de referência em `tools/TelemetrySdkReader/`.
+- [x] Consistência por **seqlock** (seq ímpar/par); leitor repete leitura quando seq muda.
+- [x] `sensors_latest.json` mantido como fallback legado (deprecando devagar).
+- [x] Documento `docs/telemetry-sdk.md` com layout byte a byte, protocolo C/C# e limites
+      — link no README.
 
-- [ ] `MemoryMappedFile` versionada (`phantom_monitor_telemetry_v<NN>`) com
-      snapshot estruturado gravado in-place a cada ciclo (alvo 100 ms cadência).
-- [ ] Layout com header (magic/version/timestamp/counter) e tabela de séries
-      nomeadas (id → type/unidade/label); tester/leitor de exemplo em `docs/`.
-- [ ] Consistência de leitura: seqlock (contador de versão) — referência: o header
-      do `PhantomVulkanTelemetry.h` (nota ali explica por que não ficou seqlock).
-- [ ] Manter `sensors_latest.json` como fallback legado (deprecando devagar).
-- [ ] Documentar no README link para um `docs/telemetry-sdk.md` com layout e exemplos.
+## P3 — Per-app profiles do OSD — ✅ CONCLUÍDO (`435d0b8`, `f3f3d82`)
 
-## P3 — Per-app profiles do OSD
+- [x] Config `profiles: [{ name, appMatch, offsetX?, offsetY?, width?, fontSize?,
+      opacity?, series?, accentColor? }]` — herda o global para campos vazios.
+- [x] Matching por executável em foco a cada tick de posição (cache de nomes;
+      `""`/`"*"` = universal).
+- [x] UI: cartões de perfil no Overlay Editor (nome, AppMatch com "Capturar app
+      em foco", offsets, largura, fonte, opacidade, whitelist de séries, acento).
+- [x] Persistência em `config.json` + `Config.Normalize` com validação.
+- [x] Tray: seção dinâmica "Automático (por aplicativo)" + perfis (fixar manualmente);
+      indicador `◉ perfil: X` no rodapé do OSD quando ativo.
 
-> Você já detecta a janela em foco a cada 30 ms; faltam perfis por processo.
+## P4 — OSD in-frame no Windows — ✅ ENTREGUE COMO ESTUDO + POLÍTICA (`docs/osd-in-frame-estudo.md`)
 
-- [ ] Config de perfil por projeto/executável (layout, posições, séries visíveis,
-      tamanho/opacity/accent) — herda do perfil global por padrão.
-- [ ] UI: aba de perfis no Overlay Editor (combo "Aplicado a este jogo?").
-- [ ] Persistência em `config.json` (`profiles: [{ app, overrides }]`).
-- [ ] Hotkey/tray: trocar perfil manualmente + indicador ativo no overlay.
+> Decisão: **não implementar hooks/injeção**. O caminho seguro registrado no
+> estudo é um plugin OBS consumindo a SDK de telemetria (P2) e renderizando o
+> OSD dentro do pipeline de captura do OBS — in-frame para game capture, zero
+> risco de anti-cheat. Nenhuma DLL nativa, nenhum schema de config morto.
 
-## P4 — OSD in-frame no Windows (o único gap "grande")
+- [x] Estudo de arquitetura completo com alternativas avaliadas e esforço
+      (`docs/osd-in-frame-estudo.md`); caminho "DLL injetada que intercepta Present"
+      **explicitamente descartado** (assinatura clássica de cheat).
+- [x] Comunicação pelo padrão SHM já existente (P2) — é a base do design recomendado.
+- [x] Nota de risco anti-cheat no README ("Políticas por design"); o overlay WPF
+      segue como default de risco zero.
 
-> É o que faz o RTSS aparecer DENTRO de gravações/streams (OBS game capture,
-> exclusive fullscreen). Conflita com a filosofia "sem injeção" do projeto →
-> **opt-in explícito, com o trade-off de anti-cheat documentado no README**.
-
-- [ ] Estudo de arquitetura: DLL injetada que intercepta `Present`
-      (`IDXGISwapChain::Present` / D3D12 / Vulkan) e desenha o OSD no próprio frame
-      — o hook Vulkan de Linux ("fix(vulkan)") já é o protótipo do design.
-- [ ] Comunicação da DLL com o monitor via o mesmo padrão SHM (P2).
-- [ ] Render de texto: DirectWrite/D2D sobre o backside do swapchain.
-- [ ] Flag de risco na UI (checkbox "modo hook, risco em jogos com anti-cheat") +
-      lista de aplicativos permitidos (whitelist ao inverso do gating atual).
-- [ ] **Manter o overlay WPF como default** (risco zero) e tudo com opt-in.
-
-## P5 — Controle (OC/ventoinha/limiter) — head-on suspicious "produto diferente"
+## P5 — Controle (OC/ventoinha/limiter) — 🔒 DECISÃO: FORA DO ESCOPO
 
 > Depende de escrita em hardware (driver de kernel/via NVAPI/ADLX). Não
 > recomendado dentro do mesmo processo do monitor — se um dia entrar, é um
 > app/pacote separado.
 
-- [ ] (decisão explícita de NÃO fazer no curto prazo; mantém o escopo "read-only")
+- [x] (decisão explícita de NÃO fazer no curto prazo; mantém o escopo "read-only")
 
 ## Deliberadamente NÃO planejado (decisões já tomadas)
 

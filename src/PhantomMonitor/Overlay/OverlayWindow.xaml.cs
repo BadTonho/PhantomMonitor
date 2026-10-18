@@ -29,6 +29,7 @@ public partial class OverlayWindow : Window
     private static readonly Brush MutedBrush = new SolidColorBrush(Color.FromRgb(0x8E, 0x9A, 0xA8));
     private static readonly Brush ColonBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255));
     private static readonly Brush GreenFpsBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x88));
+    private static readonly Brush GuideBrush = MakeFrozenBrush(30, 255, 255, 255);
 
     public OverlayWindow(AppConfig config, double left = 20, double top = 80)
     {
@@ -156,14 +157,19 @@ public partial class OverlayWindow : Window
 
         _offsetX = left;
         _offsetY = top;
-        var timer = new System.Windows.Threading.DispatcherTimer();
-        timer.Interval = TimeSpan.FromMilliseconds(30);
-        timer.Tick += (s, e) => UpdatePosition();
-        timer.Start();
+        _positionTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+        _positionTimer.Tick += (s, e) => UpdatePosition();
+        _positionTimer.Start();
     }
 
     private double _offsetX;
     private double _offsetY;
+
+    // Timers guardados no campo e parados no OnClosed: como variáveis locais eles
+    // sobreviviam ao fechamento da janela (foreground check a cada 30 ms e SetWindowPos
+    // a cada 500 ms em handle destruído), acumulando a cada recriação do overlay.
+    private System.Windows.Threading.DispatcherTimer? _positionTimer;
+    private System.Windows.Threading.DispatcherTimer? _topmostTimer;
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -204,11 +210,37 @@ public partial class OverlayWindow : Window
     }
 
     private static uint _explorerPid = 0;
+    private static DateTime _explorerPidCheckedAt = DateTime.MinValue;
+
     private static uint GetExplorerPid()
     {
-        if (_explorerPid != 0) return _explorerPid;
+        if (_explorerPid != 0 && DateTime.UtcNow - _explorerPidCheckedAt < TimeSpan.FromSeconds(10))
+            return _explorerPid;
+
+        _explorerPidCheckedAt = DateTime.UtcNow;
+
+        if (_explorerPid != 0)
+        {
+            // O explorer pode reiniciar e o PID em cache deixa de existir → re-resolve.
+            try
+            {
+                using var p = System.Diagnostics.Process.GetProcessById((int)_explorerPid);
+                if (!p.HasExited) return _explorerPid;
+            }
+            catch
+            {
+                // PID inválido/saído: cai no re-resolve abaixo.
+            }
+            _explorerPid = 0;
+        }
+
         var procs = System.Diagnostics.Process.GetProcessesByName("explorer");
-        if (procs.Length > 0) _explorerPid = (uint)procs[0].Id;
+        if (procs.Length > 0)
+        {
+            using var first = procs[0];
+            _explorerPid = (uint)first.Id;
+        }
+        foreach (var p in procs) p.Dispose();
         return _explorerPid;
     }
 
@@ -428,7 +460,7 @@ public partial class OverlayWindow : Window
             {
                 CornerRadius = new CornerRadius(2),
                 BorderThickness = new Thickness(0.5),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+                BorderBrush = GuideBrush,
                 Child = _frametimeGraph,
                 Margin = new Thickness(0, 2, 0, 0)
             };
@@ -484,7 +516,7 @@ public partial class OverlayWindow : Window
                     X2 = w,
                     Y1 = y60,
                     Y2 = y60,
-                    Stroke = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+                    Stroke = GuideBrush,
                     StrokeThickness = 0.8,
                     StrokeDashArray = new DoubleCollection { 2, 2 }
                 };
@@ -511,11 +543,29 @@ public partial class OverlayWindow : Window
         }
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        // Sem isso, cada fechamento/recriação do overlay acumulava timers órfãos
+        // (foreground check a cada 30 ms + SetWindowPos a cada 500 ms) para sempre.
+        _positionTimer?.Stop();
+        _topmostTimer?.Stop();
+        _frametimeGraph?.Children.Clear();
+        _updaters.Clear();
+        base.OnClosed(e);
+    }
+
     private static Brush GetTempBrush(double temp)
     {
         if (temp >= 80) return HotBrush;
         if (temp >= 70) return WarmBrush;
         return NormalBrush;
+    }
+
+    private static Brush MakeFrozenBrush(byte a, byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
+        brush.Freeze(); // escovas compartilhadas entre ticks não precisam de alteração
+        return brush;
     }
 
     private static Brush GetUsageBrush(double usage)
@@ -552,21 +602,22 @@ public partial class OverlayWindow : Window
     private void SetExTransparent()
     {
         var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        var exStyle = GetWindowLong(handle, GWL_EXSTYLE);
-        SetWindowLong(handle, GWL_EXSTYLE, exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
+        if (handle == IntPtr.Zero) return;
+
+        var exStyle = GetWindowLongPtr(handle, GWL_EXSTYLE).ToInt64();
+        SetWindowLongPtr(handle, GWL_EXSTYLE, new IntPtr(exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW));
     }
 
     private void StartTopmostTimer()
     {
-        var timer = new System.Windows.Threading.DispatcherTimer();
-        timer.Interval = TimeSpan.FromMilliseconds(500);
-        timer.Tick += (_, _) =>
+        _topmostTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _topmostTimer.Tick += (_, _) =>
         {
             var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
             if (handle != IntPtr.Zero)
                 SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         };
-        timer.Start();
+        _topmostTimer.Start();
     }
 
     private const int GWL_EXSTYLE = -20;
@@ -580,11 +631,25 @@ public partial class OverlayWindow : Window
     private const uint SWP_NOSIZE = 0x0001;
     private const uint SWP_NOACTIVATE = 0x0010;
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
+    // GetWindowLong/SetWindowLong (32 bits) perderam uso recomendado em processo x64 —
+    // usam as variantes *_PtrW, com fallback para WindowLongW quando o processo é 32 bits.
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+    private static extern int GetWindowLong32(IntPtr hwnd, int index);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr64(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+    private static extern int SetWindowLong32(IntPtr hwnd, int index, int newStyle);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr64(IntPtr hwnd, int index, IntPtr newStyle);
+
+    private static IntPtr GetWindowLongPtr(IntPtr hwnd, int index) =>
+        IntPtr.Size == 4 ? new IntPtr(GetWindowLong32(hwnd, index)) : GetWindowLongPtr64(hwnd, index);
+
+    private static IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr newStyle) =>
+        IntPtr.Size == 4 ? new IntPtr(SetWindowLong32(hwnd, index, (int)newStyle)) : SetWindowLongPtr64(hwnd, index, newStyle);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

@@ -22,10 +22,21 @@ public partial class AlertPopupWindow : Window
         MessageText.Text = message;
 
         _autoCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-        _autoCloseTimer.Tick += (_, _) => Close();
+        // Para o timer antes de fechar: sem isso o Tick continuava rodando (e chamando
+        // Close()) numa janela já fechada, mantendo o objeto vivo na memória para sempre.
+        _autoCloseTimer.Tick += (_, _) =>
+        {
+            _autoCloseTimer.Stop();
+            Close();
+        };
 
         Loaded += OnLoaded;
         MouseDown += (_, _) => Close();
+        Closed += (_, _) =>
+        {
+            _autoCloseTimer.Stop();
+            if (ReferenceEquals(_current, this)) _current = null;
+        };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

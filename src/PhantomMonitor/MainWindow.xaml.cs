@@ -8,6 +8,7 @@ using System.Windows.Media;
 using PhantomMonitor.Models;
 using PhantomMonitor.Overlay;
 using PhantomMonitor.Services;
+using PhantomMonitor.Services.Telemetry;
 
 namespace PhantomMonitor;
 
@@ -192,6 +193,10 @@ public partial class MainWindow : Window
             _jsonLogger = new JsonLogger(path);
         }
 
+        // SDK de telemetria (memória compartilhada): sempre ativo junto ao monitoramento —
+        // consumidores externos (OBS, AHK, dashboards) leem em tempo real sem parse.
+        _telemetrySdk = new TelemetrySdkWriter();
+
         _startTime = DateTime.UtcNow;
         StartButton.IsEnabled = false;
         StopButton.IsEnabled = true;
@@ -218,6 +223,8 @@ public partial class MainWindow : Window
         _overlay = null;
         _csvLogger = null;
         _jsonLogger = null;
+        _telemetrySdk?.Dispose();
+        _telemetrySdk = null;
 
         StartButton.IsEnabled = true;
         StopButton.IsEnabled = false;
@@ -345,12 +352,14 @@ public partial class MainWindow : Window
             _alerts?.Evaluate(data);
             _csvLogger?.Write(data);
             _jsonLogger?.Write(data);
+            _telemetrySdk?.Publish(data);
         });
     }
 
     private DebugWindow? _debugWindow;
     private OverlayEditorWindow? _overlayEditor;
     private InventoryWindow? _inventoryWindow;
+    private TelemetrySdkWriter? _telemetrySdk;
 
     private void OnOpenDebugWindow(object sender, RoutedEventArgs e) => ShowDebugWindow();
 

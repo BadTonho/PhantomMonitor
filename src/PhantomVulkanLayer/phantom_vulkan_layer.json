@@ -1,5 +1,5 @@
 {
-    "file_format_version": "1.0.0",
+    "file_format_version": "1.2.0",
     "layer": {
         "name": "VK_LAYER_PHANTOM_monitor",
         "type": "GLOBAL",
@@ -13,6 +13,9 @@
         },
         "enable_environment": {
             "ENABLE_PHANTOM_OVERLAY": "1"
+        },
+        "disable_environment": {
+            "DISABLE_PHANTOM_OVERLAY": "1"
         }
     }
 }

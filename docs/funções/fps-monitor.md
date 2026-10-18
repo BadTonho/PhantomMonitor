@@ -13,7 +13,7 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 ## Arquitetura & Integração
 
 - **Contrato Multiplataforma (`IFpsMonitor`):** Interface unificada que abstrai a captura de taxas de quadros entre Windows (`FpsMonitor`) e Linux (`LinuxFpsMonitor`).
-- **Motor Windows:** `PresentMon.exe` (standalone oficial v2.6.0 da Intel, armazenado em `tools/` e copiado automaticamente para a pasta de saída)
+- **Motor Windows:** `PresentMon.exe` (binário standalone oficial da Intel, armazenado em `tools/` e copiado automaticamente para a pasta de saída do build)
 - **Motor Linux:** `PhantomVulkanLayer` (camada Vulkan nativa em C++ que intercepta `vkQueuePresentKHR` e transmite dados via memória compartilhada `/dev/shm/phantom_fps_<pid>`, dispensando softwares como MangoHud)
 - **Comunicação no Windows:** o serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats --stop_existing_session --session_name PhantomMonitorFps --exclude PhantomMonitor.exe --no_track_input --no_track_gpu --exclude_dropped`) e analisa o CSV em tempo real. Os argumentos precisam existir no PresentMon 2.x (por exemplo, `--no_track_gpu_video` **não existe** e faz o processo encerrar imediatamente).
 - **Parse Dinâmico:** mapeia as colunas do PresentMon (`ProcessID`, `Application`, `msBetweenPresents` / `FrameTime`) e trata campos CSV entre aspas

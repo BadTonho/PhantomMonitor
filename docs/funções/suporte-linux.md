@@ -9,8 +9,7 @@ O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mant
 
 - A memória compartilhada POSIX (`/dev/shm/phantom_fps_<pid>`, fallback `/tmp/phantom_fps_<pid>.bin` — um objeto por processo Vulkan com a layer ativa) é criada com permissão `0600` (apenas o mesmo usuário), fds com `O_CLOEXEC` e o nome é removido (`shm_unlink`/`unlink`) quando a instância Vulkan é destruída. O leitor valida se o PID autoral ainda existe em `/proc/<pid>` e ignora objetos órfãos (nada de "FPS fantasma" do processo anterior).
 - O cabeçalho usa `#pragma pack(1)` e o `LinuxFpsMonitor` usa `StructLayout(Pack = 1)`: os layouts precisam permanecer idênticos (campos `uint64` ficam desalinhados, o que é aceito em x86-64/ARM64).
-- O estado global é atômico (`g_last_present_ns`, `g_telemetry_shm`) e `init/cleanup` da memória compartilhada é protegido por mutex.
-- Limitação: há um único bloco de telemetria compartilhado. Se vários processos Vulkan com a camada ativa rodarem ao mesmo tempo, o último a inicializar prevalece.
+- O estado global é atômico (`g_last_present_ns`, `g_telemetry_shm`) e o ciclo `init/cleanup` da memória compartilhada é protegido por mutex; as escritas de `present` e o `munmap` do cleanup são sincronizados por `std::shared_mutex` (lock compartilhado para escrever, exclusivo para desmapear) — um present em voo não pode escrever depois do `munmap`.
 
 ---
 
@@ -62,12 +61,12 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
 
 ## 3. Monitoramento de FPS e Frametime Sem Terceiros (`PhantomVulkanLayer`)
 
-Para capturar taxas de quadros sem depender do MangoHud ou de injeções arriscadas, o projeto implementa uma **camada Vulkan explícita nativa em C++** (`src/PhantomVulkanLayer/`):
+Para capturar taxas de quadros sem depender do MangoHud ou de injeções arriscadas, o projeto implementa uma **camada Vulkan nativa em C++** (`src/PhantomVulkanLayer/`) — **implícita** (carregada automaticamente pelo loader em todo processo Vulkan) com gating por variável de ambiente:
 
 1. **Interceptação Transparente:**
    A camada intercepta chamadas de `vkQueuePresentKHR` diretamente na cadeia do Vulkan Loader.
 2. **Cálculo de Frametime de Ultra Baixa Latência:**
-   Medição com `clock_gettime(CLOCK_MONOTONIC)` calculando o delta em microssegundos sem overhead perceptível (< 2 µs por quadro).
+   Medição com `std::chrono::steady_clock` calculando o delta em nanossegundos sem overhead perceptível (< 2 µs por quadro).
 3. **Comunicação por Memória Compartilhada (IPC):**
    Os dados do quadro ativo são escritos em memória compartilhada POSIX (`/dev/shm/phantom_fps_<pid>` — um objeto por processo — com fallback para `/tmp/phantom_fps_<pid>.bin`).
 4. **Consumo no C# (`LinuxFpsMonitor`):**
@@ -82,9 +81,11 @@ Para capturar taxas de quadros sem depender do MangoHud ou de injeções arrisca
 cd src/PhantomVulkanLayer
 ./install_layer.sh
 ```
-O script compilará a biblioteca `libVkLayer_phantom_monitor.so` e registrará o manifesto em `~/.local/share/vulkan/explicit_layers.d/phantom_vulkan_layer.json`.
+O script compila a biblioteca `libVkLayer_phantom_monitor.so`, copia para `~/.local/lib` e registra o manifesto em **`~/.local/share/vulkan/implicit_layer.d/phantom_vulkan_layer.json`** (sufixo singular exigido pelo loader). Instalações antigas em `explicit_layers.d` (plural — nunca carregadas pelo loader) são removidas automaticamente.
 
 ### Ativação em Jogos:
+A camada é **implícita**: todo processo Vulkan a carrega, mas a telemetria só é publicada quando o gating está ativo. `DISABLE_PHANTOM_OVERLAY=1` vence o enable (desativa por sessão).
+
 * **Steam:**
   Nas propriedades do jogo, defina as Opções de Inicialização:
   ```bash

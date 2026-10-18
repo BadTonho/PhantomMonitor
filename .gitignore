@@ -1,6 +1,8 @@
 ## .NET & Build outputs
 [Bb]in/
 [Oo]bj/
+build/
+out/
 *.user
 *.userosscache
 *.sln.docstates
@@ -31,6 +33,11 @@ config*.local.json
 .env
 .env.*
 
+## Chaves privadas e certificados (nunca versionar)
+*.pem
+*.key
+*.pfx
+
 ## Notas locais / anotações pessoais
 ideias.md
 
@@ -38,5 +45,5 @@ ideias.md
 .idea/
 *.swp
 
-## Tempor�rios de escrita at�mica
+## Temporários de escrita atômica
 *.tmp

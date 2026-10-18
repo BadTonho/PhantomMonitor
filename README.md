@@ -53,10 +53,10 @@ Phantom/
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - Privilégios de administrador (para leitura completa dos sensores de hardware)
 
-### Linux:
+### Linux (camada Vulkan — sem front-end):
 - Distribuição Linux com Kernel 5.4+
-- .NET 10 SDK (Runtime desktop / CLI)
-- Vulkan SDK e drivers Vulkan instalados (Mesa RADV/ANV ou driver NVIDIA proprietário)
+- CMake e compilador C++ (GCC/Clang) para construir a camada
+- Drivers Vulkan instalados (Mesa RADV/ANV ou driver NVIDIA proprietário)
 - Permissões padrão para leitura de `/sys/class/hwmon` e `/dev/shm`
 
 ## Como usar
@@ -67,21 +67,20 @@ Phantom/
 3. Clique em **"Executar como Admin"** se solicitado
 4. Ative o **"Overlay"** na sidebar ou abra o **"Editar Layout OSD"** para customizar o posicionamento
 
-### No Linux:
-1. Compile e instale a camada Vulkan:
+### Linux (apenas a camada Vulkan — ainda não há front-end):
+1. Compile e instale a camada:
    ```bash
    cd src/PhantomVulkanLayer
    chmod +x install_layer.sh
    ./install_layer.sh
    ```
-2. Inicie o PhantomMonitor:
-   ```bash
-   dotnet run --project src/PhantomMonitor
-   ```
-3. Inicie seu jogo com a camada ativada (ex: Opções de Inicialização na Steam):
+2. Inicie seu jogo com a camada ativada (ex: Opções de Inicialização na Steam):
    ```bash
    ENABLE_PHANTOM_OVERLAY=1 %command%
    ```
+
+> [!IMPORTANT]
+> O app WPF (`PhantomMonitor`) executa **somente no Windows** (`net10.0-windows`) — `dotnet run` não funciona no Linux. No Linux, a camada Vulkan é independente (publica os frametimes em `/dev/shm/phantom_fps_<pid>`); um leitor/monitor Linux é um front-end futuro (ver [suporte-linux.md](docs/funções/suporte-linux.md)).
 
 ## Configuração
 

@@ -204,8 +204,14 @@ public partial class OverlayWindow : Window
         {
             if (rect.Left <= -32000) return;
 
-            Left = rect.Left + _offsetX;
-            Top = rect.Top + _offsetY;
+            // GetWindowRect devolve PIXELS FÍSICOS; Left/Top do Window (WPF) são DIPs.
+            // Sem a conversão, no escalonamento de 125/150% o overlay derivava
+            // proporcionalmente ao fator (rect px eram interpretados como DIPs).
+            var source = PresentationSource.FromVisual(this);
+            var dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+
+            Left = rect.Left / dpiScale + _offsetX;
+            Top = rect.Top / dpiScale + _offsetY;
         }
     }
 

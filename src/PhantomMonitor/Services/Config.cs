@@ -52,6 +52,9 @@ public sealed class AppConfig
         }
     }
 
+    private static readonly System.Text.RegularExpressions.Regex HexColorRegex =
+        new("^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     /// <summary>Corrige valores inválidos vindos de um config editado à mão.</summary>
     public void Normalize()
     {
@@ -60,7 +63,14 @@ public sealed class AppConfig
         OverlayPosition ??= new();
         Overlay ??= new();
         Sensors ??= new();
+
+        Overlay.Width = Math.Clamp(Overlay.Width, 140, 700);
+        Overlay.FontSize = Math.Clamp(Overlay.FontSize, 8, 20);
+        if (!IsValidHexColor(Overlay.AccentColor)) Overlay.AccentColor = "#1E90FF";
     }
+
+    private static bool IsValidHexColor(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && HexColorRegex.IsMatch(value);
 
     public bool Save(string path)
     {

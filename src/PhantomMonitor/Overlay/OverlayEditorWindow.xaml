@@ -272,7 +272,35 @@
                         </Grid>
                         <Slider x:Name="WidthSlider" Minimum="160" Maximum="360" Value="220" 
                                 TickFrequency="10" IsSnapToTickEnabled="True"
-                                ValueChanged="OnWidthSliderChanged" Margin="0,0,0,18"/>
+                                ValueChanged="OnWidthSliderChanged" Margin="0,0,0,14"/>
+
+                        <CheckBox x:Name="CheckCompact" Content="Modo Compacto (espaçamento reduzido)" IsChecked="False" 
+                                  Margin="0,0,0,14"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="Tamanho da Fonte" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="FontSizeLabel" Text="11.5 pt" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Slider x:Name="FontSizeSlider" Minimum="8" Maximum="20" Value="11.5" 
+                                TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                ValueChanged="OnFontSizeSliderChanged" Margin="0,0,0,14"/>
+
+                        <Grid Margin="0,0,0,8">
+                            <TextBlock Text="Cor de Destaque (Accent)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="AccentLabel" Text="#1E90FF" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <WrapPanel Margin="0,0,0,18">
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#1E90FF" BorderThickness="0" Cursor="Hand" Tag="#1E90FF" Click="OnAccentPreset" ToolTip="Azul royal"/>
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#00D2FF" BorderThickness="0" Cursor="Hand" Tag="#00D2FF" Click="OnAccentPreset" ToolTip="Ciano"/>
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#00FF88" BorderThickness="0" Cursor="Hand" Tag="#00FF88" Click="OnAccentPreset" ToolTip="Verde"/>
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#FACC15" BorderThickness="0" Cursor="Hand" Tag="#FACC15" Click="OnAccentPreset" ToolTip="Âmbar"/>
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#FF8A00" BorderThickness="0" Cursor="Hand" Tag="#FF8A00" Click="OnAccentPreset" ToolTip="Laranja"/>
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#F472B6" BorderThickness="0" Cursor="Hand" Tag="#F472B6" Click="OnAccentPreset" ToolTip="Rosa"/>
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#C084FC" BorderThickness="0" Cursor="Hand" Tag="#C084FC" Click="OnAccentPreset" ToolTip="Roxo"/>
+                            <Button Width="26" Height="26" Margin="0,0,6,6" Background="#EF4444" BorderThickness="0" Cursor="Hand" Tag="#EF4444" Click="OnAccentPreset" ToolTip="Vermelho"/>
+                        </WrapPanel>
 
                         <!-- Save & Apply -->
                         <Button Content="Aplicar &amp; Salvar Configuração" 

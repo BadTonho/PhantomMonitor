@@ -40,4 +40,6 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - Falhas de leitura/gravação são registradas em `logs/errors.log` (ver [logging.md](logging.md)).
 - `showOverlay` define o estado inicial do toggle "Overlay".
 - `overlay.showNetwork`, `overlay.showFans` e `overlay.showMotherboard` já são consumidos pelo overlay (linhas NET/FAN/MB, com auto-revelação no primeiro dado real) e editáveis pelo Editor Visual.
-- `sensors.*`, `overlay.showGpuProcesses`, `overlay.compactMode`, `overlay.accentColor` e `overlay.fontSize` estão reservados no modelo, mas ainda não são consumidos pela interface.
+- `overlay.compactMode`, `overlay.accentColor` e `overlay.fontSize` são aplicados ao overlay (espaçamento reduzido, cor de destaque e tamanho base da fonte) e editáveis no Editor Visual.
+- `sensors.*` e `overlay.showGpuProcesses` estão reservados no modelo, mas ainda não são consumidos pela interface.
+- Na carga, `Normalize()` corrige valores fora de faixa: `updateIntervalMs` ≥ 100, `overlayOpacity` 0.1–1.0, `overlay.width` 140–700, `overlay.fontSize` 8–20 e `accentColor` inválido volta para `#1E90FF`.

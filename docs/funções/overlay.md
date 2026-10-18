@@ -14,13 +14,13 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no v
   - `FAN`: Rosa (`#F472B6`) com ventoinha da GPU e do sistema (% ou RPM)
   - `MB`: Cinza claro (`#CBD5E1`) com a maior temperatura de placa-mãe/SuperIO
   - `FPS`: Verde vibrante (`#00FF88`) com FPS e Frametime em milissegundos
-- **Sublinhas de Detalhes (CPU/GPU):** Sob as linhas de CPU e GPU, uma linha secundária compacta (9.5pt) exibe:
+- **Sublinhas de Detalhes (CPU/GPU):** Sob as linhas de CPU e GPU, uma linha secundária compacta (fonte base −2 pt) exibe:
   - CPU: clock, potência e voltagem (ex.: `4.15 GHz  65 W  1.250 V`)
   - GPU: VRAM usada/total, clock core/memória, potência, voltagem e hotspot (ex.: `VRAM 7.2/12 GB  2.10 GHz  7.00 GHz  220 W  1.050 V  HS 75°C`)
   - A sublinha fica oculta quando nenhum dos valores está disponível.
 - **Linhas Opcionais com Auto-Revelação:** NET, FAN e MB só aparecem depois do primeiro dado real do sensor — sem poluir o OSD em máquinas que não expõem esses sensores.
 - **Estatísticas de FPS:** Sublinha compacta com `AVG` e `1% Low`
-- **Gráfico de Frametime Slim:** Mini-gráfico de 24px com linha guia de 60 FPS (16.6ms) para detecção instantânea de stuttering
+- **Gráfico de Frametime Slim:** Mini-gráfico de 24px (18px no modo compacto) com linha guia de 60 FPS (16.6ms) para detecção instantânea de stuttering
 - **Tipografia:** Fonte monoespaçada (`Consolas / Cascadia Mono`) para evitar que os números fiquem oscilando ou pulando de posição na tela
 - **Cores Dinâmicas:** Alerta automático de temperatura e uso (Normal / Amarelo / Vermelho)
 
@@ -33,7 +33,7 @@ Inspirado diretamente no editor de layouts OSD do RTSS (`Editor de informações
 - **Painel Inspetor Lateral:**
   - Ajuste de coordenadas absolutas de tela (`X`, `Y`) com predefinições de cantos rápidos (Superior Esquerdo, Superior Direito, Inferior Esquerdo, Inferior Direito).
   - Seleção individual de camadas ativas (habilitar/desabilitar cada sensor ou gráfico).
-  - Ajuste fino de opacidade e largura do painel.
+  - Ajuste fino de opacidade, largura do painel, modo compacto, tamanho da fonte (8–20 pt) e cor de destaque (paleta de presets ou edição direta do `config.json`).
 - **Aplicação Imediata:** Botão "Aplicar & Salvar" que grava as alterações no `config.json` e atualiza a sobreposição em execução sem necessidade de reiniciar o programa.
 
 ## Configuração
@@ -44,6 +44,9 @@ Configurado via `config.json` ou pelo Editor Visual:
 - `showNetwork` - Linha de rede (`NET`) com ↓/↑ (oculta até o primeiro dado real)
 - `showFans` - Linha de ventoinhas (`FAN`): GPU e sistema (oculta até o primeiro dado real)
 - `showMotherboard` - Linha de placa-mãe (`MB`) com a maior temperatura (oculta até o primeiro dado real)
+- `compactMode` - Modo compacto: reduz paddings, espaçamento das linhas e a altura do gráfico de frametime
+- `accentColor` - Cor de destaque (hex) aplicada à linha do gráfico de frametime e ao contorno do painel
+- `fontSize` - Tamanho base da fonte do OSD em pt (8–20; sublinhas de detalhes/estatísticas usam fonte −2 pt)
 - `overlayOpacity` - Opacidade do fundo translúcido (padrão: 0.85)
 - `overlayPosition` - Coordenadas `x` e `y` na tela
 

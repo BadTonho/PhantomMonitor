@@ -95,6 +95,14 @@ public partial class OverlayEditorWindow : Window
         if (WidthSlider != null) WidthSlider.Value = _config.Overlay.Width;
         if (WidthLabel != null) WidthLabel.Text = $"{_config.Overlay.Width} px";
 
+        if (CheckCompact != null) CheckCompact.IsChecked = _config.Overlay.CompactMode;
+
+        if (FontSizeSlider != null)
+            FontSizeSlider.Value = Math.Clamp(_config.Overlay.FontSize, FontSizeSlider.Minimum, FontSizeSlider.Maximum);
+        if (FontSizeLabel != null) FontSizeLabel.Text = $"{_config.Overlay.FontSize:F1} pt";
+
+        if (AccentLabel != null) AccentLabel.Text = _config.Overlay.AccentColor;
+
         UpdateLayersVisibility();
     }
 
@@ -285,6 +293,28 @@ public partial class OverlayEditorWindow : Window
             if (BlockGpu != null) BlockGpu.Width = e.NewValue;
             if (BlockRam != null) BlockRam.Width = e.NewValue;
             if (BlockDisk != null) BlockDisk.Width = e.NewValue;
+            if (BlockNetwork != null) BlockNetwork.Width = e.NewValue;
+            if (BlockFan != null) BlockFan.Width = e.NewValue;
+            if (BlockMotherboard != null) BlockMotherboard.Width = e.NewValue;
+        }
+    }
+
+    private void OnFontSizeSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_isInitialized) return;
+        if (FontSizeLabel != null)
+        {
+            FontSizeLabel.Text = $"{e.NewValue:F1} pt";
+            _config.Overlay.FontSize = e.NewValue;
+        }
+    }
+
+    private void OnAccentPreset(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string hex })
+        {
+            _config.Overlay.AccentColor = hex;
+            if (AccentLabel != null) AccentLabel.Text = hex;
         }
     }
 
@@ -305,6 +335,8 @@ public partial class OverlayEditorWindow : Window
 
         if (OpacitySlider != null) _config.OverlayOpacity = OpacitySlider.Value;
         if (WidthSlider != null) _config.Overlay.Width = (int)WidthSlider.Value;
+        if (CheckCompact != null) _config.Overlay.CompactMode = CheckCompact.IsChecked == true;
+        if (FontSizeSlider != null) _config.Overlay.FontSize = FontSizeSlider.Value;
 
         var saved = _config.Save(_configPath);
         ConfigApplied?.Invoke(_config);
@@ -336,6 +368,10 @@ public partial class OverlayEditorWindow : Window
         _config.Overlay.ShowNetwork = false;
         _config.Overlay.ShowFans = true;
         _config.Overlay.ShowMotherboard = false;
+
+        _config.Overlay.CompactMode = false;
+        _config.Overlay.AccentColor = "#1E90FF";
+        _config.Overlay.FontSize = 11.5;
 
         LoadConfigToUi();
     }

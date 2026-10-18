@@ -16,6 +16,12 @@ public partial class OverlayWindow : Window
     private bool _showFps;
     private readonly double _detailMaxWidth = 160;
 
+    // Aparência configurável (compactMode / fontSize / accentColor)
+    private double _baseFontSize = 11.5;
+    private double _rowMargin = 1.5;
+    private double _graphHeight = 24;
+    private Brush _accentBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xF0, 0xFF));
+
     private static readonly FontFamily OsdFont = new("Consolas, Cascadia Mono, Lucida Console, Segoe UI");
     private static readonly Brush NormalBrush = new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9));
     private static readonly Brush WarmBrush = new SolidColorBrush(Color.FromRgb(0xFA, 0xCC, 0x15)); // Amarelo
@@ -34,6 +40,18 @@ public partial class OverlayWindow : Window
             MainBorder.MinWidth = config.Overlay.Width;
 
         _detailMaxWidth = Math.Max(120, (config.Overlay.Width > 0 ? config.Overlay.Width : 220) - 62);
+
+        _baseFontSize = Math.Clamp(config.Overlay.FontSize, 8, 20);
+        var accent = ParseAccentColor(config.Overlay.AccentColor);
+        _accentBrush = new SolidColorBrush(accent);
+        MainBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x30, accent.R, accent.G, accent.B));
+
+        if (config.Overlay.CompactMode)
+        {
+            MainBorder.Padding = new Thickness(6, 4, 6, 4);
+            _rowMargin = 0.5;
+            _graphHeight = 18;
+        }
 
         MakeClickThrough();
         StartTopmostTimer();
@@ -202,7 +220,7 @@ public partial class OverlayWindow : Window
     {
         var grid = new Grid
         {
-            Margin = new Thickness(0, 1.5, 0, 1.5)
+            Margin = new Thickness(0, _rowMargin, 0, _rowMargin)
         };
 
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) }); // Tag
@@ -214,7 +232,7 @@ public partial class OverlayWindow : Window
         {
             Text = tag,
             FontFamily = OsdFont,
-            FontSize = 11.5,
+            FontSize = _baseFontSize,
             FontWeight = FontWeights.Bold,
             Foreground = new SolidColorBrush(tagColor),
             VerticalAlignment = VerticalAlignment.Center
@@ -226,7 +244,7 @@ public partial class OverlayWindow : Window
         {
             Text = ":",
             FontFamily = OsdFont,
-            FontSize = 11.5,
+            FontSize = _baseFontSize,
             Foreground = ColonBrush,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center
@@ -237,7 +255,7 @@ public partial class OverlayWindow : Window
         var val1Block = new TextBlock
         {
             FontFamily = OsdFont,
-            FontSize = 11.5,
+            FontSize = _baseFontSize,
             FontWeight = FontWeights.SemiBold,
             Foreground = NormalBrush,
             VerticalAlignment = VerticalAlignment.Center,
@@ -250,7 +268,7 @@ public partial class OverlayWindow : Window
         var val2Block = new TextBlock
         {
             FontFamily = OsdFont,
-            FontSize = 11.5,
+            FontSize = _baseFontSize,
             FontWeight = FontWeights.SemiBold,
             Foreground = NormalBrush,
             VerticalAlignment = VerticalAlignment.Center,
@@ -290,7 +308,7 @@ public partial class OverlayWindow : Window
         var block = new TextBlock
         {
             FontFamily = OsdFont,
-            FontSize = 9.5,
+            FontSize = _baseFontSize - 2,
             Foreground = MutedBrush,
             TextWrapping = TextWrapping.Wrap,
             MaxWidth = _detailMaxWidth,
@@ -313,7 +331,7 @@ public partial class OverlayWindow : Window
         // Linha Principal de FPS
         var grid = new Grid
         {
-            Margin = new Thickness(0, 1.5, 0, 1)
+            Margin = new Thickness(0, _rowMargin, 0, 1)
         };
 
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) }); // FPS
@@ -325,7 +343,7 @@ public partial class OverlayWindow : Window
         {
             Text = "FPS",
             FontFamily = OsdFont,
-            FontSize = 11.5,
+            FontSize = _baseFontSize,
             FontWeight = FontWeights.Bold,
             Foreground = GreenFpsBrush,
             VerticalAlignment = VerticalAlignment.Center
@@ -337,7 +355,7 @@ public partial class OverlayWindow : Window
         {
             Text = ":",
             FontFamily = OsdFont,
-            FontSize = 11.5,
+            FontSize = _baseFontSize,
             Foreground = ColonBrush,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center
@@ -348,7 +366,7 @@ public partial class OverlayWindow : Window
         var fpsBlock = new TextBlock
         {
             FontFamily = OsdFont,
-            FontSize = 12,
+            FontSize = _baseFontSize + 0.5,
             FontWeight = FontWeights.Bold,
             Foreground = GreenFpsBrush,
             VerticalAlignment = VerticalAlignment.Center,
@@ -361,7 +379,7 @@ public partial class OverlayWindow : Window
         var ftBlock = new TextBlock
         {
             FontFamily = OsdFont,
-            FontSize = 11.5,
+            FontSize = _baseFontSize,
             FontWeight = FontWeights.SemiBold,
             Foreground = WarmBrush,
             VerticalAlignment = VerticalAlignment.Center,
@@ -384,7 +402,7 @@ public partial class OverlayWindow : Window
         var statsBlock = new TextBlock
         {
             FontFamily = OsdFont,
-            FontSize = 9.5,
+            FontSize = _baseFontSize - 2,
             Foreground = MutedBrush,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
@@ -400,7 +418,7 @@ public partial class OverlayWindow : Window
             // Gráfico de Frametime compacto estilo RivaTuner
             _frametimeGraph = new Canvas
             {
-                Height = 24,
+                Height = _graphHeight,
                 Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
                 ClipToBounds = true
             };
@@ -443,7 +461,7 @@ public partial class OverlayWindow : Window
             double h = _frametimeGraph.ActualHeight;
             if (w <= 0 || h <= 0) { w = _frametimeGraph.Width; h = _frametimeGraph.Height; }
             if (w <= 0) w = 184;
-            if (h <= 0) h = 24;
+            if (h <= 0) h = _graphHeight;
 
             var history = data.FrametimeHistory;
             double maxFt = 33.3; // 30 FPS baseline
@@ -482,7 +500,7 @@ public partial class OverlayWindow : Window
             var poly = new Polyline
             {
                 Points = pts,
-                Stroke = new SolidColorBrush(Color.FromRgb(0x00, 0xF0, 0xFF)),
+                Stroke = _accentBrush,
                 StrokeThickness = 1.2,
                 StrokeLineJoin = PenLineJoin.Round
             };
@@ -502,6 +520,21 @@ public partial class OverlayWindow : Window
         if (usage >= 90) return HotBrush;
         if (usage >= 75) return WarmBrush;
         return NormalBrush;
+    }
+
+    /// <summary>Cor de acento do overlay (fallback azul royal quando o hex é inválido).</summary>
+    private static Color ParseAccentColor(string? hex)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(hex) && ColorConverter.ConvertFromString(hex) is Color color)
+                return color;
+        }
+        catch
+        {
+            // hex inválido: usa o padrão
+        }
+        return Color.FromRgb(0x1E, 0x90, 0xFF);
     }
 
     private void MakeClickThrough()

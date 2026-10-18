@@ -34,6 +34,7 @@
     "network": false,
     "motherboard": false
   },
+  "profiles": [],
   "alerts": {
     "enabled": true,
     "cooldownSeconds": 60,

@@ -80,12 +80,14 @@ public sealed class FpsMonitor : IFpsMonitor
     private static string? FindPresentMonPath()
     {
         var baseDir = AppContext.BaseDirectory;
+        // A partir do bin/Debug/net10.0-windows, a raiz do repositório fica 5 níveis acima
+        // (bin/Debug/net10.0-windows → bin/Debug → bin → PhantomMonitor → src → raiz).
+        // Os caminhos antigos de fallback resolviam para diretórios que não existem.
         var candidates = new[]
         {
             Path.Combine(baseDir, "PresentMon.exe"),
             Path.Combine(baseDir, "tools", "PresentMon.exe"),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "tools", "PresentMon.exe")),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "tools", "PresentMon.exe")),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "tools", "PresentMon.exe")),
             Path.Combine(Directory.GetCurrentDirectory(), "tools", "PresentMon.exe"),
             Path.Combine(Directory.GetCurrentDirectory(), "PresentMon.exe")
         };
@@ -104,6 +106,13 @@ public sealed class FpsMonitor : IFpsMonitor
         try
         {
             StopPresentMon();
+
+            // Colunas descobertas na sessão anterior não podem vazar para o novo CSV
+            // (o formato do header pode diferir entre sessões/versões do PresentMon).
+            _headerParsed = false;
+            _colPid = -1;
+            _colApp = -1;
+            _colFrametime = -1;
 
             var presentMonPath = FindPresentMonPath();
             if (presentMonPath == null)
@@ -180,8 +189,12 @@ public sealed class FpsMonitor : IFpsMonitor
     {
         try
         {
-            // Verifica se é a linha de cabeçalho
-            if (!_headerParsed || line.StartsWith("Application", StringComparison.OrdinalIgnoreCase))
+            // Cabeçalho: chega no início da sessão (e re-emite quando ela reinicia).
+            // Trata como header apenas linhas que CONTÊM as colunas esperadas — um jogo
+            // cujo processo se chama "Application.exe" (padrão do Unreal) gerava linhas
+            // de dados começando com "Application" e re-parseava o header no meio da
+            // sessão, desalinhando os índices de coluna.
+            if (!_headerParsed || LooksLikeHeader(line))
             {
                 var headers = SplitCsv(line);
                 for (int i = 0; i < headers.Count; i++)
@@ -285,6 +298,13 @@ public sealed class FpsMonitor : IFpsMonitor
         {
             ErrorLog.Write("FpsMonitor.ProcessCsvLine", ex);
         }
+    }
+
+    private static bool LooksLikeHeader(string line)
+    {
+        return line.Contains("ProcessID", StringComparison.OrdinalIgnoreCase) &&
+               (line.Contains("msBetweenPresents", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("FrameTime", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Divide uma linha CSV respeitando campos entre aspas.</summary>
@@ -406,7 +426,14 @@ public sealed class FpsMonitor : IFpsMonitor
         _targetProcessName = "";
     }
 
-    public void Stop() => StopPresentMon();
+    public void Stop()
+    {
+        // Além de encerrar o PresentMon, para o polling da janela ativa: sem isso,
+        // CheckForegroundWindow continuava rodando a cada 500 ms com o monitor parado.
+        try { _pollTimer.Change(Timeout.Infinite, Timeout.Infinite); }
+        catch (ObjectDisposedException) { /* Dispose em corrida com Stop */ }
+        StopPresentMon();
+    }
 
     private void StopPresentMon()
     {

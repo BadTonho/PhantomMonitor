@@ -103,6 +103,8 @@ public partial class OverlayEditorWindow : Window
 
         if (AccentLabel != null) AccentLabel.Text = _config.Overlay.AccentColor;
 
+        if (HotkeyCombo != null) HotkeyCombo.Text = _config.ToggleOverlayHotkey;
+
         UpdateLayersVisibility();
     }
 
@@ -338,6 +340,21 @@ public partial class OverlayEditorWindow : Window
         if (CheckCompact != null) _config.Overlay.CompactMode = CheckCompact.IsChecked == true;
         if (FontSizeSlider != null) _config.Overlay.FontSize = FontSizeSlider.Value;
 
+        // Atalho global: valida antes de salvar (vazio = desativado)
+        if (HotkeyCombo != null)
+        {
+            var hotkey = HotkeyCombo.Text.Trim();
+            if (hotkey.Length > 0 && !HotkeyParser.TryParse(hotkey, out _, out _))
+            {
+                MessageBox.Show(
+                    $"Atalho inválido: \"{hotkey}\"\n\nUse combinações como Ctrl+Shift+O, Alt+F10 ou uma tecla de função (F1–F24).\n" +
+                    "Atalhos com uma única letra/número exigem um modificador (Ctrl/Alt/Shift/Win).",
+                    "Editor de Overlay", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            _config.ToggleOverlayHotkey = hotkey;
+        }
+
         var saved = _config.Save(_configPath);
         ConfigApplied?.Invoke(_config);
 
@@ -372,6 +389,8 @@ public partial class OverlayEditorWindow : Window
         _config.Overlay.CompactMode = false;
         _config.Overlay.AccentColor = "#1E90FF";
         _config.Overlay.FontSize = 11.5;
+
+        _config.ToggleOverlayHotkey = "";
 
         LoadConfigToUi();
     }

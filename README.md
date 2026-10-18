@@ -9,6 +9,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **FPS 100% independente de terceiros**:
   - **Windows**: Leitura de FPS e frametime de alta precisão via Intel PresentMon (ETW nativo, sem injetar DLLs, imune a banimentos de anti-cheat)
   - **Linux**: Camada nativa em C++ `PhantomVulkanLayer` interceptando `vkQueuePresentKHR` com comunicação por memória compartilhada (`/dev/shm/phantom_fps`)
+- **Atalho global do OSD**: Mostrar/ocultar o overlay de qualquer aplicativo via Win32 `RegisterHotKey` (ex.: `Ctrl+Shift+O`), sem injeção de DLL
 - **Gráfico de frametime**: Visualização em tempo real da variação de frametime com buffer circular
 - **Estatísticas avançadas**: FPS instantâneo, FPS médio, mínimo e 1% Low
 - **Logging**: Exportação contínua para CSV e JSON
@@ -122,6 +123,7 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Suporte a Linux e Camada Vulkan](docs/funções/suporte-linux.md)
 - [Monitoramento de FPS e Frametime](docs/funções/fps-monitor.md)
 - [Editor Visual de Overlay](docs/funções/overlay.md)
+- [Atalho Global do OSD](docs/funções/hotkey.md)
 - [Hardware Monitor Service](docs/funções/hardware-monitor.md)
 - [Configuração](docs/funções/configuracao.md)
 - [Logging e ErrorLog](docs/funções/logging.md)

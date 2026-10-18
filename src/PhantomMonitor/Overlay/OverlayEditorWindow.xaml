@@ -302,6 +302,26 @@
                             <Button Width="26" Height="26" Margin="0,0,6,6" Background="#EF4444" BorderThickness="0" Cursor="Hand" Tag="#EF4444" Click="OnAccentPreset" ToolTip="Vermelho"/>
                         </WrapPanel>
 
+                        <!-- Section: Atalho Global -->
+                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,14,0,14"/>
+
+                        <TextBlock Text="ATALHO GLOBAL" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Mostra/oculta o overlay em qualquer aplicativo (ex.: Ctrl+Shift+O)" FontSize="10" 
+                                   Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <ComboBox x:Name="HotkeyCombo" IsEditable="True" Margin="0,0,0,18">
+                            <ComboBoxItem Content=""/>
+                            <ComboBoxItem Content="Ctrl+Shift+O"/>
+                            <ComboBoxItem Content="Ctrl+Alt+O"/>
+                            <ComboBoxItem Content="Ctrl+Shift+F10"/>
+                            <ComboBoxItem Content="F9"/>
+                            <ComboBoxItem Content="F10"/>
+                            <ComboBoxItem Content="F11"/>
+                            <ComboBoxItem Content="F12"/>
+                        </ComboBox>
+
                         <!-- Save & Apply -->
                         <Button Content="Aplicar &amp; Salvar Configuração" 
                                 Style="{StaticResource PrimaryButton}" 

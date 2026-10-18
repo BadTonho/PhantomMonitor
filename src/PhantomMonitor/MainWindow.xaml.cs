@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private OverlayWindow? _overlay;
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
+    private readonly HotkeyService _hotkeys = new();
     private DateTime _startTime;
     private string _logDir = "";
     private AppConfig _config = new();
@@ -45,6 +46,22 @@ public partial class MainWindow : Window
         }
 
         StartMonitoring();
+        ApplyHotkey();
+    }
+
+    /// <summary>(Re)registra o atalho global de mostrar/ocultar o OSD conforme o config atual.</summary>
+    private void ApplyHotkey()
+    {
+        _hotkeys.Unregister();
+        if (string.IsNullOrWhiteSpace(_config.ToggleOverlayHotkey)) return;
+
+        _hotkeys.Register(this, _config.ToggleOverlayHotkey, () =>
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                OverlayToggle.IsChecked = OverlayToggle.IsChecked != true;
+            });
+        });
     }
 
     public static bool IsRunningAsAdmin()
@@ -299,6 +316,7 @@ public partial class MainWindow : Window
     private void OnOverlayConfigApplied(AppConfig newConfig)
     {
         _config = newConfig;
+        ApplyHotkey();
 
         // Só recria se o monitoramento está ativo; respeita o estado do toggle (visível/oculto).
         if (_sensorService == null) return;
@@ -337,6 +355,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _hotkeys.Dispose();
         if (_sensorService != null)
         {
             _sensorService.SensorUpdated -= OnSensorData;

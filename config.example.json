@@ -3,6 +3,7 @@
   "logToCsv": false,
   "logToJson": true,
   "showOverlay": false,
+  "toggleOverlayHotkey": "",
   "overlayOpacity": 0.85,
   "overlayPosition": {
     "x": 20,

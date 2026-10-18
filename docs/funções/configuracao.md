@@ -9,6 +9,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `logToCsv` - Habilitar logging em CSV
 - `logToJson` - Habilitar logging em JSON
 - `showOverlay` - Mostrar overlay na inicialização
+- `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex: "Ctrl+Shift+O"; vazio = desativado)
 - `overlayOpacity` - Opacidade do overlay (0-1)
 - `overlayPosition` - Posição inicial do overlay (X, Y)
 - `Overlay` - Configurações específicas do overlay
@@ -41,5 +42,6 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - `showOverlay` define o estado inicial do toggle "Overlay".
 - `overlay.showNetwork`, `overlay.showFans` e `overlay.showMotherboard` já são consumidos pelo overlay (linhas NET/FAN/MB, com auto-revelação no primeiro dado real) e editáveis pelo Editor Visual.
 - `overlay.compactMode`, `overlay.accentColor` e `overlay.fontSize` são aplicados ao overlay (espaçamento reduzido, cor de destaque e tamanho base da fonte) e editáveis no Editor Visual.
+- `toggleOverlayHotkey` registra um atalho global (Win32 `RegisterHotKey`) que alterna o OSD de qualquer aplicativo — ver [hotkey.md](hotkey.md). Editável na seção "ATALHO GLOBAL" do Editor Visual.
 - `sensors.*` e `overlay.showGpuProcesses` estão reservados no modelo, mas ainda não são consumidos pela interface.
 - Na carga, `Normalize()` corrige valores fora de faixa: `updateIntervalMs` ≥ 100, `overlayOpacity` 0.1–1.0, `overlay.width` 140–700, `overlay.fontSize` 8–20 e `accentColor` inválido volta para `#1E90FF`.

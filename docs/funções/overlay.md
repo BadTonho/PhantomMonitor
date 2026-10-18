@@ -34,6 +34,7 @@ Inspirado diretamente no editor de layouts OSD do RTSS (`Editor de informações
   - Ajuste de coordenadas absolutas de tela (`X`, `Y`) com predefinições de cantos rápidos (Superior Esquerdo, Superior Direito, Inferior Esquerdo, Inferior Direito).
   - Seleção individual de camadas ativas (habilitar/desabilitar cada sensor ou gráfico).
   - Ajuste fino de opacidade, largura do painel, modo compacto, tamanho da fonte (8–20 pt) e cor de destaque (paleta de presets ou edição direta do `config.json`).
+  - Atalho global para mostrar/ocultar o OSD em qualquer aplicativo (seção "ATALHO GLOBAL", ver [hotkey.md](hotkey.md)).
 - **Aplicação Imediata:** Botão "Aplicar & Salvar" que grava as alterações no `config.json` e atualiza a sobreposição em execução sem necessidade de reiniciar o programa.
 
 ## Configuração
@@ -49,6 +50,7 @@ Configurado via `config.json` ou pelo Editor Visual:
 - `fontSize` - Tamanho base da fonte do OSD em pt (8–20; sublinhas de detalhes/estatísticas usam fonte −2 pt)
 - `overlayOpacity` - Opacidade do fundo translúcido (padrão: 0.85)
 - `overlayPosition` - Coordenadas `x` e `y` na tela
+- `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex.: `Ctrl+Shift+O`; vazio = desativado)
 
 ## API Nativa
 

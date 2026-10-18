@@ -9,6 +9,7 @@ public sealed class AppConfig
     public bool LogToCsv { get; set; } = false;
     public bool LogToJson { get; set; } = true;
     public bool ShowOverlay { get; set; } = true;
+    public string ToggleOverlayHotkey { get; set; } = "";
     public double OverlayOpacity { get; set; } = 0.85;
     public OverlayPositionConfig OverlayPosition { get; set; } = new();
     public OverlayConfig Overlay { get; set; } = new();
@@ -67,6 +68,8 @@ public sealed class AppConfig
         Overlay.Width = Math.Clamp(Overlay.Width, 140, 700);
         Overlay.FontSize = Math.Clamp(Overlay.FontSize, 8, 20);
         if (!IsValidHexColor(Overlay.AccentColor)) Overlay.AccentColor = "#1E90FF";
+
+        ToggleOverlayHotkey = (ToggleOverlayHotkey ?? "").Trim();
     }
 
     private static bool IsValidHexColor(string? value) =>

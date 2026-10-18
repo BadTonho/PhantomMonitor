@@ -183,7 +183,7 @@ public partial class MainWindow : Window
         if (CsvToggle.IsChecked == true)
         {
             var path = Path.Combine(_logDir, $"sensors_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-            _csvLogger = new CsvLogger(path, Enum.GetValues<SensorType>());
+            _csvLogger = new CsvLogger(path);
         }
 
         if (JsonToggle.IsChecked == true)

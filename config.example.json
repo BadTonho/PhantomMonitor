@@ -23,7 +23,8 @@
     "showFrametimeGraph": true,
     "compactMode": false,
     "accentColor": "#1E90FF",
-    "fontSize": 11.5
+    "fontSize": 11.5,
+    "shownSeries": ["Gpu*", "FanSpeed*", "Disk*"]
   },
   "sensors": {
     "cpu": true,

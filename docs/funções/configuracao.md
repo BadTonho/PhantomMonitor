@@ -22,6 +22,13 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `showGpuProcesses` - Mostrar processos da GPU no overlay
 - `compactMode` - Modo compacto
 - `accentColor` - Cor de destaque (hex, ex: "#1E90FF")
+- `shownSeries` - Whitelist (padrões wildcard) das séries **por instância** exibidas no OSD
+  além das linhas canônicas: `"Gpu*"` (multi-GPU), `"FanSpeed*"` (ventoinhas extras),
+  `"Disk*"` (R/W, temperatura e saúde por disco), `"CpuTemperature#*"`, `"CpuPerCore#*"`,
+  `"CpuClock#*"` (telemetria por núcleo), `"VrmTemperature*"`, `"RailVoltage*"`,
+  `"Network*"` (por interface + totais da sessão). `"*"` libera tudo. Padrão:
+  `["Gpu*", "FanSpeed*", "Disk*"]`. Lista vazia/ausente no config volta ao padrão.
+  Os padrões são conferidos por `SensorKey.MatchesPattern` (sem distinção de maiúsculas).
 
 ### SensorConfig
 - `Cpu/Gpu/Ram/Disk/Network/Motherboard` - Sensores habilitados

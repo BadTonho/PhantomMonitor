@@ -4,24 +4,24 @@ using PhantomMonitor.Models;
 
 namespace PhantomMonitor.Services;
 
+/// <summary>
+/// CSV de telemetria com colunas dinâmicas: o cabeçalho é escrito na primeira escrita,
+/// a partir das séries realmente presentes no primeiro snapshot (séries canônicas +
+/// séries por instância como "GpuCore#1"), em vez de uma lista fixa de colunas.
+/// Colunas existentes continuam no lugar mesmo se some hardware (ventoinha extra,
+/// USB desligada...) — a célula fica em branco/0, sem desalinhar planilhas.
+/// </summary>
 public sealed class CsvLogger : IDisposable
 {
-    private readonly StreamWriter _writer;
-    private readonly SensorType[] _types;
+    private readonly string _filePath;
     private readonly object _lock = new();
+    private StreamWriter? _writer;
+    private List<SensorKey> _columns = [];
     private bool _disposed;
 
-    public CsvLogger(string filePath, IEnumerable<SensorType> types)
+    public CsvLogger(string filePath)
     {
-        // Tipos resolvidos uma única vez (antes havia Enum.Parse por coluna a cada escrita).
-        _types = types.ToArray();
-
-        var dir = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-        _writer = new StreamWriter(filePath, false) { AutoFlush = false };
-        _writer.WriteLine(string.Join(",", ["Timestamp", .. _types.Select(t => t.ToString())]));
-        _writer.Flush();
+        _filePath = filePath;
     }
 
     public void Write(SensorData data)
@@ -34,14 +34,8 @@ public sealed class CsvLogger : IDisposable
             // arquivo bloqueado) não deve propagar exceção para o app.
             try
             {
-                var values = new string[_types.Length + 1];
-                values[0] = data.Timestamp.ToString("O", CultureInfo.InvariantCulture);
-                for (int i = 0; i < _types.Length; i++)
-                {
-                    values[i + 1] = data.GetValue(_types[i]).ToString("F2", CultureInfo.InvariantCulture);
-                }
-                _writer.WriteLine(string.Join(",", values));
-                _writer.Flush();
+                _writer ??= OpenWriter(data);
+                WriteRow(data);
             }
             catch (Exception ex)
             {
@@ -50,14 +44,40 @@ public sealed class CsvLogger : IDisposable
         }
     }
 
+    private StreamWriter OpenWriter(SensorData data)
+    {
+        var dir = Path.GetDirectoryName(_filePath);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+        _columns = data.GetSeriesKeys();
+        var writer = new StreamWriter(_filePath, false) { AutoFlush = false };
+
+        // Cabeçalho fixo na abertura: coluna 0 é o timestamp, o resto são as séries do snapshot.
+        writer.WriteLine(string.Join(",", ["Timestamp", .. _columns.Select(c => c.ToString())]));
+        writer.Flush();
+        return writer;
+    }
+
+    private void WriteRow(SensorData data)
+    {
+        var cells = new string[_columns.Count + 1];
+        cells[0] = data.Timestamp.ToString("O", CultureInfo.InvariantCulture);
+        for (int i = 0; i < _columns.Count; i++)
+        {
+            cells[i + 1] = data.GetValue(_columns[i]).ToString("F2", CultureInfo.InvariantCulture);
+        }
+        _writer!.WriteLine(string.Join(",", cells));
+        _writer.Flush();
+    }
+
     public void Dispose()
     {
         lock (_lock)
         {
             if (_disposed) return;
             _disposed = true;
-            _writer.Flush();
-            _writer.Dispose();
+            try { _writer?.Flush(); } catch { /* arquivo pode ter sido removido */ }
+            _writer?.Dispose();
         }
     }
 }

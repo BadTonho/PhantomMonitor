@@ -67,6 +67,23 @@ public sealed class AppConfig
         Overlay ??= new();
         Sensors ??= new();
 
+        // Whitelist de séries por instância: config antigo sem a chave (ou com lista vazia)
+        // volta ao padrão, senão o OSD ficaria sem multi-GPU/ventoinhas/discos extras.
+        string[] defaultSeries = ["Gpu*", "FanSpeed*", "Disk*"];
+        if (Overlay.ShownSeries is not { Count: > 0 })
+        {
+            Overlay.ShownSeries = [.. defaultSeries];
+        }
+        else
+        {
+            Overlay.ShownSeries.RemoveAll(string.IsNullOrWhiteSpace);
+            Overlay.ShownSeries = Overlay.ShownSeries
+                .Select(p => p.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (Overlay.ShownSeries.Count == 0) Overlay.ShownSeries = [.. defaultSeries];
+        }
+
         Overlay.Width = Math.Clamp(Overlay.Width, 140, 700);
         Overlay.FontSize = Math.Clamp(Overlay.FontSize, 8, 20);
         if (!IsValidHexColor(Overlay.AccentColor)) Overlay.AccentColor = "#1E90FF";
@@ -140,6 +157,15 @@ public sealed class OverlayConfig
     public bool CompactMode { get; set; } = false;
     public string AccentColor { get; set; } = "#1E90FF";
     public double FontSize { get; set; } = 11.5;
+
+    /// <summary>
+    /// Whitelist (padrões wildcard) das séries por instância exibidas no OSD além das
+    /// linhas canônicas. Ex.: "Gpu*" (multi-GPU), "FanSpeed*" (ventoinhas extras),
+    /// "Disk*" (rendimento/saúde por disco), "CpuTemperature#*" (temp por núcleo),
+    /// "CpuPerCore#*", "CpuClock#*", "VrmTemperature*", "RailVoltage*", "Network*"
+    /// (por interface + totais da sessão). "*" libera tudo. Ver <see cref="SensorKey.MatchesPattern"/>.
+    /// </summary>
+    public List<string>? ShownSeries { get; set; } = ["Gpu*", "FanSpeed*", "Disk*"];
 }
 
 public sealed class SensorConfig

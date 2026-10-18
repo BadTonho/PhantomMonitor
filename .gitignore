@@ -1,17 +1,35 @@
-## .NET
-bin/
-obj/
+## .NET & Build outputs
+[Bb]in/
+[Oo]bj/
 *.user
-*.suo
+*.userosscache
 *.sln.docstates
+*.suo
 .vs/
 
-## Logs
-Logs/
+## C++ & Compiled Binaries
+*.dll
+*.exe
+!tools/PresentMon.exe
+*.lib
+*.exp
+*.obj
+*.pdb
+*.ilk
+*.idb
 
-## Config with secrets
+## Logs & Telemetry
+[Ll]ogs/
+*.log
+*.csv
+sensors_latest.json
+
+## Config with secrets / local settings
 config*.local.json
+*.local.json
+.env
+.env.*
 
-## IDE
+## IDE & Editors
 .idea/
 *.swp

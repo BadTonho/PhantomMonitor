@@ -8,9 +8,24 @@ namespace PhantomMonitor;
 public partial class App : Application
 {
     private static string? _lastShownError;
+    private static Mutex? _singleInstanceMutex;
+    private static bool _ownsMutex;
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Instância única: duas cópias do app disputariam a mesma sessão ETW do
+        // PresentMon (--stop_existing_session mata a sessão da outra) e o mesmo
+        // sensors_latest.json.
+        _singleInstanceMutex = new Mutex(true, @"Local\PhantomMonitor.SingleInstance", out bool createdNew);
+        if (!createdNew)
+        {
+            MessageBox.Show("Phantom Monitor já está em execução.", "Phantom Monitor",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
+        _ownsMutex = true;
+
         base.OnStartup(e);
 
         // Exceções na UI thread: logadas com supressão de repetição antes do modal.
@@ -43,5 +58,15 @@ public partial class App : Application
             ErrorLog.Write("TaskScheduler.UnobservedTaskException", args.Exception);
             args.SetObserved();
         };
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        base.OnExit(e);
+        if (_ownsMutex)
+        {
+            try { _singleInstanceMutex?.ReleaseMutex(); }
+            catch (Exception ex) { ErrorLog.Write("App.OnExit", ex); }
+        }
     }
 }

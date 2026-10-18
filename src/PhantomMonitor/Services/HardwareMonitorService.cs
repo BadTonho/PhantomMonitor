@@ -174,11 +174,6 @@ public sealed class HardwareMonitorService : ISensorService
             data.SetValue(SType.NetworkDownTotal, _netDownSessionBytes, "Total recebido (sessão)");
         }
 
-        ApplyCpuTempFallback(data, debugInfo);
-        ApplyRamFallbacks(data, debugInfo);
-
-        data.GpuProcesses = GetGpuProcesses();
-
         debugInfo.Add($"[FPS] {_fpsMonitor.DebugInfo}");
         debugInfo.Add($"[FPS] PresentMon: {_fpsMonitor.EtwDiag}");
         debugInfo.Add($"[FPS] PerfCount: {_fpsMonitor.PerfResult}");

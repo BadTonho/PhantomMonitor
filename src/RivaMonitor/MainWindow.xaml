@@ -73,6 +73,11 @@
                                    Margin="4,16,0,6"/>
                         <CheckBox x:Name="OverlayToggle" Content="Overlay no Jogo" IsChecked="False"
                                   Checked="OnOverlayToggled" Unchecked="OnOverlayToggled"/>
+                        <Button Content="⚙ Configurar Overlay..." 
+                                Style="{StaticResource SecondaryButton}"
+                                Click="OnOpenOverlayEditor"
+                                Padding="8,5" Margin="0,2,0,8" FontSize="11"
+                                HorizontalAlignment="Stretch"/>
                         <CheckBox x:Name="CsvToggle" Content="Exportar CSV"/>
                         <CheckBox x:Name="JsonToggle" Content="Exportar JSON"/>
                     </StackPanel>

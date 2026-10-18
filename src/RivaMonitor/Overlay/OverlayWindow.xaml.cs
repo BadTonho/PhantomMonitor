@@ -29,6 +29,8 @@ public partial class OverlayWindow : Window
         Left = left;
         Top = top;
         Opacity = config.OverlayOpacity;
+        if (config.Overlay.Width > 0)
+            MainBorder.MinWidth = config.Overlay.Width;
 
         MakeClickThrough();
         StartTopmostTimer();
@@ -93,7 +95,7 @@ public partial class OverlayWindow : Window
         _showFps = config.Overlay.ShowFps;
         if (_showFps)
         {
-            AddFpsSection();
+            AddFpsSection(config.Overlay.ShowFrametimeGraph);
         }
 
         _offsetX = left;
@@ -231,7 +233,7 @@ public partial class OverlayWindow : Window
         SensorPanel.Children.Add(grid);
     }
 
-    private void AddFpsSection()
+    private void AddFpsSection(bool showFrametimeGraph = true)
     {
         // Linha Principal de FPS
         var grid = new Grid
@@ -318,24 +320,27 @@ public partial class OverlayWindow : Window
 
         SensorPanel.Children.Add(statsGrid);
 
-        // Gráfico de Frametime compacto estilo RivaTuner
-        _frametimeGraph = new Canvas
+        if (showFrametimeGraph)
         {
-            Height = 24,
-            Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
-            ClipToBounds = true
-        };
+            // Gráfico de Frametime compacto estilo RivaTuner
+            _frametimeGraph = new Canvas
+            {
+                Height = 24,
+                Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
+                ClipToBounds = true
+            };
 
-        var graphBorder = new Border
-        {
-            CornerRadius = new CornerRadius(2),
-            BorderThickness = new Thickness(0.5),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
-            Child = _frametimeGraph,
-            Margin = new Thickness(0, 2, 0, 0)
-        };
+            var graphBorder = new Border
+            {
+                CornerRadius = new CornerRadius(2),
+                BorderThickness = new Thickness(0.5),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
+                Child = _frametimeGraph,
+                Margin = new Thickness(0, 2, 0, 0)
+            };
 
-        SensorPanel.Children.Add(graphBorder);
+            SensorPanel.Children.Add(graphBorder);
+        }
 
         _updaters.Add(data =>
         {

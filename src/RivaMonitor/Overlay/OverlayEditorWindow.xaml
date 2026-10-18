@@ -1,0 +1,258 @@
+<Window x:Class="RivaMonitor.Overlay.OverlayEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Editor de Informações na Tela (Overlay OSD) - Riva Monitor"
+        Height="640" Width="980"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BgDarkBrush}"
+        Foreground="{StaticResource TextPrimaryBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Menu / Toolbar -->
+            <RowDefinition Height="*"/>    <!-- Canvas + Inspector -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- Top Toolbar / Actions -->
+        <Border Grid.Row="0" Background="{StaticResource BgSidebarBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" 
+                Padding="14,8">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Editor de Informações na Tela (OSD)" FontWeight="SemiBold" FontSize="13" 
+                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    
+                    <Border Width="1" Height="16" Background="{StaticResource BorderBrush}" Margin="0,0,16,0"/>
+
+                    <Button Content="Salvar Layout" Style="{StaticResource PrimaryButton}" 
+                            Padding="12,5" Margin="0,0,8,0" Click="OnSaveClick"/>
+                    <Button Content="Restaurar Padrão" Style="{StaticResource SecondaryButton}" 
+                            Padding="10,5" Margin="0,0,8,0" Click="OnResetClick"/>
+                    <Button Content="Posicionar no Canto..." Style="{StaticResource SecondaryButton}" 
+                            Padding="10,5" Click="OnPresetPositionsClick"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <CheckBox x:Name="SnapGridCheck" Content="Alinhar à Grade (10px)" IsChecked="True" 
+                              VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <CheckBox x:Name="ShowGridCheck" Content="Exibir Grade" IsChecked="True" 
+                              Checked="OnToggleGrid" Unchecked="OnToggleGrid" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Workspace (Canvas + Inspector) -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Visual Grid Canvas (Estilo RTSS OSD Layout Editor) -->
+            <Border Grid.Column="0" Background="#0A0C10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" ClipToBounds="True">
+                <Canvas x:Name="EditorCanvas" Background="#0A0C10" MouseMove="OnCanvasMouseMove" MouseLeftButtonUp="OnCanvasMouseUp">
+                    
+                    <!-- Bloco FPS -->
+                    <Border x:Name="BlockFps" Canvas.Left="30" Canvas.Top="30" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="63 FPS" FontFamily="Consolas, Cascadia Mono" 
+                                           FontSize="22" FontWeight="Bold" Foreground="#00FF88"/>
+                                <TextBlock Text="  16.1 ms" FontFamily="Consolas, Cascadia Mono" 
+                                           FontSize="13" FontWeight="SemiBold" Foreground="#FACC15" 
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="AVG: 62   1% Low: 54" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="10" Foreground="#8E9AA8" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bloco Gráfico Frametime -->
+                    <Border x:Name="BlockGraph" Canvas.Left="30" Canvas.Top="90" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="8,5" Cursor="SizeAll" Width="220"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="Gráfico de Frametime" FontFamily="Consolas" FontSize="9.5" Foreground="#64748B" Margin="0,0,0,3"/>
+                            <Border Height="28" Background="#14FFFFFF" CornerRadius="2" Padding="2">
+                                <Polyline Points="0,18 20,17 40,16 60,19 80,12 100,16 120,16 140,15 160,20 180,16 200,16" 
+                                          Stroke="#00F0FF" StrokeThickness="1.4" StrokeLineJoin="Round"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bloco CPU -->
+                    <Border x:Name="BlockCpu" Canvas.Left="30" Canvas.Top="160" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll" Width="240"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="PROCESSADOR (CPU)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11" FontWeight="Bold" Foreground="#00D2FF"/>
+                            <TextBlock Text="Uso: 37.4%    Temp: 44°C" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11.5" Foreground="#F1F5F9" Margin="0,2,0,0"/>
+                            <TextBlock Text="Clock: 4150 MHz   Power: 65W" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="10" Foreground="#8E9AA8"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bloco Memória RAM -->
+                    <Border x:Name="BlockRam" Canvas.Left="30" Canvas.Top="236" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll" Width="240"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="MEMÓRIA (RAM)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11" FontWeight="Bold" Foreground="#C084FC"/>
+                            <TextBlock Text="Uso: 15.4 GB (51.8%)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11.5" Foreground="#F1F5F9" Margin="0,2,0,0"/>
+                            <TextBlock Text="Disponível: 16.5 GB / Total: 32 GB" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="10" Foreground="#8E9AA8"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bloco GPU -->
+                    <Border x:Name="BlockGpu" Canvas.Left="30" Canvas.Top="312" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll" Width="240"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="PLACA DE VÍDEO (GPU)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11" FontWeight="Bold" Foreground="#FF8A00"/>
+                            <TextBlock Text="Uso: 32.0%    Temp: 37°C" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11.5" Foreground="#F1F5F9" Margin="0,2,0,0"/>
+                            <TextBlock Text="VRAM: 3.2 GB    Clock: 1850 MHz" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="10" Foreground="#8E9AA8"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bloco Disco -->
+                    <Border x:Name="BlockDisk" Canvas.Left="30" Canvas.Top="388" 
+                            BorderBrush="#60FFFFFF" BorderThickness="1" Background="#E605070B"
+                            Padding="10,6" Cursor="SizeAll" Width="240"
+                            MouseLeftButtonDown="OnBlockMouseDown">
+                        <StackPanel>
+                            <TextBlock Text="ARMAZENAMENTO (DSK)" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11" FontWeight="Bold" Foreground="#60A5FA"/>
+                            <TextBlock Text="Read: 15 MB/s   Write: 60 KB/s" FontFamily="Consolas, Cascadia Mono" 
+                                       FontSize="11.5" Foreground="#F1F5F9" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                </Canvas>
+            </Border>
+
+            <!-- Right: Inspector & Configuration Panel -->
+            <Border Grid.Column="1" Background="{StaticResource BgSidebarBrush}" Padding="16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <!-- Section: Posição na Tela -->
+                        <TextBlock Text="POSIÇÃO NA TELA" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Posição X (px)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBox x:Name="PosXBox" Text="20" Background="{StaticResource BgSurfaceBrush}" 
+                                         Foreground="{StaticResource TextPrimaryBrush}" BorderBrush="{StaticResource BorderBrush}"
+                                         Padding="6,4" Margin="0,4,0,0" TextChanged="OnPositionBoxChanged"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Posição Y (px)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBox x:Name="PosYBox" Text="80" Background="{StaticResource BgSurfaceBrush}" 
+                                         Foreground="{StaticResource TextPrimaryBrush}" BorderBrush="{StaticResource BorderBrush}"
+                                         Padding="6,4" Margin="0,4,0,0" TextChanged="OnPositionBoxChanged"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Posicionamento Rápido" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,6,0,6"/>
+                        <UniformGrid Columns="2" Rows="2" Margin="0,0,0,14">
+                            <Button Content="↖ Sup. Esquerdo" Style="{StaticResource SecondaryButton}" 
+                                    Margin="0,0,3,3" Padding="6,4" FontSize="10" Click="OnPosTopLeft"/>
+                            <Button Content="↗ Sup. Direito" Style="{StaticResource SecondaryButton}" 
+                                    Margin="3,0,0,3" Padding="6,4" FontSize="10" Click="OnPosTopRight"/>
+                            <Button Content="↙ Inf. Esquerdo" Style="{StaticResource SecondaryButton}" 
+                                    Margin="0,3,3,0" Padding="6,4" FontSize="10" Click="OnPosBottomLeft"/>
+                            <Button Content="↘ Inf. Direito" Style="{StaticResource SecondaryButton}" 
+                                    Margin="3,3,0,0" Padding="6,4" FontSize="10" Click="OnPosBottomRight"/>
+                        </UniformGrid>
+
+                        <!-- Section: Camadas Visíveis -->
+                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,0,0,14"/>
+
+                        <TextBlock Text="CAMADAS / MÉTRICAS ATIVAS" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8"/>
+
+                        <CheckBox x:Name="CheckFps" Content="Taxa de Quadros (FPS)" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckGraph" Content="Gráfico de Frametime" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckCpu" Content="Processador (CPU)" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckGpu" Content="Placa de Vídeo (GPU)" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckRam" Content="Memória RAM" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+                        <CheckBox x:Name="CheckDisk" Content="Armazenamento (Disco)" IsChecked="True" 
+                                  Checked="OnLayerToggled" Unchecked="OnLayerToggled"/>
+
+                        <!-- Section: Aparência -->
+                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,14,0,14"/>
+
+                        <TextBlock Text="APARÊNCIA DO OVERLAY" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="Opacidade do Fundo" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="OpacityLabel" Text="85%" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Slider x:Name="OpacitySlider" Minimum="0.2" Maximum="1.0" Value="0.85" 
+                                TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                ValueChanged="OnOpacitySliderChanged" Margin="0,0,0,14"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="Largura do Painel" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="WidthLabel" Text="220 px" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Slider x:Name="WidthSlider" Minimum="160" Maximum="360" Value="220" 
+                                TickFrequency="10" IsSnapToTickEnabled="True"
+                                ValueChanged="OnWidthSliderChanged" Margin="0,0,0,18"/>
+
+                        <!-- Save & Apply -->
+                        <Button Content="Aplicar &amp; Salvar Configuração" 
+                                Style="{StaticResource PrimaryButton}" 
+                                Click="OnSaveClick" Margin="0,0,0,8"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="{StaticResource BgSurfaceBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" 
+                Padding="16,6">
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="StatusCoordinatesText" Text="Posição Selecionada: X: 20 px | Y: 80 px" 
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Text="  •  " Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="SelectedBlockText" Text="Nenhum bloco selecionado" 
+                               FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
+                <TextBlock Text="Arraste os blocos no grid para personalizar a organização" 
+                           FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

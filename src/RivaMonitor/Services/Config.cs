@@ -27,6 +27,20 @@ public sealed class AppConfig
             return new AppConfig();
         }
     }
+
+    public void Save(string path)
+    {
+        try
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var json = JsonSerializer.Serialize(this, options);
+            File.WriteAllText(path, json);
+        }
+        catch
+        {
+            // fallback
+        }
+    }
 }
 
 public sealed class OverlayPositionConfig
@@ -46,8 +60,10 @@ public sealed class OverlayConfig
     public bool ShowGpuProcesses { get; set; } = false;
     public bool ShowFans { get; set; } = true;
     public bool ShowFps { get; set; } = true;
+    public bool ShowFrametimeGraph { get; set; } = true;
     public bool CompactMode { get; set; } = false;
     public string AccentColor { get; set; } = "#1E90FF";
+    public double FontSize { get; set; } = 11.5;
 }
 
 public sealed class SensorConfig

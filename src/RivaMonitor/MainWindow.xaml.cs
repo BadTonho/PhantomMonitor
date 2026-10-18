@@ -225,6 +225,7 @@ public partial class MainWindow : Window
     }
 
     private DebugWindow? _debugWindow;
+    private OverlayEditorWindow? _overlayEditor;
 
     public void OpenDebugWindow() => OnOpenDebugWindow(null!, null!);
 
@@ -240,6 +241,37 @@ public partial class MainWindow : Window
         else
         {
             _debugWindow.Activate();
+        }
+    }
+
+    private void OnOpenOverlayEditor(object sender, RoutedEventArgs e)
+    {
+        var configPath = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "config.json");
+
+        if (_overlayEditor == null || !_overlayEditor.IsVisible)
+        {
+            _overlayEditor = new OverlayEditorWindow(_config, configPath);
+            _overlayEditor.Owner = this;
+            _overlayEditor.ConfigApplied += OnOverlayConfigApplied;
+            _overlayEditor.Closed += (_, _) => _overlayEditor = null;
+            _overlayEditor.Show();
+        }
+        else
+        {
+            _overlayEditor.Activate();
+        }
+    }
+
+    private void OnOverlayConfigApplied(AppConfig newConfig)
+    {
+        _config = newConfig;
+
+        if (_overlay != null && _overlay.IsVisible)
+        {
+            _overlay.Close();
+            _overlay = new OverlayWindow(_config, _config.OverlayPosition.X, _config.OverlayPosition.Y);
+            _overlay.Show();
         }
     }
 

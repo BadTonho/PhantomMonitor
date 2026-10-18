@@ -104,6 +104,10 @@
 > **(B)** política — fechados conscientemente por não injetar/tocar no processo do jogo;
 > **(C)** engine — dependem de fontes de leitura que a LibreHardwareMonitor não abre
 > (drivers próprios, MSR, NPU ou APIs proprietárias de vendor — NVAPI/ADLX).
+>
+> **Fontes (2026):** changelog oficial do HWiNFO v8.00..v8.54 (2024–2026),
+> página oficial do RTSS 7.3.7 final no Guru3D (set/2025) e MSI Afterburner
+> 4.6.6 final (out/2025) / 4.6.7 Beta (2026).
 
 ## Onde ficamos atrás do RTSS / MSI Afterburner
 
@@ -112,10 +116,11 @@
 | OSD in-frame (game capture, replay, gravação) | B | Fora por política; caminho seguro documentado: plugin OBS consumindo a SDK (docs/osd-in-frame-estudo.md) |
 | Frame limiter (FRTC, millisecond) | B | Fora por política: exige hook no processo do jogo; não reabrir |
 | Curva de ventoinha, V/F curve, OC scanner (Afterburner) | B | P5: fora do escopo read-only (app separado um dia) |
-| Captura de vídeo / Instant Replay | B | Mesma classe de hook do OSD in-frame; OBS no plugin cobre gravação |
+| Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (RTV1/MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (conf. features oficiais do RTSS 7.3.7); OBS no plugin cobre gravação |
 | Screenshot in-frame via hotkey | B | Não há acesso ao backbuffer sem hook; OBS cobre |
-| **Latency/Reflex markers no Windows** (colunas de "PC latency" do PresentMon v2) | A | **Gap real do produto**: hoje `FpsMonitor` só parsa `msBetweenPresents`/`FrameTime` → adicionar colunas de latência quando o PresentMon instalado as expor (novas séries) |
-| **OSD com linhas definidas pelo usuário** (templates `{CpuTemperature}`, `{Fps}` formatáveis, cores por limiar, hotkey por elemento) | A | **Gap real**: RTSS tem grupos/hotkeys/cores condicionais; a nossa whitelist cobre o que aparece, mas não composição de linhas nem cores condicionais |
+| **Métricas ricas do PresentMon** (GPU Busy, CPU Busy/CPU Wait, click-to-photon, percentis 1st/99th, modo de present) | A | **Gap real do produto**: hoje `FpsMonitor` só parsa `msBetweenPresents`/`FrameTime` → estender o parse das colunas que a versão do PresentMon em uso expõe (o RTSS usa PresentMon 2.3.1-DLSS4) |
+| **Latency markers NVIDIA Reflex** (`reflexlatency()/timespan()`, marcadores input→gpurender) | B | Implementado pelo RTSS com injection/hook no jogo — fora por política |
+| **OverlayEditor / hypertext** — tags (`<B>`, `<FNT>`), gráficos de barra/timeband, fórmulas e filtros (`buf()`, condições), camadas condicionais, macros `%CPU%`, text tables | A | **Maior gap real vs RTSS**: não temos composição de linhas nem expressões — o P6.6 (templates de OSD) cobre a parte de texto/condição; gráficos embutidos no overlay são P7 de UI |
 | Per-app "OSD ocultado" (jogos que não querem ver overlay) | A | **Gap pequeno**: `profiles` não tem flag de visibilidade → `visible: false` por perfil (quick win) |
 | LCDs externos (Logitech, OLED/StreamDeck via plugins/ecossistema) | A-parcial | Nossa SDK (P2) dá os dados; escritores/apps externos fora do produto |
 | Monitor remoto / 2ª máquina / painel na LAN (HWiNFO tem telesensor-server; RTSS usa HUDSight/3rd-party) | A | **Gap do produto**: SDK é só memória local → exportador HTTP/UDP (loopback/LAN opcional) |
@@ -125,18 +130,28 @@
 
 | Recurso | Camada | Ação definida |
 |---|---|---|
-| Colunas Min/Máx/Média/Atual por sensor + reset da sessão | A | **Gap real**: `SensorData` mantém só o valor atual (FPS tem estatística própria) → estatística por série (min/max/avg janela fixa ou sessão) + reset no inventário/tray |
+| Colunas Min/Máx/Média/Atual por sensor + hotkey de reset (v7.70/v8.34) | A | **Gap real**: `SensorData` mantém só o valor atual (FPS tem estatística própria) → estatística por série (min/max/avg janela fixa ou sessão) + reset no inventário/tray |
+| Hotkey para **pausar/retomar** o monitoramento (v8.34) | A | **Quick win**: pause/resume no tray/atalho global — não temos hoje |
+| Percentis 1st/99th de FPS e frametime (PresentMon, v8.24) | A | Já calculamos 1%/0.1% Low (média do pior 1%); o percentil puro é barato de adicionar |
 | Marcadores/hotkeys de benchmark: start/stop de log e segmento com marcador | A | **Gap barato**: hotkey/tray "reset estatística" + linha `#marker` no CSV |
-| Acesso remoto: "Remote Sensor Server" (TCP na LAN) para 2ª máquina e dashboards | A | Mesmo do item remoto do RTSS: exportador HTTP/UDP sobre a mesma estrutura do P2 |
+| Acesso remoto: "Remote Sensor Server" (TCP na LAN) para 2ª máquina e dashboards (remoto fixado em v7.34) | A | Mesmo do item remoto do RTSS: exportador HTTP/UDP sobre a mesma estrutura do P2 |
 | Bateria (laptop: carga %, desgaste, draw, AC) | A | **Gap real, barato** via WMI (`Win32_Battery` + `BatteryStaticData` em `root\WMI`) |
+| Contadores de erros de hardware **WHEA** (incl. device PCIe com falha) | A (médio) | Ler eventos WHEA via Event Log/WMI → série `WheaErrorCount` |
+| Sensores **customizados pelo usuário** (fórmulas sobre outros sensores; fix v8.54) | A (médio) | Séries derivadas em config — puxa pela engine de expressões do P6.6 |
+| OSD próprio do HWiNFO (desde v8.00): gráfico de histórico no OSD, cor de fundo, múltiplos valores por linha, eixo com min/max global | A (menor) | Nosso overlay (P1/P3) cobre texto/séries; gráfico embutido e cor de fundo = melhorias de UI |
+| Log de sensores em **JSON/YAML** (v8.48) | A (menor) | Já temos CSV contínuo + snapshot JSON; journal JSON opcional |
 | Alerts por e-mail/webhook e "destinos de log" extras | A | Diferencial menor; o script externo já permite enviar — decidir depois |
+| Polling **multithread/assíncrono** de sensores (v8.20/v8.12) | A (caveat) | LHM é sequencial por design; paralelizar entre hardwares exige testes de concorrência no driver |
+| Identidade dos monitores (fabricante/modelo via EDID, v8.26); chroma/HDR/VRR | A-parcial | Nome do monitor via WMI é barato; flags HDR/VRR exigem descriptor completo (P7) |
+| Polimento de monitoramento: pesquisa, ordenação custom, colapso de grupos, tooltips, destaque de mudanças | A (menor) | Inventário absorve aos poucos |
+| Intervalo de polling **por sensor** + smoothing/filtro médio por item | A (menor) | Hoje cadência global única; item de UX de nicho |
 | Tabela SMART atributo a atributo (realocados, erros de mídia etc.) | C | LHM sintetiza pouco; viria de SMART bruto via WMI/Win32 — maior esforço, P7 |
-| GPU: "throttle reasons" (NVAPI)/(thermal slow, power limit, no-load) e ICX/VRAM temp por grupo | C | NVAPI interop (NVIDIA) + AMD User Mode API — esforço real e especificadores por vendor (P7) |
-| CPU: C-states residency, VID per-core, PL1/PL2, contadores de throttle | C | Exige MSR próprio/driver — LHM não expõe; fora do escopo atual (documentar) |
-| NPU usage (Intel MTL/Snapdragon) | C | Idem engine (sem fonte via LHM hoje) |
-| Inventário profundo: VBIOS/EDID, SPD de RAM (timings), PCIe link por slot, resumo de sistema/OS | C-parcial | EDID (WMI MonitorID) e SPD (WMI SMBIOS MemoryDevice) são baratos; PCIe/VBIOS precisariam de NVAPI/SetupAPI (P7) |
-| Intervalo de polling **por sensor** + smoothing/filtro médio por item | A-menor | Hoje cadência global única; item de UX de nicho (config por família talvez) |
-| Grafos de histórico (sparklines) por sensor na janela de monitoramento | A (menor) | CSV/SDK já permitem; UI extra — depois |
+| GPU: Hot Spot / Memory Junction como **séries separadas** (LHM expõe p/ NVIDIA) e per-chip VRAM de GDDR6X/GDDR7 (v8.52) | A-parcial | NVIDIA: basta mapear; per-chip/AMD: P7 (engine) |
+| GPU: "throttle reasons" e power-limit flags (NVAPI/AMD; "Performance Limiting Reasons" v8.34) | C | NVAPI interop + AMD User Mode — esforço real por vendor (P7) |
+| CPU: C-states residency, VID per-core, Effective Clock, DRAM R/W bandwidth, PL1/PL2 dinâmico, % thermal throttle | C | MSR/SMN próprios — LHM não expõe (documentar como limite de engine) |
+| NPU dedicado (AMD/Intel v8.42, Qualcomm v8.40, Intel desde v7.66) | C | Sem fonte via LHM hoje |
+| Inventário profundo: VBIOS/ASIC quality/ECID, cont. RT/Tensor, ReBAR, PCIe error counters, SPD/timings (CUDIMM), PCIe link por slot | C-parcial | EDID/SPD básicos via WMI são baratos; o resto precisa de NVAPI/SetupAPI (P7) |
+| Ecossistemas de terceiros: PSUs (Corsair/MSI/NZXT), controladores de fan, WireView, ARM64/Snapdragon | C | Amplitude de leitura fora da LHM não disponível |
 
 ## Recomendação (ordem de valor/esforço)
 
@@ -144,9 +159,20 @@
 2. **P6.2** `profiles[].visible` (esconder OSD por app) — o override de séries já existe.
 3. **P6.3** Exportador HTTP/UDP do SDK (loopback/LAN) — painéis e 2ª máquina sem tocar no produto.
 4. **P6.4** Bateria via WMI (módulo separado, valioso para laptops).
-5. **P6.5** Latency markers do PresentMon v2 ("PC latency") quando disponíveis — conferir as colunas na versão do PresentMon usada pelo projeto.
-6. **P6.6** OSD templating (linhas customizadas) — médio; último da fila.
+5. **P6.5** Métricas extras do PresentMon (GPU Busy, CPU Busy/Wait, percentis 1st/99th, modo de present) conforme as colunas da versão em uso.
+6. **P6.6** OSD templating (linhas/expressões condicionais) — médio; último da fila.
+7. **P6.7** Pausar/retomar monitoramento (tray/atalho) — quick win confirmado como padrão HWiNFO.
 
 P7 (maiores, exigem NVAPI/AMD User Mode/MSR ou driver próprio): SMART completo, throttle
 reasons, EDID/SPD/PCIe detalhes, C-states/NPU — cada um documentado como "limitação da
 engine" quando implementável apenas com driver próprio.
+
+## Onde o Phantom Monitor já está à frente
+
+- **SDK de memória compartilhada gratuita e estável** (P2): a shared memory do HWiNFO
+  virou recurso pago desde a v7.0 (o RTSS 7.3.7 até adicionou um provider de
+  LibreHardwareMonitor para quem não compra a licença do HWiNFO).
+- **Sem hook/injection**: o próprio RTSS documenta que anti-cheats podem restringir o OSD
+  e bloquear a conexão ao servidor — o nosso design nunca corre esse risco.
+- **CSV livre e dinâmico** com séries por instância, JSON de snapshot local e leitor de
+  referência da SDK incluso.

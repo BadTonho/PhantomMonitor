@@ -20,7 +20,8 @@ public partial class OverlayWindow : Window
     // são criadas no primeiro snapshot que as contiver, filtradas pela whitelist
     // overlay.shownSeries e limitadas para não explodir o OSD em máquinas cheias.
     private static readonly int MaxAdvancedRows = 24;
-    private readonly List<string> _seriesPatterns;
+    private List<string> _seriesPatterns;
+    private List<string>? _baseSeriesPatterns;
     private readonly Dictionary<SensorKey, Grid> _dynamicRows = [];
 
     // Aparência configurável (compactMode / fontSize / accentColor)
@@ -168,7 +169,10 @@ public partial class OverlayWindow : Window
         _offsetY = top;
         _baseOffsetX = left;
         _baseOffsetY = top;
-        _seriesPatterns = [.. (config.Overlay.ShownSeries ?? ["Gpu*", "FanSpeed*", "Disk*"])];
+        _baseSeriesPatterns = [.. (config.Overlay.ShownSeries ?? ["Gpu*", "FanSpeed*", "Disk*"])];
+        _seriesPatterns = [.. _baseSeriesPatterns];
+        _baseOpacity = Math.Clamp(config.OverlayOpacity <= 0 ? 0.85 : config.OverlayOpacity, 0.1, 1.0);
+        Opacity = _baseOpacity;
         _positionTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
         _positionTimer.Tick += (s, e) => UpdatePosition();
         _positionTimer.Start();
@@ -179,6 +183,7 @@ public partial class OverlayWindow : Window
     private int _baseWidth = 220;
     private double _baseOffsetX;
     private double _baseOffsetY;
+    private double _baseOpacity = 0.85;
 
     // Perfis por aplicativo: cascata AppMatch do processo em foco (ou fixado pela
     // bandeja). Fonte de verdade continua sendo o config global; o perfil só faz
@@ -326,6 +331,17 @@ public partial class OverlayWindow : Window
             MainBorder.MinWidth = w;
             _detailMaxWidth = Math.Max(120, w - 62);
         }
+
+        // Opacidade do painel (vazio = global).
+        Opacity = profile?.Opacity is { } op ? Math.Clamp(op, 0.1, 1.0) : _baseOpacity;
+
+        // Whitelist de séries por instância: perfil > global. Linhas que deixam de
+        // pertencer à whitelist vigente são escondidas (sem quebrar as existentes:
+        // reaparecem se a whitelist voltar a contê-las).
+        if (profile?.ShownSeries is { Count: > 0 } series)
+            _seriesPatterns = [.. series];
+        else
+            _seriesPatterns = [.. _baseSeriesPatterns ?? ["Gpu*", "FanSpeed*", "Disk*"]];
 
         // Acento: substitui a escova do gráfico e o contorno do painel.
         if (!string.IsNullOrWhiteSpace(profile?.AccentColor))
@@ -825,11 +841,11 @@ public partial class OverlayWindow : Window
         var gridRef = grid;
 
         // O updater refresca valor e rótulo: nomes de hardware podem mudar quando o
-        // driver enumera de novo (ex.: troca de nome de NIC). Série ausente = linha oculta
-        // (hardware sumiu; reaparece quando o driver o re-enumerar).
+        // driver enumera de novo (ex.: troca de nome de NIC). Série ausente — ou que
+        // deixou de pertencer à whitelist vigente (perfil aplicado) — esconde a linha.
         _updaters.Add(d =>
         {
-            if (!d.Series.ContainsKey(key))
+            if (!d.Series.ContainsKey(key) || !_seriesPatterns.Any(p => key.MatchesPattern(p)))
             {
                 gridRef.Visibility = Visibility.Collapsed;
                 return;

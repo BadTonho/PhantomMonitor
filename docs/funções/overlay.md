@@ -77,6 +77,8 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
     "offsetY": 120,
     "width": 260,
     "fontSize": 13,
+    "opacity": 0.9,
+    "series": ["Gpu*", "FanSpeed*", "CpuTemperature#*"],
     "accentColor": "#FFCC15"
   }
 ]
@@ -86,8 +88,11 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
   por prefixo (`cs2` casa com `cs2.exe`). `""` ou `"*"` casam com **qualquer**
   aplicativo (perfil universal).
 - Campos nulos/ausentes = usa o valor global (`overlayPosition`, `overlay.width`,
-  `overlay.fontSize`, `overlay.accentColor`). A `fontSize` reescala a árvore
-  inteira do OSD preservando os deltas por tipo de bloco.
+  `overlay.fontSize`, `overlay.accentColor`, `overlayOpacity`,
+  `overlay.shownSeries`). A `fontSize` reescala a árvore
+  inteira do OSD preservando os deltas por tipo de bloco; `series` troca a
+  whitelist de séries por instância (linhas fora dela são escondidas até
+  voltarem).
 - **Fixar pela bandeja:** o menu do ícone de bandeja ganhou uma seção automática
   com `Automático (por aplicativo)` + perfis; escolher um fixa o perfil
   (sobrepõe o matcher; a fixação dura a sessão, não grava no config).

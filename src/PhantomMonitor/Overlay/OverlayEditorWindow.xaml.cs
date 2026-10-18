@@ -436,6 +436,12 @@ public partial class OverlayEditorWindow : Window
             AddProfileField(stack, "Offset Y (vazio = padrão)", profile.OffsetY?.ToString("F0") ?? "", v => profile.OffsetY = ParseDoubleOrNull(v));
             AddProfileField(stack, "Largura px (vazio = padrão)", profile.Width?.ToString("F0") ?? "", v => profile.Width = ParseIntOrNull(v));
             AddProfileField(stack, "Fonte pt (vazio = padrão)", profile.FontSize?.ToString("F1") ?? "", v => profile.FontSize = ParseDoubleOrNull(v));
+            AddProfileField(stack, "Opacidade 0.1–1.0 (vazio = global)", profile.Opacity?.ToString("F2") ?? "", v => profile.Opacity = ParseDoubleOrNull(v));
+            AddProfileField(stack, "Séries por instância (vírgula; vazio = global)", profile.ShownSeries is { Count: > 0 } s ? string.Join(",", s) : "", v =>
+            {
+                var parts = v.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                profile.ShownSeries = parts.Count > 0 ? parts : null;
+            });
             AddProfileField(stack, "Cor de acento #RRGGBB (vazio = padrão)", profile.AccentColor ?? "", v => profile.AccentColor = string.IsNullOrWhiteSpace(v) ? null : v.Trim());
 
             card.Child = stack;

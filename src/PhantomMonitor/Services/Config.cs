@@ -126,6 +126,18 @@ public sealed class AppConfig
             if (profile.OffsetY is { } y) profile.OffsetY = Math.Clamp(y, -5000, 5000);
             if (profile.Width is { } w) profile.Width = Math.Clamp(w, 140, 700);
             if (profile.FontSize is { } f) profile.FontSize = Math.Clamp(f, 8, 20);
+            if (profile.Opacity is { } o) profile.Opacity = Math.Clamp(o, 0.1, 1.0);
+
+            if (profile.ShownSeries is { Count: > 0 })
+            {
+                profile.ShownSeries.RemoveAll(string.IsNullOrWhiteSpace);
+                profile.ShownSeries = profile.ShownSeries
+                    .Select(p => p.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (profile.ShownSeries.Count == 0) profile.ShownSeries = null;
+            }
+
             if (profile.AccentColor is { } c && !IsValidHexColor(c)) profile.AccentColor = null;
         }
     }

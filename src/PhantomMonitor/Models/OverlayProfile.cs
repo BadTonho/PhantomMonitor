@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PhantomMonitor.Models;
 
 /// <summary>
@@ -20,6 +22,16 @@ public sealed class OverlayProfile
 
     public int? Width { get; set; }
     public double? FontSize { get; set; }
+
+    /// <summary>Opacidade do painel (vazio = usa overlayOpacity global).</summary>
+    public double? Opacity { get; set; }
+
+    /// <summary>
+    /// Whitelist de séries por instância deste perfil (padrões wildcards separados no campo
+    /// "series" em modo vírgula: "Gpu*,FanSpeed*"). Vazio = usa a <c>overlay.shownSeries</c> global.
+    /// </summary>
+    [JsonPropertyName("series")]
+    public List<string>? ShownSeries { get; set; }
 
     public string? AccentColor { get; set; }
 }

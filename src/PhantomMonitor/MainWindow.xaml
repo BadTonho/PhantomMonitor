@@ -80,6 +80,8 @@
                                 HorizontalAlignment="Stretch"/>
                         <CheckBox x:Name="CsvToggle" Content="Exportar CSV"/>
                         <CheckBox x:Name="JsonToggle" Content="Exportar JSON"/>
+                        <CheckBox x:Name="StartupToggle" Content="Iniciar com o Windows"
+                                  Checked="OnStartupToggled" Unchecked="OnStartupToggled"/>
                     </StackPanel>
                 </ScrollViewer>
 

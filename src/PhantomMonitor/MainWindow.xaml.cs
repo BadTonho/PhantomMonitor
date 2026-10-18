@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
     private readonly HotkeyService _hotkeys = new();
+    private TrayIconService? _tray;
     private DateTime _startTime;
     private string _logDir = "";
     private AppConfig _config = new();
@@ -47,6 +48,55 @@ public partial class MainWindow : Window
 
         StartMonitoring();
         ApplyHotkey();
+        InitTrayIcon();
+
+        StartupToggle.IsChecked = StartupManager.IsEnabled();
+    }
+
+    /// <summary>Cria o ícone da bandeja (silencioso em caso de falha: o app continua funcional).</summary>
+    private void InitTrayIcon()
+    {
+        try
+        {
+            _tray = new TrayIconService(this, "Phantom Monitor");
+            _tray.ActivateRequested += () =>
+            {
+                Show();
+                if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+                Activate();
+            };
+            _tray.OverlayToggleRequested += () =>
+            {
+                OverlayToggle.IsChecked = OverlayToggle.IsChecked != true;
+            };
+            _tray.StartupToggleRequested += () =>
+            {
+                StartupToggle.IsChecked = !StartupManager.IsEnabled();
+            };
+            _tray.ExitRequested += Close;
+            _tray.IsOverlayVisible = () => OverlayToggle.IsChecked == true;
+            _tray.IsStartupEnabled = StartupManager.IsEnabled;
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("TrayIcon.Init", ex);
+        }
+    }
+
+    private void OnStartupToggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return; // ignora o ajuste inicial do estado do checkbox
+
+        var want = StartupToggle.IsChecked == true;
+        if (!StartupManager.SetEnabled(want))
+        {
+            ErrorLog.Write("StartupManager", $"Não foi possível {(want ? "ativar" : "desativar")} a inicialização com o Windows.");
+        }
+
+        // Reflete o estado real do registro (pode falhar silenciosamente em política restrita).
+        var actual = StartupManager.IsEnabled();
+        if (StartupToggle.IsChecked != actual)
+            StartupToggle.IsChecked = actual;
     }
 
     /// <summary>(Re)registra o atalho global de mostrar/ocultar o OSD conforme o config atual.</summary>
@@ -356,6 +406,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _hotkeys.Dispose();
+        _tray?.Dispose();
         if (_sensorService != null)
         {
             _sensorService.SensorUpdated -= OnSensorData;

@@ -4,7 +4,8 @@ Interface gráfica principal do Phantom Monitor. Utiliza WPF com tema escuro e l
 
 ## Funcionalidades
 
-- **Sidebar Compacta:** Status da execução, tempo ativo, contagem de sensores, navegação rápida e controles de exportação (CSV/JSON/Overlay).
+- **Sidebar Compacta:** Status da execução, tempo ativo, contagem de sensores, navegação rápida, controles de exportação (CSV/JSON/Overlay) e opção `Iniciar com o Windows` (registro `Run`, aplicada na hora).
+- **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Sair) — ver [tray.md](tray.md).
 - **Cards de Métricas Clean:** Cards dedicados para Processador (CPU), Placa de Vídeo (GPU), Taxa de Quadros (FPS), Memória RAM, Armazenamento (Disco), Rede (↓/↑) e Placa-mãe & Ventoinhas (maior temperatura + ventoinhas GPU/Sistema).
 - **Linhas de Detalhes:** Os cards de CPU (clock, potência, voltagem) e GPU (VRAM usada/total, clock, potência, hotspot) exibem uma linha secundária com os valores avançados disponíveis; quando nenhum sensor existe, informam a indisponibilidade.
 - **Indicadores Visuais Sutis:** Barras de progresso horizontais finas (5px) e badges em pílula com borda translúcida para temperatura e frametime (sem efeitos neon ou círculos exagerados).

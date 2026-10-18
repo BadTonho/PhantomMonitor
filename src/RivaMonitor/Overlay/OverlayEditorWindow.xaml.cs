@@ -10,6 +10,8 @@ public partial class OverlayEditorWindow : Window
 {
     private readonly AppConfig _config;
     private readonly string _configPath;
+    private bool _isInitialized = false;
+
     public event Action<AppConfig>? ConfigApplied;
 
     private FrameworkElement? _selectedBlock;
@@ -21,77 +23,91 @@ public partial class OverlayEditorWindow : Window
 
     public OverlayEditorWindow(AppConfig config, string configPath)
     {
-        InitializeComponent();
         _config = config;
         _configPath = configPath;
 
+        InitializeComponent();
+
         InitGridBackground();
         LoadConfigToUi();
+
+        _isInitialized = true;
     }
 
     private void InitGridBackground()
     {
-        var group = new DrawingGroup();
-        group.Children.Add(new GeometryDrawing(
-            new SolidColorBrush(Color.FromRgb(0x0A, 0x0C, 0x10)),
-            null,
-            new RectangleGeometry(new Rect(0, 0, 20, 20))));
-
-        var pen = new Pen(new SolidColorBrush(Color.FromArgb(0x28, 0xFF, 0xFF, 0xFF)), 1.0);
-        pen.Freeze();
-
-        var lines = new GeometryGroup();
-        lines.Children.Add(new LineGeometry(new Point(0, 0), new Point(20, 0)));
-        lines.Children.Add(new LineGeometry(new Point(0, 0), new Point(0, 20)));
-        lines.Freeze();
-
-        group.Children.Add(new GeometryDrawing(null, pen, lines));
-        group.Freeze();
-
-        _gridBrush = new DrawingBrush(group)
+        try
         {
-            TileMode = TileMode.Tile,
-            Viewport = new Rect(0, 0, 20, 20),
-            ViewportUnits = BrushMappingMode.Absolute
-        };
-        _gridBrush.Freeze();
+            var group = new DrawingGroup();
+            group.Children.Add(new GeometryDrawing(
+                new SolidColorBrush(Color.FromRgb(0x0A, 0x0C, 0x10)),
+                null,
+                new RectangleGeometry(new Rect(0, 0, 20, 20))));
 
-        EditorCanvas.Background = _gridBrush;
+            var pen = new Pen(new SolidColorBrush(Color.FromArgb(0x28, 0xFF, 0xFF, 0xFF)), 1.0);
+            pen.Freeze();
+
+            var lines = new GeometryGroup();
+            lines.Children.Add(new LineGeometry(new Point(0, 0), new Point(20, 0)));
+            lines.Children.Add(new LineGeometry(new Point(0, 0), new Point(0, 20)));
+            lines.Freeze();
+
+            group.Children.Add(new GeometryDrawing(null, pen, lines));
+            group.Freeze();
+
+            _gridBrush = new DrawingBrush(group)
+            {
+                TileMode = TileMode.Tile,
+                Viewport = new Rect(0, 0, 20, 20),
+                ViewportUnits = BrushMappingMode.Absolute
+            };
+            _gridBrush.Freeze();
+
+            if (EditorCanvas != null)
+                EditorCanvas.Background = _gridBrush;
+        }
+        catch
+        {
+            // Fallback caso DrawingBrush falhe em algum ambiente
+            if (EditorCanvas != null)
+                EditorCanvas.Background = new SolidColorBrush(Color.FromRgb(0x0A, 0x0C, 0x10));
+        }
     }
 
     private void LoadConfigToUi()
     {
-        PosXBox.Text = _config.OverlayPosition.X.ToString("F0");
-        PosYBox.Text = _config.OverlayPosition.Y.ToString("F0");
+        if (PosXBox != null) PosXBox.Text = _config.OverlayPosition.X.ToString("F0");
+        if (PosYBox != null) PosYBox.Text = _config.OverlayPosition.Y.ToString("F0");
 
-        CheckFps.IsChecked = _config.Overlay.ShowFps;
-        CheckGraph.IsChecked = _config.Overlay.ShowFrametimeGraph;
-        CheckCpu.IsChecked = _config.Overlay.ShowCpu;
-        CheckGpu.IsChecked = _config.Overlay.ShowGpu;
-        CheckRam.IsChecked = _config.Overlay.ShowRam;
-        CheckDisk.IsChecked = _config.Overlay.ShowDisk;
+        if (CheckFps != null) CheckFps.IsChecked = _config.Overlay.ShowFps;
+        if (CheckGraph != null) CheckGraph.IsChecked = _config.Overlay.ShowFrametimeGraph;
+        if (CheckCpu != null) CheckCpu.IsChecked = _config.Overlay.ShowCpu;
+        if (CheckGpu != null) CheckGpu.IsChecked = _config.Overlay.ShowGpu;
+        if (CheckRam != null) CheckRam.IsChecked = _config.Overlay.ShowRam;
+        if (CheckDisk != null) CheckDisk.IsChecked = _config.Overlay.ShowDisk;
 
-        OpacitySlider.Value = _config.OverlayOpacity;
-        OpacityLabel.Text = $"{(_config.OverlayOpacity * 100):F0}%";
+        if (OpacitySlider != null) OpacitySlider.Value = _config.OverlayOpacity;
+        if (OpacityLabel != null) OpacityLabel.Text = $"{(_config.OverlayOpacity * 100):F0}%";
 
-        WidthSlider.Value = _config.Overlay.Width;
-        WidthLabel.Text = $"{_config.Overlay.Width} px";
+        if (WidthSlider != null) WidthSlider.Value = _config.Overlay.Width;
+        if (WidthLabel != null) WidthLabel.Text = $"{_config.Overlay.Width} px";
 
         UpdateLayersVisibility();
     }
 
     private void UpdateLayersVisibility()
     {
-        BlockFps.Visibility = CheckFps.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        BlockGraph.Visibility = CheckGraph.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        BlockCpu.Visibility = CheckCpu.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        BlockGpu.Visibility = CheckGpu.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        BlockRam.Visibility = CheckRam.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        BlockDisk.Visibility = CheckDisk.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockFps != null) BlockFps.Visibility = CheckFps?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockGraph != null) BlockGraph.Visibility = CheckGraph?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockCpu != null) BlockCpu.Visibility = CheckCpu?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockGpu != null) BlockGpu.Visibility = CheckGpu?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockRam != null) BlockRam.Visibility = CheckRam?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (BlockDisk != null) BlockDisk.Visibility = CheckDisk?.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnLayerToggled(object sender, RoutedEventArgs e)
     {
+        if (!_isInitialized) return;
         UpdateLayersVisibility();
     }
 
@@ -139,13 +155,15 @@ public partial class OverlayEditorWindow : Window
             _ => "Bloco Selecionado"
         };
 
-        SelectedBlockText.Text = $"Selecionado: {blockName}";
-        StatusCoordinatesText.Text = $"X: {Canvas.GetLeft(block):F0} px | Y: {Canvas.GetTop(block):F0} px";
+        if (SelectedBlockText != null)
+            SelectedBlockText.Text = $"Selecionado: {blockName}";
+        if (StatusCoordinatesText != null)
+            StatusCoordinatesText.Text = $"X: {Canvas.GetLeft(block):F0} px | Y: {Canvas.GetTop(block):F0} px";
     }
 
     private void OnCanvasMouseMove(object sender, MouseEventArgs e)
     {
-        if (_draggedBlock != null && e.LeftButton == MouseButtonState.Pressed)
+        if (_draggedBlock != null && e.LeftButton == MouseButtonState.Pressed && EditorCanvas != null)
         {
             var curPoint = e.GetPosition(EditorCanvas);
             var deltaX = curPoint.X - _dragStartPoint.X;
@@ -154,7 +172,7 @@ public partial class OverlayEditorWindow : Window
             var newLeft = _initialLeft + deltaX;
             var newTop = _initialTop + deltaY;
 
-            if (SnapGridCheck.IsChecked == true)
+            if (SnapGridCheck?.IsChecked == true)
             {
                 newLeft = Math.Round(newLeft / 10.0) * 10;
                 newTop = Math.Round(newTop / 10.0) * 10;
@@ -166,7 +184,8 @@ public partial class OverlayEditorWindow : Window
             Canvas.SetLeft(_draggedBlock, newLeft);
             Canvas.SetTop(_draggedBlock, newTop);
 
-            StatusCoordinatesText.Text = $"X: {newLeft:F0} px | Y: {newTop:F0} px";
+            if (StatusCoordinatesText != null)
+                StatusCoordinatesText.Text = $"X: {newLeft:F0} px | Y: {newTop:F0} px";
         }
     }
 
@@ -181,7 +200,8 @@ public partial class OverlayEditorWindow : Window
 
     private void OnToggleGrid(object sender, RoutedEventArgs e)
     {
-        if (ShowGridCheck.IsChecked == true)
+        if (!_isInitialized || EditorCanvas == null) return;
+        if (ShowGridCheck?.IsChecked == true && _gridBrush != null)
         {
             EditorCanvas.Background = _gridBrush;
         }
@@ -193,33 +213,36 @@ public partial class OverlayEditorWindow : Window
 
     private void OnPositionBoxChanged(object sender, TextChangedEventArgs e)
     {
+        if (!_isInitialized || PosXBox == null || PosYBox == null) return;
+
         if (double.TryParse(PosXBox.Text, out var x) && double.TryParse(PosYBox.Text, out var y))
         {
             _config.OverlayPosition.X = x;
             _config.OverlayPosition.Y = y;
-            StatusCoordinatesText.Text = $"Posição do Overlay na Tela: X: {x:F0} px | Y: {y:F0} px";
+            if (StatusCoordinatesText != null)
+                StatusCoordinatesText.Text = $"Posição do Overlay na Tela: X: {x:F0} px | Y: {y:F0} px";
         }
     }
 
     private void OnPosTopLeft(object sender, RoutedEventArgs e)
     {
-        PosXBox.Text = "20";
-        PosYBox.Text = "40";
+        if (PosXBox != null) PosXBox.Text = "20";
+        if (PosYBox != null) PosYBox.Text = "40";
     }
 
     private void OnPosTopRight(object sender, RoutedEventArgs e)
     {
         var screenW = SystemParameters.PrimaryScreenWidth;
         var w = _config.Overlay.Width > 0 ? _config.Overlay.Width : 220;
-        PosXBox.Text = Math.Max(20, screenW - w - 20).ToString("F0");
-        PosYBox.Text = "40";
+        if (PosXBox != null) PosXBox.Text = Math.Max(20, screenW - w - 20).ToString("F0");
+        if (PosYBox != null) PosYBox.Text = "40";
     }
 
     private void OnPosBottomLeft(object sender, RoutedEventArgs e)
     {
         var screenH = SystemParameters.PrimaryScreenHeight;
-        PosXBox.Text = "20";
-        PosYBox.Text = Math.Max(40, screenH - 260).ToString("F0");
+        if (PosXBox != null) PosXBox.Text = "20";
+        if (PosYBox != null) PosYBox.Text = Math.Max(40, screenH - 260).ToString("F0");
     }
 
     private void OnPosBottomRight(object sender, RoutedEventArgs e)
@@ -227,12 +250,13 @@ public partial class OverlayEditorWindow : Window
         var screenW = SystemParameters.PrimaryScreenWidth;
         var screenH = SystemParameters.PrimaryScreenHeight;
         var w = _config.Overlay.Width > 0 ? _config.Overlay.Width : 220;
-        PosXBox.Text = Math.Max(20, screenW - w - 20).ToString("F0");
-        PosYBox.Text = Math.Max(40, screenH - 260).ToString("F0");
+        if (PosXBox != null) PosXBox.Text = Math.Max(20, screenW - w - 20).ToString("F0");
+        if (PosYBox != null) PosYBox.Text = Math.Max(40, screenH - 260).ToString("F0");
     }
 
     private void OnOpacitySliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!_isInitialized) return;
         if (OpacityLabel != null)
         {
             OpacityLabel.Text = $"{(e.NewValue * 100):F0}%";
@@ -242,32 +266,33 @@ public partial class OverlayEditorWindow : Window
 
     private void OnWidthSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!_isInitialized) return;
         if (WidthLabel != null)
         {
             WidthLabel.Text = $"{e.NewValue:F0} px";
             _config.Overlay.Width = (int)e.NewValue;
-            BlockGraph.Width = e.NewValue;
-            BlockCpu.Width = e.NewValue;
-            BlockGpu.Width = e.NewValue;
-            BlockRam.Width = e.NewValue;
-            BlockDisk.Width = e.NewValue;
+            if (BlockGraph != null) BlockGraph.Width = e.NewValue;
+            if (BlockCpu != null) BlockCpu.Width = e.NewValue;
+            if (BlockGpu != null) BlockGpu.Width = e.NewValue;
+            if (BlockRam != null) BlockRam.Width = e.NewValue;
+            if (BlockDisk != null) BlockDisk.Width = e.NewValue;
         }
     }
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
-        if (double.TryParse(PosXBox.Text, out var x)) _config.OverlayPosition.X = x;
-        if (double.TryParse(PosYBox.Text, out var y)) _config.OverlayPosition.Y = y;
+        if (PosXBox != null && double.TryParse(PosXBox.Text, out var x)) _config.OverlayPosition.X = x;
+        if (PosYBox != null && double.TryParse(PosYBox.Text, out var y)) _config.OverlayPosition.Y = y;
 
-        _config.Overlay.ShowFps = CheckFps.IsChecked == true;
-        _config.Overlay.ShowFrametimeGraph = CheckGraph.IsChecked == true;
-        _config.Overlay.ShowCpu = CheckCpu.IsChecked == true;
-        _config.Overlay.ShowGpu = CheckGpu.IsChecked == true;
-        _config.Overlay.ShowRam = CheckRam.IsChecked == true;
-        _config.Overlay.ShowDisk = CheckDisk.IsChecked == true;
+        if (CheckFps != null) _config.Overlay.ShowFps = CheckFps.IsChecked == true;
+        if (CheckGraph != null) _config.Overlay.ShowFrametimeGraph = CheckGraph.IsChecked == true;
+        if (CheckCpu != null) _config.Overlay.ShowCpu = CheckCpu.IsChecked == true;
+        if (CheckGpu != null) _config.Overlay.ShowGpu = CheckGpu.IsChecked == true;
+        if (CheckRam != null) _config.Overlay.ShowRam = CheckRam.IsChecked == true;
+        if (CheckDisk != null) _config.Overlay.ShowDisk = CheckDisk.IsChecked == true;
 
-        _config.OverlayOpacity = OpacitySlider.Value;
-        _config.Overlay.Width = (int)WidthSlider.Value;
+        if (OpacitySlider != null) _config.OverlayOpacity = OpacitySlider.Value;
+        if (WidthSlider != null) _config.Overlay.Width = (int)WidthSlider.Value;
 
         _config.Save(_configPath);
         ConfigApplied?.Invoke(_config);

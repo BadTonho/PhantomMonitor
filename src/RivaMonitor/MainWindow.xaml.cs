@@ -246,20 +246,28 @@ public partial class MainWindow : Window
 
     private void OnOpenOverlayEditor(object sender, RoutedEventArgs e)
     {
-        var configPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "config.json");
+        try
+        {
+            var configPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "config.json");
 
-        if (_overlayEditor == null || !_overlayEditor.IsVisible)
-        {
-            _overlayEditor = new OverlayEditorWindow(_config, configPath);
-            _overlayEditor.Owner = this;
-            _overlayEditor.ConfigApplied += OnOverlayConfigApplied;
-            _overlayEditor.Closed += (_, _) => _overlayEditor = null;
-            _overlayEditor.Show();
+            if (_overlayEditor == null || !_overlayEditor.IsVisible)
+            {
+                _overlayEditor = new OverlayEditorWindow(_config, configPath);
+                _overlayEditor.Owner = this;
+                _overlayEditor.ConfigApplied += OnOverlayConfigApplied;
+                _overlayEditor.Closed += (_, _) => _overlayEditor = null;
+                _overlayEditor.Show();
+            }
+            else
+            {
+                _overlayEditor.Activate();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _overlayEditor.Activate();
+            MessageBox.Show($"Não foi possível abrir o editor do overlay:\n\n{ex.Message}\n\n{ex.StackTrace}",
+                "Riva Monitor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

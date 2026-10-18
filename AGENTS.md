@@ -53,3 +53,12 @@ Antes de realizar qualquer commit ou push:
 * **Não travar o local de saída do executável:** Não restrinja nem engesse onde os executáveis ou builds são gerados (`bin/`, `publish/`, `dist/`, pasta customizada, etc.). O local de compilação, teste ou publicação é livre.
 * **Regra única sobre binários:** Independentemente de onde o executável ou DLL for compilado/gerado, apenas garanta que esses binários não sejam commitados no repositório Git (já cobertos pelas regras globais do `.gitignore`).
 
+---
+
+## 4. Manutenção Contínua da Documentação (OBRIGATÓRIO)
+
+Sempre que novas funcionalidades, alterações arquiteturais, novos sensores, configurações ou refatorações forem implementadas:
+1. **Sincronização Imediata:** A documentação técnica deve ser mantida rigorosamente atualizada no mesmo ciclo de desenvolvimento da alteração de código.
+2. **Diretório `docs/`:** Atualizar ou criar os documentos correspondentes na pasta `docs/` (ex.: `docs/funções/` e guias de módulos).
+3. **`README.md`:** Refletir mudanças em instruções de execução, novos requisitos, atalhos, arquitetura geral ou dependências.
+4. **Sem Código Órfão de Documentação:** Nenhuma funcionalidade deve ser adicionada ou modificada sem que a respectiva documentação reflita o comportamento real e atualizado do sistema.

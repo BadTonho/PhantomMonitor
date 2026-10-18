@@ -21,9 +21,15 @@ public sealed class AppConfig
             if (!File.Exists(path))
             {
                 var dir = Path.GetDirectoryName(path) ?? "";
-                var examplePath = Path.Combine(dir, "config.example.json");
-                if (File.Exists(examplePath))
+                var examplePath = new[]
                 {
+                    Path.Combine(dir, "config.example.json"),
+                    Path.Combine(AppContext.BaseDirectory, "config.example.json")
+                }.FirstOrDefault(File.Exists);
+
+                if (examplePath != null)
+                {
+                    if (dir.Length > 0) Directory.CreateDirectory(dir);
                     File.Copy(examplePath, path);
                 }
             }
@@ -32,28 +38,50 @@ public sealed class AppConfig
             {
                 var json = File.ReadAllText(path);
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                return JsonSerializer.Deserialize<AppConfig>(json, options) ?? new AppConfig();
+                var cfg = JsonSerializer.Deserialize<AppConfig>(json, options) ?? new AppConfig();
+                cfg.Normalize();
+                return cfg;
             }
 
             return new AppConfig();
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorLog.Write("Config.Load", ex);
             return new AppConfig();
         }
     }
 
-    public void Save(string path)
+    /// <summary>Corrige valores inválidos vindos de um config editado à mão.</summary>
+    public void Normalize()
+    {
+        if (UpdateIntervalMs < 100) UpdateIntervalMs = 100;
+        OverlayOpacity = Math.Clamp(OverlayOpacity, 0.1, 1.0);
+        OverlayPosition ??= new();
+        Overlay ??= new();
+        Sensors ??= new();
+    }
+
+    public bool Save(string path)
     {
         try
         {
             var options = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             var json = JsonSerializer.Serialize(this, options);
-            File.WriteAllText(path, json);
+
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+            // Escrita atômica: evita config.json truncado se o app fechar no meio.
+            var tmp = path + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, path, overwrite: true);
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
-            // fallback
+            ErrorLog.Write("Config.Save", ex);
+            return false;
         }
     }
 }

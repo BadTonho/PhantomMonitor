@@ -8,17 +8,32 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - Leitura de temperatura, uso, clock e potência da GPU
 - Leitura de uso e disponibilidade de RAM
 - Leitura de uso e I/O de disco
-- Leitura de velocidade de ventoinhas
-- Fallback via WMI para temperatura da CPU (3 métodos diferentes)
-- Fallback via Performance Counters para uso de RAM
-- Leitura de processos da GPU via WMI
+- Leitura de velocidade de ventoinhas e temperatura da placa-mãe (inclui sensores de sub-hardware/SuperIO)
+- Fallback de temperatura da CPU via zona térmica ACPI (WMI `root\WMI`), **somente se o LibreHardwareMonitor não fornecer** a temperatura; consultado no máximo a cada 10 s e rotulado como aproximação
+- Fallback de RAM via WMI (`Win32_OperatingSystem`) e `PerformanceCounter` reutilizado entre ciclos
+- Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
+
+## Regras de mapeamento de sensores
+
+- **Temperatura da CPU:** prioridade `Package/Tctl/Tdie/Average` > `Max` > demais.
+- **Temperatura da GPU:** `GPU Core` tem prioridade sobre `Memory Junction` etc.; GPU Intel integrada é processada antes, e a GPU dedicada prevalece.
+- **Vários núcleos/discos:** uso por núcleo, uso de disco, clock, ventoinhas e temperatura da placa-mãe guardam o **maior** valor; throughput de disco e rede é **somado**.
+- **Disco (`DiskUsage`):** usa o sensor `Total Activity` (% de atividade), não `Used Space`.
+- **RAM:** somente memória física (ignora `Virtual Memory`). Os sensores `Data` do LibreHardwareMonitor já vêm em **GB**; `RamTotal` = usada + disponível.
+
+## Concorrência e ciclo de vida
+
+- `Start/Stop/Update/Dispose` são serializados por um lock; um tick que chega durante outro ciclo é descartado.
+- `Stop()` e `Dispose()` são idempotentes; `SensorUpdated` é disparado **fora** do lock.
+- Exceções são registradas em `logs/errors.log` via `ErrorLog` (sem `catch` vazios).
 
 ## Principais métodos
 
 - `Start()` - Inicia o monitoramento dos sensores
 - `Stop()` - Para o monitoramento
 - `GetCurrentSnapshot()` - Retorna o snapshot mais recente dos sensores
+- `Dispose()` - Para e libera timer, FPS monitor e contadores
 
 ## Eventos
 
-- `SensorUpdated` - Disparado a cada ciclo de atualização com os dados mais recentes
+- `SensorUpdated` - Disparado a cada ciclo de atualização com os dados mais recentes. A interface o consome via `Dispatcher.InvokeAsync` (não bloqueia a thread do timer).

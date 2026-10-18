@@ -7,16 +7,20 @@ namespace RivaMonitor.Services;
 public sealed class CsvLogger : IDisposable
 {
     private readonly StreamWriter _writer;
-    private readonly string[] _headers;
-    private readonly string _filePath;
+    private readonly SensorType[] _types;
     private readonly object _lock = new();
+    private bool _disposed;
 
     public CsvLogger(string filePath, IEnumerable<SensorType> types)
     {
-        _filePath = filePath;
-        _headers = ["Timestamp", .. types.Select(t => t.ToString())];
-        _writer = new StreamWriter(filePath, false);
-        _writer.WriteLine(string.Join(",", _headers));
+        // Tipos resolvidos uma única vez (antes havia Enum.Parse por coluna a cada escrita).
+        _types = types.ToArray();
+
+        var dir = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+        _writer = new StreamWriter(filePath, false) { AutoFlush = false };
+        _writer.WriteLine(string.Join(",", ["Timestamp", .. _types.Select(t => t.ToString())]));
         _writer.Flush();
     }
 
@@ -24,11 +28,13 @@ public sealed class CsvLogger : IDisposable
     {
         lock (_lock)
         {
-            var values = new List<string> { data.Timestamp.ToString("O") };
-            for (int i = 1; i < _headers.Length; i++)
+            if (_disposed) return;
+
+            var values = new string[_types.Length + 1];
+            values[0] = data.Timestamp.ToString("O", CultureInfo.InvariantCulture);
+            for (int i = 0; i < _types.Length; i++)
             {
-                var type = Enum.Parse<SensorType>(_headers[i]);
-                values.Add(data.GetValue(type).ToString("F2", CultureInfo.InvariantCulture));
+                values[i + 1] = data.GetValue(_types[i]).ToString("F2", CultureInfo.InvariantCulture);
             }
             _writer.WriteLine(string.Join(",", values));
             _writer.Flush();
@@ -39,6 +45,8 @@ public sealed class CsvLogger : IDisposable
     {
         lock (_lock)
         {
+            if (_disposed) return;
+            _disposed = true;
             _writer.Flush();
             _writer.Dispose();
         }

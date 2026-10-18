@@ -294,11 +294,19 @@ public partial class OverlayEditorWindow : Window
         if (OpacitySlider != null) _config.OverlayOpacity = OpacitySlider.Value;
         if (WidthSlider != null) _config.Overlay.Width = (int)WidthSlider.Value;
 
-        _config.Save(_configPath);
+        var saved = _config.Save(_configPath);
         ConfigApplied?.Invoke(_config);
 
-        MessageBox.Show("Configuração do Overlay salva e aplicada com sucesso!",
-            "Editor de Overlay", MessageBoxButton.OK, MessageBoxImage.Information);
+        if (saved)
+        {
+            MessageBox.Show("Configuração do Overlay salva e aplicada com sucesso!",
+                "Editor de Overlay", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show($"Configuração aplicada, mas não foi possível salvar em:\n{_configPath}\n\nVeja logs/errors.log.",
+                "Editor de Overlay", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void OnResetClick(object sender, RoutedEventArgs e)

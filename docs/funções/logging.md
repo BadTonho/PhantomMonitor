@@ -15,8 +15,17 @@ Salva os dados de sensores em arquivo CSV no diretório `logs/`.
 Salva o snapshot mais recente em um arquivo JSON no diretório `logs/`.
 
 - Sempre sobrescreve o mesmo arquivo (`sensors_latest.json`)
+- Escrita **atômica** (`.tmp` + substituição): leitores externos nunca veem JSON truncado
 - Formato JSON legível com todos os valores de sensores
 - Útil para integração com outras ferramentas
+
+## ErrorLog (`logs/errors.log`)
+
+Registro de erros internos (substitui os antigos `catch` vazios). Fica em `logs/` ao lado do executável.
+
+- Formato: `data hora [contexto] mensagem`
+- Mensagens idênticas consecutivas são suprimidas; o arquivo é zerado ao passar de ~1 MB
+- Nunca lança exceção (falha de log não derruba o app)
 
 ## Ativação
 

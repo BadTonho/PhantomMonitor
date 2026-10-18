@@ -24,6 +24,19 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 ### SensorConfig
 - `Cpu/Gpu/Ram/Disk/Network/Motherboard` - Sensores habilitados
 
-## Carregamento
+## Carregamento e localização
 
-O caminho do `config.json` é resolvido a partir do diretório base do aplicativo, subindo 5 níveis até a raiz da solução.
+O caminho é resolvido por `ConfigPaths.ConfigFile` (independente da pasta de saída do build):
+
+1. **Desenvolvimento:** sobe a partir do executável até encontrar `RivaMonitor.slnx` (ou `.sln`) e usa o `config.json` da raiz do repositório.
+2. **Publicado/instalado:** usa `%AppData%\RivaMonitor\config.json`.
+
+Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da mesma pasta ou ao lado do executável — o `.csproj` o copia para a saída) e cria o diretório se necessário.
+
+## Validação e persistência
+
+- `AppConfig.Normalize()` corrige valores inválidos (intervalo mínimo de 100 ms, opacidade entre 0,1 e 1, objetos `null`).
+- `AppConfig.Save()` grava de forma atômica (arquivo `.tmp` + substituição) e retorna `bool`; o Editor de Overlay avisa se não conseguiu salvar.
+- Falhas de leitura/gravação são registradas em `logs/errors.log` (ver [logging.md](logging.md)).
+- `showOverlay` define o estado inicial do toggle "Overlay".
+- `sensors.*`, `overlay.showNetwork`, `showGpuProcesses`, `showFans`, `compactMode`, `accentColor` e `fontSize` estão reservados no modelo, mas ainda não são consumidos pela interface.

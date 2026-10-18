@@ -13,12 +13,7 @@ public static class SensorServiceFactory
             return new HardwareMonitorService(updateIntervalMs);
         }
 
-        if (OperatingSystem.IsLinux())
-        {
-            return new Linux.LinuxSensorService(updateIntervalMs);
-        }
-
-        // Fallback genérico caso executado em outro ambiente POSIX
+        // Linux e demais sistemas POSIX (macOS usa o mesmo caminho /proc best-effort).
         return new Linux.LinuxSensorService(updateIntervalMs);
     }
 }

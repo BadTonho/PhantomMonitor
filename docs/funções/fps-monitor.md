@@ -15,16 +15,17 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 - **Contrato Multiplataforma (`IFpsMonitor`):** Interface unificada que abstrai a captura de taxas de quadros entre Windows (`FpsMonitor`) e Linux (`LinuxFpsMonitor`).
 - **Motor Windows:** `PresentMon.exe` (standalone oficial v2.6.0 da Intel, armazenado em `tools/` e copiado automaticamente para a pasta de saída)
 - **Motor Linux:** `RivaVulkanLayer` (camada Vulkan nativa em C++ que intercepta `vkQueuePresentKHR` e transmite dados via memória compartilhada `/dev/shm/riva_fps`, dispensando softwares como MangoHud)
-- **Comunicação no Windows:** O serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats`) e analisa o fluxo de CSV em tempo real de forma assíncrona
-- **Parse Dinâmico:** Mapeia automaticamente as colunas do PresentMon (`ProcessID`, `Application`, `msBetweenPresents` / `FrameTime`)
+- **Comunicação no Windows:** o serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats --stop_existing_session --session_name RivaMonitorFps --exclude RivaMonitor.exe --no_track_input --no_track_gpu --exclude_dropped`) e analisa o CSV em tempo real. Os argumentos precisam existir no PresentMon 2.x (por exemplo, `--no_track_gpu_video` **não existe** e faz o processo encerrar imediatamente).
+- **Parse Dinâmico:** mapeia as colunas do PresentMon (`ProcessID`, `Application`, `msBetweenPresents` / `FrameTime`) e trata campos CSV entre aspas
 - **Detecção de Foco:** `GetForegroundWindow` e `GetWindowThreadProcessId` via P/Invoke identificam o jogo ativo a cada 500ms
+- **Privilégios:** o PresentMon exige Administrador (ou o grupo "Performance Log Users"). Sem isso, `EtwDiag` mostra "Requer Administrador" e o motivo completo vai para `logs/errors.log`
 
 ## Propriedades
 
 - `Fps` - FPS atual (suavizado via Exponential Moving Average)
 - `FrametimeMs` - Frametime em milissegundos
-- `FpsAvg` - FPS médio dos frames recentes
-- `FpsMin` - Menor FPS registrado na sessão atual
+- `FpsAvg` - FPS médio das últimas 600 amostras
+- `FpsMin` - Menor FPS das últimas 600 amostras (janela móvel, atualizado a cada ~1 s)
 - `Fps1Low` - 1% Low (pior 1% dos frametimes para detecção de stuttering)
 - `HasData` - Indica se há dados de frames ativos
 - `FrametimeHistory` - Buffer circular de 600 amostras usado pelo gráfico do overlay

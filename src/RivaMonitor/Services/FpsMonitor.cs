@@ -8,8 +8,9 @@ namespace RivaMonitor.Services;
 
 public sealed class FpsMonitor : IFpsMonitor
 {
-    private readonly FrametimeBuffer _frametimeHistory = new(600);
-    private readonly List<double> _fpsSamples = new(600);
+    private const int MaxSamples = 600;
+    private readonly FrametimeBuffer _frametimeHistory = new(MaxSamples);
+    private readonly Queue<double> _fpsSamples = new(MaxSamples);
     private readonly object _lock = new();
 
     private Process? _presentMonProcess;
@@ -25,8 +26,8 @@ public sealed class FpsMonitor : IFpsMonitor
     private volatile string _perfResult = "";
     private volatile string _etwDiag = "Iniciando PresentMon...";
 
-    private int _targetPid;
-    private string _targetProcessName = "";
+    private volatile int _targetPid;
+    private volatile string _targetProcessName = "";
     private DateTime _lastFrameTime = DateTime.UtcNow;
     private DateTime _lastStatsCalc = DateTime.UtcNow;
 
@@ -110,7 +111,8 @@ public sealed class FpsMonitor : IFpsMonitor
             var startInfo = new ProcessStartInfo
             {
                 FileName = presentMonPath,
-                Arguments = "--output_stdout --no_console_stats --stop_existing_session --session_name RivaMonitorFps --exclude RivaMonitor.exe --no_track_input --no_track_gpu_video --exclude_dropped",
+                // PresentMon 2.x: --no_track_gpu_video não existe (rejeitado como opção desconhecida).
+                Arguments = "--output_stdout --no_console_stats --stop_existing_session --session_name RivaMonitorFps --exclude RivaMonitor.exe --no_track_input --no_track_gpu --exclude_dropped",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -142,12 +144,14 @@ public sealed class FpsMonitor : IFpsMonitor
                     {
                         _etwDiag = $"PresentMon: {e.Data}";
                     }
+                    ErrorLog.Write("PresentMon", e.Data);
                 }
             };
 
             _presentMonProcess.Exited += (s, e) =>
             {
-                if (string.IsNullOrEmpty(_etwDiag) || _etwDiag.StartsWith("PresentMon ativo"))
+                // Preserva a causa (ex.: falta de privilégio); caso contrário informa o encerramento.
+                if (!_etwDiag.StartsWith("Requer") && !_etwDiag.StartsWith("PresentMon:"))
                 {
                     _etwDiag = "PresentMon encerrado";
                 }
@@ -174,8 +178,8 @@ public sealed class FpsMonitor : IFpsMonitor
             // Verifica se é a linha de cabeçalho
             if (!_headerParsed || line.StartsWith("Application", StringComparison.OrdinalIgnoreCase))
             {
-                var headers = line.Split(',');
-                for (int i = 0; i < headers.Length; i++)
+                var headers = SplitCsv(line);
+                for (int i = 0; i < headers.Count; i++)
                 {
                     var h = headers[i].Trim();
                     if (h.Equals("ProcessID", StringComparison.OrdinalIgnoreCase))
@@ -198,15 +202,17 @@ public sealed class FpsMonitor : IFpsMonitor
                 return;
             }
 
-            var parts = line.Split(',');
+            var parts = SplitCsv(line);
             int minCols = Math.Max(_colPid, _colFrametime);
-            if (parts.Length <= minCols) return;
+            if (parts.Count <= minCols) return;
 
             if (!int.TryParse(parts[_colPid].Trim(), out int pid) || pid <= 0)
                 return;
 
+            int targetPid = _targetPid;
+
             // Filtro por processo: focar no processo da janela ativa se definido
-            if (_targetPid > 0 && pid != _targetPid)
+            if (targetPid > 0 && pid != targetPid)
                 return;
 
             string rawFt = parts[_colFrametime].Trim();
@@ -214,10 +220,10 @@ public sealed class FpsMonitor : IFpsMonitor
                 return;
 
             // Se ainda não temos um target e o processo não é do sistema, adotamos este
-            if (_targetPid == 0 && _colApp >= 0 && parts.Length > _colApp)
+            if (targetPid == 0 && _colApp >= 0 && parts.Count > _colApp)
             {
                 var appName = parts[_colApp].Trim();
-                if (!IsIgnoredProcess(appName))
+                if (!IsIgnoredProcess(Path.GetFileNameWithoutExtension(appName)))
                 {
                     _targetPid = pid;
                     _targetProcessName = appName;
@@ -242,15 +248,10 @@ public sealed class FpsMonitor : IFpsMonitor
                 }
 
                 _fps = (float)_emaFps;
-                _fpsSamples.Add(instantFps);
-                if (_fpsSamples.Count > 600)
+                _fpsSamples.Enqueue(instantFps);
+                if (_fpsSamples.Count > MaxSamples)
                 {
-                    _fpsSamples.RemoveAt(0);
-                }
-
-                if (instantFps > 0 && instantFps < _fpsMin)
-                {
-                    _fpsMin = (float)instantFps;
+                    _fpsSamples.Dequeue();
                 }
 
                 _hasData = true;
@@ -259,8 +260,10 @@ public sealed class FpsMonitor : IFpsMonitor
                 var now = DateTime.UtcNow;
                 if ((now - _lastStatsCalc).TotalSeconds >= 1.0 && _fpsSamples.Count > 0)
                 {
-                    _fpsAvg = (float)_fpsSamples.Average();
                     var sorted = _fpsSamples.OrderBy(v => v).ToList();
+                    _fpsAvg = (float)sorted.Average();
+                    // Mínimo da janela recente (e não do início da sessão, sensível a um único pico).
+                    _fpsMin = (float)sorted[0];
                     int idx1Low = Math.Max(0, (int)(sorted.Count * 0.01));
                     _fps1Low = (float)sorted[idx1Low];
                     _lastStatsCalc = now;
@@ -270,7 +273,47 @@ public sealed class FpsMonitor : IFpsMonitor
                 _debugInfo = _perfResult;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("FpsMonitor.ProcessCsvLine", ex);
+        }
+    }
+
+    /// <summary>Divide uma linha CSV respeitando campos entre aspas.</summary>
+    private static List<string> SplitCsv(string line)
+    {
+        var result = new List<string>();
+        var sb = new StringBuilder();
+        bool inQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (c == '"')
+            {
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    sb.Append('"');
+                    i++;
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+            }
+            else if (c == ',' && !inQuotes)
+            {
+                result.Add(sb.ToString());
+                sb.Clear();
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+
+        result.Add(sb.ToString());
+        return result;
     }
 
     private void CheckForegroundWindow()
@@ -286,7 +329,7 @@ public sealed class FpsMonitor : IFpsMonitor
                     string pName = "";
                     try
                     {
-                        var p = Process.GetProcessById((int)fgPid);
+                        using var p = Process.GetProcessById((int)fgPid);
                         pName = p.ProcessName;
                     }
                     catch { pName = $"pid:{fgPid}"; }
@@ -312,7 +355,7 @@ public sealed class FpsMonitor : IFpsMonitor
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { ErrorLog.Write("FpsMonitor.CheckForegroundWindow", ex); }
     }
 
     private static bool IsIgnoredProcess(string name)
@@ -323,7 +366,10 @@ public sealed class FpsMonitor : IFpsMonitor
                name.Equals("StartMenuExperienceHost", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("SearchHost", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("TextInputHost", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("LockApp", StringComparison.OrdinalIgnoreCase);
+               name.Equals("LockApp", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("dwm", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("ApplicationFrameHost", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("devenv", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ResetStats()

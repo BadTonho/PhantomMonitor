@@ -82,34 +82,47 @@ RivaShopee/
 
 ## Configuração
 
-Copie `config.example.json` para `config.json` e personalize conforme desejado:
+O `config.json` é criado automaticamente a partir de `config.example.json` na primeira execução:
+
+- **Desenvolvimento** (executando dentro do repositório): `config.json` na raiz do repositório (detectada pelo `RivaMonitor.slnx`).
+- **Publicado/instalado**: `%AppData%\RivaMonitor\config.json`.
+
+Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 
 ```json
 {
   "updateIntervalMs": 1000,
   "logToCsv": false,
-  "logToJson": false,
+  "logToJson": true,
+  "showOverlay": true,
+  "overlayOpacity": 0.85,
+  "overlayPosition": { "x": 20, "y": 80 },
   "overlay": {
-    "x": 20,
-    "y": 20,
+    "width": 220,
     "showCpu": true,
     "showGpu": true,
     "showRam": true,
     "showDisk": true,
     "showFps": true,
-    "fontSize": 14,
-    "lineSpacing": 4,
-    "backgroundColor": "#D914171E",
-    "accentColor": "#3B82F6",
-    "textColor": "#F1F5F9"
+    "showFrametimeGraph": true
   }
 }
 ```
 
+## Build e notas
+
+- O app WPF (`net10.0-windows`) executa **somente no Windows**. O suporte a Linux (`Services/Linux/` + `RivaVulkanLayer`) é a base para um futuro front-end multiplataforma (ver [suporte-linux.md](docs/funções/suporte-linux.md)).
+- A `RivaSensorLib.dll` (stub opcional) é compilada pelo `.csproj` quando o MSVC é encontrado; caso contrário o build apenas emite um aviso. Use `-p:VcVarsPath=...` para apontar o `vcvars64.bat`.
+- O FPS no Windows requer **Administrador** (PresentMon/ETW). Erros internos ficam em `logs/errors.log`.
+- O `RivaVulkanLayer` é compilado via CMake/`install_layer.sh` e não faz parte do `RivaMonitor.slnx`.
+
 ## Documentação
 
-Consulte os guias específicos em [docs/funções/](file:///docs/funções/):
-- [Suporte a Linux e Camada Vulkan](file:///docs/funções/suporte-linux.md)
-- [Monitoramento de FPS e Frametime](file:///docs/funções/fps-monitor.md)
-- [Editor Visual de Overlay](file:///docs/funções/overlay.md)
-- [Hardware Monitor Service](file:///docs/funções/hardware-monitor.md)
+Consulte os guias específicos em [docs/funções/](docs/funções/):
+- [Suporte a Linux e Camada Vulkan](docs/funções/suporte-linux.md)
+- [Monitoramento de FPS e Frametime](docs/funções/fps-monitor.md)
+- [Editor Visual de Overlay](docs/funções/overlay.md)
+- [Hardware Monitor Service](docs/funções/hardware-monitor.md)
+- [Configuração](docs/funções/configuracao.md)
+- [Logging e ErrorLog](docs/funções/logging.md)
+- [Biblioteca nativa (RivaSensorLib)](docs/funções/sensor-nativo.md)

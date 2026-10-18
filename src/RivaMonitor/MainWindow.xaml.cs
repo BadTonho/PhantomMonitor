@@ -29,15 +29,14 @@ public partial class MainWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        var configPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "config.json");
-        _config = AppConfig.Load(configPath);
+        _config = AppConfig.Load(ConfigPaths.ConfigFile);
 
         _logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
         Directory.CreateDirectory(_logDir);
 
         CsvToggle.IsChecked = _config.LogToCsv;
         JsonToggle.IsChecked = _config.LogToJson;
+        OverlayToggle.IsChecked = _config.ShowOverlay;
 
         if (!IsRunningAsAdmin())
         {
@@ -76,25 +75,24 @@ public partial class MainWindow : Window
             Process.Start(startInfo);
             Application.Current.Shutdown();
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorLog.Write("RestartAsAdmin", ex);
             MessageBox.Show("Não foi possível elevar o aplicativo. Execute manualmente como Administrador.",
                 "Riva Monitor", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
-    private void StartMonitoring()
-    {
-        OnStartClick(null!, null!);
-    }
+    private void StartMonitoring() => BeginMonitoring();
 
-    private void OnStartClick(object sender, RoutedEventArgs e)
+    private void OnStartClick(object sender, RoutedEventArgs e) => BeginMonitoring();
+
+    private void BeginMonitoring()
     {
         if (_sensorService != null) return;
 
         _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs);
         _sensorService.SensorUpdated += OnSensorData;
-        _sensorService.Start();
 
         _overlay = new OverlayWindow(_config,
             _config.OverlayPosition.X,
@@ -121,11 +119,18 @@ public partial class MainWindow : Window
         StatusText.Text = "Monitorando";
         StatusText.Foreground = FindResource("GreenBrush") as Brush;
         StatusDot.Fill = FindResource("GreenBrush") as Brush;
+
+        // Inicia o serviço por último, com loggers/overlay já prontos para o primeiro evento.
+        _sensorService.Start();
     }
 
     private void OnStopClick(object sender, RoutedEventArgs e)
     {
-        _sensorService?.Stop();
+        if (_sensorService != null)
+        {
+            _sensorService.SensorUpdated -= OnSensorData;
+            _sensorService.Dispose();
+        }
         _overlay?.Close();
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
@@ -159,8 +164,13 @@ public partial class MainWindow : Window
 
     private void OnSensorData(SensorData data)
     {
-        Dispatcher.Invoke(() =>
+        if (Dispatcher.HasShutdownStarted) return;
+
+        // Assíncrono: não bloqueia a thread do timer caso a UI esteja ocupada ou fechando.
+        Dispatcher.InvokeAsync(() =>
         {
+            if (_sensorService == null) return; // parado enquanto o evento estava na fila
+
             CpuUsageText.Text = $"{data.CpuUsage:F1}%";
             CpuUsageText.Foreground = GetUsageBrush(data.CpuUsage);
             CpuProgressBar.Value = Math.Clamp(data.CpuUsage, 0, 100);
@@ -227,9 +237,11 @@ public partial class MainWindow : Window
     private DebugWindow? _debugWindow;
     private OverlayEditorWindow? _overlayEditor;
 
-    public void OpenDebugWindow() => OnOpenDebugWindow(null!, null!);
+    public void OpenDebugWindow() => ShowDebugWindow();
 
-    private void OnOpenDebugWindow(object sender, RoutedEventArgs e)
+    private void OnOpenDebugWindow(object sender, RoutedEventArgs e) => ShowDebugWindow();
+
+    private void ShowDebugWindow()
     {
         if (_debugWindow == null || !_debugWindow.IsVisible)
         {
@@ -248,12 +260,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            var configPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "config.json");
-
             if (_overlayEditor == null || !_overlayEditor.IsVisible)
             {
-                _overlayEditor = new OverlayEditorWindow(_config, configPath);
+                _overlayEditor = new OverlayEditorWindow(_config, ConfigPaths.ConfigFile);
                 _overlayEditor.Owner = this;
                 _overlayEditor.ConfigApplied += OnOverlayConfigApplied;
                 _overlayEditor.Closed += (_, _) => _overlayEditor = null;
@@ -266,7 +275,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Não foi possível abrir o editor do overlay:\n\n{ex.Message}\n\n{ex.StackTrace}",
+            ErrorLog.Write("OpenOverlayEditor", ex.ToString());
+            MessageBox.Show($"Não foi possível abrir o editor do overlay:\n\n{ex.Message}",
                 "Riva Monitor", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -275,12 +285,13 @@ public partial class MainWindow : Window
     {
         _config = newConfig;
 
-        if (_overlay != null && _overlay.IsVisible)
-        {
-            _overlay.Close();
-            _overlay = new OverlayWindow(_config, _config.OverlayPosition.X, _config.OverlayPosition.Y);
+        // Só recria se o monitoramento está ativo; respeita o estado do toggle (visível/oculto).
+        if (_sensorService == null) return;
+
+        _overlay?.Close();
+        _overlay = new OverlayWindow(_config, _config.OverlayPosition.X, _config.OverlayPosition.Y);
+        if (OverlayToggle.IsChecked == true)
             _overlay.Show();
-        }
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
@@ -319,7 +330,12 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        _sensorService?.Dispose();
+        if (_sensorService != null)
+        {
+            _sensorService.SensorUpdated -= OnSensorData;
+            _sensorService.Dispose();
+            _sensorService = null;
+        }
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
         _overlay?.Close();

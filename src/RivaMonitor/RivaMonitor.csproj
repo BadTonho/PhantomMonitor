@@ -8,6 +8,16 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <NativeLibDir>$(MSBuildProjectDirectory)\..\RivaSensorLib\</NativeLibDir>
+    <NativeLibDirNoSlash>$(MSBuildProjectDirectory)\..\RivaSensorLib</NativeLibDirNoSlash>
+    <!-- Caminho do vcvars64.bat: pode ser sobrescrito via -p:VcVarsPath=... -->
+    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
+    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
+    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
+    <VcVarsPath Condition="'$(VcVarsPath)' == '' And Exists('$(ProgramFiles)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat')">$(ProgramFiles)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat</VcVarsPath>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
   </ItemGroup>
@@ -17,15 +27,32 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </None>
+    <!-- config.example.json acompanha o executável: serve de modelo para o config do usuário -->
+    <None Include="..\..\config.example.json" Condition="Exists('..\..\config.example.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.Management" />
   </ItemGroup>
 
-  <Target Name="BuildRivaSensorLib" BeforeTargets="BeforeBuild">
-    <Exec Command="&quot;C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat&quot; &amp;&amp; cd /d &quot;$(ProjectDir)..\RivaSensorLib&quot; &amp;&amp; cl /LD /EHsc /I. RivaSensorLib.cpp /Fe:RivaSensorLib.dll /nologo" ConsoleToMSBuild="true" StandardOutputImportance="low" Condition="!Exists('$(OutDir)RivaSensorLib.dll') And !Exists('$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll')" />
-    <Copy SourceFiles="$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll" DestinationFolder="$(OutDir)" Condition="Exists('$(ProjectDir)..\RivaSensorLib\RivaSensorLib.dll')" />
+  <!-- A DLL nativa é opcional (stub): o app funciona sem ela. Falhas viram aviso, não erro. -->
+  <Target Name="BuildRivaSensorLib" BeforeTargets="BeforeBuild"
+          Inputs="$(NativeLibDir)RivaSensorLib.cpp;$(NativeLibDir)RivaSensorLib.h"
+          Outputs="$(NativeLibDir)RivaSensorLib.dll">
+    <Warning Condition="'$(VcVarsPath)' == ''"
+             Text="vcvars64.bat não encontrado (use -p:VcVarsPath=...). RivaSensorLib.dll não será compilada; o app funciona sem ela." />
+    <Exec Condition="'$(VcVarsPath)' != ''"
+          Command="call &quot;$(VcVarsPath)&quot; &amp;&amp; cd /d &quot;$(NativeLibDirNoSlash)&quot; &amp;&amp; cl /LD /EHsc /std:c++17 /DRIVASENSORLIB_EXPORTS /I. RivaSensorLib.cpp /Fe:RivaSensorLib.dll /nologo"
+          ConsoleToMSBuild="true" StandardOutputImportance="low"
+          ContinueOnError="WarnAndContinue" />
+  </Target>
+
+  <Target Name="CopyRivaSensorLib" AfterTargets="BuildRivaSensorLib" BeforeTargets="BeforeBuild">
+    <Copy SourceFiles="$(NativeLibDir)RivaSensorLib.dll" DestinationFolder="$(OutDir)"
+          Condition="Exists('$(NativeLibDir)RivaSensorLib.dll')" />
   </Target>
 
 </Project>

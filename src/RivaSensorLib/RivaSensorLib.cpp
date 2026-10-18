@@ -1,7 +1,11 @@
 #include "RivaSensorLib.h"
+#include <atomic>
 #include <cstring>
 
-static bool g_initialized = false;
+static std::atomic<bool> g_initialized{false};
+
+// Stub: ainda não há leitura real de hardware; os valores são zerados.
+// A leitura real de sensores é feita em C# via LibreHardwareMonitor.
 
 int RivaSensor_Init()
 {
@@ -9,34 +13,18 @@ int RivaSensor_Init()
     return 0;
 }
 
-int RivaSensor_ReadSnapshot(struct NativeSensorSnapshot* snapshot)
+int RivaSensor_ReadSnapshot(NativeSensorSnapshot* snapshot)
 {
     if (!g_initialized || !snapshot)
         return -1;
 
-    snapshot->CpuUsage = 0.0;
-    snapshot->CpuTemp = 0.0;
-    snapshot->CpuClock = 0.0;
-    snapshot->CpuVoltage = 0.0;
-    snapshot->CpuPower = 0.0;
-    snapshot->GpuUsage = 0.0;
-    snapshot->GpuTemp = 0.0;
-    snapshot->GpuCoreClock = 0.0;
-    snapshot->GpuMemoryClock = 0.0;
-    snapshot->GpuVoltage = 0.0;
-    snapshot->GpuMemoryUsed = 0.0;
-    snapshot->GpuMemoryTotal = 0.0;
-    snapshot->GpuPower = 0.0;
-    snapshot->RamUsage = 0.0;
-    snapshot->RamTotal = 0.0;
-    snapshot->FanSpeedRpm = 0.0;
-
+    std::memset(snapshot, 0, sizeof(NativeSensorSnapshot));
     return 0;
 }
 
 int RivaSensor_GetSensorCount()
 {
-    return 16;
+    return RIVA_SENSOR_COUNT;
 }
 
 int RivaSensor_GetSensorName(int index, char* buffer, int bufferSize)
@@ -44,7 +32,7 @@ int RivaSensor_GetSensorName(int index, char* buffer, int bufferSize)
     if (!g_initialized || !buffer || bufferSize <= 0)
         return -1;
 
-    static const char* names[] = {
+    static const char* names[RIVA_SENSOR_COUNT] = {
         "CPU Usage", "CPU Temperature", "CPU Clock", "CPU Voltage",
         "CPU Power", "GPU Usage", "GPU Temperature", "GPU Core Clock",
         "GPU Memory Clock", "GPU Voltage", "GPU Memory Used",
@@ -52,7 +40,7 @@ int RivaSensor_GetSensorName(int index, char* buffer, int bufferSize)
         "Fan Speed"
     };
 
-    if (index < 0 || index >= 16)
+    if (index < 0 || index >= RIVA_SENSOR_COUNT)
         return -1;
 
     std::strncpy(buffer, names[index], static_cast<size_t>(bufferSize) - 1);
@@ -63,6 +51,9 @@ int RivaSensor_GetSensorName(int index, char* buffer, int bufferSize)
 int RivaSensor_GetSensorValue(int index, double* value)
 {
     if (!g_initialized || !value)
+        return -1;
+
+    if (index < 0 || index >= RIVA_SENSOR_COUNT)
         return -1;
 
     *value = 0.0;

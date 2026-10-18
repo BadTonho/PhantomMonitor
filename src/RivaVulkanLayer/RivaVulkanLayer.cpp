@@ -35,10 +35,10 @@ std::unordered_map<void*, InstanceDispatch> g_instance_dispatch;
 std::unordered_map<void*, DeviceDispatch> g_device_dispatch;
 
 // Telemetria e memória compartilhada
-RivaVulkanTelemetryHeader* g_telemetry_shm = nullptr;
+std::atomic<RivaVulkanTelemetryHeader*> g_telemetry_shm{nullptr};
 int g_shm_fd = -1;
 std::atomic<uint64_t> g_frame_counter{0};
-uint64_t g_last_present_ns = 0;
+std::atomic<uint64_t> g_last_present_ns{0};
 
 uint64_t get_time_ns() {
 #if !defined(_WIN32)
@@ -53,15 +53,19 @@ uint64_t get_time_ns() {
 #endif
 }
 
+std::mutex g_shm_mutex;
+
 void init_shared_memory() {
-    if (g_telemetry_shm != nullptr) return;
+    std::lock_guard<std::mutex> lock(g_shm_mutex);
+    if (g_telemetry_shm.load() != nullptr) return;
 
 #if !defined(_WIN32)
+    // 0600: apenas o mesmo usuário (jogo e RivaMonitor) acessa a telemetria.
     // 1. Tentar POSIX shared memory (/dev/shm/riva_fps)
-    g_shm_fd = shm_open(RIVA_SHM_NAME, O_CREAT | O_RDWR, 0666);
+    g_shm_fd = shm_open(RIVA_SHM_NAME, O_CREAT | O_RDWR, 0600);
     if (g_shm_fd < 0) {
         // Fallback para arquivo comum em /tmp/riva_fps.bin
-        g_shm_fd = open(RIVA_FALLBACK_FILE, O_CREAT | O_RDWR, 0666);
+        g_shm_fd = open(RIVA_FALLBACK_FILE, O_CREAT | O_RDWR, 0600);
     }
 
     if (g_shm_fd >= 0) {
@@ -69,11 +73,11 @@ void init_shared_memory() {
         if (ftruncate(g_shm_fd, size) == 0) {
             void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, g_shm_fd, 0);
             if (addr != MAP_FAILED) {
-                g_telemetry_shm = static_cast<RivaVulkanTelemetryHeader*>(addr);
-                std::memset(g_telemetry_shm, 0, sizeof(RivaVulkanTelemetryHeader));
-                g_telemetry_shm->magic = RIVA_TELEMETRY_MAGIC;
-                g_telemetry_shm->version = RIVA_TELEMETRY_VERSION;
-                g_telemetry_shm->pid = static_cast<uint32_t>(getpid());
+                auto* shm = static_cast<RivaVulkanTelemetryHeader*>(addr);
+                std::memset(shm, 0, sizeof(RivaVulkanTelemetryHeader));
+                shm->magic = RIVA_TELEMETRY_MAGIC;
+                shm->version = RIVA_TELEMETRY_VERSION;
+                shm->pid = static_cast<uint32_t>(getpid());
 
                 // Ler nome do processo em /proc/self/comm
                 int comm_fd = open("/proc/self/comm", O_RDONLY);
@@ -82,10 +86,13 @@ void init_shared_memory() {
                     ssize_t bytes_read = read(comm_fd, comm_buf, sizeof(comm_buf) - 1);
                     if (bytes_read > 0) {
                         if (comm_buf[bytes_read - 1] == '\n') comm_buf[bytes_read - 1] = '\0';
-                        std::strncpy(g_telemetry_shm->process_name, comm_buf, sizeof(g_telemetry_shm->process_name) - 1);
+                        std::strncpy(shm->process_name, comm_buf, sizeof(shm->process_name) - 1);
                     }
                     close(comm_fd);
                 }
+
+                // Publica o ponteiro só depois de inicializado.
+                g_telemetry_shm.store(shm);
             }
         }
     }
@@ -93,10 +100,12 @@ void init_shared_memory() {
 }
 
 void cleanup_shared_memory() {
+    std::lock_guard<std::mutex> lock(g_shm_mutex);
 #if !defined(_WIN32)
-    if (g_telemetry_shm != nullptr) {
-        munmap(g_telemetry_shm, sizeof(RivaVulkanTelemetryHeader));
-        g_telemetry_shm = nullptr;
+    // Zera o ponteiro antes de desmapear para que o present não escreva em memória liberada.
+    RivaVulkanTelemetryHeader* shm = g_telemetry_shm.exchange(nullptr);
+    if (shm != nullptr) {
+        munmap(shm, sizeof(RivaVulkanTelemetryHeader));
     }
     if (g_shm_fd >= 0) {
         close(g_shm_fd);
@@ -128,24 +137,26 @@ static VKAPI_ATTR VkResult VKAPI_CALL Riva_vkQueuePresentKHR(
         }
     }
 
+    // exchange atômico: seguro com vários threads/filas chamando present ao mesmo tempo.
     uint64_t now_ns = get_time_ns();
-    if (g_last_present_ns > 0) {
-        uint64_t delta_ns = now_ns - g_last_present_ns;
+    uint64_t prev_ns = g_last_present_ns.exchange(now_ns);
+    if (prev_ns > 0 && now_ns > prev_ns) {
+        uint64_t delta_ns = now_ns - prev_ns;
         float ft_ms = static_cast<float>(delta_ns) / 1000000.0f;
         float fps = (ft_ms > 0.001f) ? (1000.0f / ft_ms) : 0.0f;
 
-        if (g_telemetry_shm != nullptr) {
+        // Lê o ponteiro uma única vez (cleanup pode zerá-lo em outro thread).
+        RivaVulkanTelemetryHeader* shm = g_telemetry_shm.load();
+        if (shm != nullptr) {
             uint64_t frame = ++g_frame_counter;
-            g_telemetry_shm->frame_count = frame;
-            g_telemetry_shm->timestamp_ns = now_ns;
-            g_telemetry_shm->frametime_ms = ft_ms;
-            g_telemetry_shm->instant_fps = fps;
+            shm->frame_count = frame;
+            shm->timestamp_ns = now_ns;
+            shm->frametime_ms = ft_ms;
+            shm->instant_fps = fps;
         }
-    } else {
+    } else if (prev_ns == 0) {
         init_shared_memory();
     }
-    g_last_present_ns = now_ns;
-
     if (next_present != nullptr) {
         return next_present(queue, pPresentInfo);
     }

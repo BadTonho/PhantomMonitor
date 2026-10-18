@@ -24,8 +24,21 @@ public sealed class JsonLogger : IDisposable
     {
         lock (_lock)
         {
-            var json = JsonSerializer.Serialize(data, JsonOptions);
-            File.WriteAllText(_filePath, json + Environment.NewLine);
+            try
+            {
+                var dir = Path.GetDirectoryName(_filePath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+                // Escreve num temporário e substitui: leitores externos nunca veem JSON truncado.
+                var json = JsonSerializer.Serialize(data, JsonOptions);
+                var tmp = _filePath + ".tmp";
+                File.WriteAllText(tmp, json + Environment.NewLine);
+                File.Move(tmp, _filePath, overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Write("JsonLogger.Write", ex);
+            }
         }
     }
 

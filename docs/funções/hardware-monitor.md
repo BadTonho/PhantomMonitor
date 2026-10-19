@@ -57,7 +57,23 @@ Consumidores:
 - `Start()` - Inicia o monitoramento dos sensores
 - `Stop()` - Para o monitoramento
 - `GetCurrentSnapshot()` - Retorna o snapshot mais recente dos sensores
+- `ResetSeriesStats()` - Zera as estatísticas por série da sessão (min/máx/média)
 - `Dispose()` - Para e libera timer, FPS monitor e contadores
+
+## Estatísticas por série (min/max/média)
+
+A cada ciclo publicado, o `SeriesStatsTracker` acumula **uma amostra por série**
+(canônicas e por instância) — min, máx e média aritmética da
+sessão. O resultado viaja no snapshot (`SensorData.SeriesStats`) e por isso chega
+ao inventário, ao JSON (`sensors_latest.json`) e a qualquer consumidor da API.
+Amostras não-finitas (NaN/Inf) são descartadas (números de leitura "balançada"
+não contaminam a média para sempre). FPS tem as próprias janelas móveis e não
+entra neste agregador.
+
+- **Reset:** item da bandeja ("Resetar estatísticas") e botão da janela de
+  inventário; o CSV ativo recebe um marcador `#marker` delimitando o segmento
+  (ver [logging.md](logging.md)).
+- `Legendas`: a média só fica definida (`"--"`) com ao menos uma amostra.
 
 ## Eventos
 

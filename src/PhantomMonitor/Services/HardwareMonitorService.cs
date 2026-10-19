@@ -26,6 +26,9 @@ public sealed class HardwareMonitorService : ISensorService
     private volatile bool _disposed;
     private SensorData _current = new();
 
+    // Estatísticas por série da sessão (min/max/avg; zeradas pelo usuário).
+    private readonly SeriesStatsTracker _seriesStats = new();
+
     // Prioridade do sensor escolhido por tipo na rodada atual (acessado só dentro de _sync).
     private readonly Dictionary<SType, int> _priority = [];
 
@@ -99,6 +102,12 @@ public sealed class HardwareMonitorService : ISensorService
     }
 
     public SensorData GetCurrentSnapshot() => _current;
+
+    /// <summary>Zera as estatísticas por série da sessão (bandeja/inventário).</summary>
+    public void ResetSeriesStats()
+    {
+        lock (_sync) _seriesStats.Reset();
+    }
 
     private void Update()
     {
@@ -188,6 +197,11 @@ public sealed class HardwareMonitorService : ISensorService
             data.Values[SType.FpsMax] = _fpsMonitor.FpsMax;
             data.FrametimeHistory = _fpsMonitor.FrametimeHistory.ToArray();
         }
+
+        // Estatísticas por série: uma amostra por snapshot publicado, anexada ao
+        // snapshot (inventário e JSON exibem min/máx/média da sessão).
+        _seriesStats.Commit(data);
+        data.SeriesStats = _seriesStats.CopySnapshot();
 
         return data;
     }

@@ -18,6 +18,7 @@ public static class InventoryBuilder
         foreach (var key in data.GetSeriesKeys())
         {
             var value = data.GetValue(key);
+            data.SeriesStats.TryGetValue(key, out var stats);
             list.Add(new InventorySeries
             {
                 Key = key.ToString(),
@@ -27,10 +28,23 @@ public static class InventoryBuilder
                 ValueText = string.IsNullOrEmpty(SensorUnits.Of(key.Type))
                     ? value.ToString("F2", CultureInfo.InvariantCulture)
                     : SensorFormatter.FormatSeries(key, value),
+                MinText = FormatStat(stats?.Min, key),
+                MaxText = FormatStat(stats?.Max, key),
+                AvgText = FormatStat(stats?.Average, key),
                 Canonical = key.IsPrimary
             });
         }
         return list;
+    }
+
+    /// <summary>min/max/média formatados com a unidade da série; NaN = sem amostra.</summary>
+    private static string FormatStat(double? value, SensorKey key)
+    {
+        if (value is not { } v || !double.IsFinite(v)) return "--";
+        var unit = SensorUnits.Of(key.Type);
+        return unit.Length > 0
+            ? $"{v:F2} {unit}"
+            : v.ToString("F2", CultureInfo.InvariantCulture);
     }
 
     public static List<InventoryHardware> BuildHardware(SensorData data)
@@ -72,6 +86,15 @@ public sealed class InventorySeries
 
     /// <summary>Valor já formatado com a unidade (ex.: "45°C", "3.2 GB/s").</summary>
     public string ValueText { get; set; } = "";
+
+    /// <summary>Mínimo da sessão (formatado; "--" enquanto não há amostra).</summary>
+    public string MinText { get; set; } = "--";
+
+    /// <summary>Máximo da sessão (formatado; "--" enquanto não há amostra).</summary>
+    public string MaxText { get; set; } = "--";
+
+    /// <summary>Média da sessão (formatada; "--" enquanto não há amostra).</summary>
+    public string AvgText { get; set; } = "--";
 
     /// <summary>True para as séries canônicas legadas (índice 0).</summary>
     public bool Canonical { get; set; }

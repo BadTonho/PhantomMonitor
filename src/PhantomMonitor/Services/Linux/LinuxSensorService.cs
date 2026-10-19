@@ -40,6 +40,9 @@ public sealed class LinuxSensorService : ISensorService
     // Slot estável por caminho de hwmon (hwmon com o mesmo "name", como duas amdgpu).
     private readonly Dictionary<string, int> _hwmonSlots = new(StringComparer.Ordinal);
 
+    // Estatísticas por série da sessão (min/max/avg; zeradas pelo usuário).
+    private readonly SeriesStatsTracker _seriesStats = new();
+
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
 
@@ -64,6 +67,9 @@ public sealed class LinuxSensorService : ISensorService
     }
 
     public SensorData GetCurrentSnapshot() => _current;
+
+    /// <summary>Zera as estatísticas por série da sessão (bandeja/inventário).</summary>
+    public void ResetSeriesStats() => _seriesStats.Reset();
 
     private void Update()
     {
@@ -95,6 +101,10 @@ public sealed class LinuxSensorService : ISensorService
                 data.Values[SensorType.FpsMax] = _fpsMonitor.FpsMax;
                 data.FrametimeHistory = _fpsMonitor.FrametimeHistory.ToArray();
             }
+
+            // Estatísticas por série: uma amostra por snapshot publicado.
+            _seriesStats.Commit(data);
+            data.SeriesStats = _seriesStats.CopySnapshot();
 
             _current = data;
             if (IsRunning)

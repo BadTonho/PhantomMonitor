@@ -9,4 +9,7 @@ public interface ISensorService : IDisposable
     void Start();
     void Stop();
     SensorData GetCurrentSnapshot();
+
+    /// <summary>Zera as estatísticas por série acumuladas na sessão (min/max/avg).</summary>
+    void ResetSeriesStats();
 }

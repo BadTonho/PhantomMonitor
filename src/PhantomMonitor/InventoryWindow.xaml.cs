@@ -14,11 +14,13 @@ namespace PhantomMonitor;
 public partial class InventoryWindow : Window
 {
     private readonly Func<SensorData?> _snapshotProvider;
+    private readonly Action<string>? _resetStats;
     private readonly DispatcherTimer _refreshTimer;
 
-    public InventoryWindow(Func<SensorData?> snapshotProvider)
+    public InventoryWindow(Func<SensorData?> snapshotProvider, Action<string>? resetStats = null)
     {
         _snapshotProvider = snapshotProvider;
+        _resetStats = resetStats;
 
         InitializeComponent();
         _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -26,6 +28,12 @@ public partial class InventoryWindow : Window
 
         Loaded += (_, _) => { Refresh(); _refreshTimer.Start(); };
         Closed += (_, _) => _refreshTimer.Stop();
+    }
+
+    private void OnResetStatsClick(object sender, RoutedEventArgs e)
+    {
+        _resetStats?.Invoke("inventário");
+        Refresh();
     }
 
     private void Refresh()
@@ -44,7 +52,7 @@ public partial class InventoryWindow : Window
                            $"atualizado às {data.Timestamp:HH:mm:ss}";
 
         SeriesGrid.ItemsSource = series;
-        RefreshText.Text = $"Atualiza automaticamente a cada 2 s (snapshot atual).";
+        RefreshText.Text = $"Atualiza automaticamente a cada 2 s (snapshot atual). Mín/Máx/Média são da sessão desde o último \"Resetar estatísticas\".";
 
         // Árvore só é reconstruída se mudou (a enumeração do hardware é estável na prática;
         // evita colapsar nós que o usuário abriu a cada 2 s). A indentação do rastro

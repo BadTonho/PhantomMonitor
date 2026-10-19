@@ -20,6 +20,12 @@ public sealed class SensorData
     public Dictionary<SensorKey, double> Series { get; set; } = [];
     public Dictionary<SensorKey, string> SeriesLabels { get; set; } = [];
 
+    /// <summary>
+    /// Estatísticas por série acumuladas na sessão (min/max/avg; ver SeriesStatsTracker).
+    /// Vai para o snapshot JSON; o CSV e a SDK continuam publicando só o valor atual.
+    /// </summary>
+    public Dictionary<SensorKey, SeriesStats> SeriesStats { get; set; } = [];
+
     [JsonIgnore]
     public List<GpuProcessInfo> GpuProcesses { get; set; } = [];
     [JsonIgnore]

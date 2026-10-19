@@ -24,7 +24,18 @@ Salva o snapshot mais recente em um arquivo JSON no diretório `logs/`.
 - Formato JSON legível com todos os valores de sensores
 - Séries por instância aparecem em `series` / `seriesLabels` com chaves `Categoria#índice`
   (ex.: `series: { "GpuCore#1": 65.0 }`); as séries canônicas continuam em `values`
+- `seriesStats` traz as estatísticas da sessão com a MESMA chave `Categoria#índice`
+  (`min`, `max`, `average`, `count`); só aparecem séries com ao menos uma amostra
 - Útil para integração com outras ferramentas
+
+## Marcadores no CSV (`#marker`)
+
+O `CsvLogger.WriteMarker()` insere uma linha `#marker,<timestamp>,<rótulo>` no
+log ativo — delimita segmentos de sessão/benchmark sem quebrar planilhas: quem
+consome só as colunas numéricas ignora a linha. Na prática é gerado pelo
+**reset de estatísticas** (bandeja/inventário) com o rótulo `reset (<origem>)`.
+Só tem efeito com o CSV já aberto (a partir da primeira linha de valores).
+
 ## ErrorLog (`logs/errors.log`)
 
 Registro de erros internos (substitui os antigos `catch` vazios). Fica em `logs/` ao lado do executável.

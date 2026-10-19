@@ -70,6 +70,32 @@ public sealed class CsvLogger : IDisposable
         _writer.Flush();
     }
 
+    /// <summary>
+    /// Linha de marcador ("#marker") para delimitar segmentos de sessão/benchmark
+    /// (reset de estatísticas, aquecimento, fim de teste). Clientes que só leem as
+    /// colunas numéricas ignoram a linha — planilhas mantêm as colunas alinhadas.
+    /// Só tem efeito com o CSV já aberto (após a primeira linha de valores).
+    /// </summary>
+    public void WriteMarker(string label)
+    {
+        lock (_lock)
+        {
+            if (_disposed || _writer == null) return;
+
+            try
+            {
+                _writer.WriteLine(string.Join(",", "#marker",
+                    DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                    (label ?? "").Replace(',', ' ')));
+                _writer.Flush();
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Write("CsvLogger.WriteMarker", ex);
+            }
+        }
+    }
+
     public void Dispose()
     {
         lock (_lock)

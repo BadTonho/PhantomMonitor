@@ -20,10 +20,17 @@ Grade com todas as séries do snapshot atual:
 | Série | Chave completa: `GpuCore` (canônica) ou `GpuCore#1` (instância) |
 | Sensor de origem | Rótulo do sensor/hardware de onde o valor veio |
 | Valor | Formatado com unidade (`45°C`, `3.2 GB/s`, `1850 MHz`) |
+| Mín (sessão) / Máx (sessão) / Média | Estatísticas acumuladas desde o último "Resetar estatísticas" (efeito HWiNFO); `--` até haver amostra |
 | Unidade | Unidade canônica da categoria (ver `SensorUnits`) |
 | Canônica | ✓ quando for série de índice 0, compatível com painel/alertas legados |
 
 Mais 2 s de cadência de atualização (DispatcherTimer local, sem tocar no serviço).
+
+### Botão "Resetar estatísticas"
+
+No topo da janela: zera min/máx/média de todas as séries (mesma ação do item da
+bandeja) e grava um marcador `#marker,reset (inventário)` no CSV ativo — o
+segmento anterior fica delimitado na planilha.
 
 ## Aba "Hardware detectado"
 

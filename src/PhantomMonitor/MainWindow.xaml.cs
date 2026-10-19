@@ -76,10 +76,10 @@ public partial class MainWindow : Window
             {
                 StartupToggle.IsChecked = !StartupManager.IsEnabled();
             };
+            _tray.ResetStatsRequested += () => ResetSeriesStats("bandeja");
             _tray.ExitRequested += Close;
             _tray.IsOverlayVisible = () => OverlayToggle.IsChecked == true;
             _tray.IsStartupEnabled = StartupManager.IsEnabled;
-
             // Seção dinâmica: perfis do OSD (fixar perfil / voltar ao automático).
             _tray.SetDynamicItems(() =>
             {
@@ -203,6 +203,33 @@ public partial class MainWindow : Window
     /// <summary>Estado do matcher de perfis consultado pelo overlay a cada tick de posição.</summary>
     private OverlayProfileState ResolveProfileState() =>
         new() { Profiles = _config.Profiles, Pinned = _pinnedProfile };
+
+    /// <summary>
+    /// Reset das estatísticas por série da sessão (min/max/avg), pedido pela bandeja
+    /// ou pela janela de inventário. Quando o CSV está ativo, grava um marcador
+    /// "#marker" para delimitar o segmento do reset na planilha.
+    /// </summary>
+    private void ResetSeriesStats(string source)
+    {
+        _sensorService?.ResetSeriesStats();
+        _csvLogger?.WriteMarker($"reset ({source})");
+
+        StatusText.Text = "Estatísticas resetadas";
+        StatusText.Foreground = TryFindResource("TextSecondaryBrush") as Brush;
+        StatusDot.Fill = TryFindResource("GreenBrush") as Brush;
+
+        // Volta ao rótulo padrão após um instante (a fonte de verdade é Monitorando/Parado).
+        var restore = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        restore.Tick += (_, _) =>
+        {
+            restore.Stop();
+            if (_sensorService == null) return;
+            StatusText.Text = "Monitorando";
+            StatusText.Foreground = TryFindResource("GreenBrush") as Brush;
+            StatusDot.Fill = TryFindResource("GreenBrush") as Brush;
+        };
+        restore.Start();
+    }
 
     private void OnStartClick(object sender, RoutedEventArgs e) => BeginMonitoring();
 
@@ -424,7 +451,7 @@ public partial class MainWindow : Window
     {
         if (_inventoryWindow == null || !_inventoryWindow.IsVisible)
         {
-            _inventoryWindow = new InventoryWindow(() => _sensorService?.GetCurrentSnapshot());
+            _inventoryWindow = new InventoryWindow(() => _sensorService?.GetCurrentSnapshot(), ResetSeriesStats);
             _inventoryWindow.Owner = this;
             _inventoryWindow.Closed += (_, _) => _inventoryWindow = null;
             _inventoryWindow.Show();

@@ -40,7 +40,8 @@ public sealed class TrayIconService : IDisposable
     private const uint MenuShow = 1;
     private const uint MenuOverlay = 2;
     private const uint MenuStartup = 3;
-    private const uint MenuExit = 4;
+    private const uint MenuResetStats = 4;
+    private const uint MenuExit = 5;
 
     private const int DefaultIconId = 32512; // IDI_APPLICATION
 
@@ -60,6 +61,9 @@ public sealed class TrayIconService : IDisposable
 
     /// <summary>Menu: alternar a inicialização com o Windows.</summary>
     public event Action? StartupToggleRequested;
+
+    /// <summary>Menu: zero as estatísticas por série da sessão (min/max/avg).</summary>
+    public event Action? ResetStatsRequested;
 
     /// <summary>Menu: encerrar o aplicativo.</summary>
     public event Action? ExitRequested;
@@ -166,6 +170,7 @@ public sealed class TrayIconService : IDisposable
         AppendMenu(menu, MfString, MenuShow, "Mostrar Phantom Monitor");
         AppendMenu(menu, MfString | (overlayChecked ? MfChecked : 0), MenuOverlay, "Overlay no Jogo");
         AppendMenu(menu, MfString | (startupChecked ? MfChecked : 0), MenuStartup, "Iniciar com o Windows");
+        AppendMenu(menu, MfString, MenuResetStats, "Resetar estatísticas");
 
         // Seção dinâmica (perfis por aplicativo): itens e estados avaliados a cada
         // abertura do menu pelos proveedores registrados na janela principal.
@@ -195,6 +200,7 @@ public sealed class TrayIconService : IDisposable
                 case MenuShow: ActivateRequested?.Invoke(); break;
                 case MenuOverlay: OverlayToggleRequested?.Invoke(); break;
                 case MenuStartup: StartupToggleRequested?.Invoke(); break;
+                case MenuResetStats: ResetStatsRequested?.Invoke(); break;
                 case MenuExit: ExitRequested?.Invoke(); break;
                 default:
                     if (cmd >= MenuDynamicBase) DynamicItemClicked?.Invoke((int)cmd);

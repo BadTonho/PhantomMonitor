@@ -11,7 +11,11 @@ Integração com a bandeja do Windows **sem WinForms**: usa `Shell_NotifyIcon` d
   - `Mostrar Phantom Monitor` — ativa a janela principal.
   - `Overlay no Jogo` (check) — mesma ação do toggle de overlay da sidebar.
   - `Iniciar com o Windows` (check) — liga/desliga a inicialização automática.
+  - `Resetar estatísticas` — zera min/máx/média das séries da sessão (ver
+    [hardware-monitor](hardware-monitor.md)) e grava um marcador `#marker` no CSV ativo.
   - `Sair` — encerra o aplicativo.
+  - Após `Iniciar com o Windows`, vem a **seção dinâmica de perfis** do OSD
+    (fixar perfil / voltar ao automático).
 - **Robustez:** falhas de criação são registradas em `logs/errors.log` (eventos `TrayIcon`) sem derrubar o app; o ícone é removido (`NIM_DELETE`) e o hook de janela é desfeito no `Dispose` (fechamento da janela principal).
 
 ## StartupManager

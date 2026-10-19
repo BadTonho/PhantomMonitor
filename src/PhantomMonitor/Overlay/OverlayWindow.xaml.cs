@@ -192,6 +192,7 @@ public partial class OverlayWindow : Window
     private OverlayProfile? _activeProfile;
     private string? _pinnedProfile;
     private TextBlock? _profileTag;
+    private bool _isProfileHidden;
     private readonly Dictionary<int, string> _foregroundNames = [];
 
     // Timers guardados no campo e parados no OnClosed: como variáveis locais eles
@@ -323,6 +324,15 @@ public partial class OverlayWindow : Window
         // Offsets: perfil > padrão capturado no construtor.
         _offsetX = profile?.OffsetX ?? _baseOffsetX;
         _offsetY = profile?.OffsetY ?? _baseOffsetY;
+
+        // Visibilidade: um perfil pode esconder o OSD por completo enquanto casa
+        // (jogo que marca como "sem overlay"). Volta ao abrir outro app / desfixar.
+        var hidden = profile?.Visible == false;
+        if (_isProfileHidden != hidden)
+        {
+            _isProfileHidden = hidden;
+            MainBorder.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+        }
 
         // Largura/redondagem do painel de detalhes.
         var width = profile?.Width ?? _baseWidth;

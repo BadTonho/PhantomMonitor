@@ -15,7 +15,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `Overlay` - Configurações específicas do overlay
 - `Sensors` - Quais sensores estão habilitados
 - `alerts` - Regras de alerta com ações (popup/som/script/desligar) — ver [alertas.md](alertas.md)
-- `profiles` - Perfis por aplicativo do OSD: `[{ name, appMatch, offsetX?, offsetY?, width?, fontSize?, accentColor? }]` — ver [overlay.md](overlay.md); `appMatch` vazio ou `*` casa com qualquer executável
+- `profiles` - Perfis por aplicativo do OSD: `[{ name, appMatch, offsetX?, offsetY?, width?, fontSize?, accentColor?, series?, visible? }]` — ver [overlay.md](overlay.md); `appMatch` vazio ou `*` casa com qualquer executável; `visible: false` esconde o OSD enquanto o perfil casa
 
 ### OverlayConfig
 - `width` - Largura do overlay em pixels

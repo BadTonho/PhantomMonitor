@@ -444,6 +444,20 @@ public partial class OverlayEditorWindow : Window
             });
             AddProfileField(stack, "Cor de acento #RRGGBB (vazio = padrão)", profile.AccentColor ?? "", v => profile.AccentColor = string.IsNullOrWhiteSpace(v) ? null : v.Trim());
 
+            // Visibilidade do OSD nesse app (cartão programático: muta direto o perfil,
+            // como os demais cartões; os TextBoxes usam _profileBindings, checkboxes não).
+            var visibleRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 4) };
+            var visibleCheck = new CheckBox
+            {
+                Content = "OSD visível neste app (desmarque para escondê-lo)",
+                IsChecked = profile.Visible != false,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = 11
+            };
+            visibleCheck.Click += (_, _) => profile.Visible = visibleCheck.IsChecked != false ? null : false;
+            visibleRow.Children.Add(visibleCheck);
+            stack.Children.Add(visibleRow);
+
             card.Child = stack;
             ProfilesPanel.Children.Add(card);
         }

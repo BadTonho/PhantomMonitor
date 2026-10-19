@@ -79,14 +79,21 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
     "fontSize": 13,
     "opacity": 0.9,
     "series": ["Gpu*", "FanSpeed*", "CpuTemperature#*"],
-    "accentColor": "#FFCC15"
-  }
+    "accentColor": "#FFCC15",
+    "visible": true
+  },
+  { "name": "Sem OSD no jogo X", "appMatch": "desconcertante", "visible": false }
 ]
 ```
 
 - `appMatch`: nome do executável **sem** `.exe`/caminho, case-insensitive,
   por prefixo (`cs2` casa com `cs2.exe`). `""` ou `"*"` casam com **qualquer**
   aplicativo (perfil universal).
+- `visible`: `false` **esconde o OSD por completo** enquanto o perfil casa
+  (útil para jogos/menus que combinam mal com overlays ou para gravar tela
+  limpa); volta sozinho quando o app em foco deixa de casar. `true`/ausente =
+  visível (comportamento padrão). Combina com `opacity: 0` se a intenção for
+  manter o painel apenas "invisível" em vez de escondido.
 - Campos nulos/ausentes = usa o valor global (`overlayPosition`, `overlay.width`,
   `overlay.fontSize`, `overlay.accentColor`, `overlayOpacity`,
   `overlay.shownSeries`). A `fontSize` reescala a árvore
@@ -100,7 +107,8 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
   (`◉ perfil: CS2`); sem perfil, nada aparece.
 - **Editor Visual:** seção "PERFIS POR APLICATIVO" com cartões editáveis
   (nome, AppMatch com botão "Capturar" do app em foco, offsets, largura, fonte,
-  acento), adicionar/remover; "Aplicar & Salvar" grava em `config.profiles`.
+  acento, checkbox `OSD visível neste app`), adicionar/remover;
+  "Aplicar & Salvar" grava em `config.profiles`.
 
 ## API Nativa
 

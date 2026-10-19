@@ -34,6 +34,12 @@ public sealed class OverlayProfile
     public List<string>? ShownSeries { get; set; }
 
     public string? AccentColor { get; set; }
+
+    /// <summary>
+    /// false esconde o OSD por completo enquanto este perfil casa (ex.: jogo que
+    /// combina mal com overlays). null/ausente = visível (comportamento padrão).
+    /// </summary>
+    public bool? Visible { get; set; }
 }
 
 /// <summary>Estado compartilhado do matcher: perfis vigentes + perfil fixado pela bandeja.</summary>

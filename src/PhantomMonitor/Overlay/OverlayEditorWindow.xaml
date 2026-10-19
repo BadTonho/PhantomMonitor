@@ -356,6 +356,19 @@
                                 Padding="8,5" Margin="0,8,0,8" FontSize="11"
                                 HorizontalAlignment="Stretch" Click="OnAddProfileClicked"/>
 
+                        <!-- Section: Templates do OSD -->
+                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,14,0,14"/>
+
+                        <TextBlock Text="LINHAS PERSONALIZADAS (TEMPLATES)" FontSize="11" FontWeight="Bold" 
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Uma linha de template por linha de texto; entra no fim do painel (antes da seção dinâmica de séries). Placeholders: {Chave} resolve a série canônica (ou a primeira instância), {Chave#1} é explícito, {Chave:N} fixa N decimais (0–3) e aceita wildcard ({FanSpeed*}). A linha fica oculta até todos os placeholders existirem. Cor da linha: só via config (templates[].color)."
+                                   FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <TextBox x:Name="TemplatesBox" AcceptsReturn="True" TextWrapping="NoWrap"
+                                 HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Visible"
+                                 MinHeight="92" MaxHeight="220" FontFamily="Consolas, Cascadia Mono"
+                                 FontSize="11" ToolTip="Ex.:&#x0a;VRAM {GpuMemoryUsed:N0}/{GpuMemoryTotal:N0} MB&#x0a;Temp VRM: {VrmTemperature*}°C"/>
+
                         <!-- Save & Apply -->
                         <Button Content="Aplicar &amp; Salvar Configuração" 
                                 Style="{StaticResource PrimaryButton}" 

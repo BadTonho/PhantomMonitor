@@ -148,9 +148,20 @@ public sealed class AppConfig
 
             if (profile.AccentColor is { } c && !IsValidHexColor(c)) profile.AccentColor = null;
         }
+
+        // Templates do OSD (P6.6): texto obrigatório, cor valida (hex) senão cai no
+        // branco padrão; templates sem texto não renderizam nada — descartados aqui.
+        Overlay.Templates ??= new();
+        Overlay.Templates.RemoveAll(t => t is null);
+        Overlay.Templates.RemoveAll(t => string.IsNullOrWhiteSpace(t.Text));
+        foreach (var template in Overlay.Templates)
+        {
+            template.Text = template.Text.Trim();
+            if (template.Color is { } color && !IsValidHexColor(color)) template.Color = null;
+        }
     }
 
-    private static bool IsValidHexColor(string? value) =>
+    internal static bool IsValidHexColor(string? value) =>
         !string.IsNullOrWhiteSpace(value) && HexColorRegex.IsMatch(value);
 
     public bool Save(string path)
@@ -201,6 +212,12 @@ public sealed class OverlayConfig
     public double FontSize { get; set; } = 11.5;
 
     /// <summary>
+    /// Linhas de template do usuário (P6.6): texto livre com placeholders
+    /// {Chave} / {Chave:N} resolvidos no fim do painel; ver OverlayTemplate.
+    /// </summary>
+    public List<OverlayTemplate> Templates { get; set; } = [];
+
+    /// <summary>
     /// Whitelist (padrões wildcard) das séries por instância exibidas no OSD além das
     /// linhas canônicas. Ex.: "Gpu*" (multi-GPU), "FanSpeed*" (ventoinhas extras),
     /// "Disk*" (rendimento/saúde por disco), "CpuTemperature#*" (temp por núcleo),
@@ -208,6 +225,22 @@ public sealed class OverlayConfig
     /// (por interface + totais da sessão). "*" libera tudo. Ver <see cref="SensorKey.MatchesPattern"/>.
     /// </summary>
     public List<string>? ShownSeries { get; set; } = ["Gpu*", "FanSpeed*", "Disk*"];
+}
+
+/// <summary>
+/// Linha personalizada do OSD (P6.6): <c>text</c> é renderizado no fim do painel
+/// com placeholders resolvidos a cada ciclo — <c>{GpuMemoryTotal}</c> casa a série
+/// canônica (ou a primeira instância quando ela não existir; <c>{GpuTemperature#1}</c>
+/// é explícito; aceita wildcard <c>{Gpu*}</c> = primeiro match) e <c>{Key:N}</c>
+/// fixa N decimais (0–3, padrão 1). A linha fica escondida enquanto qualquer
+/// placeholder não resolver. Cor opcional apenas em config (#RRGGBB/#AARRGGBB).
+/// </summary>
+public sealed class OverlayTemplate
+{
+    public string Text { get; set; } = "";
+
+    /// <summary>Cor da linha (#RRGGBB ou #AARRGGBB); null/válido ausente = branco padrão.</summary>
+    public string? Color { get; set; }
 }
 
 public sealed class SensorConfig

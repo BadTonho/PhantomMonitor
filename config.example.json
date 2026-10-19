@@ -24,7 +24,8 @@
     "compactMode": false,
     "accentColor": "#1E90FF",
     "fontSize": 11.5,
-    "shownSeries": ["Gpu*", "FanSpeed*", "Disk*"]
+    "shownSeries": ["Gpu*", "FanSpeed*", "Disk*"],
+    "templates": []
   },
   "sensors": {
     "cpu": true,

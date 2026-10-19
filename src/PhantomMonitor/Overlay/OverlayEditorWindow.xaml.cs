@@ -125,6 +125,15 @@ public partial class OverlayEditorWindow : Window
 
         if (HotkeyCombo != null) HotkeyCombo.Text = _config.ToggleOverlayHotkey;
 
+        // Templates (P6.6): só o texto é editável na UI; preserva a cor de cada
+        // linha existente (match por texto) ao aplicar.
+        if (TemplatesBox != null)
+        {
+            TemplatesBox.Text = string.Join(
+                Environment.NewLine,
+                _config.Overlay.Templates.Select(t => t.Text).Where(t => t.Length > 0));
+        }
+
         if (_config.Overlay.ShownSeries is { Count: > 0 } series)
         {
             foreach (var (box, patterns) in SeriesOptions)
@@ -583,6 +592,22 @@ public partial class OverlayEditorWindow : Window
         }
 
         _config.Overlay.ShownSeries = series;
+
+        // Templates (P6.6): cada linha não vazia vira um template na mesma ordem;
+        // cores pré-existentes no config permanecem para textos idênticos (edite
+        // a cor diretamente no config.json — a UI manda só o texto).
+        if (TemplatesBox != null)
+        {
+            var colors = _config.Overlay.Templates
+                .GroupBy(t => t.Text.Trim())
+                .ToDictionary(g => g.Key, g => g.First().Color);
+            _config.Overlay.Templates = TemplatesBox.Text
+                .Split('\n')
+                .Select(l => l.Trim('\r').Trim())
+                .Where(l => l.Length > 0)
+                .Select(l => new OverlayTemplate { Text = l, Color = colors.GetValueOrDefault(l) })
+                .ToList();
+        }
 
         // Atalho global: valida antes de salvar (vazio = desativado)
         if (HotkeyCombo != null)

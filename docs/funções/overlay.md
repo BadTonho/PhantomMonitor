@@ -107,8 +107,34 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
   (`◉ perfil: CS2`); sem perfil, nada aparece.
 - **Editor Visual:** seção "PERFIS POR APLICATIVO" com cartões editáveis
   (nome, AppMatch com botão "Capturar" do app em foco, offsets, largura, fonte,
-  acento, checkbox `OSD visível neste app`), adicionar/remover;
-  "Aplicar & Salvar" grava em `config.profiles`.
+  acento, checkbox `OSD visível neste app`), adicionar/remover; seção
+  "LINHAS PERSONALIZADAS (TEMPLATES)" com TextBox multilinha (uma linha de
+  template por linha — a UI edita só o texto, a cor permanece via config);
+  "Aplicar & Salvar" grava em `config.profiles` e `overlay.templates`.
+
+## Linhas personalizadas (templates, P6.6)
+
+```json
+"templates": [
+  { "text": "VRAM {GpuMemoryUsed:N0}/{GpuMemoryTotal:N0} MB", "color": "#A3E635" },
+  { "text": "Ventoinha: {FanSpeed*} RPM" },
+  { "text": "Desgaste da bateria: {BatteryWearLevel:N0}%" }
+]
+```
+
+- **Placeholders** resolvidos a cada ciclo: `{Chave}` casando primeiro valor dado
+  a série canônica (ex.: `GpuMemoryTotal`) ou uma instância (`GpuTemperature#1`), caindo
+  para a primeira instância da categoria quando a canônica não existe; wildcards
+  crescem do primeiro match de `SensorKey.MatchesPattern` (`{FanSpeed*}`).
+- **`{Chave:N}`** fixa N decimais (0–3; padrão 1): o texto decide a unidade —
+  escreva `°C`, `MB`, `ms` etc. no literal.
+- **Linha oculta** enquanto qualquer placeholder não resolver (ex.: notebook de
+  bateria:{BatteryWearLevel} nunca exibe em desktop).
+- **Posição:** as linhas de template formam um bloco no **fim do painel** (sempre
+  depois das séries dinâmicas por instância).
+- **Fonte/cor:** fonte e tamanho seguem o OSD (base −1 pt); cor por template em
+  `color` (#RRGGBB/#AARRGGBB) — só editável no config, a UI edita só o texto
+  (mesmíssimo texto = cor preservada ao aplicar o editor).
 
 ## API Nativa
 

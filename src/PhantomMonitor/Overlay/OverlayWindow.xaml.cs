@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -171,12 +172,26 @@ public partial class OverlayWindow : Window
         _baseOffsetY = top;
         _baseSeriesPatterns = [.. (config.Overlay.ShownSeries ?? ["Gpu*", "FanSpeed*", "Disk*"])];
         _seriesPatterns = [.. _baseSeriesPatterns];
+
+        // Templates do usuário (P6.6): compilam uma vez por overlay (recriado quando
+        // o config muda); linhas entram num container próprio no FIM do painel.
+        foreach (var template in config.Overlay.Templates)
+        {
+            var segments = CompileTemplate(template.Text);
+            if (segments.Count == 0) continue;
+            var color = TryParseTemplateColor(template.Color);
+            _compiledTemplates.Add((segments, color));
+        }
+
         _baseOpacity = Math.Clamp(config.OverlayOpacity <= 0 ? 0.85 : config.OverlayOpacity, 0.1, 1.0);
         Opacity = _baseOpacity;
         _positionTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
         _positionTimer.Tick += (s, e) => UpdatePosition();
         _positionTimer.Start();
     }
+
+    private readonly List<(List<TemplateSegment> Segments, Brush Color)> _compiledTemplates = [];
+    private StackPanel? _templatesPanel;
 
     private double _offsetX;
     private double _offsetY;
@@ -699,6 +714,7 @@ public partial class OverlayWindow : Window
     public void Update(SensorData data)
     {
         EnsureDynamicRows(data);
+        EnsureTemplateRows(data); // P6.6: linhas personalizadas por último no painel
 
         foreach (var updater in _updaters)
         {
@@ -785,6 +801,14 @@ public partial class OverlayWindow : Window
             if (_dynamicRows.Count >= MaxAdvancedRows) break;
             if (_dynamicRows.ContainsKey(key)) continue;
             AddAdvancedRow(key, data);
+
+            // Container de templates (P6.6) permanece o último filho do painel:
+            // séries que aparecem depois não "passam por baixo" do bloco de templates.
+            if (_templatesPanel is { } panel)
+            {
+                SensorPanel.Children.Remove(panel);
+                SensorPanel.Children.Add(panel);
+            }
         }
     }
 
@@ -875,6 +899,194 @@ public partial class OverlayWindow : Window
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         return brush;
+    }
+
+    // ---------- Templates do usuário (P6.6) ----------
+
+    /// <summary>Segmento compilado: texto literal OU placeholder (chave/patrão + decimais).</summary>
+    private sealed record TemplateSegment(string Literal, string Pattern, SensorKey Key, int Decimals)
+    {
+        public bool IsLiteral => Pattern.Length == 0;
+    }
+
+    /// <summary>
+    /// Parser simples e deliberadamente tolerante: "{Key}" e "{Key:N}" (N = decimais
+    /// 0–3, padrão 1); "{Gpu*}" é tratado como padrão wildcard (primeiro match);
+    /// "{" solitário permanece literal. Chave inválida (não é SensorType) só sobrevive
+    /// como padrão e nunca resolve → linha escondida até existir série que case.
+    /// </summary>
+    private static List<TemplateSegment> CompileTemplate(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return [];
+
+        var segments = new List<TemplateSegment>();
+        var sb = new StringBuilder();
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '{')
+            {
+                var close = text.IndexOf('}', i + 1);
+                if (close < 0) { sb.Append(text[i..]); break; }
+
+                var token = text[(i + 1)..close].Trim();
+                i = close;
+
+                var decimals = 1;
+                var colon = token.IndexOf(':');
+                if (colon > 0 &&
+                    int.TryParse(token[(colon + 1)..].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n))
+                {
+                    decimals = Math.Clamp(n, 0, 3);
+                    token = token[..colon].Trim();
+                }
+
+                if (token.Length == 0)
+                {
+                    segments.Add(new TemplateSegment(sb.ToString(), "", default, 0));
+                    sb.Clear();
+                    continue;
+                }
+
+                if (SensorKey.TryParse(token, out var key))
+                    segments.Add(new TemplateSegment(sb.ToString(), "", key, decimals));
+                else
+                    segments.Add(new TemplateSegment(sb.ToString(), token, default, decimals));
+                sb.Clear();
+            }
+            else
+            {
+                sb.Append(text[i]);
+            }
+        }
+
+        if (sb.Length > 0) segments.Add(new TemplateSegment(sb.ToString(), "", default, 0));
+        return segments;
+    }
+
+    /// <summary>Cor do template (hex #RGB-, #RRGGBB e #AARRGGBB); inválida/ausente = branco padrão.</summary>
+    private static Brush TryParseTemplateColor(string? color)
+    {
+        var value = (color ?? "").Trim();
+        try
+        {
+            if (value.Length is 4 or 7 or 9 && value[0] == '#')
+            {
+                var c = (Color)ColorConverter.ConvertFromString(value);
+                return PinFrozenBrush(c);
+            }
+        }
+        catch (FormatException)
+        {
+            // ValueError → cai no branco (Normalize já derruba cores inválidas no config).
+        }
+        return NormalBrush;
+    }
+
+    /// <summary>
+    /// Resolve um placeholder para valor numérico; false quando NADA casa (linha oculta).
+    /// Chave canônica: valor canônico primeiro, senão a primeira instância da categoria;
+    /// chave com índice: exata; texto não-parseado: primeiro match de <see cref="SensorKey.MatchesPattern"/>.
+    /// </summary>
+    private static bool TryResolveTemplateValue(SensorData data, TemplateSegment segment, out double value)
+    {
+        value = 0;
+
+        if (segment.IsLiteral) return false;
+
+        if (segment.Pattern.Length > 0)
+        {
+            // Padrão wildcard: primeiro componente em GetSeriesKeys (canônicas primeiro).
+            foreach (var key in data.GetSeriesKeys())
+            {
+                if (!key.MatchesPattern(segment.Pattern)) continue;
+                value = ReadSeriesValue(data, key);
+                return true;
+            }
+            return false;
+        }
+
+        var k = segment.Key;
+        if (k.IsPrimary)
+        {
+            if (data.Values.TryGetValue(k.Type, out var canonical)) { value = canonical; return true; }
+
+            // Sem canônica: primeira instância publicada da categoria (#1, #2...).
+            var inst = data.Series.Keys
+                .Where(s => s.Type == k.Type && s.Index > 0)
+                .OrderBy(s => s.Index)
+                .FirstOrDefault();
+            if (inst is { } found && data.Series.TryGetValue(found, out var v)) { value = v; return true; }
+            return false;
+        }
+
+        return data.Series.TryGetValue(k, out value);
+    }
+
+    /// <summary>Valor com verificação de presença (GetValue devolve 0 para série ausente).</summary>
+    private static double ReadSeriesValue(SensorData data, SensorKey key) =>
+        key.IsPrimary
+            ? data.Values.TryGetValue(key.Type, out var v) ? v : 0
+            : data.Series.TryGetValue(key, out var s) ? s : 0;
+
+    /// <summary>Renderiza o texto do template; false = algum placeholder não resolveu.</summary>
+    private static bool TryRenderTemplate(SensorData data, List<TemplateSegment> segments, out string text)
+    {
+        var sb = new StringBuilder();
+        foreach (var segment in segments)
+        {
+            if (segment.IsLiteral)
+            {
+                sb.Append(segment.Literal);
+                continue;
+            }
+
+            if (!TryResolveTemplateValue(data, segment, out var value)) { text = ""; return false; }
+            sb.Append(value.ToString($"F{segment.Decimals}", CultureInfo.InvariantCulture));
+        }
+
+        text = sb.ToString();
+        return text.Length > 0;
+    }
+
+    /// <summary>
+    /// Linhas de template (P6.6) num container próprio criado no primeiro snapshot —
+    /// e sempre reposicionado para o fim do painel (ver EnsureDynamicRows).
+    /// </summary>
+    private void EnsureTemplateRows(SensorData data)
+    {
+        if (_templatesPanel != null || _compiledTemplates.Count == 0) return;
+
+        _templatesPanel = new StackPanel();
+        foreach (var (segments, color) in _compiledTemplates)
+        {
+            var row = new TextBlock
+            {
+                FontFamily = OsdFont,
+                FontSize = _baseFontSize - 1,
+                Foreground = color,
+                Margin = new Thickness(0, _rowMargin, 0, 0),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Visibility = Visibility.Collapsed // até todos os placeholders resolverem
+            };
+
+            _templatesPanel.Children.Add(row);
+            _updaters.Add(d =>
+            {
+                if (!TryRenderTemplate(d, segments, out var text))
+                {
+                    row.Visibility = Visibility.Collapsed;
+                    return;
+                }
+
+                row.Visibility = Visibility.Visible;
+                row.Text = text;
+            });
+        }
+
+        SensorPanel.Children.Add(_templatesPanel);
+        _templatesPanel.SetCurrentValue(StackPanel.MarginProperty, new Thickness(0, _rowMargin, 0, 0));
+        _ = data; // entrada uniforme com os demais services de linha (uso futuro de debug)
     }
 
     private static string TagFor(SensorKey key)

@@ -89,6 +89,7 @@ public sealed class LinuxSensorService : ISensorService
             ReadHwmonSensors(data);
             ReadDiskStats(data);
             ReadGpuSysfs(data);
+            ReadPowerSupply(data);
 
             if (_fpsMonitor.HasData)
             {
@@ -388,6 +389,95 @@ public sealed class LinuxSensorService : ISensorService
         {
             content = "";
             return false;
+        }
+    }
+
+    /// <summary>Número da primeira linha sysfs; false se ausente/invalido.</summary>
+    private static bool TryReadSysfsDouble(string path, out double value)
+    {
+        value = 0;
+        return TryReadSysfsFile(path, out var raw) &&
+               double.TryParse(raw.Split('\n')[0], NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    /// <summary>
+    /// Bateria/fonte AC (P6.4) via /sys/class/power_supply: classes por `type` —
+    /// "Mains" (AC) alimenta BatteryAcPower (arquivo `online`), "Battery" alimenta
+    /// nível (`capacity`), tensão (`voltage_now`, µV), potência (`power_now`, µW; ou
+    /// `current_now` × tensão) e desgaste ((1 − energy_full/energy_full_design) × 100,
+    /// com charge_full como respatilha). O sinal é normalizado por `status`:
+    /// positivo = consumindo da bateria, negativo = carregando (drivers divergem no
+    /// sinal de current_now/power_now). Desktop sem power_supply não publica nada.
+    /// </summary>
+    private void ReadPowerSupply(SensorData data)
+    {
+        try
+        {
+            const string psBase = "/sys/class/power_supply";
+            if (!Directory.Exists(psBase)) return;
+
+            foreach (var dir in Directory.GetDirectories(psBase))
+            {
+                if (!TryReadSysfsFile(Path.Combine(dir, "type"), out var psType)) continue;
+
+                if (psType.Equals("Mains", StringComparison.OrdinalIgnoreCase) ||
+                    psType.Equals("UPS", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Fonte AC: fica ativa durante toda a sessão (o desktop não tem);
+                    // publica 1/0 sempre que um adaptador existir.
+                    if (TryReadSysfsFile(Path.Combine(dir, "online"), out var onlineRaw))
+                    {
+                        data.SetValue(SensorType.BatteryAcPower, onlineRaw == "1" ? 1 : 0,
+                            $"Carregador ({Path.GetFileName(dir)})");
+                    }
+                    continue;
+                }
+
+                if (!psType.Equals("Battery", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var label = $"Bateria ({Path.GetFileName(dir)})";
+
+                if (TryReadSysfsDouble(Path.Combine(dir, "capacity"), out var cap) && cap > 0)
+                    data.SetValue(SensorType.BatteryLevel, Math.Clamp(cap, 0, 100), label);
+
+                if (TryReadSysfsDouble(Path.Combine(dir, "voltage_now"), out var microVolts) && microVolts > 0)
+                    data.SetValue(SensorType.BatteryVoltage, microVolts / 1_000_000.0, label);
+
+                // Potência: power_now direto; sem esse arquivo, current_now × tensão.
+                double powerW = 0;
+                if (TryReadSysfsDouble(Path.Combine(dir, "power_now"), out var microWatts))
+                    powerW = microWatts / 1_000_000.0;
+                else if (TryReadSysfsDouble(Path.Combine(dir, "current_now"), out var microAmps) && microVolts > 0)
+                    powerW = microAmps * microVolts / 1e12; // µA × µV = pW
+
+                if (powerW != 0 && TryReadSysfsFile(Path.Combine(dir, "status"), out var status))
+                {
+                    powerW = status.Equals("Charging", StringComparison.OrdinalIgnoreCase)
+                        ? -Math.Abs(powerW)
+                        : Math.Abs(powerW);
+                }
+
+                if (powerW != 0)
+                    data.SetValue(SensorType.BatteryPower, powerW, label);
+
+                // Desgaste: energia (µWh) ou carga (µAh) — ambas dão a mesma razão.
+                if (TryReadSysfsDouble(Path.Combine(dir, "energy_full"), out var full) && full > 0)
+                {
+                    if (TryReadSysfsDouble(Path.Combine(dir, "energy_full_design"), out var design) && design > 0)
+                        data.SetValue(SensorType.BatteryWearLevel, Math.Clamp((1 - full / design) * 100.0, 0, 100), label);
+                }
+                else if (TryReadSysfsDouble(Path.Combine(dir, "charge_full"), out var chFull) && chFull > 0 &&
+                         TryReadSysfsDouble(Path.Combine(dir, "charge_full_design"), out var chDesign) && chDesign > 0)
+                {
+                    data.SetValue(SensorType.BatteryWearLevel, Math.Clamp((1 - chFull / chDesign) * 100.0, 0, 100), label);
+                }
+
+                break; // primeira bateria: notebooks têm uma; multi-bateria via instância futura
+            }
+        }
+        catch
+        {
+            // power_supply é opcional (desktop/servidor): falha de leitura é silenciosa.
         }
     }
 

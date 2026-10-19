@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Management;
 using System.Runtime.InteropServices;
@@ -54,6 +55,12 @@ public sealed class HardwareMonitorService : ISensorService
     private DateTime _lastGpuProcesses = DateTime.MinValue;
     private List<GpuProcessInfo> _cachedGpuProcesses = [];
     private readonly Dictionary<int, string> _pidNames = [];
+
+    // Bateria (P6.4): leitura WMI a cada 10 s é mais que suficiente — carga/tensão
+    // mudam devagar, e a consulta atravessa WMI COM, que custa mais que o ciclo.
+    private BatterySnapshot? _cachedBattery;
+    private DateTime _lastBatteryRead = DateTime.MinValue;
+    private static readonly TimeSpan BatteryInterval = TimeSpan.FromSeconds(10);
 
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
@@ -166,6 +173,7 @@ public sealed class HardwareMonitorService : ISensorService
 
         ApplyCpuTempFallback(data, debugInfo);
         ApplyRamFallbacks(data, debugInfo);
+        ReadBattery(data, debugInfo);
 
         data.GpuProcesses = GetGpuProcesses();
 
@@ -318,6 +326,159 @@ public sealed class HardwareMonitorService : ISensorService
             data.Values[SType.RamUsage] = Math.Clamp((total - data.GetValue(SType.RamAvailable)) / total * 100.0, 0, 100);
             data.Labels[SType.RamUsage] = "RAM Uso (calculado)";
         }
+    }
+
+    private sealed record BatterySnapshot(double Level, double Voltage, double Power, double Wear, double AcPower);
+
+    /// <summary>
+    /// Bateria (P6.4): só publica séries quando HÁ bateria (notebook/UPS) — desktop fica
+    /// sem nenhuma série da família BAT. Fontes em cascata: `root\WMI` (BatteryStatus:
+    /// tensão/potência/AC; BatteryFullChargedCapacity + BatteryStaticData: desgaste) e
+    /// `Win32_Battery` (nível estimado + resultado de respatilha para tensão/desgaste).
+    /// Consultas são a cada 10 s; `SELECT *` com acesso defensivo às propriedades porque
+    /// drivers de bateria variam o que expõem.
+    /// </summary>
+    private void ReadBattery(SensorData data, List<string> debugInfo)
+    {
+        if (DateTime.UtcNow - _lastBatteryRead >= BatteryInterval)
+        {
+            _lastBatteryRead = DateTime.UtcNow;
+            _cachedBattery = null;
+            try { _cachedBattery = ReadBatteryFromWmi(); }
+            catch (Exception ex) { ErrorLog.Write("WMI.Battery", ex); }
+        }
+
+        var b = _cachedBattery;
+        if (b == null) return;
+
+        if (b.Level > 0)
+        {
+            data.Values[SType.BatteryLevel] = b.Level;
+            data.Labels[SType.BatteryLevel] = "Bateria (carga estimada)";
+        }
+        if (b.Voltage > 0)
+        {
+            data.Values[SType.BatteryVoltage] = b.Voltage;
+            data.Labels[SType.BatteryVoltage] = "Bateria (tensão)";
+        }
+        if (b.Power != 0)
+        {
+            data.Values[SType.BatteryPower] = b.Power;
+            data.Labels[SType.BatteryPower] = "Bateria (fluxo de potência)";
+        }
+        if (b.Wear > 0)
+        {
+            data.Values[SType.BatteryWearLevel] = b.Wear;
+            data.Labels[SType.BatteryWearLevel] = "Bateria (desgaste)";
+        }
+        data.Values[SType.BatteryAcPower] = b.AcPower;
+        data.Labels[SType.BatteryAcPower] = b.AcPower > 0 ? "Bateria (fonte AC conectada)" : "Bateria (fonte AC desconectada)";
+
+        debugInfo.Add($"[WMI] Bateria: nível={b.Level:F0}% tensão={b.Voltage:F2} V potência={b.Power:F2} W desgaste={b.Wear:F1}% AC={b.AcPower:F0}");
+    }
+
+    private static BatterySnapshot? ReadBatteryFromWmi()
+    {
+        double? level = null, voltage = null, power = null, wear = null;
+        double acPower = 0;
+
+        // root\WMI BatteryStatus (MSBatteryClass): tensão, taxas e fonte AC por bateria.
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM BatteryStatus");
+            using var results = searcher.Get();
+            foreach (var obj in results)
+            {
+                using (obj)
+                {
+                    var dischargeW = WmiProp(obj, "DischargeRate") / 1000.0;
+                    var chargeW = WmiProp(obj, "ChargeRate") / 1000.0;
+                    // Convenção: positivo = consumindo da bateria, negativo = carregando.
+                    power = dischargeW > 0 ? dischargeW : -chargeW;
+                    var mv = WmiProp(obj, "Voltage");
+                    if (mv > 0) voltage = mv / 1000.0;
+                    acPower = WmiProp(obj, "PowerOnline") != 0 ? 1 : 0;
+                }
+                break; // primeira bateria reportada
+            }
+        }
+        catch (Exception ex) { ErrorLog.Write("WMI.Battery.Status", ex); }
+
+        // Win32_Battery: nível estimado e fallback de tensão/desgaste (sem bateria no
+        // desktop esta classe simplesmente não devolve instâncias).
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT * FROM Win32_Battery");
+            using var results = searcher.Get();
+            foreach (var obj in results)
+            {
+                using (obj)
+                {
+                    var pct = WmiProp(obj, "EstimatedChargeRemaining");
+                    if (pct > 0) level = pct;
+                    if (voltage is not > 0)
+                    {
+                        var mv = WmiProp(obj, "DesignVoltage"); // mV em Win32 também
+                        if (mv > 0) voltage = mv / 1000.0;
+                    }
+                    if (!wear.HasValue)
+                    {
+                        var full = WmiProp(obj, "FullChargeCapacity");  // mWh
+                        var design = WmiProp(obj, "DesignCapacity");    // mWh
+                        if (full > 0 && design > 0) wear = Math.Clamp((1 - full / design) * 100.0, 0, 100);
+                    }
+                }
+                break;
+            }
+        }
+        catch (Exception ex) { ErrorLog.Write("WMI.Battery.Win32", ex); }
+
+        // Desgaste autoritativo (root\WMI), se o driver de bateria expõe as classes.
+        if (!wear.HasValue)
+        {
+            try
+            {
+                var full = WmiFirstNumeric(@"root\WMI",
+                    "SELECT FullChargedCapacity FROM BatteryFullChargedCapacity", "FullChargedCapacity");
+                var design = WmiFirstNumeric(@"root\WMI",
+                    "SELECT DesignedCapacity FROM BatteryStaticData", "DesignedCapacity");
+                if (full > 0 && design > 0) wear = Math.Clamp((1 - full / design) * 100.0, 0, 100);
+            }
+            catch (Exception ex) { ErrorLog.Write("WMI.Battery.Wear", ex); }
+        }
+
+        // Sem bateria (desktop ou classe ausente): nada a publicar.
+        if (!level.HasValue && !voltage.HasValue && !power.HasValue) return null;
+
+        return new BatterySnapshot(level ?? 0, voltage ?? 0, power ?? 0, wear ?? 0, acPower);
+    }
+
+    /// <summary>Propriedade WMI tolerante: propriedade ausente do driver devolve fallback (não lança).</summary>
+    private static double WmiProp(ManagementBaseObject obj, string name, double fallback = 0)
+    {
+        try
+        {
+            if (obj.Properties[name]?.Value is IConvertible c)
+                return c.ToDouble(CultureInfo.InvariantCulture);
+        }
+        catch (Exception ex)
+        {
+            _ = ex; // driver não expõe a propriedade: segue com fallback
+        }
+        return fallback;
+    }
+
+    /// <summary>Primeiro valor numérico de uma consulta WMI (0 se não houver resultado).</summary>
+    private static double WmiFirstNumeric(string scope, string query, string property)
+    {
+        using var searcher = new ManagementObjectSearcher(scope, query);
+        using var results = searcher.Get();
+        foreach (var obj in results)
+        {
+            using (obj) return WmiProp(obj, property);
+        }
+        return 0;
     }
 
     private static double ReadCpuTempFromThermalZone()

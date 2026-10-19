@@ -896,6 +896,8 @@ public partial class OverlayWindow : Window
             SensorType.DiskUsage or SensorType.DiskRead or SensorType.DiskWrite or
             SensorType.DiskTemperature or SensorType.DiskHealth or
             SensorType.DiskTotalRead or SensorType.DiskTotalWritten => "DSK" + num,
+            SensorType.BatteryLevel or SensorType.BatteryVoltage or SensorType.BatteryPower or
+            SensorType.BatteryWearLevel or SensorType.BatteryAcPower => "BAT" + num,
             SensorType.NetworkUp or SensorType.NetworkDown => "NET" + num,
             SensorType.MotherboardTemp => "MB" + num,
             SensorType.VrmTemperature => "VRM" + num,
@@ -921,6 +923,9 @@ public partial class OverlayWindow : Window
         SensorType.DiskTemperature or SensorType.DiskHealth or
         SensorType.DiskTotalRead or SensorType.DiskTotalWritten => Color.FromRgb(0x60, 0xA5, 0xFA),
 
+        SensorType.BatteryLevel or SensorType.BatteryVoltage or SensorType.BatteryPower or
+        SensorType.BatteryWearLevel or SensorType.BatteryAcPower => Color.FromRgb(0xA3, 0xE6, 0x35),
+
         SensorType.NetworkUp or SensorType.NetworkDown => Color.FromRgb(0x34, 0xD3, 0x99),
         SensorType.FanSpeed => Color.FromRgb(0xF4, 0x72, 0xB6),
         _ => Color.FromRgb(0xCB, 0xD5, 0xE1)
@@ -945,7 +950,10 @@ public partial class OverlayWindow : Window
 
         SensorType.NetworkUp or SensorType.NetworkDown => 5,
 
-        _ => 6
+        SensorType.BatteryLevel or SensorType.BatteryVoltage or SensorType.BatteryPower or
+        SensorType.BatteryWearLevel or SensorType.BatteryAcPower => 6,
+
+        _ => 7
     };
 
     protected override void OnClosed(EventArgs e)

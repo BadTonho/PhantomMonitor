@@ -13,6 +13,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - Fallback de temperatura da CPU via zona térmica ACPI (WMI `root\WMI`), **somente se o LibreHardwareMonitor não fornecer** a temperatura; consultado no máximo a cada 10 s e rotulado como aproximação
 - Fallback de RAM via WMI (`Win32_OperatingSystem`) e `PerformanceCounter` reutilizado entre ciclos
 - Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
+- **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo)
 
 ## Regras de mapeamento de sensores
 
@@ -51,6 +52,25 @@ Consumidores:
 - `Start/Stop/Update/Dispose` são serializados por um lock; um tick que chega durante outro ciclo é descartado.
 - `Stop()` e `Dispose()` são idempotentes; `SensorUpdated` é disparado **fora** do lock.
 - Exceções são registradas em `logs/errors.log` via `ErrorLog` (sem `catch` vazios).
+
+## Bateria (`Battery*`, P6.4)
+
+Família publicada **apenas quando existe bateria** (notebook/UPS); desktop não
+gera nenhuma linha — nem no CSV, nem no JSON, nem no OSD:
+
+| Série | Unidade | Significado / fonte |
+|---|---|---|
+| `BatteryLevel` | % | Carga remanescente (`Win32_Battery.EstimatedChargeRemaining`) |
+| `BatteryVoltage` | V | Tensão da bateria (`BatteryStatus.Voltage`, mV → V; respatilha `DesignVoltage`) |
+| `BatteryPower` | W | Fluxo de potência: **positivo consumindo** (discharge), **negativo carregando** (`DischargeRate`/`ChargeRate`, mW → W) |
+| `BatteryWearLevel` | % | Desgaste = (1 − FullChargedCapacity/DesignedCapacity) × 100 (root\WMI; respatilha `Win32_Battery` Full/Design) |
+| `BatteryAcPower` | 1/0 | Fonte AC conectada (`PowerOnline`) |
+
+- Leitura WMI a cada **10 s** (carga/tensão mudam devagar; a consulta atravessa COM).
+- `SELECT *` com acesso tolerante às propriedades: drivers de bateria variam o que
+  expõem (propriedade ausente devolve fallback em vez de derrubar o ciclo).
+- OSD: família `BAT` com cor lima própria (só aparece com `Battery*` na whitelist
+  `overlay.shownSeries`).
 
 ## Principais métodos
 

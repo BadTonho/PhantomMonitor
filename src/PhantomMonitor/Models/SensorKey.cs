@@ -131,15 +131,17 @@ public static class SensorUnits
         SensorType.DiskTemperature => "°C",
 
         SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.GpuCore or SensorType.GpuMemory or
-        SensorType.RamUsage or SensorType.DiskUsage or SensorType.DiskHealth or SensorType.GpuFan => "%",
+        SensorType.RamUsage or SensorType.DiskUsage or SensorType.DiskHealth or SensorType.GpuFan or
+        SensorType.BatteryLevel or SensorType.BatteryWearLevel => "%",
 
         SensorType.FanSpeed => "RPM",
 
         SensorType.CpuClock or SensorType.GpuCoreClock or SensorType.GpuMemoryClock => "MHz",
 
-        SensorType.CpuVoltage or SensorType.GpuVoltage or SensorType.RailVoltage => "V",
+        SensorType.CpuVoltage or SensorType.GpuVoltage or SensorType.RailVoltage or
+        SensorType.BatteryVoltage => "V",
 
-        SensorType.CpuPower or SensorType.GpuPower => "W",
+        SensorType.CpuPower or SensorType.GpuPower or SensorType.BatteryPower => "W",
 
         SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal => "MB",
 

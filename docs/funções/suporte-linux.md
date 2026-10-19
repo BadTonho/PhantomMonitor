@@ -61,6 +61,11 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
   * Totais da sessão: `NetworkUpTotal`/`NetworkDownTotal` (integrando a velocidade observada entre amostras).
 * **GPU (Utilização e VRAM):**
   * Monitoramento DRM em `/sys/class/drm/card*/device/gpu_busy_percent` e `mem_info_vram_*` — multi-GPU real: canônica do primeiro card + `GpuCore#i`, `GpuMemoryUsed#i`, `GpuMemoryTotal#i` para cada card.
+* **Bateria/Fonte AC (P6.4):**
+  * `/sys/class/power_supply/BAT*` (classe `type` = `Battery`): nível (`capacity`), tensão (`voltage_now`, µV → V), potência (`power_now` µW; respatilha `current_now` × tensão) e desgaste ((1 − `energy_full`/`energy_full_design`) × 100; respatilha `charge_full(_design)`).
+  * Sinal normalizado pelo arquivo `status`: **positivo consumindo**, negativo carregando (drivers divergem no sinal de `current_now`).
+  * Adaptadores (`type` = `Mains`/`UPS`): `BatteryAcPower` 1/0 a partir de `online`.
+  * Desktop/servidor sem `power_supply` não publica nada da família; os dados vão direto para o inventory/OSD/CSV como as demais séries.
 
 ---
 

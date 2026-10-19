@@ -65,5 +65,20 @@ public enum SensorType
     NetworkUpTotal,
 
     /// <summary>Total de bytes recebidos na sessão atual.</summary>
-    NetworkDownTotal
+    NetworkDownTotal,
+
+    /// <summary>Carga remanescente da bateria em % (100 = cheia; notebooks/UPs).</summary>
+    BatteryLevel,
+
+    /// <summary>Tensão da célula/células da bateria em V.</summary>
+    BatteryVoltage,
+
+    /// <summary>Potência da bateria em W: positivo consumindo (descarregando), negativo carregando.</summary>
+    BatteryPower,
+
+    /// <summary>Desgaste da bateria em % (1 − capacidade cheia/capacidade de projeto) × 100.</summary>
+    BatteryWearLevel,
+
+    /// <summary>Fonte AC conectada (1 = na tomada/carregando disponível, 0 = na bateria).</summary>
+    BatteryAcPower
 }

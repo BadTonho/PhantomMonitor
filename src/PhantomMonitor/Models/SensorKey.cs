@@ -132,7 +132,8 @@ public static class SensorUnits
 
         SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.GpuCore or SensorType.GpuMemory or
         SensorType.RamUsage or SensorType.DiskUsage or SensorType.DiskHealth or SensorType.GpuFan or
-        SensorType.BatteryLevel or SensorType.BatteryWearLevel => "%",
+        SensorType.BatteryLevel or SensorType.BatteryWearLevel or
+        SensorType.GpuBusy or SensorType.CpuBusy or SensorType.CpuWait => "%",
 
         SensorType.FanSpeed => "RPM",
 
@@ -153,9 +154,10 @@ public static class SensorUnits
         SensorType.NetworkUpTotal or SensorType.NetworkDownTotal => "B",
 
         SensorType.Fps or SensorType.FpsAvg or SensorType.FpsMin or SensorType.Fps1Low or
-        SensorType.Fps01Low or SensorType.FpsMax => "FPS",
+        SensorType.Fps01Low or SensorType.FpsMax or SensorType.FpsP1 or SensorType.FpsP99 => "FPS",
 
-        SensorType.FrametimeMs => "ms",
+        SensorType.FrametimeMs or SensorType.PresentLatency or
+        SensorType.FrametimeP1 or SensorType.FrametimeP99 => "ms",
 
         _ => ""
     };

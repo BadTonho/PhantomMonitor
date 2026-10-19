@@ -80,5 +80,29 @@ public enum SensorType
     BatteryWearLevel,
 
     /// <summary>Fonte AC conectada (1 = na tomada/carregando disponível, 0 = na bateria).</summary>
-    BatteryAcPower
+    BatteryAcPower,
+
+    /// <summary>Ocupação da GPU em % (coluna "GpuBusy%"/"GPU Busy" do PresentMon; 0 = indisponível).</summary>
+    GpuBusy,
+
+    /// <summary>Custo de CPU da pilha de present em % (coluna "CpuBusy%"; 0 = indisponível).</summary>
+    CpuBusy,
+
+    /// <summary>Tempo de CPU ociosa esperando present em % (coluna "CpuWait%"; 0 = indisponível).</summary>
+    CpuWait,
+
+    /// <summary>Latência de present em ms (coluna "MsUntilDisplayed"; 0 = indisponível).</summary>
+    PresentLatency,
+
+    /// <summary>Percentil 1 de FPS da janela de estatísticas (bruto, da mesma janela de 60 s do Avg/Min).</summary>
+    FpsP1,
+
+    /// <summary>Percentil 99 de FPS da janela de estatísticas.</summary>
+    FpsP99,
+
+    /// <summary>Percentil 1 de frametime (ms) da janela de estatísticas.</summary>
+    FrametimeP1,
+
+    /// <summary>Percentil 99 de frametime (ms) da janela de estatísticas.</summary>
+    FrametimeP99
 }

@@ -12,6 +12,7 @@ public sealed class FpsMonitor : IFpsMonitor
     private const int MaxStatsSamples = 3600;  // janela das estatísticas (~60 s rodando a 60 FPS)
     private readonly FrametimeBuffer _frametimeHistory = new(MaxGraphSamples);
     private readonly Queue<double> _fpsSamples = new(MaxStatsSamples);
+    private readonly Queue<double> _frametimeSamples = new(MaxStatsSamples); // janela p/ percentis puros
     private readonly object _lock = new();
 
     private Process? _presentMonProcess;
@@ -25,6 +26,14 @@ public sealed class FpsMonitor : IFpsMonitor
     private volatile float _fpsMax;
     private volatile float _lastFrametimeMs;
     private volatile bool _hasData;
+    private volatile float _gpuBusy;        // colunas opcionais do PresentMon 2.x (0 = indisponível)
+    private volatile float _cpuBusy;
+    private volatile float _cpuWait;
+    private volatile float _presentLatencyMs;
+    private volatile float _fpsP1;
+    private volatile float _fpsP99;
+    private volatile float _frametimeP1;
+    private volatile float _frametimeP99;
     private volatile string _debugInfo = "Inicializando...";
     private volatile string _perfResult = "";
     private volatile string _etwDiag = "Iniciando PresentMon...";
@@ -38,6 +47,13 @@ public sealed class FpsMonitor : IFpsMonitor
     private int _colPid = -1;
     private int _colApp = -1;
     private int _colFrametime = -1;
+
+    // Colunas opcionais (present tracking estendido): quando o executável/versão não
+    // as emite, os índices ficam em -1 e as métricas publicam 0 ("indisponível").
+    private int _colGpuBusy = -1;
+    private int _colCpuBusy = -1;
+    private int _colCpuWait = -1;
+    private int _colDisplayLatency = -1;
     private bool _headerParsed;
 
     // EMA (Exponential Moving Average) para suavizar o FPS
@@ -58,6 +74,14 @@ public sealed class FpsMonitor : IFpsMonitor
     public float Fps1Low => _fps1Low;
     public float Fps01Low => _fps01Low;
     public float FpsMax => _fpsMax;
+    public float GpuBusy => _gpuBusy;
+    public float CpuBusy => _cpuBusy;
+    public float CpuWait => _cpuWait;
+    public float PresentLatencyMs => _presentLatencyMs;
+    public float FpsP1 => _fpsP1;
+    public float FpsP99 => _fpsP99;
+    public float FrametimeP1 => _frametimeP1;
+    public float FrametimeP99 => _frametimeP99;
     public bool HasData => _hasData;
     public FrametimeBuffer FrametimeHistory => _frametimeHistory;
     public string DebugInfo => _debugInfo;
@@ -113,6 +137,10 @@ public sealed class FpsMonitor : IFpsMonitor
             _colPid = -1;
             _colApp = -1;
             _colFrametime = -1;
+            _colGpuBusy = -1;
+            _colCpuBusy = -1;
+            _colCpuWait = -1;
+            _colDisplayLatency = -1;
 
             var presentMonPath = FindPresentMonPath();
             if (presentMonPath == null)
@@ -211,6 +239,21 @@ public sealed class FpsMonitor : IFpsMonitor
                         if (_colFrametime == -1 || h.Equals("msBetweenPresents", StringComparison.OrdinalIgnoreCase))
                             _colFrametime = i;
                     }
+
+                    // Colunas opcionais, casadas por substring case-insensitive porque o
+                    // PresentMon varia o nome entre versões ("GpuBusy%", "GPU Busy %".
+                    // "MsUntilDisplayed"...). Colunas ausentes = índice permanece -1 e as
+                    // métricas publicam 0 (indicativo de indisponível) sem quebrar o resto.
+                    else if (_colGpuBusy == -1 && h.Contains("gpubusy", StringComparison.OrdinalIgnoreCase))
+                        _colGpuBusy = i;
+                    else if (_colCpuBusy == -1 && h.Contains("cpubusy", StringComparison.OrdinalIgnoreCase))
+                        _colCpuBusy = i;
+                    else if (_colCpuWait == -1 && h.Contains("cpuwait", StringComparison.OrdinalIgnoreCase))
+                        _colCpuWait = i;
+                    else if (_colDisplayLatency == -1 &&
+                             (h.Contains("msuntildisplayed", StringComparison.OrdinalIgnoreCase) ||
+                              h.Contains("presentlatency", StringComparison.OrdinalIgnoreCase)))
+                        _colDisplayLatency = i;
                 }
 
                 if (_colPid >= 0 && _colFrametime >= 0)
@@ -237,6 +280,13 @@ public sealed class FpsMonitor : IFpsMonitor
             if (!double.TryParse(rawFt, NumberStyles.Float, CultureInfo.InvariantCulture, out double ftMs) || ftMs <= 0 || ftMs > 2000)
                 return;
 
+            // Métricas extras (colunas opcionais): só entram se o header declarou a
+            // coluna e o valor for plausível — linhas antigas/outra versão publicam 0.
+            double gpuBusy = ParseOptional(parts, _colGpuBusy, 0, 100);
+            double cpuBusy = ParseOptional(parts, _colCpuBusy, 0, 100);
+            double cpuWait = ParseOptional(parts, _colCpuWait, 0, 100);
+            double latency = ParseOptional(parts, _colDisplayLatency, 0, 2000);
+
             // Se ainda não temos um target e o processo não é do sistema, adotamos este
             if (targetPid == 0 && _colApp >= 0 && parts.Count > _colApp)
             {
@@ -252,6 +302,16 @@ public sealed class FpsMonitor : IFpsMonitor
             {
                 _lastFrametimeMs = (float)ftMs;
                 _frametimeHistory.Add((float)ftMs);
+                _frametimeSamples.Enqueue(ftMs);
+                if (_frametimeSamples.Count > MaxStatsSamples)
+                {
+                    _frametimeSamples.Dequeue();
+                }
+
+                _gpuBusy = (float)gpuBusy;
+                _cpuBusy = (float)cpuBusy;
+                _cpuWait = (float)cpuWait;
+                _presentLatencyMs = (float)latency;
 
                 double instantFps = 1000.0 / ftMs;
 
@@ -287,6 +347,19 @@ public sealed class FpsMonitor : IFpsMonitor
                     int idx01Low = Math.Max(0, (int)(sorted.Count * 0.001));
                     _fps01Low = (float)sorted[idx01Low];
                     _fpsMax = (float)sorted[^1];
+
+                    // Percentis puros (P6.5): P1/P99 de FPS e de frametime, na mesma
+                    // janela — o 1% Low existente é só P1 da janela de FPS; aqui o
+                    // FrametimeP99 expõe os spikes ms-brutos que o gráfico já mostra.
+                    _fpsP1 = (float)PercentileOf(sorted, 0.01);
+                    _fpsP99 = (float)PercentileOf(sorted, 0.99);
+                    if (_frametimeSamples.Count > 0)
+                    {
+                        var sortedFt = _frametimeSamples.OrderBy(v => v).ToList();
+                        _frametimeP1 = (float)PercentileOf(sortedFt, 0.01);
+                        _frametimeP99 = (float)PercentileOf(sortedFt, 0.99);
+                    }
+
                     _lastStatsCalc = now;
                 }
 
@@ -406,6 +479,7 @@ public sealed class FpsMonitor : IFpsMonitor
         {
             _fpsSamples.Clear();
             _frametimeHistory.Clear();
+            _frametimeSamples.Clear();
             _fps = 0;
             _fpsMin = float.MaxValue;
             _fpsAvg = 0;
@@ -416,7 +490,27 @@ public sealed class FpsMonitor : IFpsMonitor
             _hasData = false;
             _emaFps = 0;
             _emaInitialized = false;
+            _gpuBusy = 0;
+            _cpuBusy = 0;
+            _cpuWait = 0;
+            _presentLatencyMs = 0;
+            _fpsP1 = 0;
+            _fpsP99 = 0;
+            _frametimeP1 = 0;
+            _frametimeP99 = 0;
         }
+    }
+
+    /// <summary>Percentil p puro sobre lista já ordenada (índice inferior, padrão nearest-rank).</summary>
+    private static double PercentileOf(List<double> sortedLower, double p) =>
+        sortedLower[Math.Clamp((int)Math.Floor(sortedLower.Count * p), 0, sortedLower.Count - 1)];
+
+    /// <summary>Coluna opcional: -1 = ausente, valor ruins = 0 ("indisponível"); range plausível protege de lixo.</summary>
+    private static double ParseOptional(List<string> parts, int col, double min, double max)
+    {
+        if (col < 0 || col >= parts.Count) return 0;
+        return double.TryParse(parts[col].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) &&
+               v >= min && v <= max ? v : 0;
     }
 
     public void Reset()

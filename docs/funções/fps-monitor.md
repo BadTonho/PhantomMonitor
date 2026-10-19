@@ -32,3 +32,31 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 - `HasData` - Indica se há dados de frames ativos
 - `FrametimeHistory` - Buffer circular de 600 amostras usado pelo gráfico do overlay
 - `DebugInfo` / `PerfResult` / `EtwDiag` - Diagnósticos e status da sessão do PresentMon
+
+## Métricas extras do PresentMon e percentis puros (P6.5)
+
+Além do FPS/frametime clássicos, o monitor consome **colunas opcionais** do CSV do
+PresentMon 2.x e publica percentis brutos:
+
+| Propriedade / série | Unidade | Fonte / conteúdo |
+|---|---|---|
+| `GpuBusy` | % | Coluna `GpuBusy%`/`GPU Busy` (ocupação real da GPU durante o frame) |
+| `CpuBusy` | % | Coluna `CpuBusy%` (custo de CPU da pilha de present) |
+| `CpuWait` | % | Coluna `CpuWait%` (CPU ociosa esperando present) |
+| `PresentLatencyMs` | ms | Coluna `MsUntilDisplayed`/`PresentLatency` (present → display) |
+| `FpsP1` / `FpsP99` | FPS | Percentil 1/99 **bruto** da janela de ~60 s de FPS |
+| `FrametimeP1` / `FrametimeP99` | ms | Percentil 1/99 da janela de frametimes (P99 expõe os spikes do gráfico) |
+
+Detalhes de robustez:
+
+- **Casamento por substring case-insensitive:** o nome dessas colunas varia
+  entre versões do PresentMon ("GpuBusy%", "GPU Busy %", "MsUntilDisplayed"...).
+- **Coluna ausente = 0 ("indisponível"):** versões antigas do executável ou flags
+  que desativam o tracking publicam 0 nas séries; os consumidores tratam `<= 0`
+  como indisponível (mesmo contrato das temperaturas).
+- **Valores plausíveis:** busy/wait são aceitos em 0–100% e latência em 0–2000 ms —
+  lixo de driver não entra nas janelas de estatística.
+- **Percentis:** calculados no tick de ~1 s sobre a mesma janela de 3600 amostras
+  do Avg/Min; o `FpsP1` coincide com o `Fps1Low` já existente (mesmo índice da
+  janela), e as séries novas ganham as counterparts P99 e os percentis de frametime
+  que antes só existiam visualmente no gráfico. Janelas independentes para FPS e frametime.

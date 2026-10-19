@@ -204,6 +204,17 @@ public sealed class HardwareMonitorService : ISensorService
             data.Values[SType.Fps01Low] = _fpsMonitor.Fps01Low;
             data.Values[SType.FpsMax] = _fpsMonitor.FpsMax;
             data.FrametimeHistory = _fpsMonitor.FrametimeHistory.ToArray();
+
+            // Métricas extras do PresentMon (P6.5): 0 = coluna ausente nesta versão
+            // (o CSV/JSON vazio em CpuTemp segue o mesmo contrato de <= 0 = indisponível).
+            data.Values[SType.GpuBusy] = _fpsMonitor.GpuBusy;
+            data.Values[SType.CpuBusy] = _fpsMonitor.CpuBusy;
+            data.Values[SType.CpuWait] = _fpsMonitor.CpuWait;
+            data.Values[SType.PresentLatency] = _fpsMonitor.PresentLatencyMs;
+            data.Values[SType.FpsP1] = _fpsMonitor.FpsP1;
+            data.Values[SType.FpsP99] = _fpsMonitor.FpsP99;
+            data.Values[SType.FrametimeP1] = _fpsMonitor.FrametimeP1;
+            data.Values[SType.FrametimeP99] = _fpsMonitor.FrametimeP99;
         }
 
         // Estatísticas por série: uma amostra por snapshot publicado, anexada ao

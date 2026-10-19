@@ -1,9 +1,13 @@
-# SDK de Telemetria (memória compartilhada)
+# SDK de Telemetria (memória compartilhada + HTTP)
 
 Terceiros (OBS, AutoHotkey, dashboards, scripts, outros apps) consomem a telemetria
-do Phantom Monitor **sem parse de JSON/CSV**: o monitor publica um snapshot
-estruturado numa memória compartilhada a cada ciclo de monitoramento (mesma
-cadência do snapshot, mínimo 100 ms).
+do Phantom Monitor de duas formas, **sem tocar em arquivos de log**:
+
+1. **Memória compartilhada** (sempre ativa): o monitor publica um snapshot
+   estruturado numa memória compartilhada a cada ciclo de monitoramento (mesma
+   cadência do snapshot, mínimo 100 ms) — parse zero no consumidor.
+2. **Exportador HTTP** (opt-in, `telemetryExport.enabled`): o último snapshot vira
+   JSON em `GET /values` para dashboards de navegador e ferramentas externas.
 
 > O mapa é criado sempre que o monitoramento inicia e destruído quando para.
 > `logs/sensors_latest.json` continua como fallback legado para integrações simples.
@@ -69,10 +73,54 @@ C (mesmo protocolo): `uint32 seq = *(uint32*)(base+8); if (seq & 1) retry;
 explicito necessário em x86/x64 para este uso; em ARM64, leia `seq` com
 `__atomic_load_n(..., __ATOMIC_ACQUIRE)`.
 
+- Cadência = cadência do monitoramento (`updateIntervalMs`, mínimo 100 ms).
+- Um consumidor nunca deve confiar em `label` para identificar: identifique por
+  `key` (contrato estável), `label` é humano/observacional.
+
+## Exportador HTTP (`telemetryExport`, P6.3)
+
+Complemento de rede para o mapa de memória — mesma cadência, payload maior:
+
+```json
+"telemetryExport": { "enabled": false, "port": 7317, "listenAll": false }
+```
+
+- **Endpoints:** `GET /values` (snapshot JSON, **mesmo payload do
+  `sensors_latest.json`**: `values`, `series`, `seriesLabels`, `seriesStats`,
+  `timestamp`) e `GET /health` (`{"ok":true,"timestamp":"..."}` para health
+  checks). Outros caminhos → 404 em texto.
+- **Escuta padrão:** `http://127.0.0.1:7317/` — loopback não requer permissão de
+  URL do http.sys nem firewall. `listenAll: true` vira `http://+:porta/`
+  (todas as interfaces, para consumo em 2ª máquina) e **pode** exigir liberação
+  de firewall/port forwarding; sem TLS e sem autenticação, então só use em rede
+  confiável. `port` é travada em 1024–65535 pelo `Normalize`.
+- **Headers:** `Cache-Control: no-store` (painéis de browser buscam a cada 500 ms
+  sem stale), `Content-Type: application/json`, `Content-Length` para keep-alive.
+- **Ciclo de vida:** ligado somente com o monitoramento ativo (criado no início,
+  descartado no stop); falha ao abrir a porta é registrada em
+  `logs/errors.log` e **não** impede o monitoramento.
+- **Ativo quando pausado (P6.7):** segue servindo o último snapshot válido
+  durante a pausa — dashboards não "somem", congelando no valor de pausa.
+- **Anti-cheat por design:** ouvindo no loopback, nenhum processo de jogo é
+  afetado; o exporter só responde, nunca consulta o sistema nem outros apps.
+- **Por que HTTP e não UDP:** `HttpListener` dá descoberta (`/health`),
+  Content-Length/keep-alive, headers e clientes universais (fetch de browser,
+  curl, Invoke-RestMethod) sem escrever nenhum parser do lado do consumidor;
+  UDP teria menos overhead, mas toda integração precisaria reimplementar
+  framing/parse (~o que o SDK de memória resolve melhor em tempo real).
+
+### Exemplo de consumo
+
+```bash
+curl http://127.0.0.1:7317/values
+Invoke-RestMethod http://127.0.0.1:7317/values | % { "$($_.series['GpuCore'])" }
+```
+
 ## Limites e versionamento
 
 - Capacidade por ciclo: **256 séries**; chaves até 40 caracteres; rótulos até 32
-  (excesso truncado; não-ASCII vira `*`).- A mudança de layout quebra compatibilidade → **mapa novo** (`..._v2`) com
+  (excesso truncado; não-ASCII vira `*`).
+- A mudança de layout quebra compatibilidade → **mapa novo** (`..._v2`) com
   `version` incrementada; o leitor checa `version` antes de parsear.
 - Cadência = cadência do monitoramento (`updateIntervalMs`, mínimo 100 ms).
 - Um consumidor nunca deve confiar em `label` para identificar: identifique por

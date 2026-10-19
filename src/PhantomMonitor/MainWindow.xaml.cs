@@ -264,6 +264,15 @@ public partial class MainWindow : Window
         // consumidores externos (OBS, AHK, dashboards) leem em tempo real sem parse.
         _telemetrySdk = new TelemetrySdkWriter();
 
+        // Exportador HTTP (opt-in em config.telemetryExport): serves o último snapshot.
+        _telemetryHttp?.Dispose();
+        _telemetryHttp = null;
+        if (_config.TelemetryExport.Enabled)
+        {
+            _telemetryHttp = new TelemetryHttpExporter(_config.TelemetryExport.Port, _config.TelemetryExport.ListenAll);
+            _telemetryHttp.Start();
+        }
+
         _startTime = DateTime.UtcNow;
         StartButton.IsEnabled = false;
         StopButton.IsEnabled = true;
@@ -292,6 +301,8 @@ public partial class MainWindow : Window
         _jsonLogger = null;
         _telemetrySdk?.Dispose();
         _telemetrySdk = null;
+        _telemetryHttp?.Dispose();
+        _telemetryHttp = null;
 
         StartButton.IsEnabled = true;
         StopButton.IsEnabled = false;
@@ -420,6 +431,7 @@ public partial class MainWindow : Window
             _csvLogger?.Write(data);
             _jsonLogger?.Write(data);
             _telemetrySdk?.Publish(data);
+            _telemetryHttp?.Publish(data);
         });
     }
 
@@ -427,6 +439,7 @@ public partial class MainWindow : Window
     private OverlayEditorWindow? _overlayEditor;
     private InventoryWindow? _inventoryWindow;
     private TelemetrySdkWriter? _telemetrySdk;
+    private TelemetryHttpExporter? _telemetryHttp;
 
     private void OnOpenDebugWindow(object sender, RoutedEventArgs e) => ShowDebugWindow();
 

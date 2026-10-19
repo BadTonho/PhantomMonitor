@@ -15,6 +15,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `Overlay` - Configurações específicas do overlay
 - `Sensors` - Quais sensores estão habilitados
 - `alerts` - Regras de alerta com ações (popup/som/script/desligar) — ver [alertas.md](alertas.md)
+- `telemetryExport` - Exportador HTTP do SDK de telemetria: `{ enabled: false, port: 7317, listenAll: false }` — publica o último snapshot como JSON em `GET /values` (mesmo payload do `sensors_latest.json`) e `GET /health`; padrão é loopback (`listenAll: true` abre para a LAN e pode exigir firewall) — ver [telemetry-sdk.md](../telemetry-sdk.md)
 - `profiles` - Perfis por aplicativo do OSD: `[{ name, appMatch, offsetX?, offsetY?, width?, fontSize?, accentColor?, series?, visible? }]` — ver [overlay.md](overlay.md); `appMatch` vazio ou `*` casa com qualquer executável; `visible: false` esconde o OSD enquanto o perfil casa
 
 ### OverlayConfig

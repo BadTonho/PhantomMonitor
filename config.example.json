@@ -35,6 +35,7 @@
     "motherboard": false
   },
   "profiles": [],
+  "telemetryExport": { "enabled": false, "port": 7317, "listenAll": false },
   "alerts": {
     "enabled": true,
     "cooldownSeconds": 60,

@@ -17,6 +17,9 @@ public sealed class AppConfig
     public SensorConfig Sensors { get; set; } = new();
     public AlertsConfig Alerts { get; set; } = new();
 
+    /// <summary>Exportador HTTP do SDK de telemetria (opt-in; ver TelemetryExportConfig).</summary>
+    public TelemetryExportConfig TelemetryExport { get; set; } = new();
+
     /// <summary>Perfis por aplicativo do OSD (aplicam overrides quando o executável em foco casa).</summary>
     public List<OverlayProfile> Profiles { get; set; } = [];
 
@@ -69,6 +72,11 @@ public sealed class AppConfig
         OverlayPosition ??= new();
         Overlay ??= new();
         Sensors ??= new();
+
+        // Exportador HTTP: porta em faixa de usuário (abaixo de 1024 costuma exigir
+        // privilégio e confunde com serviços do sistema), loopback por padrão.
+        TelemetryExport ??= new();
+        TelemetryExport.Port = Math.Clamp(TelemetryExport.Port, 1024, 65535);
 
         // Whitelist de séries por instância: config antigo sem a chave (ou com lista vazia)
         // volta ao padrão, senão o OSD ficaria sem multi-GPU/ventoinhas/discos extras.
@@ -210,6 +218,27 @@ public sealed class SensorConfig
     public bool Disk { get; set; } = true;
     public bool Network { get; set; } = false;
     public bool Motherboard { get; set; } = false;
+}
+
+/// <summary>
+/// Exportador HTTP do SDK de telemetria (P6.3): publica o último snapshot como
+/// JSON em <c>GET /values</c> (mesmo payload do sensors_latest.json) e
+/// <c>GET /health</c>. Por padrão desligado e escutando no loopback
+/// (127.0.0.1, sem exigir permissão de URL do http.sys); <c>listenAll</c>
+/// abre para a LAN (<c>http://+:porta/</c>) e pode requerer liberação de
+/// firewall. UDP não foi implementado de propósito: HTTP dá discovery
+/// (health), Content-Length e cache headers sem nenhum parser no cliente —
+/// justificativa completa em docs/telemetry-sdk.md.
+/// </summary>
+public sealed class TelemetryExportConfig
+{
+    public bool Enabled { get; set; }
+
+    /// <summary>Porta TCP do listener (1024–65535; padrão 7317).</summary>
+    public int Port { get; set; } = 7317;
+
+    /// <summary>false = escuta só em 127.0.0.1; true = todas as interfaces (LAN, opt-in).</summary>
+    public bool ListenAll { get; set; }
 }
 
 public sealed class AlertsConfig

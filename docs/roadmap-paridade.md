@@ -88,6 +88,21 @@
 
 - [x] (decisão explícita de NÃO fazer no curto prazo; mantém o escopo "read-only")
 
+## P6 — Paridade instrumental (efeito HWiNFO) — ✅ CONCLUÍDO (2026-10-19)
+
+Sete sub-etapas, um commit Conventional cada, build 0 erros/0 avisos, docs sincronizadas:
+
+- **P6.1** Estatísticas por série (min/max/média da sessão) + reset (bandeja/inventário) + marcador `#marker` no CSV — `0acb085`
+- **P6.2** `profiles[].visible: false` esconde o OSD por aplicativo — `60c72e5`
+- **P6.3** Exportador HTTP do SDK (`GET /values` `/health`, loopback padrão, `listenAll` opt-in; UDP de propósito fora — `1caf566`
+- **P6.4** Família `Battery*` (nível/%, tensão, potência com sinal, desgaste, AC) via WMI no Windows e `/sys/class/power_supply` no Linux; desktop sem bateria não publica nada — `5095a11`
+- **P6.5** Métricas extras do PresentMon (GPU Busy / CPU Busy / CPU Wait / latência de present) + percentis puros P1/P99 de FPS e frametime, parse tolerante a versão — `159a0cf`
+- **P6.6** Templating do OSD: linhas personalizadas com placeholders `{Chave}`/`{Chave:N}`/wildcard, ocultas até resolverem, sempre no fim do painel; cor só via config — `df4b72e`
+- **P6.7** Pausa/retomada do monitoramento (bandeja + 2º atalho global `Ctrl+Alt+P`): ciclos pulados, telemetria congelada no último snapshot, estado não persistente — `5c54f8f`
+
+A tabela da rodada 2 abaixo continua válida como registro dos gaps avaliados;
+as linhas fechadas por P6 estão marcadas ✅ na coluna "Ação definida".
+
 ## Deliberadamente NÃO planejado (decisões já tomadas)
 
 - Seqlock na SHM Vulkan (custo de 4 bytes/ABI por consistência total) —
@@ -118,24 +133,24 @@
 | Curva de ventoinha, V/F curve, OC scanner (Afterburner) | B | P5: fora do escopo read-only (app separado um dia) |
 | Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (RTV1/MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (conf. features oficiais do RTSS 7.3.7); OBS no plugin cobre gravação |
 | Screenshot in-frame via hotkey | B | Não há acesso ao backbuffer sem hook; OBS cobre |
-| **Métricas ricas do PresentMon** (GPU Busy, CPU Busy/CPU Wait, click-to-photon, percentis 1st/99th, modo de present) | A | **Gap real do produto**: hoje `FpsMonitor` só parsa `msBetweenPresents`/`FrameTime` → estender o parse das colunas que a versão do PresentMon em uso expõe (o RTSS usa PresentMon 2.3.1-DLSS4) |
+| **Métricas ricas do PresentMon** (GPU Busy, CPU Busy/CPU Wait, click-to-photon, percentis 1st/99th, modo de present) | A | ✅ Fechado pelo **P6.5** (GPU/CPU Busy, CPU Wait, latência de present e percentis P1/P99 de FPS/frametime; modo de present/click-to-photon não expostos pelo executável — não planejado) |
 | **Latency markers NVIDIA Reflex** (`reflexlatency()/timespan()`, marcadores input→gpurender) | B | Implementado pelo RTSS com injection/hook no jogo — fora por política |
-| **OverlayEditor / hypertext** — tags (`<B>`, `<FNT>`), gráficos de barra/timeband, fórmulas e filtros (`buf()`, condições), camadas condicionais, macros `%CPU%`, text tables | A | **Maior gap real vs RTSS**: não temos composição de linhas nem expressões — o P6.6 (templates de OSD) cobre a parte de texto/condição; gráficos embutidos no overlay são P7 de UI |
-| Per-app "OSD ocultado" (jogos que não querem ver overlay) | A | **Gap pequeno**: `profiles` não tem flag de visibilidade → `visible: false` por perfil (quick win) |
+| **OverlayEditor / hypertext** — tags (`<B>`, `<FNT>`), gráficos de barra/timeband, fórmulas e filtros (`buf()`, condições), camadas condicionais, macros `%CPU%`, text tables | A | 🟡 Parcial: **P6.6** (templates `{Chave}`/`{Chave:N}` + cor) cobre texto/condição simples; gráficos embutidos e expressões = P7 de UI |
+| Per-app "OSD ocultado" (jogos que não querem ver overlay) | A | ✅ Fechado pelo **P6.2** (`profiles[].visible: false`) |
 | LCDs externos (Logitech, OLED/StreamDeck via plugins/ecossistema) | A-parcial | Nossa SDK (P2) dá os dados; escritores/apps externos fora do produto |
-| Monitor remoto / 2ª máquina / painel na LAN (HWiNFO tem telesensor-server; RTSS usa HUDSight/3rd-party) | A | **Gap do produto**: SDK é só memória local → exportador HTTP/UDP (loopback/LAN opcional) |
+| Monitor remoto / 2ª máquina / painel na LAN (HWiNFO tem telesensor-server; RTSS usa HUDSight/3rd-party) | A | ✅ Fechado pelo **P6.3** (exportador HTTP `GET /values`, loopback/LAN opt-in; UDP de propósito fora) |
 | Overlay VR (OpenVR overlay) | A (nicho) | Nicho; não planejado |
 
 ## Onde ficamos atrás do HWiNFO
 
 | Recurso | Camada | Ação definida |
 |---|---|---|
-| Colunas Min/Máx/Média/Atual por sensor + hotkey de reset (v7.70/v8.34) | A | **Gap real**: `SensorData` mantém só o valor atual (FPS tem estatística própria) → estatística por série (min/max/avg janela fixa ou sessão) + reset no inventário/tray |
-| Hotkey para **pausar/retomar** o monitoramento (v8.34) | A | **Quick win**: pause/resume no tray/atalho global — não temos hoje |
-| Percentis 1st/99th de FPS e frametime (PresentMon, v8.24) | A | Já calculamos 1%/0.1% Low (média do pior 1%); o percentil puro é barato de adicionar |
-| Marcadores/hotkeys de benchmark: start/stop de log e segmento com marcador | A | **Gap barato**: hotkey/tray "reset estatística" + linha `#marker` no CSV |
-| Acesso remoto: "Remote Sensor Server" (TCP na LAN) para 2ª máquina e dashboards (remoto fixado em v7.34) | A | Mesmo do item remoto do RTSS: exportador HTTP/UDP sobre a mesma estrutura do P2 |
-| Bateria (laptop: carga %, desgaste, draw, AC) | A | **Gap real, barato** via WMI (`Win32_Battery` + `BatteryStaticData` em `root\WMI`) |
+| Colunas Min/Máx/Média/Atual por sensor + hotkey de reset (v7.70/v8.34) | A | ✅ Fechado pelo **P6.1** (SeriesStatsTracker por snapshot + "Resetar estatísticas" na bandeja/colunas Min/Máx/Média no inventário) |
+| Hotkey para **pausar/retomar** o monitoramento (v8.34) | A | ✅ Fechado pelo **P6.7** (tray com check + 2º atalho global; telemetria congelada no último snapshot) |
+| Percentis 1st/99th de FPS e frametime (PresentMon, v8.24) | A | ✅ Fechado pelo **P6.5** (FpsP1/FpsP99 + FrametimeP1/FrametimeP99 sobre a janela de ~60 s) |
+| Marcadores/hotkeys de benchmark: start/stop de log e segmento com marcador | A | ✅ Fechado pelo **P6.1** (`#marker,<ts>,<label>` no CSV a cada reset; start/stop de log por hotkey segue opcional) |
+| Acesso remoto: "Remote Sensor Server" (TCP na LAN) para 2ª máquina e dashboards (remoto fixado em v7.34) | A | ✅ Fechado pelo **P6.3** (mesma estrutura do P2 exportada por HTTP; LAN opt-in com `listenAll`) |
+| Bateria (laptop: carga %, desgaste, draw, AC) | A | ✅ Fechado pelo **P6.4** (WMI `root\WMI`+`Win32_Battery` no Windows; `/sys/class/power_supply` no Linux; desktop não publica) |
 | Contadores de erros de hardware **WHEA** (incl. device PCIe com falha) | A (médio) | Ler eventos WHEA via Event Log/WMI → série `WheaErrorCount` |
 | Sensores **customizados pelo usuário** (fórmulas sobre outros sensores; fix v8.54) | A (médio) | Séries derivadas em config — puxa pela engine de expressões do P6.6 |
 | OSD próprio do HWiNFO (desde v8.00): gráfico de histórico no OSD, cor de fundo, múltiplos valores por linha, eixo com min/max global | A (menor) | Nosso overlay (P1/P3) cobre texto/séries; gráfico embutido e cor de fundo = melhorias de UI |
@@ -155,17 +170,20 @@
 
 ## Recomendação (ordem de valor/esforço)
 
-1. **P6.1** Min/max/avg por série + **reset de estatísticas** (tray/hotkey) com marcadores no CSV — "efeito HWiNFO" na leitura e nos dados.
-2. **P6.2** `profiles[].visible` (esconder OSD por app) — o override de séries já existe.
-3. **P6.3** Exportador HTTP/UDP do SDK (loopback/LAN) — painéis e 2ª máquina sem tocar no produto.
-4. **P6.4** Bateria via WMI (módulo separado, valioso para laptops).
-5. **P6.5** Métricas extras do PresentMon (GPU Busy, CPU Busy/Wait, percentis 1st/99th, modo de present) conforme as colunas da versão em uso.
-6. **P6.6** OSD templating (linhas/expressões condicionais) — médio; último da fila.
-7. **P6.7** Pausar/retomar monitoramento (tray/atalho) — quick win confirmado como padrão HWiNFO.
+1. ✅ **P6.1** Min/max/avg por série + **reset de estatísticas** (tray/inventário) com marcadores no CSV — feito (`0acb085`)
+2. ✅ **P6.2** `profiles[].visible` (esconder OSD por app) — feito (`60c72e5`)
+3. ✅ **P6.3** Exportador HTTP do SDK (loopback/LAN opt-in; UDP deliberadamente fora) — feito (`1caf566`)
+4. ✅ **P6.4** Bateria via WMI/sysfs (Windows + Linux, módulo próprio da família `Battery*`) — feito (`5095a11`)
+5. ✅ **P6.5** Métricas extras do PresentMon (GPU/CPU Busy, CPU Wait, latência de present) + percentis 1st/99th — feito (`159a0cf`)
+6. ✅ **P6.6** OSD templating (linhas com placeholders, condições por resolução de séries) — feito (`df4b72e`)
+7. ✅ **P6.7** Pausar/retomar monitoramento (tray/atalho global `Ctrl+Alt+P`) — feito (`5c54f8f`)
 
-P7 (maiores, exigem NVAPI/AMD User Mode/MSR ou driver próprio): SMART completo, throttle
+**P6 integralmente concluído.** Próximo capítulo natural (P7, esforço grande e/ou
+dependente de engine tercerizada) permanece como "limitação de engine" documentada.
+
+**P7 (maiores, exigem NVAPI/AMD User Mode/MSR ou driver próprio): SMART completo, throttle
 reasons, EDID/SPD/PCIe detalhes, C-states/NPU — cada um documentado como "limitação da
-engine" quando implementável apenas com driver próprio.
+engine" quando implementável apenas com driver próprio.**
 
 ## Onde o Phantom Monitor já está à frente
 

@@ -4,17 +4,21 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 
 ## Funcionalidades
 
-- **Monitoramento completo**: CPU (uso, temperatura, clock, potência, voltagem), GPU (uso, temperatura, VRAM usada/total, clock, potência, hotspot), RAM (uso, disponível), disco (uso, I/O), rede (↓/↑), ventoinhas (GPU/sistema) e temperaturas de placa-mãe/SuperIO
+- **Monitoramento completo**: CPU (uso, temperatura, clock, potência, voltagem), GPU (uso, temperatura, VRAM usada/total, clock, potência, hotspot), RAM (uso, disponível), disco (uso, I/O), rede (↓/↑), ventoinhas (GPU/sistema), temperaturas de placa-mãe/SuperIO e **bateria** (carga, tensão, potência, desgaste e fonte AC — laptops/UPs; Windows via WMI, Linux via `/sys/class/power_supply`)
 - **Overlay configurável & transparente**: Janela flutuante sempre visível sobre jogos com informações em tempo real, sublinhas de detalhes (CPU/GPU) e linhas opcionais NET/FAN/MB com auto-revelação, além do Editor Visual (grid canvas, drag-and-drop, modo compacto, cor de destaque e tamanho de fonte)
+- **Linhas personalizadas no OSD (templates)**: texto livre com placeholders `{Chave}`/`{Chave:N}`/wildcard resolvidos a cada ciclo; linha invisível até todos os sensores existirem (`overlay.templates`)
+- **Perfis por aplicativo**: overrides de posição/largura/fonte/acento/séries por app — e `visible: false` para esconder o OSD completo em jogos específicos
 - **FPS 100% independente de terceiros**:
-  - **Windows**: Leitura de FPS e frametime de alta precisão via Intel PresentMon (ETW nativo, sem injetar DLLs, imune a banimentos de anti-cheat)
+  - **Windows**: Leitura de FPS e frametime de alta precisão via Intel PresentMon (ETW nativo, sem injetar DLLs, imune a banimentos de anti-cheat) — com **GPU Busy / CPU Busy / CPU Wait / latência de present** quando a versão do executável expõe as colunas
   - **Linux**: Camada nativa em C++ `PhantomVulkanLayer` interceptando `vkQueuePresentKHR` com comunicação por memória compartilhada (`/dev/shm/phantom_fps_<pid>`, um objeto por processo)
-- **Atalho global do OSD**: Mostrar/ocultar o overlay de qualquer aplicativo via Win32 `RegisterHotKey` (ex.: `Ctrl+Shift+O`), sem injeção de DLL
-- **Bandeja do sistema**: Ícone na bandeja (Win32 puro, sem WinForms) com menu de contexto — mostrar janela, alternar OSD, iniciar com o Windows e sair — e opção de autostart via registro do usuário
+- **Atalhos globais**: mostrar/ocultar o OSD (`toggleOverlayHotkey`) e **pausar/retomar o monitoramento** (`pauseMonitorHotkey`, padrão `Ctrl+Alt+P`) via Win32 `RegisterHotKey`, sem injeção de DLL
+- **Bandeja do sistema**: Ícone na bandeja (Win32 puro, sem WinForms) com menu de contexto — mostrar janela, alternar OSD, iniciar com o Windows, **resetar estatísticas**, **pausar monitoramento** e sair — e opção de autostart via registro do usuário
 - **Gráfico de frametime**: Visualização em tempo real da variação de frametime com buffer circular
-- **Estatísticas avançadas**: FPS instantâneo, médio, mínimo, máximo, 1% Low e 0.1% Low
+- **Estatísticas avançadas de FPS**: instantâneo, médio, mínimo, máximo, 1% Low, 0.1% Low e **percentis puros 1st/99th de FPS e frametime**
+- **Estatísticas por série (estilo HWiNFO)**: mín/máx/média da sessão para **qualquer série** (canônica e por instância), com reset pela bandeja/inventário e ranking na janela de inventário
 - **Alertas com ações**: Regras por sensor (acima/abaixo de um limiar) com popup, som, script externo e desligamento agendado (com trava de segurança `allowShutdown`)
-- **Logging**: Exportação contínua para CSV e JSON
+- **Logging**: Exportação contínua para CSV e JSON — CSV aceita **marcadores `#marker`** para delimitar segmentos de sessão/benchmark
+- **SDK de telemetria**: memória compartilhada sempre ativa + **exportador HTTP opt-in** (`telemetryExport`) — consuma o snapshot em JSON (mesmo payload do `sensors_latest.json`) via `GET /values` no loopback ou LAN (ver `docs/telemetry-sdk.md`)
 - **Visual Clean**: Design profissional refinado (paleta Slate Dark), eliminando efeitos excessivos de neon
 - **Configurável**: `config.json` com fallback automático para `config.example.json`
 

@@ -36,6 +36,7 @@
     "network": false,
     "motherboard": false
   },
+  "customSensors": [],
   "profiles": [],
   "telemetryExport": { "enabled": false, "port": 7317, "listenAll": false },
   "alerts": {

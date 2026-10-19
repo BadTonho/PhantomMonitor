@@ -28,6 +28,9 @@ public sealed class AppConfig
     /// <summary>Exportador HTTP do SDK de telemetria (opt-in; ver TelemetryExportConfig).</summary>
     public TelemetryExportConfig TelemetryExport { get; set; } = new();
 
+    /// <summary>Sensores customizados (fórmulas sobre outras séries; ver CustomSensorEngine).</summary>
+    public List<CustomSensorConfig> CustomSensors { get; set; } = [];
+
     /// <summary>Perfis por aplicativo do OSD (aplicam overrides quando o executável em foco casa).</summary>
     public List<OverlayProfile> Profiles { get; set; } = [];
 
@@ -168,6 +171,30 @@ public sealed class AppConfig
             template.Text = template.Text.Trim();
             if (template.Color is { } color && !IsValidHexColor(color)) template.Color = null;
         }
+
+        // Sensores customizados: nome obrigatório (removidos com fórmula que não
+        // compilam — erro registrado, os válidos mantêm a ordem/índice do config).
+        CustomSensors ??= [];
+        CustomSensors.RemoveAll(s => s is null || string.IsNullOrWhiteSpace(s.Name));
+        foreach (var sensor in CustomSensors)
+        {
+            sensor.Name = sensor.Name.Trim();
+            sensor.Formula = (sensor.Formula ?? "").Trim();
+            sensor.Unit = (sensor.Unit ?? "").Trim();
+
+            if (!CustomSensorEngine.IsFormulaValid(sensor.Formula))
+            {
+                ErrorLog.Write("Config.Normalize",
+                    $"customSensors: fórmula inválida descartada para '{sensor.Name}': '{sensor.Formula}'");
+                sensor.Formula = "";
+            }
+        }
+        CustomSensors.RemoveAll(s => string.IsNullOrWhiteSpace(s.Formula));
+        if (CustomSensors.Count > CustomSensorEngine.MaxSensors)
+        {
+            CustomSensors.RemoveRange(CustomSensorEngine.MaxSensors,
+                CustomSensors.Count - CustomSensorEngine.MaxSensors);
+        }
     }
 
     internal static bool IsValidHexColor(string? value) =>
@@ -260,6 +287,25 @@ public sealed class SensorConfig
     public bool Disk { get; set; } = true;
     public bool Network { get; set; } = false;
     public bool Motherboard { get; set; } = false;
+}
+
+/// <summary>
+/// Sensor customizado (paridade HWiNFO "custom user sensor"): fórmula derivada de
+/// outras séries do snapshot, avaliada a cada ciclo pela <see cref="CustomSensorEngine"/>
+/// e publicada como série <c>Custom#i</c> (i = posição da fórmula no config, ≥ 1).
+/// <c>formula</c> segue a sintaxe do parser (operadores + - * /, parênteses, funções
+/// min/max/abs e referências {"Chave"} — ver docs/funções/sensores-customizados.md).
+/// <c>unit</c> é opcional e só compõe o rótulo exibido ("Média (°C)").
+/// </summary>
+public sealed class CustomSensorConfig
+{
+    /// <summary>Nome amigável (vira o rótulo da série e a referência {"Nome"} em fórmulas).</summary>
+    public string Name { get; set; } = "";
+
+    public string Formula { get; set; } = "";
+
+    /// <summary>Unidade opcional exibida no rótulo e nas planilhas ("°C", "%", "MB"...).</summary>
+    public string Unit { get; set; } = "";
 }
 
 /// <summary>

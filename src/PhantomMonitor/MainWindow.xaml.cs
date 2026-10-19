@@ -284,7 +284,7 @@ public partial class MainWindow : Window
     {
         if (_sensorService != null) return;
 
-        _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs);
+        _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs, _config);
         _sensorService.SensorUpdated += OnSensorData;
 
         _overlay = new OverlayWindow(_config,

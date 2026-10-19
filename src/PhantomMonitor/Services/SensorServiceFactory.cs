@@ -6,14 +6,18 @@ namespace PhantomMonitor.Services;
 /// </summary>
 public static class SensorServiceFactory
 {
-    public static ISensorService Create(int updateIntervalMs = 1000)
+    public static ISensorService Create(int updateIntervalMs = 1000, AppConfig? config = null)
     {
+        // Sensores customizados (fórmulas do usuário): engine única compartilhada
+        // com o provedor escolhido; configuração vazia custa zero por ciclo.
+        var customSensors = CustomSensorEngine.FromConfig(config);
+
         if (OperatingSystem.IsWindows())
         {
-            return new HardwareMonitorService(updateIntervalMs);
+            return new HardwareMonitorService(updateIntervalMs, customSensors);
         }
 
         // Linux e demais sistemas POSIX (macOS usa o mesmo caminho /proc best-effort).
-        return new Linux.LinuxSensorService(updateIntervalMs);
+        return new Linux.LinuxSensorService(updateIntervalMs, customSensors);
     }
 }

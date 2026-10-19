@@ -19,6 +19,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `telemetryExport` - Exportador HTTP do SDK de telemetria: `{ enabled: false, port: 7317, listenAll: false }` — publica o último snapshot como JSON em `GET /values` (mesmo payload do `sensors_latest.json`) e `GET /health`; padrão é loopback (`listenAll: true` abre para a LAN e pode exigir firewall) — ver [telemetry-sdk.md](../telemetry-sdk.md)
 - `profiles` - Perfis por aplicativo do OSD: `[{ name, appMatch, offsetX?, offsetY?, width?, fontSize?, accentColor?, series?, visible? }]` — ver [overlay.md](overlay.md); `appMatch` vazio ou `*` casa com qualquer executável; `visible: false` esconde o OSD enquanto o perfil casa
 - `overlay.templates` - Linhas personalizadas do OSD: `[{ text, color? }]` com placeholders `{Chave}`/`{Chave:N}`/ wildcard; linha oculta até todos os placeholders resolverem; cor só via config — ver [overlay.md](overlay.md)
+- `customSensors` - Sensores customizados do usuário: `[{ name, formula, unit? }]` — fórmulas derivadas de outras séries (`{GpuTemperature} - {CpuTemperature}`, funções `min/max/abs`, wildcard), publicadas como série `Custom#i` a cada ciclo (entra em stats/CSV/SDK/alertas) — ver [sensores-customizados.md](sensores-customizados.md)
 
 ### OverlayConfig
 - `width` - Largura do overlay em pixels

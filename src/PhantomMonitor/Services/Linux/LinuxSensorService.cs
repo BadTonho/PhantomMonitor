@@ -43,6 +43,9 @@ public sealed class LinuxSensorService : ISensorService
     // Estatísticas por série da sessão (min/max/avg; zeradas pelo usuário).
     private readonly SeriesStatsTracker _seriesStats = new();
 
+    // Sensores customizados (fórmulas do usuário): avaliados no fim de cada snapshot.
+    private readonly CustomSensorEngine? _customSensors;
+
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
 
@@ -51,9 +54,10 @@ public sealed class LinuxSensorService : ISensorService
 
     public void SetPaused(bool paused) => Paused = paused;
 
-    public LinuxSensorService(int updateIntervalMs = 1000)
+    public LinuxSensorService(int updateIntervalMs = 1000, CustomSensorEngine? customSensors = null)
     {
         _updateIntervalMs = updateIntervalMs;
+        _customSensors = customSensors;
         _timer = new Timer(_ => Update(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
@@ -110,6 +114,10 @@ public sealed class LinuxSensorService : ISensorService
                 data.Values[SensorType.FpsMax] = _fpsMonitor.FpsMax;
                 data.FrametimeHistory = _fpsMonitor.FrametimeHistory.ToArray();
             }
+
+            // Sensores customizados avaliam ANTES do commit das estatísticas:
+            // min/máx/média da sessão, CSV/SDK/HTTP e inventário enxergam como nativas.
+            _customSensors?.Evaluate(data);
 
             // Estatísticas por série: uma amostra por snapshot publicado.
             _seriesStats.Commit(data);

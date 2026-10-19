@@ -104,5 +104,12 @@ public enum SensorType
     FrametimeP1,
 
     /// <summary>Percentil 99 de frametime (ms) da janela de estatísticas.</summary>
-    FrametimeP99
+    FrametimeP99,
+
+    /// <summary>
+    /// Sensor customizado do usuário (fórmula sobre outras séries; ver
+    /// CustomSensorEngine). Sem canônica: toda a família é por instância
+    /// ("Custom#i" = posição da fórmula no config; rótulo = nome amigável).
+    /// </summary>
+    Custom
 }

@@ -1003,6 +1003,16 @@ public partial class OverlayWindow : Window
                 value = ReadSeriesValue(data, key);
                 return true;
             }
+
+            // Sem match na CHAVE textual: rótulo amigável — exato ou nome-base antes
+            // de " (" (sensores customizados são referenciáveis pelo nome do config).
+            foreach (var key in data.GetSeriesKeys())
+            {
+                if (!LabelMatchesPattern(data.GetLabel(key), segment.Pattern)) continue;
+                value = ReadSeriesValue(data, key);
+                return true;
+            }
+
             return false;
         }
 
@@ -1028,6 +1038,18 @@ public partial class OverlayWindow : Window
         key.IsPrimary
             ? data.Values.TryGetValue(key.Type, out var v) ? v : 0
             : data.Series.TryGetValue(key, out var s) ? s : 0;
+
+    /// <summary>
+    /// Padrão casa o rótulo por igualdade ou por nome-base (rótulo "DeltaTemp (°C)"
+    /// casa "DeltaTemp"): mesma regra da resolução de fórmulas dos sensores customizados.
+    /// </summary>
+    private static bool LabelMatchesPattern(string label, string pattern)
+    {
+        if (string.Equals(label, pattern, StringComparison.OrdinalIgnoreCase)) return true;
+        var paren = label.IndexOf(" (", StringComparison.Ordinal);
+        if (paren <= 0 || paren == label.Length - 2) return false;
+        return string.Equals(label[..paren], pattern, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>Renderiza o texto do template; false = algum placeholder não resolveu.</summary>
     private static bool TryRenderTemplate(SensorData data, List<TemplateSegment> segments, out string text)

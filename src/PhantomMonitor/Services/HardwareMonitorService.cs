@@ -62,6 +62,9 @@ public sealed class HardwareMonitorService : ISensorService
     private DateTime _lastBatteryRead = DateTime.MinValue;
     private static readonly TimeSpan BatteryInterval = TimeSpan.FromSeconds(10);
 
+    // Sensores customizados (fórmulas do usuário): avaliados no fim de cada snapshot.
+    private readonly CustomSensorEngine? _customSensors;
+
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
 
@@ -73,9 +76,10 @@ public sealed class HardwareMonitorService : ISensorService
         lock (_sync) Paused = paused;
     }
 
-    public HardwareMonitorService(int updateIntervalMs = 1000)
+    public HardwareMonitorService(int updateIntervalMs = 1000, CustomSensorEngine? customSensors = null)
     {
         _updateIntervalMs = Math.Max(100, updateIntervalMs);
+        _customSensors = customSensors;
         _timer = new Timer(_ => Update(), null, Timeout.Infinite, Timeout.Infinite);
 
         _computer = new Computer
@@ -231,6 +235,10 @@ public sealed class HardwareMonitorService : ISensorService
 
         // Estatísticas por série: uma amostra por snapshot publicado, anexada ao
         // snapshot (inventário e JSON exibem min/máx/média da sessão).
+        // Sensores customizados avaliam ANTES do commit: as fórmulas podem referenciar
+        // qualquer série (LHM, FPS/present, NETWORK…) e entram nas estatísticas/exportações.
+        _customSensors?.Evaluate(data);
+
         _seriesStats.Commit(data);
         data.SeriesStats = _seriesStats.CopySnapshot();
 

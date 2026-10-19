@@ -7,6 +7,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Monitoramento completo**: CPU (uso, temperatura, clock, potência, voltagem), GPU (uso, temperatura, VRAM usada/total, clock, potência, hotspot), RAM (uso, disponível), disco (uso, I/O), rede (↓/↑), ventoinhas (GPU/sistema), temperaturas de placa-mãe/SuperIO e **bateria** (carga, tensão, potência, desgaste e fonte AC — laptops/UPs; Windows via WMI, Linux via `/sys/class/power_supply`)
 - **Overlay configurável & transparente**: Janela flutuante sempre visível sobre jogos com informações em tempo real, sublinhas de detalhes (CPU/GPU) e linhas opcionais NET/FAN/MB com auto-revelação, além do Editor Visual (grid canvas, drag-and-drop, modo compacto, cor de destaque e tamanho de fonte)
 - **Linhas personalizadas no OSD (templates)**: texto livre com placeholders `{Chave}`/`{Chave:N}`/wildcard resolvidos a cada ciclo; linha invisível até todos os sensores existirem (`overlay.templates`)
+- **Sensores customizados (fórmulas)**: séries derivadas do usuário (`Custom#i`) sobre qualquer leitura do snapshot — operadores `+ - * /`, funções `min/max/abs` e referências por chave/wildcard/nome; entram nas estatísticas, CSV/JSON, SDK e alertas como série nativa (`customSensors`)
 - **Perfis por aplicativo**: overrides de posição/largura/fonte/acento/séries por app — e `visible: false` para esconder o OSD completo em jogos específicos
 - **FPS 100% independente de terceiros**:
   - **Windows**: Leitura de FPS e frametime de alta precisão via Intel PresentMon (ETW nativo, sem injetar DLLs, imune a banimentos de anti-cheat) — com **GPU Busy / CPU Busy / CPU Wait / latência de present** quando a versão do executável expõe as colunas
@@ -145,6 +146,7 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Logging e ErrorLog](docs/funções/logging.md)
 - [Biblioteca nativa (PhantomSensorLib)](docs/funções/sensor-nativo.md)
 - [Formatação de sensores (SensorFormatter)](docs/funções/sensor-formatter.md)
+- [Sensores customizados (fórmulas)](docs/funções/sensores-customizados.md)
 - [Inventário de Hardware](docs/funções/inventário-hardware.md)
 - [SDK de Telemetria (memória compartilhada)](docs/telemetry-sdk.md)
 - [Estudo: OSD in-frame no Windows (P4)](docs/osd-in-frame-estudo.md)

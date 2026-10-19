@@ -1,7 +1,7 @@
-# Roadmap — Paridade de Monitoramento (RTSS/Afterburner · HWiNFO)
+# Roadmap — Paridade de Monitoramento (suítes de referência do mercado)
 
-> O que fazer para o Phantom Monitor chegar perto dos rivais. Gerado a partir da
-> comparação com o código em fim de 2026 (pós a bateria de correções
+> O que fazer para o Phantom Monitor alcançar as suítes de referência do mercado.
+> Gerado a partir da comparação com o código em fim de 2026 (pós a bateria de correções
 > `79913ed..6233267`). **Status: P1–P4 implementados/entregues em
 > `6b5c148..` (série "paridade"); P5 é decisão de escopo, não tarefa.**
 
@@ -18,7 +18,7 @@
 
 ---
 
-## P1 — Framework de sensores dinâmico (efeito "HWiNFO") — ✅ CONCLUÍDO (`6b5c148`, `a6cbac5`, `9ee36fb`, `f6567a9`, `df6db76`)
+## P1 — Framework de sensores dinâmico (séries por instância, estilo inventário completo) — ✅ CONCLUÍDO (`6b5c148`, `a6cbac5`, `9ee36fb`, `f6567a9`, `df6db76`)
 
 > Fundação: `SensorKey` ("Categoria#índice") + `SensorData.Series/SeriesLabels`.
 > O LibreHardwareMonitor **já entregava** os valores; o trabalho foi de modelagem
@@ -88,7 +88,7 @@
 
 - [x] (decisão explícita de NÃO fazer no curto prazo; mantém o escopo "read-only")
 
-## P6 — Paridade instrumental (efeito HWiNFO) — ✅ CONCLUÍDO (2026-10-19)
+## P6 — Paridade instrumental (estatísticas/OSD/telemetria) — ✅ CONCLUÍDO (2026-10-19)
 
 Sete sub-etapas, um commit Conventional cada, build 0 erros/0 avisos, docs sincronizadas:
 
@@ -112,7 +112,7 @@ as linhas fechadas por P6 estão marcadas ✅ na coluna "Ação definida".
 
 ---
 
-# Rodada 2 — gaps restantes vs RTSS/Afterburner e HWiNFO (pós P1..P5)
+# Rodada 2 — gaps restantes (pós P1..P5)
 
 > Nova verificação após a implementação de P1..P5. Os itens estão separados em
 > **(A)** produto — dá para implementar no escopo atual;
@@ -120,51 +120,50 @@ as linhas fechadas por P6 estão marcadas ✅ na coluna "Ação definida".
 > **(C)** engine — dependem de fontes de leitura que a LibreHardwareMonitor não abre
 > (drivers próprios, MSR, NPU ou APIs proprietárias de vendor — NVAPI/ADLX).
 >
-> **Fontes (2026):** changelog oficial do HWiNFO v8.00..v8.54 (2024–2026),
-> página oficial do RTSS 7.3.7 final no Guru3D (set/2025) e MSI Afterburner
-> 4.6.6 final (out/2025) / 4.6.7 Beta (2026).
+> **Fontes (2026):** changelogs e páginas oficiais das suítes de referência
+> de monitoramento/overlay (2024–2026).
 
-## Onde ficamos atrás do RTSS / MSI Afterburner
+## Onde ficamos atrás — overlay de jogos (padrão de mercado)
 
 | Recurso | Camada | Ação definida |
 |---|---|---|
 | OSD in-frame (game capture, replay, gravação) | B | Fora por política; caminho seguro documentado: plugin OBS consumindo a SDK (docs/osd-in-frame-estudo.md) |
 | Frame limiter (FRTC, millisecond) | B | Fora por política: exige hook no processo do jogo; não reabrir |
-| Curva de ventoinha, V/F curve, OC scanner (Afterburner) | B | P5: fora do escopo read-only (app separado um dia) |
-| Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (RTV1/MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (conf. features oficiais do RTSS 7.3.7); OBS no plugin cobre gravação |
+| Curva de ventoinha, V/F curve, OC scanner | B | P5: fora do escopo read-only (app separado um dia) |
+| Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (padrão dos hooks de captura); OBS no plugin cobre gravação |
 | Screenshot in-frame via hotkey | B | Não há acesso ao backbuffer sem hook; OBS cobre |
 | **Métricas ricas do PresentMon** (GPU Busy, CPU Busy/CPU Wait, click-to-photon, percentis 1st/99th, modo de present) | A | ✅ Fechado pelo **P6.5** (GPU/CPU Busy, CPU Wait, latência de present e percentis P1/P99 de FPS/frametime; modo de present/click-to-photon não expostos pelo executável — não planejado) |
-| **Latency markers NVIDIA Reflex** (`reflexlatency()/timespan()`, marcadores input→gpurender) | B | Implementado pelo RTSS com injection/hook no jogo — fora por política |
+| **Latency markers NVIDIA Reflex** (`reflexlatency()/timespan()`, marcadores input→gpurender) | B | Implementado com injection/hook no jogo pelas suítes de referência — fora por política |
 | **OverlayEditor / hypertext** — tags (`<B>`, `<FNT>`), gráficos de barra/timeband, fórmulas e filtros (`buf()`, condições), camadas condicionais, macros `%CPU%`, text tables | A | 🟡 Parcial: **P6.6** (templates `{Chave}`/`{Chave:N}` + cor) cobre texto/condição simples; gráficos embutidos e expressões = P7 de UI |
 | Per-app "OSD ocultado" (jogos que não querem ver overlay) | A | ✅ Fechado pelo **P6.2** (`profiles[].visible: false`) |
 | LCDs externos (Logitech, OLED/StreamDeck via plugins/ecossistema) | A-parcial | Nossa SDK (P2) dá os dados; escritores/apps externos fora do produto |
-| Monitor remoto / 2ª máquina / painel na LAN (HWiNFO tem telesensor-server; RTSS usa HUDSight/3rd-party) | A | ✅ Fechado pelo **P6.3** (exportador HTTP `GET /values`, loopback/LAN opt-in; UDP de propósito fora) |
+| Monitor remoto / 2ª máquina / painel na LAN (servidor de sensor remoto nas suítes de referência) | A | ✅ Fechado pelo **P6.3** (exportador HTTP `GET /values`, loopback/LAN opt-in; UDP de propósito fora) |
 | Overlay VR (OpenVR overlay) | A (nicho) | Nicho; não planejado |
 
-## Onde ficamos atrás do HWiNFO
+## Onde ficamos atrás — suítes de monitoramento de hardware
 
 | Recurso | Camada | Ação definida |
 |---|---|---|
-| Colunas Min/Máx/Média/Atual por sensor + hotkey de reset (v7.70/v8.34) | A | ✅ Fechado pelo **P6.1** (SeriesStatsTracker por snapshot + "Resetar estatísticas" na bandeja/colunas Min/Máx/Média no inventário) |
-| Hotkey para **pausar/retomar** o monitoramento (v8.34) | A | ✅ Fechado pelo **P6.7** (tray com check + 2º atalho global; telemetria congelada no último snapshot) |
-| Percentis 1st/99th de FPS e frametime (PresentMon, v8.24) | A | ✅ Fechado pelo **P6.5** (FpsP1/FpsP99 + FrametimeP1/FrametimeP99 sobre a janela de ~60 s) |
+| Colunas Min/Máx/Média/Atual por sensor + hotkey de reset | A | ✅ Fechado pelo **P6.1** (SeriesStatsTracker por snapshot + "Resetar estatísticas" na bandeja/colunas Min/Máx/Média no inventário) |
+| Hotkey para **pausar/retomar** o monitoramento | A | ✅ Fechado pelo **P6.7** (tray com check + 2º atalho global; telemetria congelada no último snapshot) |
+| Percentis 1st/99th de FPS e frametime (percentis brutos sobre janela móvel) | A | ✅ Fechado pelo **P6.5** (FpsP1/FpsP99 + FrametimeP1/FrametimeP99 sobre a janela de ~60 s) |
 | Marcadores/hotkeys de benchmark: start/stop de log e segmento com marcador | A | ✅ Fechado pelo **P6.1** (`#marker,<ts>,<label>` no CSV a cada reset; start/stop de log por hotkey segue opcional) |
-| Acesso remoto: "Remote Sensor Server" (TCP na LAN) para 2ª máquina e dashboards (remoto fixado em v7.34) | A | ✅ Fechado pelo **P6.3** (mesma estrutura do P2 exportada por HTTP; LAN opt-in com `listenAll`) |
+| Acesso remoto: servidor de sensor remoto (TCP na LAN) para 2ª máquina e dashboards | A | ✅ Fechado pelo **P6.3** (mesma estrutura do P2 exportada por HTTP; LAN opt-in com `listenAll`) |
 | Bateria (laptop: carga %, desgaste, draw, AC) | A | ✅ Fechado pelo **P6.4** (WMI `root\WMI`+`Win32_Battery` no Windows; `/sys/class/power_supply` no Linux; desktop não publica) |
 | Contadores de erros de hardware **WHEA** (incl. device PCIe com falha) | A (médio) | Ler eventos WHEA via Event Log/WMI → série `WheaErrorCount` |
-| Sensores **customizados pelo usuário** (fórmulas sobre outros sensores; fix v8.54) | A (médio) | Séries derivadas em config — puxa pela engine de expressões do P6.6 |
-| OSD próprio do HWiNFO (desde v8.00): gráfico de histórico no OSD, cor de fundo, múltiplos valores por linha, eixo com min/max global | A (menor) | Nosso overlay (P1/P3) cobre texto/séries; gráfico embutido e cor de fundo = melhorias de UI |
-| Log de sensores em **JSON/YAML** (v8.48) | A (menor) | Já temos CSV contínuo + snapshot JSON; journal JSON opcional |
+| Sensores **customizados pelo usuário** (fórmulas sobre outros sensores) | A (médio) | Séries derivadas em config — puxa pela engine de expressões do P6.6 |
+| OSD próprio da suíte de hardware: gráfico de histórico no OSD, cor de fundo, múltiplos valores por linha, eixo com min/max global | A (menor) | Nosso overlay (P1/P3) cobre texto/séries; gráfico embutido e cor de fundo = melhorias de UI |
+| Log de sensores em **JSON/YAML** | A (menor) | Já temos CSV contínuo + snapshot JSON; journal JSON opcional |
 | Alerts por e-mail/webhook e "destinos de log" extras | A | Diferencial menor; o script externo já permite enviar — decidir depois |
-| Polling **multithread/assíncrono** de sensores (v8.20/v8.12) | A (caveat) | LHM é sequencial por design; paralelizar entre hardwares exige testes de concorrência no driver |
-| Identidade dos monitores (fabricante/modelo via EDID, v8.26); chroma/HDR/VRR | A-parcial | Nome do monitor via WMI é barato; flags HDR/VRR exigem descriptor completo (P7) |
+| Polling **multithread/assíncrono** de sensores | A (caveat) | LHM é sequencial por design; paralelizar entre hardwares exige testes de concorrência no driver |
+| Identidade dos monitores (fabricante/modelo via EDID); chroma/HDR/VRR | A-parcial | Nome do monitor via WMI é barato; flags HDR/VRR exigem descriptor completo (P7) |
 | Polimento de monitoramento: pesquisa, ordenação custom, colapso de grupos, tooltips, destaque de mudanças | A (menor) | Inventário absorve aos poucos |
 | Intervalo de polling **por sensor** + smoothing/filtro médio por item | A (menor) | Hoje cadência global única; item de UX de nicho |
 | Tabela SMART atributo a atributo (realocados, erros de mídia etc.) | C | LHM sintetiza pouco; viria de SMART bruto via WMI/Win32 — maior esforço, P7 |
-| GPU: Hot Spot / Memory Junction como **séries separadas** (LHM expõe p/ NVIDIA) e per-chip VRAM de GDDR6X/GDDR7 (v8.52) | A-parcial | NVIDIA: basta mapear; per-chip/AMD: P7 (engine) |
-| GPU: "throttle reasons" e power-limit flags (NVAPI/AMD; "Performance Limiting Reasons" v8.34) | C | NVAPI interop + AMD User Mode — esforço real por vendor (P7) |
+| GPU: Hot Spot / Memory Junction como **séries separadas** (LHM expõe p/ NVIDIA) e per-chip VRAM de GDDR6X/GDDR7 | A-parcial | NVIDIA: basta mapear; per-chip/AMD: P7 (engine) |
+| GPU: "throttle reasons" e power-limit flags (NVAPI/AMD; "Performance Limiting Reasons") | C | NVAPI interop + AMD User Mode — esforço real por vendor (P7) |
 | CPU: C-states residency, VID per-core, Effective Clock, DRAM R/W bandwidth, PL1/PL2 dinâmico, % thermal throttle | C | MSR/SMN próprios — LHM não expõe (documentar como limite de engine) |
-| NPU dedicado (AMD/Intel v8.42, Qualcomm v8.40, Intel desde v7.66) | C | Sem fonte via LHM hoje |
+| NPU dedicado (AMD/Intel/Qualcomm) | C | Sem fonte via LHM hoje |
 | Inventário profundo: VBIOS/ASIC quality/ECID, cont. RT/Tensor, ReBAR, PCIe error counters, SPD/timings (CUDIMM), PCIe link por slot | C-parcial | EDID/SPD básicos via WMI são baratos; o resto precisa de NVAPI/SetupAPI (P7) |
 | Ecossistemas de terceiros: PSUs (Corsair/MSI/NZXT), controladores de fan, WireView, ARM64/Snapdragon | C | Amplitude de leitura fora da LHM não disponível |
 
@@ -187,10 +186,10 @@ engine" quando implementável apenas com driver próprio.**
 
 ## Onde o Phantom Monitor já está à frente
 
-- **SDK de memória compartilhada gratuita e estável** (P2): a shared memory do HWiNFO
-  virou recurso pago desde a v7.0 (o RTSS 7.3.7 até adicionou um provider de
-  LibreHardwareMonitor para quem não compra a licença do HWiNFO).
-- **Sem hook/injection**: o próprio RTSS documenta que anti-cheats podem restringir o OSD
-  e bloquear a conexão ao servidor — o nosso design nunca corre esse risco.
+- **SDK de memória compartilhada gratuita e estável** (P2): em soluções comerciais
+  de referência, o acesso de terceiros à telemetria bruta via memória compartilhada
+  tende a ser recurso licenciado/pago — aqui é aberto, documentado e versionado.
+- **Sem hook/injection**: anti-cheats podem restringir os OSDs que injetam hooks no
+  processo do jogo — o nosso design nunca corre esse risco, por construção.
 - **CSV livre e dinâmico** com séries por instância, JSON de snapshot local e leitor de
   referência da SDK incluso.

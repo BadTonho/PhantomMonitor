@@ -20,7 +20,7 @@ Grade com todas as séries do snapshot atual:
 | Série | Chave completa: `GpuCore` (canônica) ou `GpuCore#1` (instância) |
 | Sensor de origem | Rótulo do sensor/hardware de onde o valor veio |
 | Valor | Formatado com unidade (`45°C`, `3.2 GB/s`, `1850 MHz`) |
-| Mín (sessão) / Máx (sessão) / Média | Estatísticas acumuladas desde o último "Resetar estatísticas" (efeito HWiNFO); `--` até haver amostra |
+| Mín (sessão) / Máx (sessão) / Média | Estatísticas acumuladas desde o último "Resetar estatísticas"; `--` até haver amostra |
 | Unidade | Unidade canônica da categoria (ver `SensorUnits`) |
 | Canônica | ✓ quando for série de índice 0, compatível com painel/alertas legados |
 

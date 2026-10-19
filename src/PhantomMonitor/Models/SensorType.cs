@@ -38,7 +38,7 @@ public enum SensorType
     Fps01Low,
     FpsMax,
 
-    // ---- Séries adicionais (paridade HWiNFO; todas também aceitam instâncias "#i") ----
+    // ---- Séries adicionais (todas também aceitam instâncias "#i") ----
 
     /// <summary>Temperatura por disco/NVMe (0 = indisponível).</summary>
     DiskTemperature,

@@ -1,6 +1,6 @@
 # FpsMonitor
 
-Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon** (open-source) em segundo plano para capturar eventos de apresentação de frames (`Present`) da placa de vídeo via ETW nativo. Não depende de MSI Afterburner ou RTSS e é imune a banimentos de anti-cheat por não injetar DLL nos jogos.
+Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon** (open-source) em segundo plano para capturar eventos de apresentação de frames (`Present`) da placa de vídeo via ETW nativo. Não injeta DLL nos jogos — imune a banimentos de anti-cheat.
 
 ## Funcionalidades
 

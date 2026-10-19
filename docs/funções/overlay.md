@@ -1,8 +1,8 @@
 # OverlayWindow
 
-Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no visual clássico do **RivaTuner Statistics Server (RTSS)**. É compacta, clicável (click-through), sem impacto visual excessivo sobre os jogos e sempre visível no topo.
+Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual clássico de OSD de jogos. É compacta, clicável (click-through), sem impacto visual excessivo sobre os jogos e sempre visível no topo.
 
-## Estilo Visual Phantom OSD (Estilo RTSS)
+## Estilo Visual Phantom OSD
 
 - **Layout Inline Compacto:** Elimina cards volumosos e barras de progresso grossas. Cada dispositivo ocupa uma única linha com alinhamento tabular perfeito.
 - **Cores Oficiais por Dispositivo:**
@@ -34,7 +34,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela inspirada no v
 
 ## Editor Visual de Informações na Tela (OverlayEditorWindow)
 
-Inspirado diretamente no editor de layouts OSD do RTSS (`Editor de informações na tela`):
+Inspirado em editores de layout de OSD clássicos (`Editor de informações na tela`):
 - **Área de Edição com Grade (Grid Canvas):** Canvas com malha ortogonal escura onde os blocos de métricas (FPS, Gráfico de Frametime, CPU, GPU, RAM, Disco, Rede, Ventoinhas e Placa-mãe) são visualizados e manipulados.
 - **Arrastar e Soltar Interativo:** Suporte a movimentação livre dos blocos com o mouse e opção de alinhamento à grade (*Snap to Grid* de 10px). Arrastar um bloco desloca **o offset global do overlay** pela mesma quantidade (os campos X/Y acompanham em tempo real e o valor é persistido ao Salvar).
 - **Seleção de Camadas:** Destaque visual da camada selecionada com moldura wireframe e indicação de coordenadas em tempo real.

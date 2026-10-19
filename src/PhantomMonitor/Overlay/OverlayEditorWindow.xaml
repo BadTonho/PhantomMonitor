@@ -49,7 +49,7 @@
                 <ColumnDefinition Width="300"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Left: Visual Grid Canvas (Estilo RTSS OSD Layout Editor) -->
+            <!-- Left: Visual Grid Canvas (layout clássico de editores de OSD) -->
             <Border Grid.Column="0" Background="#0A0C10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" ClipToBounds="True">
                 <Canvas x:Name="EditorCanvas" Background="#0A0C10" MouseMove="OnCanvasMouseMove" MouseLeftButtonUp="OnCanvasMouseUp">
                     

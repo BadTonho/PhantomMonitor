@@ -12,9 +12,9 @@ O `OverlayWindow` atual é uma janela WPF `WS_EX_LAYERED` **separada** do jogo:
 - **não aparece** em `game capture` (capture de swapchain): o compositor captura
   apenas os quadros que o jogo apresenta — janelas de outros processos ficam de fora.
 
-Esse é o gap estrutural em relação ao RTSS: overlay “in-frame”, dentro das
-imagens que o jogo apresenta, visível em qualquer captura e em gravações do
-Driver-level/GPU capture.
+Esse é o gap estrutural em relação aos overlays com hook no processo do jogo:
+overlay "in-frame", dentro das imagens que o jogo apresenta, visível em qualquer
+captura e em gravações do Driver-level/GPU capture.
 
 ## 2. Alternativas avaliadas
 

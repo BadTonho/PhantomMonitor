@@ -678,7 +678,7 @@ public partial class OverlayWindow : Window
 
         if (showFrametimeGraph)
         {
-            // Gráfico de Frametime compacto estilo RivaTuner
+            // Gráfico de Frametime compacto de barras suaves
             _frametimeGraph = new Canvas
             {
                 Height = _graphHeight,

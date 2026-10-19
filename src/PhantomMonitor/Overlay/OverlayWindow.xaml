@@ -14,7 +14,7 @@
             <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.6" Color="#000000"/>
         </Border.Effect>
         <StackPanel x:Name="SensorPanel">
-            <!-- Linhas de métricas limpas estilo RivaTuner OSD -->
+            <!-- Linhas de métricas limpas do OSD -->
         </StackPanel>
     </Border>
 </Window>

@@ -1,6 +1,6 @@
 # Phantom Monitor
 
-Monitor de hardware leve, elegante e de alta precisão com suporte multiplataforma (**Windows e Linux**). Exibe CPU, GPU, RAM, disco e FPS em tempo real com uma interface moderna e limpa, editor visual de overlay estilo RTSS, e **sem dependência de softwares de terceiros** (sem MSI Afterburner/RTSS no Windows, sem MangoHud no Linux).
+Monitor de hardware leve, elegante e de alta precisão com suporte multiplataforma (**Windows e Linux**). Exibe CPU, GPU, RAM, disco e FPS em tempo real com uma interface moderna e limpa, editor visual de overlay dedicado, e **sem dependência de softwares de monitoramento de terceiros** (sem instrumentação/overlays externos no Windows, sem MangoHud no Linux).
 
 ## Funcionalidades
 
@@ -15,7 +15,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Bandeja do sistema**: Ícone na bandeja (Win32 puro, sem WinForms) com menu de contexto — mostrar janela, alternar OSD, iniciar com o Windows, **resetar estatísticas**, **pausar monitoramento** e sair — e opção de autostart via registro do usuário
 - **Gráfico de frametime**: Visualização em tempo real da variação de frametime com buffer circular
 - **Estatísticas avançadas de FPS**: instantâneo, médio, mínimo, máximo, 1% Low, 0.1% Low e **percentis puros 1st/99th de FPS e frametime**
-- **Estatísticas por série (estilo HWiNFO)**: mín/máx/média da sessão para **qualquer série** (canônica e por instância), com reset pela bandeja/inventário e ranking na janela de inventário
+- **Estatísticas por série**: mín/máx/média da sessão para **qualquer série** (canônica e por instância), com reset pela bandeja/inventário e ranking na janela de inventário
 - **Alertas com ações**: Regras por sensor (acima/abaixo de um limiar) com popup, som, script externo e desligamento agendado (com trava de segurança `allowShutdown`)
 - **Logging**: Exportação contínua para CSV e JSON — CSV aceita **marcadores `#marker`** para delimitar segmentos de sessão/benchmark
 - **SDK de telemetria**: memória compartilhada sempre ativa + **exportador HTTP opt-in** (`telemetryExport`) — consuma o snapshot em JSON (mesmo payload do `sensors_latest.json`) via `GET /values` no loopback ou LAN (ver `docs/telemetry-sdk.md`)
@@ -126,8 +126,8 @@ Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 
 O monitor **não injeta DLLs nem faz hooks no processo dos jogos** — no Windows, seu OSD é uma
 janela própria (WS_EX_LAYERED), o FPS vem do ETW via PresentMon e a telemetria é publicada por
-memória compartilhada. É por isso que o projeto **não implementa** um OSD in-frame estilo RTSS
-no Windows: hooks de `Present`/DXGI são a assinatura clássica rastreada por EAC/BattlEye/Vanguard
+memória compartilhada. É por isso que o projeto **não implementa** um OSD in-frame via hook
+no processo do jogo: hooks de `Present`/DXGI são a assinatura clássica rastreada por EAC/BattlEye/Vanguard
 e podem derrubar contas. O estudo completo do caminho seguro (plugin OBS consumindo a SDK de
 telemetria) está em [docs/osd-in-frame-estudo.md](docs/osd-in-frame-estudo.md).
 
@@ -148,4 +148,4 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Inventário de Hardware](docs/funções/inventário-hardware.md)
 - [SDK de Telemetria (memória compartilhada)](docs/telemetry-sdk.md)
 - [Estudo: OSD in-frame no Windows (P4)](docs/osd-in-frame-estudo.md)
-- [Roadmap de paridade (RTSS/Afterburner · HWiNFO)](docs/roadmap-paridade.md)
+- [Roadmap de paridade funcional](docs/roadmap-paridade.md)

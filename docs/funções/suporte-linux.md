@@ -1,6 +1,6 @@
 # Suporte Nativo a Linux (Multiplataforma)
 
-O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, RTSS, GOverlay ou drivers proprietários adicionais).
+O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, GOverlay ou drivers proprietários adicionais).
 
 > [!IMPORTANT]
 > **Escopo atual:** o app WPF (`PhantomMonitor.csproj`, `net10.0-windows`) só executa no Windows. O código em `Services/Linux/` e a camada `PhantomVulkanLayer` são a base de suporte a Linux, mas **ainda não há um front-end Linux executável** (seria necessário um projeto multiplataforma ou multi-target). O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e **não faz parte do `PhantomMonitor.slnx`** (a solução só lista projetos MSBuild).

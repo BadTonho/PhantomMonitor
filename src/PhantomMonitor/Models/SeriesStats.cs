@@ -1,7 +1,7 @@
 namespace PhantomMonitor.Models;
 
 /// <summary>
-/// Estatística de uma série acumulada na sessão de monitoramento (efeito HWiNFO):
+/// Estatística de uma série acumulada na sessão de monitoramento:
 /// mínimo, máximo e média das amostras efetivamente publicadas. Zera com
 /// "Resetar estatísticas" (bandeja/inventário), que também grava um marcador no CSV.
 /// NaN = nenhuma amostra ainda (a média só fica definida com Count ≥ 1).

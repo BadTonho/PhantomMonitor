@@ -6,7 +6,7 @@ using PhantomMonitor.Models;
 namespace PhantomMonitor.Services.Telemetry;
 
 /// <summary>
-/// SDK de telemetria estilo RTSS/HWiNFO: publica o snapshot atual numa região de
+/// SDK de telemetria de baixa latência: publica o snapshot atual numa região de
 /// memória compartilhada (<c>phantom_monitor_telemetry_v1</c>) em cada ciclo do
 /// monitoramento, sem parse de JSON/CSV por parte do consumidor.
 ///

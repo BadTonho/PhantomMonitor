@@ -65,6 +65,14 @@ public sealed class HardwareMonitorService : ISensorService
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
 
+    /// <summary>Pausa (P6.7): o timer continua, mas os ciclos pulam sem publicar evento.</summary>
+    public bool Paused { get; private set; }
+
+    public void SetPaused(bool paused)
+    {
+        lock (_sync) Paused = paused;
+    }
+
     public HardwareMonitorService(int updateIntervalMs = 1000)
     {
         _updateIntervalMs = Math.Max(100, updateIntervalMs);
@@ -118,6 +126,10 @@ public sealed class HardwareMonitorService : ISensorService
 
     private void Update()
     {
+        // Pausa (P6.7): nenhum ciclo — sem evento (CSV/JSON/SDK/HTTP/overlay congelam
+        // no último snapshot), sem WMI/ETW a mais. O set check volta a ler _current.
+        if (Paused) return;
+
         // Se o ciclo anterior ainda está rodando (ou Stop/Dispose em curso), pula este tick.
         if (!Monitor.TryEnter(_sync)) return;
 

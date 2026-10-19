@@ -41,7 +41,8 @@ public sealed class TrayIconService : IDisposable
     private const uint MenuOverlay = 2;
     private const uint MenuStartup = 3;
     private const uint MenuResetStats = 4;
-    private const uint MenuExit = 5;
+    private const uint MenuPause = 5;
+    private const uint MenuExit = 6;
 
     private const int DefaultIconId = 32512; // IDI_APPLICATION
 
@@ -65,6 +66,9 @@ public sealed class TrayIconService : IDisposable
     /// <summary>Menu: zero as estatísticas por série da sessão (min/max/avg).</summary>
     public event Action? ResetStatsRequested;
 
+    /// <summary>Menu: pausar/retomar a coleta de sensores (P6.7, sem persistir).</summary>
+    public event Action? PauseToggleRequested;
+
     /// <summary>Menu: encerrar o aplicativo.</summary>
     public event Action? ExitRequested;
 
@@ -73,6 +77,9 @@ public sealed class TrayIconService : IDisposable
 
     /// <summary>Estado atual da inicialização com o Windows (para o check do menu).</summary>
     public Func<bool>? IsStartupEnabled { get; set; }
+
+    /// <summary>Estado atual da pausa do monitoramento (para o check do menu, P6.7).</summary>
+    public Func<bool>? IsPaused { get; set; }
 
     public TrayIconService(Window window, string tooltip)
     {
@@ -171,6 +178,7 @@ public sealed class TrayIconService : IDisposable
         AppendMenu(menu, MfString | (overlayChecked ? MfChecked : 0), MenuOverlay, "Overlay no Jogo");
         AppendMenu(menu, MfString | (startupChecked ? MfChecked : 0), MenuStartup, "Iniciar com o Windows");
         AppendMenu(menu, MfString, MenuResetStats, "Resetar estatísticas");
+        AppendMenu(menu, MfString | ((IsPaused?.Invoke() == true) ? MfChecked : 0), MenuPause, "Pausar monitoramento");
 
         // Seção dinâmica (perfis por aplicativo): itens e estados avaliados a cada
         // abertura do menu pelos proveedores registrados na janela principal.
@@ -201,6 +209,7 @@ public sealed class TrayIconService : IDisposable
                 case MenuOverlay: OverlayToggleRequested?.Invoke(); break;
                 case MenuStartup: StartupToggleRequested?.Invoke(); break;
                 case MenuResetStats: ResetStatsRequested?.Invoke(); break;
+                case MenuPause: PauseToggleRequested?.Invoke(); break;
                 case MenuExit: ExitRequested?.Invoke(); break;
                 default:
                     if (cmd >= MenuDynamicBase) DynamicItemClicked?.Invoke((int)cmd);

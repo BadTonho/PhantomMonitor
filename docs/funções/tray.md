@@ -13,6 +13,10 @@ Integração com a bandeja do Windows **sem WinForms**: usa `Shell_NotifyIcon` d
   - `Iniciar com o Windows` (check) — liga/desliga a inicialização automática.
   - `Resetar estatísticas` — zera min/máx/média das séries da sessão (ver
     [hardware-monitor](hardware-monitor.md)) e grava um marcador `#marker` no CSV ativo.
+  - `Pausar monitoramento` (check) — pausa/retoma a coleta (P6.7): ciclos pulados,
+    CSV/JSON/SDK congelados no último valor, overlay fixo no último snapshot;
+    estado é só runtime (não persiste). Alternativa: atalho global
+    `pauseMonitorHotkey` (padrão `Ctrl+Alt+P`, ver [hotkey](hotkey.md)).
   - `Sair` — encerra o aplicativo.
   - Após `Iniciar com o Windows`, vem a **seção dinâmica de perfis** do OSD
     (fixar perfil / voltar ao automático).

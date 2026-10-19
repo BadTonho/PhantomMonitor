@@ -10,6 +10,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `logToJson` - Habilitar logging em JSON
 - `showOverlay` - Mostrar overlay na inicialização
 - `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex: "Ctrl+Shift+O"; vazio = desativado)
+- `pauseMonitorHotkey` - 2º atalho global (P6.7): pausa/retoma o monitoramento (padrão `Ctrl+Alt+P`; vazio = desativado; estado de pausa não persiste) — ver [hotkey.md](hotkey.md) e [hardware-monitor.md](hardware-monitor.md)
 - `overlayOpacity` - Opacidade do overlay (0-1)
 - `overlayPosition` - Posição inicial do overlay (X, Y)
 - `Overlay` - Configurações específicas do overlay

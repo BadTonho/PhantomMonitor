@@ -11,6 +11,14 @@ public sealed class AppConfig
     public bool LogToJson { get; set; } = true;
     public bool ShowOverlay { get; set; } = true;
     public string ToggleOverlayHotkey { get; set; } = "";
+
+    /// <summary>
+    /// 2º atalho global (P6.7): pausa/retoma o monitoramento em runtime. Padrão
+    /// Ctrl+Alt+P; vazio = desativado. O estado de pausa NÃO persiste no config —
+    /// reiniciar o app retoma a coleta.
+    /// </summary>
+    public string PauseMonitorHotkey { get; set; } = "Ctrl+Alt+P";
+
     public double OverlayOpacity { get; set; } = 0.85;
     public OverlayPositionConfig OverlayPosition { get; set; } = new();
     public OverlayConfig Overlay { get; set; } = new();
@@ -105,6 +113,7 @@ public sealed class AppConfig
         OverlayPosition.Y = Math.Clamp(OverlayPosition.Y, -5000, 5000);
 
         ToggleOverlayHotkey = (ToggleOverlayHotkey ?? "").Trim();
+        PauseMonitorHotkey = (PauseMonitorHotkey ?? "").Trim();
 
         Alerts ??= new();
         Alerts.CooldownSeconds = Math.Clamp(Alerts.CooldownSeconds, 1, 3600);

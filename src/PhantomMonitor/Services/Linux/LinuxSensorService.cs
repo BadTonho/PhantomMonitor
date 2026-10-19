@@ -46,6 +46,11 @@ public sealed class LinuxSensorService : ISensorService
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
 
+    /// <summary>Pausa (P6.7): os ciclos pulam sem publicar evento; último snapshot fica.</summary>
+    public bool Paused { get; private set; }
+
+    public void SetPaused(bool paused) => Paused = paused;
+
     public LinuxSensorService(int updateIntervalMs = 1000)
     {
         _updateIntervalMs = updateIntervalMs;
@@ -73,6 +78,9 @@ public sealed class LinuxSensorService : ISensorService
 
     private void Update()
     {
+        // Pausa (P6.7): sem novo evento; consumidores congelam no último snapshot.
+        if (Paused) return;
+
         // Um tick demorado (leitura de /sys lenta em RAID/NFS) não pode se sobrepor ao
         // próximo: corrompia os contadores _prevCpu*/_prevDisk* (uso sugerindo ~100%).
         if (!Monitor.TryEnter(_updateLock)) return;

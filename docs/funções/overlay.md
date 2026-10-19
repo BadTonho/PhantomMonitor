@@ -60,6 +60,7 @@ Configurado via `config.json` ou pelo Editor Visual:
 - `overlayOpacity` - Opacidade do fundo translúcido (padrão: 0.85)
 - `overlayPosition` - Coordenadas `x` e `y` na tela
 - `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex.: `Ctrl+Shift+O`; vazio = desativado)
+- `pauseMonitorHotkey` - 2º atalho global (P6.7): pausa/retoma o monitoramento (padrão `Ctrl+Alt+P`; vazio = desativado) — ver [hotkey.md](hotkey.md)
 - `profiles` - Perfis por aplicativo (ver seção abaixo)
 
 ## Perfis por aplicativo (P3)

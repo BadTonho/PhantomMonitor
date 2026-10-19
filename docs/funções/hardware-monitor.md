@@ -78,6 +78,8 @@ gera nenhuma linha — nem no CSV, nem no JSON, nem no OSD:
 - `Stop()` - Para o monitoramento
 - `GetCurrentSnapshot()` - Retorna o snapshot mais recente dos sensores
 - `ResetSeriesStats()` - Zera as estatísticas por série da sessão (min/máx/média)
+- `SetPaused(bool) / Paused` - Pausa/retoma os ciclos (P6.7): sem eventos, o último
+  snapshot permanece para overlay/inventário/SDK/HTTP; não persiste no config
 - `Dispose()` - Para e libera timer, FPS monitor e contadores
 
 ## Estatísticas por série (min/max/média)

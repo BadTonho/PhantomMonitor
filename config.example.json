@@ -4,6 +4,7 @@
   "logToJson": true,
   "showOverlay": false,
   "toggleOverlayHotkey": "",
+  "pauseMonitorHotkey": "Ctrl+Alt+P",
   "overlayOpacity": 0.85,
   "overlayPosition": {
     "x": 20,

@@ -18,7 +18,10 @@ public partial class MainWindow : Window
     private OverlayWindow? _overlay;
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
-    private readonly HotkeyService _hotkeys = new();
+    private readonly HotkeyService _hotkeys = new(HotkeyService.DefaultHotkeyId);
+
+    /// <summary>2º atalho global (P6.7): pausar/retomar o monitoramento em runtime.</summary>
+    private readonly HotkeyService _pauseHotkeys = new(HotkeyService.PauseHotkeyId);
     private TrayIconService? _tray;
     private AlertService? _alerts;
     private DateTime _startTime;
@@ -77,9 +80,11 @@ public partial class MainWindow : Window
                 StartupToggle.IsChecked = !StartupManager.IsEnabled();
             };
             _tray.ResetStatsRequested += () => ResetSeriesStats("bandeja");
+            _tray.PauseToggleRequested += () => TogglePauseMonitor();
             _tray.ExitRequested += Close;
             _tray.IsOverlayVisible = () => OverlayToggle.IsChecked == true;
             _tray.IsStartupEnabled = StartupManager.IsEnabled;
+            _tray.IsPaused = () => _sensorService?.Paused ?? false;
             // Seção dinâmica: perfis do OSD (fixar perfil / voltar ao automático).
             _tray.SetDynamicItems(() =>
             {
@@ -130,19 +135,28 @@ public partial class MainWindow : Window
             StartupToggle.IsChecked = actual;
     }
 
-    /// <summary>(Re)registra o atalho global de mostrar/ocultar o OSD conforme o config atual.</summary>
+    /// <summary>(Re)registra os atalhos globais (overlay + pausa) conforme o config atual.</summary>
     private void ApplyHotkey()
     {
         _hotkeys.Unregister();
-        if (string.IsNullOrWhiteSpace(_config.ToggleOverlayHotkey)) return;
+        _pauseHotkeys.Unregister();
 
-        _hotkeys.Register(this, _config.ToggleOverlayHotkey, () =>
+        if (!string.IsNullOrWhiteSpace(_config.ToggleOverlayHotkey))
         {
-            Dispatcher.InvokeAsync(() =>
+            _hotkeys.Register(this, _config.ToggleOverlayHotkey, () =>
             {
-                OverlayToggle.IsChecked = OverlayToggle.IsChecked != true;
+                Dispatcher.InvokeAsync(() =>
+                {
+                    OverlayToggle.IsChecked = OverlayToggle.IsChecked != true;
+                });
             });
-        });
+        }
+
+        if (!string.IsNullOrWhiteSpace(_config.PauseMonitorHotkey))
+        {
+            _pauseHotkeys.Register(this, _config.PauseMonitorHotkey, () =>
+                Dispatcher.InvokeAsync(TogglePauseMonitor));
+        }
     }
 
     public static bool IsRunningAsAdmin()
@@ -197,6 +211,39 @@ public partial class MainWindow : Window
             var index = id - (int)TrayIconService.MenuDynamicBase - 1;
             if (index < 0 || index >= _config.Profiles.Count) return;
             _pinnedProfile = _config.Profiles[index].Name;
+        }
+    }
+
+    /// <summary>
+    /// Pausa/retoma o monitoramento (P6.7) via bandeja ou atalho global. Em pausa o
+    /// serviço pula os ciclos: nenhum evento chega → CSV/JSON/SDK/HTTP ficam
+    /// congelados (sem "dentes de serra" no eixo do tempo) e o overlay exibe o
+    /// último valor do snapshot. O estado NÃO persiste: reiniciar o app retoma.
+    /// </summary>
+    private void TogglePauseMonitor()
+    {
+        if (_sensorService == null)
+        {
+            StatusText.Text = "Pausa: inicie o monitoramento";
+            StatusText.Foreground = TryFindResource("TextSecondaryBrush") as Brush;
+            StatusDot.Fill = TryFindResource("TextMutedBrush") as Brush;
+            return;
+        }
+
+        var newPaused = !_sensorService.Paused;
+        _sensorService.SetPaused(newPaused);
+
+        if (newPaused)
+        {
+            StatusText.Text = "Pausado";
+            StatusText.Foreground = TryFindResource("TextSecondaryBrush") as Brush;
+            StatusDot.Fill = TryFindResource("YellowBrush") as Brush;
+        }
+        else
+        {
+            StatusText.Text = "Monitorando";
+            StatusText.Foreground = TryFindResource("GreenBrush") as Brush;
+            StatusDot.Fill = TryFindResource("GreenBrush") as Brush;
         }
     }
 

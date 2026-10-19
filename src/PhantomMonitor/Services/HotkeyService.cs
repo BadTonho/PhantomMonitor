@@ -12,8 +12,15 @@ namespace PhantomMonitor.Services;
 public sealed class HotkeyService : IDisposable
 {
     private const int WmHotkey = 0x0312;
-    private const int HotkeyId = 0x5048; // "PH" — identificador fixo do atalho do app
     private const uint ModNoRepeat = 0x4000;
+
+    /// <summary>Identificador Win32 do atalho de overlay ("PH" = 0x5048) — legacy/default.</summary>
+    public const int DefaultHotkeyId = 0x5048;
+
+    /// <summary>Identificador Win32 do 2º atalho global (pausar monitoramento, P6.7).</summary>
+    public const int PauseHotkeyId = 0x5049;
+
+    private readonly int _hotkeyId;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -25,6 +32,15 @@ public sealed class HotkeyService : IDisposable
     private IntPtr _hwnd;
     private bool _registered;
     private Action? _callback;
+
+    /// <param name="hotkeyId">
+    /// Identificador Win32 único dentro do HWND: uma mesma janela pode registrar
+    /// vários atalhos (overlay + pausa) sem conflito de mensagem.
+    /// </param>
+    public HotkeyService(int hotkeyId = DefaultHotkeyId)
+    {
+        _hotkeyId = hotkeyId;
+    }
 
     /// <summary>
     /// Registra o atalho descrito por <paramref name="spec"/> (ex.: "Ctrl+Shift+O").
@@ -57,7 +73,7 @@ public sealed class HotkeyService : IDisposable
             return false;
         }
 
-        if (!RegisterHotKey(_hwnd, HotkeyId, modifiers | ModNoRepeat, vk))
+        if (!RegisterHotKey(_hwnd, _hotkeyId, modifiers | ModNoRepeat, vk))
         {
             ErrorLog.Write("Hotkey",
                 $"Falha ao registrar o atalho global '{spec}' (Win32 {Marshal.GetLastWin32Error()}) — combinação já em uso?");
@@ -80,7 +96,7 @@ public sealed class HotkeyService : IDisposable
 
         if (_registered && _hwnd != IntPtr.Zero)
         {
-            UnregisterHotKey(_hwnd, HotkeyId);
+            UnregisterHotKey(_hwnd, _hotkeyId);
         }
 
         _registered = false;
@@ -89,7 +105,7 @@ public sealed class HotkeyService : IDisposable
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmHotkey && wParam.ToInt32() == HotkeyId)
+        if (msg == WmHotkey && wParam.ToInt32() == _hotkeyId)
         {
             _callback?.Invoke();
             handled = true;

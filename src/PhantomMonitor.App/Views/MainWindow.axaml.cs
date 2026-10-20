@@ -8,14 +8,18 @@ namespace PhantomMonitor.App.Views;
 public sealed partial class MainWindow : Window
 {
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
+    private OverlayWindow? _overlayWindow;
 
     public MainWindow()
     {
         InitializeComponent();
         Opened += (_, _) =>
         {
+            EnsureOverlayWindow();
+            ViewModel.PropertyChanged += OnViewModelPropertyChanged;
             RefreshWindowPresentationState();
             ViewModel.Start();
+            SyncOverlayVisibility();
         };
         Activated += (_, _) => RefreshWindowPresentationState();
         Deactivated += (_, _) => RefreshWindowPresentationState();
@@ -24,7 +28,42 @@ public sealed partial class MainWindow : Window
             if (args.Property == Window.WindowStateProperty)
                 RefreshWindowPresentationState();
         };
-        Closed += (_, _) => ViewModel.Dispose();
+        Closed += (_, _) =>
+        {
+            ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _overlayWindow?.Close();
+            ViewModel.Dispose();
+        };
+    }
+
+    private void EnsureOverlayWindow()
+    {
+        _overlayWindow ??= new OverlayWindow
+        {
+            DataContext = DataContext,
+            Width = ViewModel.OverlayWidth,
+            Opacity = ViewModel.OverlayOpacity
+        };
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.OverlayVisible))
+            SyncOverlayVisibility();
+    }
+
+    private void SyncOverlayVisibility()
+    {
+        if (_overlayWindow is null) return;
+        if (ViewModel.OverlayVisible)
+        {
+            if (!_overlayWindow.IsVisible)
+                _overlayWindow.Show();
+        }
+        else if (_overlayWindow.IsVisible)
+        {
+            _overlayWindow.Hide();
+        }
     }
 
     private void RefreshWindowPresentationState() =>
@@ -33,6 +72,7 @@ public sealed partial class MainWindow : Window
     private void OnStartClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Start();
     private void OnPauseClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.TogglePause();
     private void OnStopClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Stop();
+    private void OnToggleOverlayClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ToggleOverlay();
     private void OnOverviewClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowOverview();
     private void OnInventoryClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowInventory();
     private void OnCustomSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowCustomSensors();

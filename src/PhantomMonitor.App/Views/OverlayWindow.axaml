@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PhantomMonitor.App.Views.OverlayWindow"
+        Title="Phantom Monitor Overlay"
+        Width="260"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowDecorations="None"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
+        Topmost="True"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
+  <Border Margin="8"
+          Padding="12"
+          CornerRadius="10"
+          Background="#E6111824"
+          BorderBrush="#663B82F6"
+          BorderThickness="1">
+    <StackPanel Spacing="8">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="2" PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll">
+          <TextBlock Text="PHANTOM MONITOR" Foreground="#F8FAFC" FontSize="10" FontWeight="Bold" />
+          <TextBlock Text="HARDWARE OVERLAY" Foreground="#91A0B5" FontSize="8" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="×" Padding="6,0" MinWidth="24" MinHeight="24"
+                Background="#263448" Foreground="#E6EDF6" Click="OnHideClick" />
+      </Grid>
+      <Border Height="1" Background="#39475A" />
+      <ItemsControl ItemsSource="{Binding OverlayRows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Grid ColumnDefinitions="74,*" ColumnSpacing="10" Margin="0,2">
+              <TextBlock Text="{Binding Name}" Foreground="#9FB0C5" FontSize="10" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="#F3F6FB" FontSize="11"
+                         FontFamily="monospace" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Text="{Binding LastUpdateText}" Foreground="#718096" FontSize="8" HorizontalAlignment="Right" />
+    </StackPanel>
+  </Border>
+</Window>

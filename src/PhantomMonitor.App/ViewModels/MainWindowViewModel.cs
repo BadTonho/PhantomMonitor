@@ -66,6 +66,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _telemetryExportListenAll;
     private string _telemetryExportStatusText = "Desativado";
     private string _settingsMessage = "As alterações são aplicadas ao salvar.";
+    private bool _overlayShowCpu;
+    private bool _overlayShowGpu;
+    private bool _overlayShowRam;
+    private bool _overlayShowDisk;
+    private bool _overlayShowNetwork;
+    private bool _overlayShowFans;
+    private bool _overlayShowMotherboard;
+    private bool _overlayShowFps;
+    private readonly ObservableCollection<OverlayMetricViewModel> _overlayRows = new();
     private IReadOnlyList<double> _cpuSamples = [];
     private IReadOnlyList<double> _gpuSamples = [];
     private IReadOnlyList<double> _ramSamples = [];
@@ -176,6 +185,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         : $"http://127.0.0.1:{TelemetryExportPortText}/values · http://127.0.0.1:{TelemetryExportPortText}/health";
     public string LogDirectoryText => UserDataPaths.LogDirectory;
     public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
+    public ObservableCollection<OverlayMetricViewModel> OverlayRows => _overlayRows;
+    public bool OverlayVisible => _config.ShowOverlay;
+    public string OverlayButtonText => OverlayVisible ? "Ocultar overlay" : "Mostrar overlay";
+    public double OverlayOpacity => _config.OverlayOpacity;
+    public double OverlayWidth => _config.Overlay.Width;
+    public bool OverlayShowCpu { get => _overlayShowCpu; set => Set(ref _overlayShowCpu, value); }
+    public bool OverlayShowGpu { get => _overlayShowGpu; set => Set(ref _overlayShowGpu, value); }
+    public bool OverlayShowRam { get => _overlayShowRam; set => Set(ref _overlayShowRam, value); }
+    public bool OverlayShowDisk { get => _overlayShowDisk; set => Set(ref _overlayShowDisk, value); }
+    public bool OverlayShowNetwork { get => _overlayShowNetwork; set => Set(ref _overlayShowNetwork, value); }
+    public bool OverlayShowFans { get => _overlayShowFans; set => Set(ref _overlayShowFans, value); }
+    public bool OverlayShowMotherboard { get => _overlayShowMotherboard; set => Set(ref _overlayShowMotherboard, value); }
+    public bool OverlayShowFps { get => _overlayShowFps; set => Set(ref _overlayShowFps, value); }
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
     public IReadOnlyList<double> GpuSamples { get => _gpuSamples; private set => Set(ref _gpuSamples, value); }
     public IReadOnlyList<double> RamSamples { get => _ramSamples; private set => Set(ref _ramSamples, value); }
@@ -200,6 +222,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _telemetryExportStatusText = _config.TelemetryExport.Enabled ? "Aguardando coleta" : "Desativado";
         _alertsCooldownText = _config.Alerts.CooldownSeconds.ToString(CultureInfo.CurrentCulture);
         _alertsEnabled = _config.Alerts.Enabled;
+        _overlayShowCpu = _config.Overlay.ShowCpu;
+        _overlayShowGpu = _config.Overlay.ShowGpu;
+        _overlayShowRam = _config.Overlay.ShowRam;
+        _overlayShowDisk = _config.Overlay.ShowDisk;
+        _overlayShowNetwork = _config.Overlay.ShowNetwork;
+        _overlayShowFans = _config.Overlay.ShowFans;
+        _overlayShowMotherboard = _config.Overlay.ShowMotherboard;
+        _overlayShowFps = _config.Overlay.ShowFps;
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
         LoadCustomSensorEditors();
@@ -207,6 +237,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshAlertEditor();
         _sensorService = LinuxSensorServiceFactory.Create(_config);
         AttachSensorService(_sensorService);
+        UpdateOverlayRows(null);
     }
 
     public void Start()
@@ -252,6 +283,49 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusText = IsPaused ? "Pausado" : "Monitorando";
         Raise(nameof(IsPaused));
         Raise(nameof(PauseButtonText));
+    }
+
+    public void ToggleOverlay()
+    {
+        SetOverlayVisible(!_config.ShowOverlay);
+    }
+
+    public void HideOverlay()
+    {
+        if (_config.ShowOverlay)
+            SetOverlayVisible(false);
+    }
+
+    private void SetOverlayVisible(bool visible)
+    {
+        var previous = _config.ShowOverlay;
+        _config.ShowOverlay = visible;
+        if (!_config.Save(ConfigPaths.ConfigFile))
+        {
+            _config.ShowOverlay = previous;
+            SettingsMessage = "Não foi possível salvar showOverlay no config.json.";
+            return;
+        }
+
+        Raise(nameof(OverlayVisible));
+        Raise(nameof(OverlayButtonText));
+        SettingsMessage = _config.ShowOverlay ? "Overlay ativado." : "Overlay ocultado.";
+    }
+
+    private void UpdateOverlayRows(SensorData? data)
+    {
+        OverlayRows.Clear();
+        var selection = new OverlayConfigSelection(
+            OverlayShowCpu,
+            OverlayShowGpu,
+            OverlayShowRam,
+            OverlayShowDisk,
+            OverlayShowNetwork,
+            OverlayShowFans,
+            OverlayShowMotherboard,
+            OverlayShowFps);
+        foreach (var row in OverlayMetricsBuilder.Build(data, selection))
+            OverlayRows.Add(row);
     }
 
     public void ShowOverview()
@@ -774,6 +848,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var oldTelemetryEnabled = _config.TelemetryExport.Enabled;
         var oldTelemetryPort = _config.TelemetryExport.Port;
         var oldTelemetryListenAll = _config.TelemetryExport.ListenAll;
+        var oldOverlayCpu = _config.Overlay.ShowCpu;
+        var oldOverlayGpu = _config.Overlay.ShowGpu;
+        var oldOverlayRam = _config.Overlay.ShowRam;
+        var oldOverlayDisk = _config.Overlay.ShowDisk;
+        var oldOverlayNetwork = _config.Overlay.ShowNetwork;
+        var oldOverlayFans = _config.Overlay.ShowFans;
+        var oldOverlayMotherboard = _config.Overlay.ShowMotherboard;
+        var oldOverlayFps = _config.Overlay.ShowFps;
         var collectionWasRunning = IsRunning;
         var collectionWasPaused = IsPaused;
         var intervalChanged = newInterval.HasValue && newInterval.Value != oldInterval;
@@ -781,8 +863,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var telemetryChanged = TelemetryExportEnabled != oldTelemetryEnabled
             || telemetryPort != oldTelemetryPort
             || TelemetryExportListenAll != oldTelemetryListenAll;
+        var overlayChanged = OverlayShowCpu != oldOverlayCpu
+            || OverlayShowGpu != oldOverlayGpu
+            || OverlayShowRam != oldOverlayRam
+            || OverlayShowDisk != oldOverlayDisk
+            || OverlayShowNetwork != oldOverlayNetwork
+            || OverlayShowFans != oldOverlayFans
+            || OverlayShowMotherboard != oldOverlayMotherboard
+            || OverlayShowFps != oldOverlayFps;
 
-        if (!intervalChanged && !loggingChanged && !telemetryChanged)
+        if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
         {
             ConfigureTelemetryExporter();
             SettingsMessage = "Nenhuma alteração para salvar.";
@@ -796,6 +886,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _config.TelemetryExport.Enabled = TelemetryExportEnabled;
         _config.TelemetryExport.Port = telemetryPort;
         _config.TelemetryExport.ListenAll = TelemetryExportListenAll;
+        _config.Overlay.ShowCpu = OverlayShowCpu;
+        _config.Overlay.ShowGpu = OverlayShowGpu;
+        _config.Overlay.ShowRam = OverlayShowRam;
+        _config.Overlay.ShowDisk = OverlayShowDisk;
+        _config.Overlay.ShowNetwork = OverlayShowNetwork;
+        _config.Overlay.ShowFans = OverlayShowFans;
+        _config.Overlay.ShowMotherboard = OverlayShowMotherboard;
+        _config.Overlay.ShowFps = OverlayShowFps;
+        UpdateOverlayRows(_latestSensorData);
 
         if (!_config.Save(ConfigPaths.ConfigFile))
         {
@@ -806,6 +905,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _config.TelemetryExport.Enabled = oldTelemetryEnabled;
             _config.TelemetryExport.Port = oldTelemetryPort;
             _config.TelemetryExport.ListenAll = oldTelemetryListenAll;
+            _config.Overlay.ShowCpu = oldOverlayCpu;
+            _config.Overlay.ShowGpu = oldOverlayGpu;
+            _config.Overlay.ShowRam = oldOverlayRam;
+            _config.Overlay.ShowDisk = oldOverlayDisk;
+            _config.Overlay.ShowNetwork = oldOverlayNetwork;
+            _config.Overlay.ShowFans = oldOverlayFans;
+            _config.Overlay.ShowMotherboard = oldOverlayMotherboard;
+            _config.Overlay.ShowFps = oldOverlayFps;
+            OverlayShowCpu = oldOverlayCpu;
+            OverlayShowGpu = oldOverlayGpu;
+            OverlayShowRam = oldOverlayRam;
+            OverlayShowDisk = oldOverlayDisk;
+            OverlayShowNetwork = oldOverlayNetwork;
+            OverlayShowFans = oldOverlayFans;
+            OverlayShowMotherboard = oldOverlayMotherboard;
+            OverlayShowFps = oldOverlayFps;
+            UpdateOverlayRows(_latestSensorData);
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
             return;
         }
@@ -830,6 +946,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     ? "Coleta reiniciada pausada; as estatísticas da sessão foram zeradas."
                     : "Coleta reiniciada; as estatísticas da sessão foram zeradas."
                 : "Intervalo salvo. Será usado quando a coleta for iniciada."
+            : overlayChanged && !loggingChanged && !telemetryChanged
+                ? "Opções do overlay salvas e aplicadas."
             : loggingChanged && telemetryChanged
                 ? collectionWasRunning
                     ? "Logs e exportador HTTP atualizados sem reiniciar a coleta."
@@ -991,6 +1109,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _latestSensorData = data;
         _telemetryHttpExporter?.Publish(data);
         InventoryGroups = SensorInventoryBuilder.Build(data);
+        UpdateOverlayRows(data);
         RefreshSensorTuningSeriesOptions();
         RefreshAlertEditor();
         HasInventorySnapshot = true;

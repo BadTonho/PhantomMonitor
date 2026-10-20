@@ -9,7 +9,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `logToCsv` - Habilitar logging em CSV
 - `logToJson` - Habilitar logging em JSON
 - `logToJsonJournal` - Journal JSON contínuo (JSONL): uma linha por amostra em `logs/sensors_*.jsonl` + notas nos marcadores de sessão (início/resets) — ver [logging.md](logging.md)
-- `showOverlay` - Mostrar overlay na inicialização
+- `showOverlay` - Mostrar overlay na inicialização; no Avalonia Linux, também controla sua visibilidade pelo dashboard
 - `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex: "Ctrl+Shift+O"; vazio = desativado)
 - `pauseMonitorHotkey` - 2º atalho global (P6.7): pausa/retoma o monitoramento (padrão `Ctrl+Alt+P`; vazio = desativado; estado de pausa não persiste) — ver [hotkey.md](hotkey.md) e [hardware-monitor.md](hardware-monitor.md)
 - `overlayOpacity` - Opacidade do overlay (0-1)
@@ -64,6 +64,7 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - No Avalonia Linux, a mesma página edita `telemetryExport.enabled`, `port` (1024–65.535) e `listenAll`; o estado e os endpoints ativos são exibidos. O listener funciona durante a coleta, permanece ativo na pausa e fecha ao parar. Acesso por `listenAll` não tem TLS nem autenticação.
 - No Avalonia Linux, a página **Sensores customizados** edita nome, fórmula, unidade e ordem das entradas `customSensors`; salvar recria o serviço de sensores e reinicia as estatísticas da sessão, preservando coleta parada ou pausada.
 - No Avalonia Linux, a página **Ajuste por série** edita `sensorTuning`: alvos exatos ou padrões, `intervalMs` e `smoothing`, com reordenação para controlar precedência (a última regra correspondente vence). Salvar aplica a lista ao recriar o serviço Linux; coleta parada ou pausada preserva seu estado. Ver [ajuste-de-series.md](ajuste-de-series.md).
+- No Avalonia Linux, a página **Configurações → Overlay flutuante** edita as categorias CPU, GPU, RAM, disco, rede, ventoinhas, placa-mãe e FPS/frametime nos campos existentes de `overlay`. O botão da visão geral alterna `showOverlay` e persiste a mudança imediatamente. Ver [overlay.md](overlay.md) para as limitações de posicionamento e fullscreen em Wayland.
 - No Avalonia Linux, a página **Alertas** edita regras do bloco `alerts`, incluindo caminho de script e argumentos. Scripts `.sh` usam `/bin/sh`; outros arquivos precisam ser executáveis. Som e desligamento são preservados, mas não executados nesse frontend.
 - **Aplicação no Linux:** salvar persiste com `AppConfig.Save()`. Alterar o intervalo recria o serviço de sensores, zera as estatísticas da sessão e preserva coleta pausada/parada. Alterar apenas os formatos de log atualiza os loggers sem reiniciar a coleta; opções do exportador HTTP são reabertas sem reiniciar a coleta e, se ela estiver parada, valem ao próximo início.
 - Um intervalo já salvo acima de 60.000 ms é preservado enquanto o campo não for editado; após editar, a tela aceita somente 100–60.000 ms.

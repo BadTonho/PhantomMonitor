@@ -71,6 +71,7 @@
             <TextBlock Text="{Binding LastUpdateText}" Classes="muted" FontSize="11" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="{Binding OverlayButtonText}" Click="OnToggleOverlayClick" />
             <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
             <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
             <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
@@ -256,6 +257,24 @@
             <TextBox Classes="settings-input" Text="{Binding UpdateIntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <TextBlock Text="Use um valor entre 100 e 60.000 ms. Um intervalo menor atualiza o painel com mais frequência." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="10">
+            <TextBlock Text="OVERLAY FLUTUANTE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Escolha as categorias mostradas na janela compacta. Salve para aplicar." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <WrapPanel Orientation="Horizontal" ItemWidth="170">
+              <CheckBox Content="CPU" IsChecked="{Binding OverlayShowCpu, Mode=TwoWay}" />
+              <CheckBox Content="GPU" IsChecked="{Binding OverlayShowGpu, Mode=TwoWay}" />
+              <CheckBox Content="RAM" IsChecked="{Binding OverlayShowRam, Mode=TwoWay}" />
+              <CheckBox Content="Disco" IsChecked="{Binding OverlayShowDisk, Mode=TwoWay}" />
+              <CheckBox Content="Rede" IsChecked="{Binding OverlayShowNetwork, Mode=TwoWay}" />
+              <CheckBox Content="Ventoinhas" IsChecked="{Binding OverlayShowFans, Mode=TwoWay}" />
+              <CheckBox Content="Placa-mãe" IsChecked="{Binding OverlayShowMotherboard, Mode=TwoWay}" />
+              <CheckBox Content="FPS e frametime" IsChecked="{Binding OverlayShowFps, Mode=TwoWay}" />
+            </WrapPanel>
+            <TextBlock Text="O overlay é arrastável e recebe cliques. No Wayland, o compositor define sua posição inicial e seu comportamento sobre janelas em tela cheia." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
@@ -564,7 +583,7 @@
       </StackPanel>
     </ScrollViewer>
 
-    <Border Grid.Column="1" Panel.ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="#243345" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="10" Padding="16">
+    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="#243345" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="10" Padding="16">
       <StackPanel Spacing="5">
         <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="#7DD3FC" FontSize="9" FontWeight="Bold" />
         <TextBlock Text="{Binding AlertToastMessage}" Foreground="#F3F6FB" FontSize="12" TextWrapping="Wrap" />

@@ -1,5 +1,13 @@
 # OverlayWindow
 
+## Overlay compacto no Avalonia/Linux
+
+O dashboard Avalonia oferece uma janela flutuante independente da janela principal. Ela é aberta conforme `showOverlay`, pode ser alternada pelo botão **Mostrar/Ocultar overlay** na visão geral e fechada pelo botão `×`. O botão atualiza o `config.json` imediatamente. As categorias CPU, GPU, RAM, disco, rede, ventoinhas, placa-mãe e FPS/frametime são selecionadas em **Configurações → Overlay flutuante** e aplicadas ao salvar, usando os campos existentes de `overlay`.
+
+O overlay recebe os snapshots do monitor; valores que ainda não existem aparecem como `—`, e pausa da coleta mantém a última leitura. A janela é compacta, sem bordas, sempre no topo de janelas comuns e pode ser movida arrastando o cabeçalho. Ela recebe cliques, sem modo click-through. Em Wayland, o compositor controla a posição inicial e a presença sobre aplicativos em tela cheia; a transparência também depende do compositor. A versão Linux não inclui perfis, templates, gráficos ou o editor visual do WPF.
+
+O WPF continua oferecendo o OSD avançado descrito abaixo, incluindo templates, séries por instância, perfis por aplicativo, gráficos e editor visual.
+
 Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual clássico de OSD de jogos. É compacta, clicável (click-through), sem impacto visual excessivo sobre os jogos e sempre visível no topo.
 
 ## Estilo Visual Phantom OSD

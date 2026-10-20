@@ -7,6 +7,7 @@ using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 using PhantomMonitor.Services.Linux;
+using PhantomMonitor.Services.Telemetry;
 
 namespace PhantomMonitor.App.ViewModels;
 
@@ -22,6 +23,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
     private JsonJournalLogger? _jsonJournalLogger;
+    private TelemetryHttpExporter? _telemetryHttpExporter;
+    private SensorData? _latestSensorData;
+    private int? _activeTelemetryPort;
+    private bool? _activeTelemetryListenAll;
     private bool _started;
     private bool _disposed;
     private string _statusText = "Iniciando monitoramento…";
@@ -56,6 +61,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _logToCsv;
     private bool _logToJson;
     private bool _logToJsonJournal;
+    private bool _telemetryExportEnabled;
+    private string _telemetryExportPortText = "7317";
+    private bool _telemetryExportListenAll;
+    private string _telemetryExportStatusText = "Desativado";
     private string _settingsMessage = "As alterações são aplicadas ao salvar.";
     private IReadOnlyList<double> _cpuSamples = [];
     private IReadOnlyList<double> _gpuSamples = [];
@@ -144,6 +153,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool LogToCsv { get => _logToCsv; set => Set(ref _logToCsv, value); }
     public bool LogToJson { get => _logToJson; set => Set(ref _logToJson, value); }
     public bool LogToJsonJournal { get => _logToJsonJournal; set => Set(ref _logToJsonJournal, value); }
+    public bool TelemetryExportEnabled { get => _telemetryExportEnabled; set => Set(ref _telemetryExportEnabled, value); }
+    public string TelemetryExportPortText
+    {
+        get => _telemetryExportPortText;
+        set
+        {
+            if (Set(ref _telemetryExportPortText, value)) Raise(nameof(TelemetryExportEndpointText));
+        }
+    }
+    public bool TelemetryExportListenAll
+    {
+        get => _telemetryExportListenAll;
+        set
+        {
+            if (Set(ref _telemetryExportListenAll, value)) Raise(nameof(TelemetryExportEndpointText));
+        }
+    }
+    public string TelemetryExportStatusText { get => _telemetryExportStatusText; private set => Set(ref _telemetryExportStatusText, value); }
+    public string TelemetryExportEndpointText => TelemetryExportListenAll
+        ? $"http://<host>:{TelemetryExportPortText}/values · http://<host>:{TelemetryExportPortText}/health"
+        : $"http://127.0.0.1:{TelemetryExportPortText}/values · http://127.0.0.1:{TelemetryExportPortText}/health";
     public string LogDirectoryText => UserDataPaths.LogDirectory;
     public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
@@ -164,6 +194,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _logToCsv = _config.LogToCsv;
         _logToJson = _config.LogToJson;
         _logToJsonJournal = _config.LogToJsonJournal;
+        _telemetryExportEnabled = _config.TelemetryExport.Enabled;
+        _telemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);
+        _telemetryExportListenAll = _config.TelemetryExport.ListenAll;
+        _telemetryExportStatusText = _config.TelemetryExport.Enabled ? "Aguardando coleta" : "Desativado";
         _alertsCooldownText = _config.Alerts.CooldownSeconds.ToString(CultureInfo.CurrentCulture);
         _alertsEnabled = _config.Alerts.Enabled;
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
@@ -181,6 +215,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StartLoggers();
         _sensorService.Start();
         _started = true;
+        ConfigureTelemetryExporter();
         StatusText = "Monitorando";
         Raise(nameof(IsRunning));
         Raise(nameof(IsPaused));
@@ -196,6 +231,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _sensorService.SetPaused(false);
         _sensorService.Stop();
         _started = false;
+        DisposeTelemetryExporter();
+        _latestSensorData = null;
+        UpdateTelemetryExportStatus();
         DisposeLoggers();
         StatusText = "Parado";
         FpsHint = "Monitoramento parado. Inicie novamente para continuar.";
@@ -722,17 +760,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             newInterval = parsed;
         }
 
+        if (!int.TryParse(TelemetryExportPortText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var telemetryPort)
+            || telemetryPort is < 1024 or > 65_535)
+        {
+            SettingsMessage = "A porta do exportador HTTP deve ficar entre 1024 e 65.535.";
+            return;
+        }
+
         var oldInterval = _config.UpdateIntervalMs;
         var oldCsv = _config.LogToCsv;
         var oldJson = _config.LogToJson;
         var oldJournal = _config.LogToJsonJournal;
+        var oldTelemetryEnabled = _config.TelemetryExport.Enabled;
+        var oldTelemetryPort = _config.TelemetryExport.Port;
+        var oldTelemetryListenAll = _config.TelemetryExport.ListenAll;
         var collectionWasRunning = IsRunning;
         var collectionWasPaused = IsPaused;
         var intervalChanged = newInterval.HasValue && newInterval.Value != oldInterval;
         var loggingChanged = LogToCsv != oldCsv || LogToJson != oldJson || LogToJsonJournal != oldJournal;
+        var telemetryChanged = TelemetryExportEnabled != oldTelemetryEnabled
+            || telemetryPort != oldTelemetryPort
+            || TelemetryExportListenAll != oldTelemetryListenAll;
 
-        if (!intervalChanged && !loggingChanged)
+        if (!intervalChanged && !loggingChanged && !telemetryChanged)
         {
+            ConfigureTelemetryExporter();
             SettingsMessage = "Nenhuma alteração para salvar.";
             return;
         }
@@ -741,6 +793,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _config.LogToCsv = LogToCsv;
         _config.LogToJson = LogToJson;
         _config.LogToJsonJournal = LogToJsonJournal;
+        _config.TelemetryExport.Enabled = TelemetryExportEnabled;
+        _config.TelemetryExport.Port = telemetryPort;
+        _config.TelemetryExport.ListenAll = TelemetryExportListenAll;
 
         if (!_config.Save(ConfigPaths.ConfigFile))
         {
@@ -748,6 +803,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _config.LogToCsv = oldCsv;
             _config.LogToJson = oldJson;
             _config.LogToJsonJournal = oldJournal;
+            _config.TelemetryExport.Enabled = oldTelemetryEnabled;
+            _config.TelemetryExport.Port = oldTelemetryPort;
+            _config.TelemetryExport.ListenAll = oldTelemetryListenAll;
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
             return;
         }
@@ -762,16 +820,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (IsRunning) StartLoggers();
         }
 
+        ConfigureTelemetryExporter();
+
         UpdateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
+        TelemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);
         SettingsMessage = intervalChanged
             ? collectionWasRunning
                 ? collectionWasPaused
                     ? "Coleta reiniciada pausada; as estatísticas da sessão foram zeradas."
                     : "Coleta reiniciada; as estatísticas da sessão foram zeradas."
                 : "Intervalo salvo. Será usado quando a coleta for iniciada."
-            : collectionWasRunning
-                ? "Logs atualizados sem reiniciar a coleta."
-                : "Opções de log salvas para a próxima coleta.";
+            : loggingChanged && telemetryChanged
+                ? collectionWasRunning
+                    ? "Logs e exportador HTTP atualizados sem reiniciar a coleta."
+                    : "Opções de logs e exportador salvas para a próxima coleta."
+                : telemetryChanged
+                    ? collectionWasRunning
+                        ? "Exportador HTTP atualizado sem reiniciar a coleta."
+                        : "Opções do exportador salvas para a próxima coleta."
+                    : collectionWasRunning
+                        ? "Logs atualizados sem reiniciar a coleta."
+                        : "Opções de log salvas para a próxima coleta.";
     }
 
     private void ReplaceSensorService()
@@ -809,7 +878,89 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             StatusText = "Parado";
             RaiseRunState();
+            UpdateTelemetryExportStatus();
         }
+    }
+
+    private void ConfigureTelemetryExporter()
+    {
+        var options = _config.TelemetryExport;
+        if (!options.Enabled)
+        {
+            DisposeTelemetryExporter();
+            UpdateTelemetryExportStatus();
+            return;
+        }
+
+        if (!IsRunning)
+        {
+            DisposeTelemetryExporter();
+            UpdateTelemetryExportStatus();
+            return;
+        }
+
+        if (_telemetryHttpExporter is not null
+            && _activeTelemetryPort == options.Port
+            && _activeTelemetryListenAll == options.ListenAll
+            && _telemetryHttpExporter.IsListening)
+        {
+            UpdateTelemetryExportStatus();
+            return;
+        }
+
+        DisposeTelemetryExporter();
+        var exporter = new TelemetryHttpExporter(options.Port, options.ListenAll);
+        _telemetryHttpExporter = exporter;
+        _activeTelemetryPort = options.Port;
+        _activeTelemetryListenAll = options.ListenAll;
+        exporter.StateChanged += OnTelemetryExporterStateChanged;
+        if (_latestSensorData is not null)
+            exporter.Publish(_latestSensorData);
+
+        exporter.Start();
+        UpdateTelemetryExportStatus();
+    }
+
+    private void OnTelemetryExporterStateChanged(TelemetryHttpExporter exporter) => Dispatcher.UIThread.Post(() =>
+    {
+        if (_disposed || !ReferenceEquals(exporter, _telemetryHttpExporter)) return;
+        UpdateTelemetryExportStatus();
+    });
+
+    private void UpdateTelemetryExportStatus()
+    {
+        if (!_config.TelemetryExport.Enabled)
+        {
+            TelemetryExportStatusText = "Desativado";
+            return;
+        }
+
+        if (!IsRunning)
+        {
+            TelemetryExportStatusText = "Aguardando coleta";
+            return;
+        }
+
+        if (_telemetryHttpExporter is null)
+        {
+            TelemetryExportStatusText = "Aguardando inicialização";
+            return;
+        }
+
+        TelemetryExportStatusText = _telemetryHttpExporter.IsListening
+            ? $"Escutando em {_telemetryHttpExporter.Endpoint}"
+            : $"Falha ao abrir o listener: {_telemetryHttpExporter.LastError ?? "erro desconhecido"}";
+    }
+
+    private void DisposeTelemetryExporter()
+    {
+        var exporter = _telemetryHttpExporter;
+        _telemetryHttpExporter = null;
+        _activeTelemetryPort = null;
+        _activeTelemetryListenAll = null;
+        if (exporter is null) return;
+        exporter.StateChanged -= OnTelemetryExporterStateChanged;
+        exporter.Dispose();
     }
 
     private void ResetDisplayedSession()
@@ -837,6 +988,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (_disposed || !_started) return;
 
+        _latestSensorData = data;
+        _telemetryHttpExporter?.Publish(data);
         InventoryGroups = SensorInventoryBuilder.Build(data);
         RefreshSensorTuningSeriesOptions();
         RefreshAlertEditor();
@@ -982,6 +1135,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _sensorService.Stop();
             _started = false;
         }
+        DisposeTelemetryExporter();
         DisposeLoggers();
         _alertToastTimer?.Stop();
         _desktopNotificationService?.Dispose();

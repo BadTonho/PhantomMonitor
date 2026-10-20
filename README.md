@@ -96,8 +96,9 @@ Phantom/
    ```bash
    ENABLE_PHANTOM_OVERLAY=1 %command%
    ```
-6. A gravação é controlada pelas opções `logToCsv`, `logToJson` e `logToJsonJournal` do `config.json`. No Linux, os arquivos ficam em `~/.local/share/PhantomMonitor/logs/` (ou no diretório definido por `XDG_DATA_HOME`).
-7. Use **Configurações** na barra lateral para alterar o intervalo global de coleta e os formatos de gravação pela interface.
+6. Use **Configurações → Exportador HTTP** para ativar `GET /values` e `GET /health`, escolher a porta e, opcionalmente, permitir acesso pela rede local. O padrão é desativado e restrito ao próprio computador.
+7. A gravação é controlada pelas opções `logToCsv`, `logToJson` e `logToJsonJournal` do `config.json`. No Linux, os arquivos ficam em `~/.local/share/PhantomMonitor/logs/` (ou no diretório definido por `XDG_DATA_HOME`).
+8. Use **Configurações** na barra lateral para alterar o intervalo global de coleta e os formatos de gravação pela interface.
 
 > [!IMPORTANT]
 > O dashboard Avalonia é, nesta primeira versão, o frontend Linux. O WPF permanece como o frontend Windows durante a migração; a coleta Windows ainda não foi ligada ao app Avalonia. No Linux, a UI mostra FPS quando um jogo Vulkan habilita a camada Phantom. O overlay de jogo ainda não faz parte do frontend Avalonia.
@@ -134,7 +135,7 @@ Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 ## Build e notas
 
 - `PhantomMonitor.App` usa Avalonia e `PhantomMonitor.Core` (`net10.0`) para compartilhar modelos e serviços; `PhantomMonitor` (WPF) continua sendo o frontend Windows durante a transição.
-- O dashboard Avalonia inclui visão geral, inventário, editor de sensores customizados, ajuste por série, configurações de coleta e logs, além de edição de alertas com notificações internas e scripts Linux. Overlay, bandeja, som e desligamento continuam disponíveis somente no WPF.
+- O dashboard Avalonia inclui visão geral, inventário, editores de sensores customizados e ajuste por série, configurações de coleta/logs e exportador HTTP, além de edição de alertas com notificações internas e scripts Linux. Overlay, bandeja, som e desligamento continuam disponíveis somente no WPF.
 - Os fontes de `PhantomSensorLib` (C++, stub) ficam no repositório como extensão futura, **sem pipeline de build ativo** — nenhum código consome a DLL hoje (ver [sensor-nativo.md](docs/funções/sensor-nativo.md)).
 - O FPS no Windows requer **Administrador** (PresentMon/ETW). Erros internos ficam em `logs/errors.log`.
 - O `PhantomVulkanLayer` é compilado via CMake/`install_layer.sh` e não faz parte do `PhantomMonitor.slnx`.

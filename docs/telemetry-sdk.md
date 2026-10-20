@@ -91,9 +91,10 @@ Complemento de rede para o mapa de memória — mesma cadência, payload maior:
   (`{"ok":true,"timestamp":"..."}` para health checks). Outros caminhos → 404 em texto.
 - **Escuta padrão:** `http://127.0.0.1:7317/` — loopback não requer permissão de
   URL do http.sys nem firewall. `listenAll: true` vira `http://+:porta/`
-  (todas as interfaces, para consumo em 2ª máquina) e **pode** exigir liberação
-  de firewall/port forwarding; sem TLS e sem autenticação, então só use em rede
-  confiável. `port` é travada em 1024–65535 pelo `Normalize`.
+  (todas as interfaces, para consumo em 2ª máquina) e pode exigir uma regra de
+  firewall no Linux ou uma URL ACL/firewall no Windows; sem TLS e sem
+  autenticação, então só use em rede confiável. `port` é travada em 1024–65535
+  pelo `Normalize`.
 - **Headers:** `Cache-Control: no-store` (painéis de browser buscam a cada 500 ms
   sem stale), `Content-Type: application/json`, `Content-Length` para keep-alive.
 - **Ciclo de vida:** ligado somente com o monitoramento ativo (criado no início,
@@ -101,6 +102,11 @@ Complemento de rede para o mapa de memória — mesma cadência, payload maior:
   `logs/errors.log` e **não** impede o monitoramento.
 - **Ativo quando pausado (P6.7):** segue servindo o último snapshot válido
   durante a pausa — dashboards não "somem", congelando no valor de pausa.
+- **Avalonia/Linux:** os campos `enabled`, `port` e `listenAll` podem ser editados
+  na página **Configurações**. O dashboard mostra endpoint e estado do listener;
+  falhas de bind aparecem ali e no log sem interromper a coleta. Se a porta ou
+  o endereço forem alterados durante a pausa, o listener é reaberto e recebe o
+  snapshot congelado antes de voltar a servir.
 - **Anti-cheat por design:** ouvindo no loopback, nenhum processo de jogo é
   afetado; o exporter só responde, nunca consulta o sistema nem outros apps.
 - **Por que HTTP e não UDP:** `HttpListener` dá descoberta (`/health`),

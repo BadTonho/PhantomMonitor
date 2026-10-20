@@ -11,10 +11,9 @@ namespace PhantomMonitor.Services.Telemetry;
 /// por instância e estatísticas da sessão) — para dashboards no navegador,
 /// painéis em 2ª máquina e ferramentas externas, sem tocar em arquivos.
 ///
-/// - Por padrão escuta em <c>http://127.0.0.1:&lt;porta&gt;/</c> (loopback: exige
-///   apenas o app, sem permissão de URL do http.sys). Acesso LAN opt-in via
-///   <c>listenAll</c> (<c>http://+:porta/</c>), que pode requerer permissão
-///   (netsh/firewall) — documentado em docs/telemetry-sdk.md.
+/// - Por padrão escuta em <c>http://127.0.0.1:&lt;porta&gt;/</c>. Acesso LAN
+///   opt-in via <c>listenAll</c> (<c>http://+:porta/</c>), que pode requerer
+///   liberação de firewall — documentado em docs/telemetry-sdk.md.
 /// - Somente leitura e somente o último ciclo: nem consome sensores nem toca em
 ///   processos de jogos (política anti-cheat do projeto, em qualquer camada).
 /// - Concorrência: <see cref="Publish"/> só troca a referência do último
@@ -37,7 +36,14 @@ public sealed class TelemetryHttpExporter : IDisposable
     private CancellationTokenSource? _cts;
     private Task? _serveLoop;
     private volatile SensorData? _latest;
-    private bool _disposed;
+    private volatile bool _disposed;
+    private volatile bool _isListening;
+
+    /// <summary>Disparado quando o estado do listener muda, inclusive em erro assíncrono.</summary>
+    public event Action<TelemetryHttpExporter>? StateChanged;
+
+    public bool IsListening => _isListening;
+    public string? LastError { get; private set; }
 
     public TelemetryHttpExporter(int port, bool listenAll = false)
     {
@@ -55,7 +61,7 @@ public sealed class TelemetryHttpExporter : IDisposable
 
     public void Start()
     {
-        if (_disposed || _serveLoop != null) return;
+        if (_disposed || _isListening || _serveLoop != null) return;
 
         try
         {
@@ -63,12 +69,16 @@ public sealed class TelemetryHttpExporter : IDisposable
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("HttpExporter.Start", ex);
+            SetFailure("HttpExporter.Start", ex);
             return;
         }
 
+        _isListening = true;
+        LastError = null;
+        RaiseStateChanged();
         _cts = new CancellationTokenSource();
-        _serveLoop = Task.Run(() => ServeLoopAsync(_cts.Token));
+        var token = _cts.Token;
+        _serveLoop = Task.Run(() => ServeLoopAsync(token));
     }
 
     private async Task ServeLoopAsync(CancellationToken ct)
@@ -87,12 +97,27 @@ public sealed class TelemetryHttpExporter : IDisposable
             }
             catch (Exception ex)
             {
-                ErrorLog.Write("HttpExporter.Loop", ex);
+                SetFailure("HttpExporter.Loop", ex);
+                try { _listener.Close(); } catch { /* já encerrado */ }
                 break; // listener quebrado (ex.: URL sem permissão) — nada adianta continuar
             }
 
             _ = Task.Run(() => Handle(context), CancellationToken.None);
         }
+    }
+
+    private void SetFailure(string operation, Exception exception)
+    {
+        _isListening = false;
+        LastError = exception.Message;
+        ErrorLog.Write(operation, exception);
+        RaiseStateChanged();
+    }
+
+    private void RaiseStateChanged()
+    {
+        try { StateChanged?.Invoke(this); }
+        catch (Exception ex) { ErrorLog.Write("HttpExporter.StateChanged", ex); }
     }
 
     private void Handle(HttpListenerContext context)
@@ -156,6 +181,7 @@ public sealed class TelemetryHttpExporter : IDisposable
         {
             ErrorLog.Write("HttpExporter.Dispose", ex);
         }
+        _isListening = false;
         _serveLoop = null;
         _latest = null;
     }

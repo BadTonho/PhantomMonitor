@@ -1,23 +1,32 @@
 # Logging (CSV / JSON)
 
 Sistema de logging para exportação dos dados de sensores em formato CSV e/ou JSON.
+Os formatos e estruturas são compartilhados pelo WPF e pelo Avalonia; a pasta de
+destino depende do frontend.
 
 ## CsvLogger
 
-Salva os dados de sensores em arquivo CSV no diretório `logs/`.
+Salva os dados de sensores em arquivo CSV. No WPF, usa `logs/` ao lado do app; no
+Avalonia Linux, usa a pasta de dados do usuário `~/.local/share/PhantomMonitor/logs/`
+(respeitando `XDG_DATA_HOME` por meio de `LocalApplicationData`).
 
 - Colunas **dinâmicas**: o cabeçalho é escrito na primeira escrita com as séries
   presentes no primeiro snapshot — coluna 0 = `Timestamp`, depois as séries
   canônicas (na ordem do enum `SensorType`) e por fim as séries por instância
   (`GpuCore#1`, `CpuTemperature#3`, `FanSpeed#2`...), ver [sensor-key / hardware-monitor](hardware-monitor.md)
 - Cria um novo arquivo a cada início de monitoramento, com timestamp no nome
+- O Avalonia inclui milissegundos no timestamp da sessão para evitar colisão ao
+  parar e iniciar novamente dentro do mesmo segundo
 - Hardware que desaparece depois (USB desligada, SSD removido) mantém sua coluna
   na tabela; a célula fica em zero — o alinhamento de planilhas não quebra
-- Formato: `sensors_YYYYMMDD_HHmmss.csv`
+- Formato: `sensors_YYYYMMDD_HHmmss.csv` (WPF) ou
+  `sensors_YYYYMMDD_HHmmss_fff.csv` (Avalonia Linux)
 
 ## JsonLogger
 
-Salva o snapshot mais recente em um arquivo JSON no diretório `logs/`.
+Salva o snapshot mais recente em `sensors_latest.json` no diretório de logs do
+frontend: `logs/` ao lado do app WPF ou `~/.local/share/PhantomMonitor/logs/` no
+Avalonia Linux.
 
 - Sempre sobrescreve o mesmo arquivo (`sensors_latest.json`)
 - Escrita **atômica** (`.tmp` + substituição): leitores externos nunca veem JSON truncado
@@ -42,7 +51,10 @@ Só tem efeito com o CSV já aberto (a partir da primeira linha de valores).
 
 ## JsonJournalLogger (journal JSON contínuo, JSONL)
 
-Journal **append-only** em `logs/sensors_YYYYMMDD_HHmmss.jsonl`: **uma linha por
+Journal **append-only** em `sensors_YYYYMMDD_HHmmss.jsonl` (WPF) ou
+`sensors_YYYYMMDD_HHmmss_fff.jsonl` (Avalonia Linux) na pasta de logs do
+frontend: `logs/` ao lado do app WPF ou `~/.local/share/PhantomMonitor/logs/` no
+Avalonia Linux. Registra **uma linha por
 evento**, custo de gravação constante (nada é reescrito a cada ciclo, diferente
 do snapshot sensors_latest.json) — indicado para benchmarks longos e replay.
 
@@ -81,9 +93,13 @@ Também é o destino de todos os tratadores globais de exceção do app:
 
 ## Ativação
 
-Controlado pelo `config.json`:
+Controlado pelo `config.json`, carregado quando o app inicia:
 - `logToCsv` - Ativar logging CSV
 - `logToJson` - Ativar logging JSON
 - `logToJsonJournal` - Ativar journal JSON contínuo (JSONL)
 
-Também pode ser ativado via checkboxes na sidebar da interface principal.
+No Avalonia Linux, essas opções são lidas ao iniciar o app e aplicadas quando a
+coleta inicia; a tela não oferece controles de log nesta etapa. No WPF, também
+podem ser alteradas pelos checkboxes da interface principal e são aplicadas na
+próxima sessão de monitoramento. Pausar a coleta interrompe temporariamente a
+entrada de novas amostras; parar ou fechar o app fecha os arquivos ativos.

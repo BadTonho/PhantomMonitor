@@ -16,6 +16,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly Queue<double> _cpuHistory = new();
     private readonly Queue<double> _gpuHistory = new();
     private readonly Queue<double> _ramHistory = new();
+    private CsvLogger? _csvLogger;
+    private JsonLogger? _jsonLogger;
+    private JsonJournalLogger? _jsonJournalLogger;
     private bool _started;
     private bool _disposed;
     private string _statusText = "Iniciando monitoramento…";
@@ -94,6 +97,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public void Start()
     {
         if (_disposed || IsRunning) return;
+        StartLoggers();
         _sensorService.Start();
         _started = true;
         StatusText = "Monitorando";
@@ -111,6 +115,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _sensorService.SetPaused(false);
         _sensorService.Stop();
         _started = false;
+        DisposeLoggers();
         StatusText = "Parado";
         FpsHint = "Monitoramento parado. Inicie novamente para continuar.";
         Raise(nameof(IsRunning));
@@ -147,6 +152,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void UpdateSnapshot(SensorData data)
     {
+        if (_disposed || !_started) return;
+
         InventoryGroups = SensorInventoryBuilder.Build(data);
         HasInventorySnapshot = true;
         Raise(nameof(IsWaitingForInventorySnapshot));
@@ -187,6 +194,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RamSamples = _ramHistory.ToArray();
         FrametimeSamples = data.FrametimeHistory.Select(x => (double)x).ToArray();
         LastUpdateText = $"Atualizado às {data.Timestamp.ToLocalTime():HH:mm:ss}";
+
+        _csvLogger?.Write(data);
+        _jsonLogger?.Write(data);
+        _jsonJournalLogger?.Write(data);
+    }
+
+    private void StartLoggers()
+    {
+        var logDirectory = UserDataPaths.LogDirectory;
+        var sessionStamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff", CultureInfo.InvariantCulture);
+
+        if (_config.LogToCsv)
+            _csvLogger = new CsvLogger(Path.Combine(logDirectory, $"sensors_{sessionStamp}.csv"));
+
+        if (_config.LogToJson)
+            _jsonLogger = new JsonLogger(Path.Combine(logDirectory, "sensors_latest.json"));
+
+        if (_config.LogToJsonJournal)
+        {
+            _jsonJournalLogger = new JsonJournalLogger(Path.Combine(logDirectory, $"sensors_{sessionStamp}.jsonl"));
+            _jsonJournalLogger.WriteNote("início da sessão");
+        }
+    }
+
+    private void DisposeLoggers()
+    {
+        _csvLogger?.Dispose();
+        _jsonLogger?.Dispose();
+        _jsonJournalLogger?.Dispose();
+        _csvLogger = null;
+        _jsonLogger = null;
+        _jsonJournalLogger = null;
     }
 
     private static bool Has(SensorData data, SensorType type) => data.Values.ContainsKey(type);
@@ -245,6 +284,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed) return;
         _disposed = true;
         _sensorService.SensorUpdated -= OnSensorUpdated;
+        if (IsRunning)
+        {
+            _sensorService.SetPaused(false);
+            _sensorService.Stop();
+            _started = false;
+        }
+        DisposeLoggers();
         _sensorService.Dispose();
     }
 }

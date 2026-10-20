@@ -3,7 +3,7 @@
 O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, GOverlay ou drivers proprietários adicionais).
 
 > [!IMPORTANT]
-> **Escopo atual:** o dashboard Avalonia (`src/PhantomMonitor.App`) é, nesta etapa, o frontend Linux e consome `LinuxSensorService` de `PhantomMonitor.Core`. O frontend WPF (`src/PhantomMonitor`) permanece disponível no Windows durante a transição; ainda não há provedor Windows ligado ao app Avalonia. A primeira versão Avalonia cobre monitoramento ao vivo e FPS; overlay, inventário, alertas, bandeja e editores continuam no WPF por enquanto. O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e não faz parte da solução MSBuild.
+> **Escopo atual:** o dashboard Avalonia (`src/PhantomMonitor.App`) é, nesta etapa, o frontend Linux e consome `LinuxSensorService` de `PhantomMonitor.Core`. Ele cobre monitoramento ao vivo, FPS, inventário de séries publicadas e gravação CSV/JSON/JSONL configurada pelo `config.json`. Os logs são salvos na pasta de dados do usuário Linux. O frontend WPF (`src/PhantomMonitor`) permanece disponível no Windows durante a transição; ainda não há provedor Windows ligado ao app Avalonia. Overlay, alertas, bandeja e editores continuam no WPF por enquanto. O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e não faz parte da solução MSBuild.
 
 ### Camada Vulkan: notas técnicas
 

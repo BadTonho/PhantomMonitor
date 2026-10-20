@@ -30,4 +30,8 @@
     <Reference Include="System.Management" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PhantomMonitor.Core\PhantomMonitor.Core.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -5,7 +5,7 @@ namespace PhantomMonitor.Services;
 /// <summary>
 /// Resolve o caminho do config.json de forma independente do diretório de saída.
 /// - Em desenvolvimento (repositório detectado subindo a partir do executável): config.json na raiz do repo.
-/// - Caso contrário (publish/instalado): %AppData%\PhantomMonitor\config.json.
+/// - Caso contrário (publish/instalado): diretório de configuração do usuário + PhantomMonitor/config.json.
 /// </summary>
 public static class ConfigPaths
 {

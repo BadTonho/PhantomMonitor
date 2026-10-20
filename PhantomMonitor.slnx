@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/PhantomMonitor.Core/PhantomMonitor.Core.csproj" />
+    <Project Path="src/PhantomMonitor.App/PhantomMonitor.App.csproj" />
     <Project Path="src/PhantomMonitor/PhantomMonitor.csproj" />
   </Folder>
 </Solution>

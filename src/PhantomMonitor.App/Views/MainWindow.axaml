@@ -1,0 +1,177 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:charts="using:PhantomMonitor.App.Controls"
+        x:Class="PhantomMonitor.App.Views.MainWindow"
+        Title="Phantom Monitor"
+        Width="1120" Height="790" MinWidth="850" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="#111827">
+  <Window.Styles>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#8B98AA" />
+    </Style>
+    <Style Selector="TextBlock.metric">
+      <Setter Property="Foreground" Value="#F3F6FB" />
+      <Setter Property="FontSize" Value="28" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="14,9" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </Window.Styles>
+
+  <Grid ColumnDefinitions="210,*">
+    <Border Grid.Column="0" Background="#151E2B" BorderBrush="#263244" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto" Margin="18,22">
+        <StackPanel Spacing="3">
+          <TextBlock Text="PHANTOM" Foreground="#F8FAFC" FontSize="19" FontWeight="Bold" />
+          <TextBlock Text="HARDWARE MONITOR" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,38,0,0" Spacing="10">
+          <TextBlock Text="MONITORAMENTO" Foreground="#718096" FontSize="10" FontWeight="Bold" Margin="8,0,0,4" />
+          <Border Background="#202C3B" CornerRadius="7" Padding="10,9">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="◉" Foreground="#38BDF8" FontSize="14" />
+              <TextBlock Text="Visão geral" Foreground="#E6EDF6" FontSize="12" FontWeight="SemiBold" />
+            </StackPanel>
+          </Border>
+          <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="#66758A" FontSize="9" Margin="8,13,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="2" Background="#1B2634" CornerRadius="9" Padding="11">
+          <StackPanel Spacing="5">
+            <TextBlock Text="ESTADO" Foreground="#75859A" FontSize="9" FontWeight="Bold" />
+            <TextBlock Text="{Binding StatusText}" Foreground="#DCE5F0" FontSize="12" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="28,23,28,28" Spacing="16">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Visão geral do sistema" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding LastUpdateText}" Classes="muted" FontSize="11" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          </StackPanel>
+        </Grid>
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+          <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="PROCESSADOR" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+                <Border Grid.Column="1" Background="#243345" CornerRadius="8" Padding="8,3">
+                  <TextBlock Text="CPU" Foreground="#93C5FD" FontSize="9" FontWeight="Bold" />
+                </Border>
+              </Grid>
+              <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                <StackPanel>
+                  <TextBlock Text="{Binding CpuUsageText}" Classes="metric" />
+                  <TextBlock Text="Utilização total" Classes="muted" FontSize="10" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
+                  <TextBlock Text="{Binding CpuTempText}" Foreground="#E6EDF6" FontSize="14" HorizontalAlignment="Right" />
+                  <TextBlock Text="{Binding CpuClockText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
+                </StackPanel>
+              </Grid>
+              <charts:HistoryChart Grid.Row="2" Values="{Binding CpuSamples}" Stroke="#38BDF8" Height="42" />
+            </Grid>
+          </Border>
+
+          <Border Grid.Column="1" Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="PLACA DE VÍDEO" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+                <Border Grid.Column="1" Background="#243345" CornerRadius="8" Padding="8,3">
+                  <TextBlock Text="GPU" Foreground="#C4B5FD" FontSize="9" FontWeight="Bold" />
+                </Border>
+              </Grid>
+              <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                <StackPanel>
+                  <TextBlock Text="{Binding GpuUsageText}" Classes="metric" />
+                  <TextBlock Text="Utilização do núcleo" Classes="muted" FontSize="10" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
+                  <TextBlock Text="{Binding GpuTempText}" Foreground="#E6EDF6" FontSize="14" HorizontalAlignment="Right" />
+                  <TextBlock Text="{Binding GpuMemoryText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
+                </StackPanel>
+              </Grid>
+              <charts:HistoryChart Grid.Row="2" Values="{Binding GpuSamples}" Stroke="#A78BFA" Height="42" />
+            </Grid>
+          </Border>
+        </Grid>
+
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="14">
+          <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="17">
+            <StackPanel Spacing="11">
+              <TextBlock Text="MEMÓRIA RAM" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="{Binding RamUsageText}" Classes="metric" />
+              <TextBlock Text="{Binding RamDetailText}" Classes="muted" FontSize="11" />
+              <charts:HistoryChart Values="{Binding RamSamples}" Stroke="#34D399" Height="34" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="1" Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="17">
+            <StackPanel Spacing="12">
+              <TextBlock Text="DISCO" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <StackPanel Spacing="4">
+                <TextBlock Text="LEITURA" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding DiskReadText}" Foreground="#E6EDF6" FontSize="16" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <TextBlock Text="GRAVAÇÃO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding DiskWriteText}" Foreground="#E6EDF6" FontSize="16" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="2" Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="17">
+            <StackPanel Spacing="12">
+              <TextBlock Text="REDE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <StackPanel Spacing="4">
+                <TextBlock Text="DOWNLOAD" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding NetworkDownText}" Foreground="#E6EDF6" FontSize="16" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <TextBlock Text="UPLOAD" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding NetworkUpText}" Foreground="#E6EDF6" FontSize="16" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="4">
+                <TextBlock Text="FPS EM JOGO" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="{Binding FpsHint}" Classes="muted" FontSize="10" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="22" VerticalAlignment="Center">
+                <StackPanel>
+                  <TextBlock Text="FPS" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="{Binding FpsText}" Foreground="#F3F6FB" FontSize="25" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel>
+                  <TextBlock Text="FRAMETIME" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="{Binding FrametimeText}" Foreground="#E6EDF6" FontSize="16" />
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+            <charts:HistoryChart Grid.Row="1" Values="{Binding FrametimeSamples}" Stroke="#FBBF24" Height="56" />
+            <TextBlock Grid.Row="2" Text="{Binding FpsStatsText}" Foreground="#AAB7C8" FontSize="10" />
+          </Grid>
+        </Border>
+
+        <TextBlock Text="Os valores de temperatura, clock e utilização dependem dos sensores expostos pelo kernel e pelo driver." Classes="muted" FontSize="10" TextWrapping="Wrap" Margin="2,0,0,0" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Window>

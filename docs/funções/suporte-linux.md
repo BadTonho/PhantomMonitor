@@ -3,7 +3,7 @@
 O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, GOverlay ou drivers proprietários adicionais).
 
 > [!IMPORTANT]
-> **Escopo atual:** o app WPF (`PhantomMonitor.csproj`, `net10.0-windows`) só executa no Windows. O código em `Services/Linux/` e a camada `PhantomVulkanLayer` são a base de suporte a Linux, mas **ainda não há um front-end Linux executável** (seria necessário um projeto multiplataforma ou multi-target). O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e **não faz parte do `PhantomMonitor.slnx`** (a solução só lista projetos MSBuild).
+> **Escopo atual:** o dashboard Avalonia (`src/PhantomMonitor.App`) é, nesta etapa, o frontend Linux e consome `LinuxSensorService` de `PhantomMonitor.Core`. O frontend WPF (`src/PhantomMonitor`) permanece disponível no Windows durante a transição; ainda não há provedor Windows ligado ao app Avalonia. A primeira versão Avalonia cobre monitoramento ao vivo e FPS; overlay, inventário, alertas, bandeja e editores continuam no WPF por enquanto. O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e não faz parte da solução MSBuild.
 
 ### Camada Vulkan: notas técnicas
 
@@ -15,28 +15,22 @@ O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mant
 
 ## 1. Visão Geral da Arquitetura
 
-O sistema emprega uma arquitetura desacoplada via `ISensorService` e `IFpsMonitor`, com seleção dinâmica de provedor em tempo de execução através da `SensorServiceFactory`:
+O app Avalonia Linux consome os contratos compartilhados `ISensorService` e `IFpsMonitor` do Core. O app WPF mantém sua fábrica para Windows e os serviços de plataforma existentes.
 
 ```
-                    ┌─────────────────────────┐
-                    │   PhantomMonitor (UI)   │
-                    └────────────┬────────────┘
-                                 │
-                     ISensorService / IFpsMonitor
-                                 │
-            ┌────────────────────┴────────────────────┐
-            ▼                                         ▼
-   [Ambiente Windows]                         [Ambiente Linux]
- ├── HardwareMonitorService                 ├── LinuxSensorService
- │   └── LibreHardwareMonitor               │   ├── /proc/stat (CPU usage)
- └── FpsMonitor                             │   ├── /proc/meminfo (RAM)
-     └── Intel PresentMon                   │   ├── /sys/class/hwmon (Temps)
-                                            │   ├── /sys/class/drm (GPU usage/VRAM)
-                                            │   ├── /proc/diskstats (I/O)
-                                            │   ├── /proc/net/dev (Rede ↑/↓ + totais da sessão)
-                                            │   └── /sys/class/power_supply (Bateria/AC)
-                                            └── LinuxFpsMonitor
-                                                └── PhantomVulkanLayer (shared memory)
+PhantomMonitor.App (Avalonia/Linux)
+  └── PhantomMonitor.Core
+      ├── ISensorService / IFpsMonitor
+      └── LinuxSensorService
+          ├── /proc/stat (CPU)
+          ├── /proc/meminfo (RAM)
+          ├── /sys/class/hwmon (temperaturas e ventoinhas)
+          ├── /sys/class/drm (GPU e VRAM)
+          ├── /proc/diskstats e /proc/net/dev (disco e rede)
+          └── LinuxFpsMonitor → PhantomVulkanLayer (memória compartilhada)
+
+PhantomMonitor (WPF/Windows)
+  └── HardwareMonitorService + FpsMonitor (PresentMon/ETW)
 ```
 
 ---
@@ -87,6 +81,12 @@ Para capturar taxas de quadros sem depender do MangoHud ou de injeções arrisca
 ---
 
 ## 4. Compilação e Ativação da Camada Vulkan no Linux
+
+### Executar o frontend:
+```bash
+dotnet run --project src/PhantomMonitor.App
+```
+O dashboard inicia a coleta automaticamente. CPU, GPU, RAM, disco e rede aparecem quando o kernel e os drivers publicam as métricas; valores sem leitura são exibidos como `—`. A área de FPS informa como ativar a camada quando ainda não recebe quadros.
 
 ### Compilação:
 ```bash

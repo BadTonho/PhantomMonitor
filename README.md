@@ -31,22 +31,17 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 ```
 Phantom/
 ├── src/
-│   ├── PhantomMonitor/           # Aplicação desktop (.NET 10)
+│   ├── PhantomMonitor.App/       # Frontend Avalonia Linux (.NET 10)
+│   │   ├── Views/                # Janela principal
+│   │   ├── ViewModels/           # Estado do dashboard e controles
+│   │   └── Controls/             # Gráficos de histórico
+│   ├── PhantomMonitor.Core/      # Modelos e serviços compartilhados (net10.0)
+│   │   ├── Models/               # SensorData, SensorType, SensorKey e config
+│   │   └── Services/Linux/       # procfs, sysfs, hwmon, DRM e FPS Vulkan
+│   ├── PhantomMonitor/           # Frontend WPF atual para Windows (transição)
 │   │   ├── MainWindow.xaml       # Interface principal clean
 │   │   ├── Overlay/              # Overlay transparente e Editor Visual (OverlayEditorWindow)
-│   │   ├── Models/               # Modelos de dados (SensorData, SensorType)
-│   │   └── Services/             # Provedores de telemetria desacoplados
-│   │       ├── ISensorService.cs # Contrato de hardware
-│   │       ├── IFpsMonitor.cs    # Contrato de taxas de quadro
-│   │       ├── SensorServiceFactory.cs # Seleção de provedor por SO
-│   │       ├── HardwareMonitorService.cs # Windows (LibreHardwareMonitor + PresentMon)
-│   │       ├── Config.cs         # AppConfig/config.json (Normalize + Save atômico)
-│   │       ├── CsvLogger.cs, JsonLogger.cs, JsonJournalLogger.cs # exportação CSV/snapshot JSON/JSONL
-│   │       ├── CustomSensorEngine.cs # Fórmulas do usuário → séries Custom#i
-│   │       ├── Telemetry/        # SDK de telemetria (memória compartilhada + HTTP opt-in)
-│   │       └── Linux/            # Linux nativo (procfs, sysfs, hwmon, drm)
-│   │           ├── LinuxSensorService.cs
-│   │           └── LinuxFpsMonitor.cs
+│   │   └── Services/             # Integrações de hardware e desktop para Windows
 │   ├── PhantomVulkanLayer/       # Camada Vulkan nativa em C++ para Linux
 │   │   ├── PhantomVulkanLayer.cpp   # Intercepta vkQueuePresentKHR e grava em /dev/shm
 │   │   ├── PhantomVulkanTelemetry.h # Contrato binário de memória compartilhada
@@ -66,9 +61,11 @@ Phantom/
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - Privilégios de administrador (para leitura completa dos sensores de hardware)
 
-### Linux (camada Vulkan — sem front-end):
+### Linux:
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- Avalonia é restaurado pelo NuGet no primeiro build
 - Distribuição Linux com Kernel 5.4+
-- CMake e compilador C++ (GCC/Clang) para construir a camada
+- (Opcional, para FPS em jogos) CMake e compilador C++ (GCC/Clang) para construir a camada
 - Drivers Vulkan instalados (Mesa RADV/ANV ou driver NVIDIA proprietário)
 - Permissões padrão para leitura de `/sys/class/hwmon` e `/dev/shm`
 
@@ -80,27 +77,31 @@ Phantom/
 3. Clique em **"Executar como Admin"** se solicitado
 4. Ative o **"Overlay no Jogo"** na sidebar ou abra o **"⚙ Configurar Overlay..."** para customizar o posicionamento
 
-### Linux (apenas a camada Vulkan — ainda não há front-end):
-1. Compile e instale a camada:
+### No Linux (frontend Avalonia):
+1. (Opcional, para FPS em jogos) Compile e instale a camada Vulkan:
    ```bash
    cd src/PhantomVulkanLayer
    chmod +x install_layer.sh
    ./install_layer.sh
    ```
-2. Inicie seu jogo com a camada ativada (ex: Opções de Inicialização na Steam):
+2. Inicie o dashboard:
+   ```bash
+   dotnet run --project src/PhantomMonitor.App
+   ```
+3. Para coletar FPS, inicie um jogo Vulkan com a camada ativada (ex.: opções de inicialização da Steam):
    ```bash
    ENABLE_PHANTOM_OVERLAY=1 %command%
    ```
 
 > [!IMPORTANT]
-> O app WPF (`PhantomMonitor`) executa **somente no Windows** (`net10.0-windows`) — `dotnet run` não funciona no Linux. No Linux, a camada Vulkan é independente (publica os frametimes em `/dev/shm/phantom_fps_<pid>`); um leitor/monitor Linux é um front-end futuro (ver [suporte-linux.md](docs/funções/suporte-linux.md)).
+> O dashboard Avalonia é, nesta primeira versão, o frontend Linux. O WPF permanece como o frontend Windows durante a migração; a coleta Windows ainda não foi ligada ao app Avalonia. No Linux, a UI mostra FPS quando um jogo Vulkan habilita a camada Phantom. O overlay de jogo ainda não faz parte do frontend Avalonia.
 
 ## Configuração
 
 O `config.json` é criado automaticamente a partir de `config.example.json` na primeira execução:
 
 - **Desenvolvimento** (executando dentro do repositório): `config.json` na raiz do repositório (detectada pelo `PhantomMonitor.slnx`).
-- **Publicado/instalado**: `%AppData%\PhantomMonitor\config.json`.
+- **Publicado/instalado**: arquivo `config.json` na pasta de dados da aplicação do usuário (AppData no Windows; configuração do usuário no Linux).
 
 Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 
@@ -126,7 +127,8 @@ Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 
 ## Build e notas
 
-- O app WPF (`net10.0-windows`) executa **somente no Windows**. O suporte a Linux (`Services/Linux/` + `PhantomVulkanLayer`) é a base para um futuro front-end multiplataforma (ver [suporte-linux.md](docs/funções/suporte-linux.md)).
+- `PhantomMonitor.App` usa Avalonia e `PhantomMonitor.Core` (`net10.0`) para compartilhar modelos e serviços; `PhantomMonitor` (WPF) continua sendo o frontend Windows durante a transição.
+- O dashboard Avalonia ainda não inclui overlay, inventário, alertas, bandeja ou editor de configuração.
 - Os fontes de `PhantomSensorLib` (C++, stub) ficam no repositório como extensão futura, **sem pipeline de build ativo** — nenhum código consome a DLL hoje (ver [sensor-nativo.md](docs/funções/sensor-nativo.md)).
 - O FPS no Windows requer **Administrador** (PresentMon/ETW). Erros internos ficam em `logs/errors.log`.
 - O `PhantomVulkanLayer` é compilado via CMake/`install_layer.sh` e não faz parte do `PhantomMonitor.slnx`.

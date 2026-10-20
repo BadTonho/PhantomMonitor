@@ -1,6 +1,6 @@
 # HardwareMonitorService
  
-Serviço de leitura de sensores de hardware para ambiente Windows, implementando a interface `ISensorService`. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário. No Linux, a `SensorServiceFactory` instancia automaticamente o `LinuxSensorService`.
+Serviço de leitura de sensores de hardware para ambiente Windows, implementando a interface `ISensorService`. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário. O frontend WPF seleciona `LinuxSensorService` pelo `SensorServiceFactory` fora do Windows; o dashboard Avalonia usa `LinuxSensorServiceFactory` diretamente.
 
 ## Funcionalidades
 

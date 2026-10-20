@@ -39,4 +39,25 @@ decodificada das linhas de diagnóstico `[HWR]` que o `HardwareMonitorService` j
 produz por ciclo (mesma fonte da janela de debug) — sem duplicar enumerações.
 A reconstrução da árvore ocorre só quando a estrutura muda.
 
-Fonte: `Services/InventoryBuilder.cs` (`BuildSeries`/`BuildHardware`).
+## Aba "Monitores" (identidade via EDID/WMI)
+
+ID dos monitores conectados, decodificado de `root\wmi` (cache de **60 s**):
+
+| Coluna | Fonte |
+|---|---|
+| Instância WMI (device) | `WmiMonitorID.InstanceName` (identifica o device; estável com múltiplos monitores) |
+| Fabricante | `ManufacturerName` (código PnP do EDID: `DEL`, `SAM`, `LGD`... decodificado) |
+| Modelo | `UserFriendlyName` (nome do painel: `U2723QE`) — sem nome no EDID cai no `ProductCodeID` |
+| Código | `ProductCodeID` (texto do EDID ou decimal concatenado) |
+| S/N | `SerialNumberID` (série do painel) |
+| Diagonal | `WmiMonitorBasicDisplayParams`: √(largura² + altura²) cm → polegadas (`--` se não reportado) |
+| Fabricação | `YearOfManufacture` + semana (`2023 s24`) |
+| Primário | bit da propriedade `VideoInputType` |
+
+- Somente monitores **ativos** (`Active ≠ 0`): entradas "fantasma" são removidas.
+- Também vai para o snapshot JSON (`monitors`) e para qualquer consumidor do
+  SDK via snapshot; o CSV e a tabela da SDK não mudam (são séries numéricas).
+- Desktops/VMs/RDP sem monitor reportado: aba vazia (nenhuma falha é gerada).
+
+Fonte: `Services/InventoryBuilder.cs` (`BuildSeries`/`BuildHardware`),
+`HardwareMonitorService.GetMonitors` e `Models/MonitorInfo.cs`.

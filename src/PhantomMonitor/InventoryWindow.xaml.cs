@@ -47,11 +47,13 @@ public partial class InventoryWindow : Window
 
         var series = InventoryBuilder.BuildSeries(data);
         var hardware = InventoryBuilder.BuildHardware(data);
+        var monitors = data.Monitors;
 
         SummaryText.Text = $"{hardware.Count} nós de hardware • {series.Count} séries publicadas • " +
-                           $"atualizado às {data.Timestamp:HH:mm:ss}";
+                           $"{monitors.Count} monitor(es) • atualizado às {data.Timestamp:HH:mm:ss}";
 
         SeriesGrid.ItemsSource = series;
+        MonitorsGrid.ItemsSource = monitors;
         RefreshText.Text = $"Atualiza automaticamente a cada 2 s (snapshot atual). Mín/Máx/Média são da sessão desde o último \"Resetar estatísticas\".";
 
         // Árvore só é reconstruída se mudou (a enumeração do hardware é estável na prática;

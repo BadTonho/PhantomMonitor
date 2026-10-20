@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
+using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using LibreHardwareMonitor.Hardware;
 using PhantomMonitor.Models;
@@ -73,6 +75,12 @@ public sealed class HardwareMonitorService : ISensorService
     private int _wheaSessionCount;
     private DateTime _lastWheaRead = DateTime.MinValue;
     private static readonly TimeSpan WheaInterval = TimeSpan.FromSeconds(10);
+
+    // Identidade dos monitores (EDID via root\wmi): cache de 60 s — painéis/slot
+    // de monitor não mudam a cada ciclo, e a consulta atravessa WMI COM por fullscreen.
+    private List<MonitorInfo> _cachedMonitors = [];
+    private DateTime _lastMonitorsRead = DateTime.MinValue;
+    private static readonly TimeSpan MonitorsInterval = TimeSpan.FromSeconds(60);
 
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
@@ -201,6 +209,8 @@ public sealed class HardwareMonitorService : ISensorService
         ApplyRamFallbacks(data, debugInfo);
         ReadBattery(data, debugInfo);
         ReadWheaErrors(data, debugInfo);
+
+        data.Monitors = GetMonitors();
 
         data.GpuProcesses = GetGpuProcesses();
 
@@ -963,6 +973,169 @@ public sealed class HardwareMonitorService : ISensorService
         name.StartsWith("VR ", StringComparison.OrdinalIgnoreCase) ||
         name.StartsWith("VSoC", StringComparison.OrdinalIgnoreCase) ||
         name.StartsWith("VCore", StringComparison.OrdinalIgnoreCase);
+
+    // ---------- Identidade de monitores (EDID via WMI) ----------
+
+    /// <summary>
+    /// Monitores conectados, decodificados de <c>root\wmi</c>: <c>WmiMonitorID</c>
+    /// (código do fabricante/Modelo\serial/ano+semana do EDID) e
+    /// <c>WmiMonitorBasicDisplayParams</c> (tamanho físico → diagonal; bit
+    /// VideoInputType = primário). Cache de 60 s; ordena para estabilidade entre
+    ///ciclos. Sem monitores reportados (VMs/RDP): lista vazia e nenhuma falha.
+    /// </summary>
+    private List<MonitorInfo> GetMonitors()
+    {
+        if (DateTime.UtcNow - _lastMonitorsRead < MonitorsInterval)
+            return _cachedMonitors;
+
+        _lastMonitorsRead = DateTime.UtcNow;
+        var result = new List<MonitorInfo>();
+
+        try
+        {
+            // 1) Tamanho físico e flag de primário por InstanceName.
+            var sizes = new Dictionary<string, (double In, bool Primary)>(StringComparer.OrdinalIgnoreCase);
+            using (var sizeSearcher = new ManagementObjectSearcher(@"root\wmi",
+                       "SELECT InstanceName, MaxHorizontalImageSize, MaxVerticalImageSize, VideoInputType FROM WmiMonitorBasicDisplayParams"))
+            using (var items = sizeSearcher.Get())
+            {
+                foreach (var obj in items)
+                {
+                    using (obj)
+                    {
+                        var instance = obj["InstanceName"]?.ToString() ?? "";
+                        if (instance.Length == 0) continue;
+
+                        var hCm = WmiProp(obj, "MaxHorizontalImageSize");
+                        var vCm = WmiProp(obj, "MaxVerticalImageSize");
+                        var inches = hCm > 0 && vCm > 0
+                            ? Math.Ceiling(Math.Sqrt(hCm * hCm + vCm * vCm) / 2.54 * 10.0) / 10.0
+                            : 0.0;
+                        var isPrimary = WmiProp(obj, "VideoInputType", 0) % 2 == 1;
+                        sizes[instance] = (inches, isPrimary);
+                    }
+                }
+            }
+
+            // 2) Identidade EDID por InstanceName (somente monitores ativos).
+            using (var idSearcher = new ManagementObjectSearcher(@"root\wmi",
+                       "SELECT InstanceName, ManufacturerName, ProductCodeID, UserFriendlyName, UserFriendlyNameLength, SerialNumberID, SerialNumberIDLength, WeekOfManufacture, YearOfManufacture, Active FROM WmiMonitorID"))
+            using (var items = idSearcher.Get())
+            {
+                foreach (var obj in items)
+                {
+                    using (obj)
+                    {
+                        if (Convert.ToInt32(obj["Active"] ?? 0) == 0) continue; // monitor "fantasma" no registro
+
+                        var instance = obj["InstanceName"]?.ToString() ?? "";
+                        var info = new MonitorInfo
+                        {
+                            InstanceName = instance,
+                            Manufacturer = DecodeEdidString(obj["ManufacturerName"]),
+                            Model = DecodeUserFriendlyName(obj),
+                            ProductCode = DecodeProductCode(obj["ProductCodeID"]),
+                            Serial = DecodeEdidString(obj["SerialNumberID"]),
+                            DiagonalInches = sizes.TryGetValue(instance, out var size) ? size.In : 0.0,
+                            Primary = sizes.TryGetValue(instance, out var size2) && size2.Primary,
+                            WeekOfManufacture = (int)WmiProp(obj, "WeekOfManufacture"),
+                            YearOfManufacture = (int)WmiProp(obj, "YearOfManufacture")
+                        };
+                        result.Add(info);
+                    }
+                }
+            }
+
+            // Estável entre ciclos (o WMI come entrega de qualquer ordem).
+            result.Sort((a, b) => string.CompareOrdinal(a.InstanceName, b.InstanceName));
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("WMI.MonitorId", ex);
+        }
+
+        return _cachedMonitors = result;
+    }
+
+    /// <summary>Array UInt16 do EDID ( ManufacturerName/SerialNumberID ) → texto ASCII até o terminador 0.</summary>
+    private static string DecodeEdidString(object? raw)
+    {
+        if (raw is not IEnumerable codes) return "";
+
+        var sb = new StringBuilder(8);
+        foreach (var code in codes)
+        {
+            var v = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
+            if (v == 0) break; // terminador/padding
+            if (v is >= 32 and <= 126) sb.Append((char)v);
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Modelo do painel: UserFriendlyName (tamanho real na prop @Length) e fallback do ProductCodeID.</summary>
+    private static string DecodeUserFriendlyName(ManagementBaseObject obj)
+    {
+        try
+        {
+            var name = obj["UserFriendlyName"] switch
+            {
+                char[] chars => (object?)chars,
+                string str => str,
+                _ => null
+            };
+            if (name is char[] array)
+            {
+                var length = Convert.ToInt32(obj["UserFriendlyNameLength"] ?? 0);
+                var sb = new StringBuilder(length > 0 && length <= array.Length ? length : array.Length);
+                foreach (var c in array)
+                {
+                    if (c == '\0') break;
+                    sb.Append(c);
+                }
+                var friendly = sb.ToString().Trim();
+                if (friendly.Length > 0) return friendly;
+            }
+
+            // Painel sem UserFriendlyName (alguns laptops/DUMY devices): usa o product code.
+            var code = DecodeProductCode(obj["ProductCodeID"]);
+            return code.Length > 0 ? code : "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    /// <summary>ProductCodeID → texto do EDID quando printable, senão número decimal (padrão das ferramentas).</summary>
+    private static string DecodeProductCode(object? raw)
+    {
+        if (raw is not IEnumerable codes) return "";
+
+        var sb = new StringBuilder(4);
+        var printable = false;
+        foreach (var code in codes)
+        {
+            var v = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
+            if (v == 0) break;
+            if (v is >= 32 and <= 126)
+            {
+                sb.Append((char)v);
+                printable = true;
+            }
+        }
+        if (printable && sb.Length > 0) return sb.ToString();
+
+        // Código numérico cru (ex.: 5027): mostra asBuzzword os bytes como decimal concatenado.
+        sb.Clear();
+        foreach (var code in codes)
+        {
+            var v = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
+            if (v == 0) break;
+            if (sb.Length > 0) sb.Append('-');
+            sb.Append(v.ToString(CultureInfo.InvariantCulture));
+        }
+        return sb.ToString();
+    }
 
     // ---------- Processos na GPU ----------
 

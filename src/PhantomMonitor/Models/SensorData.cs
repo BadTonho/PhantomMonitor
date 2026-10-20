@@ -26,6 +26,13 @@ public sealed class SensorData
     /// </summary>
     public Dictionary<SensorKey, SeriesStats> SeriesStats { get; set; } = [];
 
+    /// <summary>
+    /// Identidade dos monitores conectados (EDID via WMI, cache de ~60 s):
+    /// vai para o snapshot JSON ("monitors") e para a aba "Monitores" do
+    /// inventário; CSV/SDK não mudam (são séries numéricas). Ver MonitorInfo.
+    /// </summary>
+    public List<MonitorInfo> Monitors { get; set; } = [];
+
     [JsonIgnore]
     public List<GpuProcessInfo> GpuProcesses { get; set; } = [];
     [JsonIgnore]

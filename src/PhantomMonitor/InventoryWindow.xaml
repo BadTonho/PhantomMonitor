@@ -50,6 +50,23 @@
                 <TreeView x:Name="HardwareTree" Margin="0,8,0,0"
                           Background="Transparent" BorderThickness="0"/>
             </TabItem>
+            <TabItem Header="Monitores">
+                <DataGrid x:Name="MonitorsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                          Background="Transparent" RowBackground="Transparent" BorderThickness="0,1,0,0"
+                          Margin="0,8,0,0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Instância WMI (device)" Binding="{Binding InstanceName}" MinWidth="220" Width="*"/>
+                        <DataGridTextColumn Header="Fabricante" Binding="{Binding Manufacturer}" MinWidth="80"/>
+                        <DataGridTextColumn Header="Modelo" Binding="{Binding Model}" MinWidth="120"/>
+                        <DataGridTextColumn Header="Código" Binding="{Binding ProductCode}" MinWidth="70"/>
+                        <DataGridTextColumn Header="S/N" Binding="{Binding Serial}" MinWidth="90"/>
+                        <DataGridTextColumn Header="Diagonal" Binding="{Binding DiagonalText}" MinWidth="70"/>
+                        <DataGridTextColumn Header="Fabricação" Binding="{Binding MadeText}" MinWidth="90"/>
+                        <DataGridCheckBoxColumn Header="Primário" Binding="{Binding Primary}" MinWidth="70"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
         </TabControl>
 
         <StatusBar Grid.Row="2" Background="Transparent" Foreground="{StaticResource TextMutedBrush}">

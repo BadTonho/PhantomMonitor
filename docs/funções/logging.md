@@ -10,7 +10,7 @@ Salva os dados de sensores em arquivo CSV no diretório `logs/`.
   presentes no primeiro snapshot — coluna 0 = `Timestamp`, depois as séries
   canônicas (na ordem do enum `SensorType`) e por fim as séries por instância
   (`GpuCore#1`, `CpuTemperature#3`, `FanSpeed#2`...), ver [sensor-key / hardware-monitor](hardware-monitor.md)
-- Cria um novo arquivo a cada execução com timestamp no nome
+- Cria um novo arquivo a cada início de monitoramento, com timestamp no nome
 - Hardware que desaparece depois (USB desligada, SSD removido) mantém sua coluna
   na tabela; a célula fica em zero — o alinhamento de planilhas não quebra
 - Formato: `sensors_YYYYMMDD_HHmmss.csv`
@@ -25,7 +25,11 @@ Salva o snapshot mais recente em um arquivo JSON no diretório `logs/`.
 - Séries por instância aparecem em `series` / `seriesLabels` com chaves `Categoria#índice`
   (ex.: `series: { "GpuCore#1": 65.0 }`); as séries canônicas continuam em `values`
 - `seriesStats` traz as estatísticas da sessão com a MESMA chave `Categoria#índice`
-  (`min`, `max`, `average`, `count`); só aparecem séries com ao menos uma amostra
+  (`min`, `max`, `sum`, `count`, `average`); só aparecem séries com ao menos uma amostra
+- `monitors` traz a identidade dos monitores conectados (EDID via WMI, cache de ~60 s):
+  fabricante, modelo, código de produto, nº de série, diagonal em polegadas,
+  ano/semana de fabricação e flag de monitor primário — os processos da GPU NÃO
+  entram no snapshot (são exibidos apenas na janela principal)
 - Útil para integração com outras ferramentas
 
 ## Marcadores no CSV (`#marker`)
@@ -49,7 +53,10 @@ do snapshot sensors_latest.json) — indicado para benchmarks longos e replay.
 ```
 
 - **`meta`**: única linha de cabeçalho (na primeira amostra) com o mapa
-  série→rótulo do ciclo; amostras seguintes carregam só chave→valor.
+  série→rótulo do ciclo; amostras seguintes carregam só chave→valor. Por vir
+  DEPOIS da nota de início de sessão (gravada na abertura do journal), a linha
+  `meta` não é necessariamente a primeira do arquivo (o arquivo abre com a
+  nota "início da sessão").
 - **`sample`**: uma por snapshot com TODAS as séries presentes (canônicas +
   por instância + `Custom#i`).
 - **`note`**: marcadores da sessão — **início** ("início da sessão") e **resets

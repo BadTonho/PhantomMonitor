@@ -4,10 +4,10 @@ Interface gráfica principal do Phantom Monitor. Utiliza WPF com tema escuro e l
 
 ## Funcionalidades
 
-- **Sidebar Compacta:** Status da execução, tempo ativo, contagem de sensores, navegação rápida, controles de exportação (CSV/JSON/Overlay) e opção `Iniciar com o Windows` (registro `Run`, aplicada na hora).
-- **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Sair) — ver [tray.md](tray.md).
+- **Sidebar Compacta:** Status da execução (`Monitorando` / `Parado` / `Pausado` (P6.7)), tempo ativo, contagem de sensores, navegação rápida, toggle `Overlay no Jogo`, atalhos para o Editor de Overlay e o Inventário de Hardware, controles de exportação (CSV/JSON/Journal JSONL — P8.3) e opção `Iniciar com o Windows` (registro `Run`, aplicada na hora).
+- **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Resetar estatísticas, Pausar monitoramento, seção de perfis do OSD e Sair) — ver [tray.md](tray.md).
 - **Cards de Métricas Clean:** Cards dedicados para Processador (CPU), Placa de Vídeo (GPU), Taxa de Quadros (FPS), Memória RAM, Armazenamento (Disco), Rede (↓/↑) e Placa-mãe & Ventoinhas (maior temperatura + ventoinhas GPU/Sistema).
-- **Linhas de Detalhes:** Os cards de CPU (clock, potência, voltagem) e GPU (VRAM usada/total, clock, potência, hotspot) exibem uma linha secundária com os valores avançados disponíveis; quando nenhum sensor existe, informam a indisponibilidade.
+- **Linhas de Detalhes:** Os cards de CPU (clock, potência, voltagem) e GPU (VRAM usada/total, clock, potência, hotspot e temp de VRAM — P8.6) exibem uma linha secundária com os valores avançados disponíveis; quando nenhum sensor existe, informam a indisponibilidade.
 - **Indicadores Visuais Sutis:** Barras de progresso horizontais finas (5px) e badges em pílula com borda translúcida para temperatura e frametime (sem efeitos neon ou círculos exagerados).
 - **Lista de Processos Ativos:** Visualização limpa em tabela de processos consumindo a GPU.
 - **Janela de Diagnóstico:** Acesso direto à visualização de sensores detectados em tempo real (`DebugWindow`).
@@ -15,7 +15,7 @@ Interface gráfica principal do Phantom Monitor. Utiliza WPF com tema escuro e l
 
 ## Auto-inicialização
 
-O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback seguro e suporte a controle manual via "Iniciar Monitor" e "Parar").
+O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback seguro e suporte a controle manual via "Iniciar Monitor" e "Parar"). A pausa (P6.7) é só de runtime — via bandeja ou atalho global — e reiniciar o app retoma a coleta.
 
 ## Cores e Tipografia
 

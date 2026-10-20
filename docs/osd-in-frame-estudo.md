@@ -49,7 +49,7 @@ O plugin (C/C++ via `obs-frontend-api`/`obs-graphics`) faria:
    plugin (fora desta solução); o monitor continua com a arquitetura atual.
 
 ### Esforço estimado (fases)
-1. Fonte de leitura C++ com seqlock (≈1 day; refere-te `TelemetrySdkReader` em C#).
+1. Fonte de leitura C++ com seqlock (≈1 day; referência: `TelemetrySdkReader` em C#).
 2. `obs_source` de texto em canvas dos itens formatados (2–4 days).
 3. Gráfico de frametime antes (cross-OS: dados já publicados em `FrametimeHistory`?)
    — v2; somente texto primeiro.
@@ -64,8 +64,9 @@ Total ≈ 1 semana para o MVP texto-only.
   em **qualquer** jogo, mesmo em rankeds.
 - O projeto já tem in-frame-OSD no **Linux** por uma via que não fala com o
   processo do jogo: a camada Vulkan própria (`PhantomVulkanLayer`) é uma
-  VK_LAYER opt-in ativada por variável de ambiente do jogo, lendo o mesmo
-  formato de memória compartilhada POSIX `/dev/shm/phantom_fps_*` — sem DLL
+  VK_LAYER opt-in ativada por variável de ambiente do jogo, **publicando**
+  (gravando) os frametimes no formato de memória compartilhada POSIX
+  `/dev/shm/phantom_fps_<pid>` — sem DLL
   injetada em processos alheios. O estudo de portar esse modelo ao Windows
   continua descartado: no Windows não existe o hook de camada equivalente sem
   injeção de DLL no processo alvo.

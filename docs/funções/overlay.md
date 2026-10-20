@@ -16,17 +16,17 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
   - `FPS`: Verde vibrante (`#00FF88`) com FPS e Frametime em milissegundos
 - **Sublinhas de Detalhes (CPU/GPU):** Sob as linhas de CPU e GPU, uma linha secundária compacta (fonte base −2 pt) exibe:
   - CPU: clock, potência e voltagem (ex.: `4.15 GHz  65 W  1.250 V`)
-  - GPU: VRAM usada/total, clock core/memória, potência, voltagem e hotspot (ex.: `VRAM 7.2/12 GB  2.10 GHz  7.00 GHz  220 W  1.050 V  HS 75°C`)
+  - GPU: VRAM usada/total, clock core/memória, potência, voltagem, hotspot e temp de VRAM (P8.6) (ex.: `VRAM 7.2/12 GB  2.10 GHz  7.00 GHz  220 W  1.050 V  HS 75°C  MEM 78°C`)
   - A sublinha fica oculta quando nenhum dos valores está disponível.
-- **Linhas Opcionais com Auto-Revelação:** NET, FAN e MB só aparecem depois do primeiro dado real do sensor — sem poluir o OSD em máquinas que não expõem esses sensores.
+- **Linhas Opcionais com Auto-Revelação:** NET, FAN e MB só aparecem depois do primeiro dado real do sensor — sem poluir o OSD em máquinas que não expõem esses sensores. A revelação é só de entrada: uma vez visível, a linha fixa permanece (mostra `--` se o dado sumir); as linhas *por instância* é que se escondem de novo.
 - **Linhas por Instância (Séries Dinâmicas):** além das linhas fixas, o OSD cria linhas por instância no primeiro snapshot em que surgirem, com tags próprias e cor da família:
-  - `GPU1`/`GPU2...` — multi-GPU: temp, uso, VRAM, clocks, hotspot, potência (a dedicada é a GPU 1);
+  - `GPU1`/`GPU2...` — multi-GPU: temp, uso, VRAM, clocks, hotspot, temp de VRAM (P8.6), potência (a dedicada é a GPU 1);
   - `FAN1..` — ventoinhas por slot da placa-mãe/SuperIO;
   - `DSK1..` — uso, R/W, temperatura e saúde/endurance por disco;
   - `CPU1..` — temperatura, uso e clock por núcleo (desligado por padrão, poluído em CPUs com 32 núcleos);
   - `MB1..`, `VRM1..`, `RL1..` — temperaturas por sensor, zonas VRM e rails de tensão;
   - `NET1..` — rede por interface com velocidade e totais da sessão.
-  - Filtradas pela whitelist `overlay.shownSeries` (wildcards, ver [configuracao.md](configuracao.md)), ordenadas por família (GPU → ventoinhas → discos → RAM → CPU → rede → placa-mãe) e limitadas a 24 linhas para não explodir o OSD em máquinas cheias; hardware que some esconde a linha até reenumerar.
+  - Filtrada pela whitelist `overlay.shownSeries` (wildcards, ver [configuracao.md](configuracao.md)), ordenadas por família (GPU → ventoinhas → discos → RAM → CPU → rede → bateria → demais famílias: placa-mãe/VRM/rails/outros) e limitadas a 24 linhas para não explodir o OSD em máquinas cheias; hardware que some esconde a linha até reenumerar.
 - **Estatísticas de FPS:** Sublinha compacta com `AVG`, `1% Low`, `0.1% Low` e `MAX` (quebra em linha automaticamente se não couber)
 - **Gráfico de Frametime Slim:** Mini-gráfico de 24px (18px no modo compacto) com linha guia de 60 FPS (16.6ms) para detecção instantânea de stuttering
 - **Tipografia:** Fonte monoespaçada (`Consolas / Cascadia Mono`) para evitar que os números fiquem oscilando ou pulando de posição na tela
@@ -54,6 +54,8 @@ Configurado via `config.json` ou pelo Editor Visual:
 - `showNetwork` - Linha de rede (`NET`) com ↓/↑ (oculta até o primeiro dado real)
 - `showFans` - Linha de ventoinhas (`FAN`): GPU e sistema (oculta até o primeiro dado real)
 - `showMotherboard` - Linha de placa-mãe (`MB`) com a maior temperatura (oculta até o primeiro dado real)
+- `showGpuProcesses` - **sem efeito no código atual** (chave legada de config, definida mas nunca lida; a lista "Processos ativos na GPU" fica na janela principal independentemente dela)
+- `shownSeries` - Whitelist (padrões wildcard) das séries por instância; padrão `["Gpu*", "FanSpeed*", "Disk*"]` (ver seção "Linhas por Instância" acima)
 - `compactMode` - Modo compacto: reduz paddings, espaçamento das linhas e a altura do gráfico de frametime
 - `accentColor` - Cor de destaque (hex) aplicada à linha do gráfico de frametime e ao contorno do painel
 - `fontSize` - Tamanho base da fonte do OSD em pt (8–20; sublinhas de detalhes/estatísticas usam fonte −2 pt)
@@ -108,7 +110,8 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
   (`◉ perfil: CS2`); sem perfil, nada aparece.
 - **Editor Visual:** seção "PERFIS POR APLICATIVO" com cartões editáveis
   (nome, AppMatch com botão "Capturar" do app em foco, offsets, largura, fonte,
-  acento, checkbox `OSD visível neste app`), adicionar/remover; seção
+  opacidade, séries por instância em vírgula, acento e checkbox
+  `OSD visível neste app`), adicionar/remover; seção
   "LINHAS PERSONALIZADAS (TEMPLATES)" com TextBox multilinha (uma linha de
   template por linha — a UI edita só o texto, a cor permanece via config);
   "Aplicar & Salvar" grava em `config.profiles` e `overlay.templates`.

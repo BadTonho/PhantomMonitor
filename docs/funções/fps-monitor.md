@@ -16,7 +16,7 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 - **Motor Windows:** `PresentMon.exe` (binário standalone oficial da Intel, armazenado em `tools/` e copiado automaticamente para a pasta de saída do build)
 - **Motor Linux:** `PhantomVulkanLayer` (camada Vulkan nativa em C++ que intercepta `vkQueuePresentKHR` e transmite dados via memória compartilhada `/dev/shm/phantom_fps_<pid>`, dispensando softwares como MangoHud)
 - **Comunicação no Windows:** o serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats --stop_existing_session --session_name PhantomMonitorFps --exclude PhantomMonitor.exe --no_track_input --no_track_gpu --exclude_dropped`) e analisa o CSV em tempo real. Os argumentos precisam existir no PresentMon 2.x (por exemplo, `--no_track_gpu_video` **não existe** e faz o processo encerrar imediatamente).
-- **Parse Dinâmico:** mapeia as colunas do PresentMon (`ProcessID`, `Application`, `msBetweenPresents` / `FrameTime`) e trata campos CSV entre aspas
+- **Parse Dinâmico:** mapeia as colunas do PresentMon (`ProcessID`, `Application`; frametime por `msBetweenPresents`, com fallback em `FrameTime` e `msBetweenDisplayChange`) e trata campos CSV entre aspas
 - **Detecção de Foco:** `GetForegroundWindow` e `GetWindowThreadProcessId` via P/Invoke identificam o jogo ativo a cada 500ms
 - **Privilégios:** o PresentMon exige Administrador (ou o grupo "Performance Log Users"). Sem isso, `EtwDiag` mostra "Requer Administrador" e o motivo completo vai para `logs/errors.log`
 

@@ -33,7 +33,7 @@ podem mirar `sensor: "Custom"` + `sensorIndex: 2`.
 
 ## Sintaxe da fórmula
 
-- **Operadores**: `+ - * /` com precedência padrão e parênteses; unário `-`.
+- **Operadores**: `+ - * /` com precedência padrão e parênteses; unário `-` (o parser também aceita `+` unário, que é descartado).
 - **Números**: decimais com **ponto** (`0.5`); vírgula é separador de argumentos.
 - **Funções**: `min(a, b, ...)`, `max(a, b, ...)` (variádicas) e `abs(a)`.
 - **Referências** `{...}` (seguinte resolução, similar às templates do OSD):
@@ -41,7 +41,7 @@ podem mirar `sensor: "Custom"` + `sensorIndex: 2`.
      (instância). Canônica ausente cai na **primeira instância publicada**.
   2. **Padrão wildcard** — `GpuTemperature#*`, `FanSpeed#*`: o primeiro match na
      ordem canônica→instâncias.
-  3. **Nome amigável** — `{DeltaTemp}` casa o rótulo (igual exato, ou nome-base
+  3. **Nome amigável** — `{DeltaTemp}` casa o rótulo (igual exato, sem diferenciar maiúsculas/minúsculas, ou nome-base
      antes de " (": a unidade "DeltaTemp (°C)" também casa). Isso permite fórmulas
      referenciando **outros sensores customizados pelo nome** (avaliação na ordem
      do config; fórmulas posteriores enxergam as anteriores do mesmo ciclo).
@@ -68,7 +68,7 @@ ciclo ausente.
 
 ## Comportamento de runtime
 
-- Fórmulas são compiladas **uma vez** (parser→AST com cota máx. de nós) — a
+- Fórmulas são compiladas **uma vez** (parser→AST com cota máx. de 256 nós) — a
   avaliação por ciclo é só resolução de referências + aritmética.
 - Teto de **64 sensores customizados** por config.
 - A engine é compartilhada entre Windows (`HardwareMonitorService`) e Linux

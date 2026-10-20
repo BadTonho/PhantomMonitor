@@ -9,10 +9,12 @@ Utilitário estático de formatação de métricas compartilhado entre a janela 
 - `FormatClock(mhz)` → `850 MHz` / `4.15 GHz`
 - `FormatFan(value)` → `--`, `45%` (valores ≤ 100, GPUs NVIDIA) ou `1450 RPM` (SuperIO/AMD)
 - `BuildCpuDetail(data)` → linha compacta com clock, potência e voltagem disponíveis (`null` quando não há nenhum)
-- `BuildGpuDetail(data)` → linha compacta com VRAM usada/total, clock core/memória, potência, voltagem e hotspot (`null` quando não há nenhum)
+- `BuildGpuDetail(data)` → linha compacta com VRAM usada/total, clock core/memória, potência, voltagem, hot spot (`HS`) e temperatura da VRAM (`MEM`) (`null` quando não há nenhum)
 - `BuildFanSummary(data)` → resumo de ventoinhas para os cards (`Ventoinhas: GPU 45% | Sistema 1200 RPM`)
+- `FormatSeries(key, value)` → valor de qualquer série formatado pela categoria (°C, %, MHz, GB/s, FPS, ms, "3 err"...; `--` quando ≤ 0) — usado nas linhas por instância do OSD e no inventário
 
 ## Consumidores
 
-- `MainWindow` — cards de CPU/GPU (linhas de detalhes), Rede e Placa-mãe & Ventoinhas
-- `OverlayWindow` — sublinhas de detalhes de CPU/GPU e linhas `NET`/`FAN`
+- `MainWindow` — cards de CPU/GPU (linhas de detalhes), Disco (I/O R/W), Rede e Placa-mãe & Ventoinhas
+- `OverlayWindow` — sublinhas de detalhes de CPU/GPU, linhas `NET`/`FAN` e linhas por série/instância (`FormatSeries`)
+- `InventoryBuilder` — texto do valor (`ValueText`) das séries publicadas na aba "Séries publicadas" do inventário

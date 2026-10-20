@@ -32,7 +32,9 @@ O sistema emprega uma arquitetura desacoplada via `ISensorService` e `IFpsMonito
  └── FpsMonitor                             │   ├── /proc/meminfo (RAM)
      └── Intel PresentMon                   │   ├── /sys/class/hwmon (Temps)
                                             │   ├── /sys/class/drm (GPU usage/VRAM)
-                                            │   └── /proc/diskstats (I/O)
+                                            │   ├── /proc/diskstats (I/O)
+                                            │   ├── /proc/net/dev (Rede ↑/↓ + totais da sessão)
+                                            │   └── /sys/class/power_supply (Bateria/AC)
                                             └── LinuxFpsMonitor
                                                 └── PhantomVulkanLayer (shared memory)
 ```
@@ -44,15 +46,15 @@ O sistema emprega uma arquitetura desacoplada via `ISensorService` e `IFpsMonito
 No Linux, todas as métricas são consumidas de forma não intrusiva a partir das interfaces padrão do kernel:
 
 * **CPU (Uso e Clock):**
-  * Uso: calculado a partir de deltas de tempo (user, nice, system, idle, iowait) em `/proc/stat`.
+  * Uso: calculado a partir de deltas de tempo (user, nice, system, idle, iowait, irq, softirq, steal) em `/proc/stat`.
   * **Uso por núcleo:** mesmíssimo cálculo por linha `cpuN` publicado como `CpuPerCore#i`.
-  * Clock: frequência atual de cada núcleo em `/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq` — canônica (cpu0) + `CpuClock#(i+1)` por núcleo.
+  * Clock: frequência atual de cada núcleo em `/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq` — `CpuClock#(i+1)` por núcleo (cpu0 → `CpuClock#1`; sem série canônica `CpuClock` no Linux, e a varredura para no primeiro núcleo sem cpufreq).
 * **Memória RAM:**
   * Uso total, disponível e ocupado obtidos em `/proc/meminfo` (`MemTotal`, `MemAvailable`).
 * **Temperaturas e Ventoinhas:**
   * Subsistema unificado `hwmon` em `/sys/class/hwmon/hwmon*`.
   * CPU: drivers de temperatura nativos `coretemp` (Intel), `k10temp` ou `zenpower` (AMD) — série por arquivo (`temp1_input` → `CpuTemperature#1`).
-  * GPU: drivers de kernel DRM (`amdgpu`, `nouveau`, `nvidia`) — `GpuTemperature#hwmon` por card; `GpuFan` canônico + `FanSpeed#hwmon` por ventoinha. O arquivo `tempN_label` diferencia os diodos quando existe: `edge` → `GpuTemperature`, `junction`/`hotspot` → `GpuHotSpot`, `mem`/`vram` → `GpuVramTemperature` (canônicas = maior valor entre os cards).
+  * GPU: drivers de kernel DRM (`amdgpu`, `nouveau`, `nvidia`) — `GpuTemperature#hwmon` por card; `GpuFan` canônico + `FanSpeed#(hwmon×100 + fanN)` por ventoinha (slot composto: hwmon e o N do arquivo `fan*_input`). O arquivo `tempN_label` diferencia os diodos quando existe: `edge` → `GpuTemperature`, `junction`/`hotspot` → `GpuHotSpot`, `mem`/`vram` → `GpuVramTemperature` (canônicas = maior valor entre os cards).
   * Controladores/EC: temperaturas por slot + canônica máxima (`MotherboardTemp`, `MotherboardTemp#i`).
 * **Disco:**
   * Leitura e escrita em `/proc/diskstats`, convertendo setores (512 bytes) em throughput: canônico somado ("Discos (somatório)") + `DiskRead#i`/`DiskWrite#i` por device (slot estável por nome).

@@ -4,7 +4,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 
 ## Funcionalidades
 
-- **Monitoramento completo**: CPU (uso, temperatura, clock, potência, voltagem), GPU (uso, temperatura, VRAM usada/total, clock, potência, hotspot), RAM (uso, disponível), disco (uso, I/O), rede (↓/↑), ventoinhas (GPU/sistema), temperaturas de placa-mãe/SuperIO e **bateria** (carga, tensão, potência, desgaste e fonte AC — laptops/UPs; Windows via WMI, Linux via `/sys/class/power_supply`) + **identidade dos monitores** (fabricante/modelo/série/diagonal do EDID via WMI, no inventário e no snapshot JSON)
+- **Monitoramento completo**: CPU (uso, temperatura, clock, potência, voltagem), GPU (uso, temperatura, VRAM usada/total, **temperatura da VRAM**, clock, potência, hotspot), RAM (uso, disponível), disco (uso, I/O, temperatura, saúde e totais SMART), rede (↓/↑ e totais da sessão), ventoinhas (GPU/sistema), temperaturas de placa-mãe/SuperIO (**rails de tensão, VRM e módulos de RAM**) e **bateria** (carga, tensão, potência, desgaste e fonte AC — laptops/UPs; Windows via WMI, Linux via `/sys/class/power_supply`) + **identidade dos monitores** (fabricante/modelo/série/diagonal do EDID via WMI, no inventário e no snapshot JSON)
 - **Overlay configurável & transparente**: Janela flutuante sempre visível sobre jogos com informações em tempo real, sublinhas de detalhes (CPU/GPU) e linhas opcionais NET/FAN/MB com auto-revelação, além do Editor Visual (grid canvas, drag-and-drop, modo compacto, cor de destaque e tamanho de fonte)
 - **Linhas personalizadas no OSD (templates)**: texto livre com placeholders `{Chave}`/`{Chave:N}`/wildcard resolvidos a cada ciclo; linha invisível até todos os sensores existirem (`overlay.templates`)
 - **Sensores customizados (fórmulas)**: séries derivadas do usuário (`Custom#i`) sobre qualquer leitura do snapshot — operadores `+ - * /`, funções `min/max/abs` e referências por chave/wildcard/nome; entram nas estatísticas, CSV/JSON, SDK e alertas como série nativa (`customSensors`)
@@ -39,6 +39,10 @@ Phantom/
 │   │       ├── IFpsMonitor.cs    # Contrato de taxas de quadro
 │   │       ├── SensorServiceFactory.cs # Seleção de provedor por SO
 │   │       ├── HardwareMonitorService.cs # Windows (LibreHardwareMonitor + PresentMon)
+│   │       ├── Config.cs         # AppConfig/config.json (Normalize + Save atômico)
+│   │       ├── CsvLogger.cs, JsonLogger.cs, JsonJournalLogger.cs # exportação CSV/snapshot JSON/JSONL
+│   │       ├── CustomSensorEngine.cs # Fórmulas do usuário → séries Custom#i
+│   │       ├── Telemetry/        # SDK de telemetria (memória compartilhada + HTTP opt-in)
 │   │       └── Linux/            # Linux nativo (procfs, sysfs, hwmon, drm)
 │   │           ├── LinuxSensorService.cs
 │   │           └── LinuxFpsMonitor.cs
@@ -48,6 +52,7 @@ Phantom/
 │   │   ├── phantom_vulkan_layer.json# Manifesto oficial Vulkan
 │   │   └── install_layer.sh         # Script de compilação e instalação da camada
 │   └── PhantomSensorLib/         # Biblioteca nativa C++ para sensores
+├── tools/                        # PresentMon.exe (ETW) e leitor de exemplo da SDK (TelemetrySdkReader)
 ├── docs/funções/                 # Documentação detalhada de cada módulo
 ├── config.example.json           # Template de configuração versionado
 └── AGENTS.md                     # Diretrizes e regras do repositório
@@ -72,7 +77,7 @@ Phantom/
 1. Clone o repositório
 2. Execute `dotnet run --project src/PhantomMonitor`
 3. Clique em **"Executar como Admin"** se solicitado
-4. Ative o **"Overlay"** na sidebar ou abra o **"Editar Layout OSD"** para customizar o posicionamento
+4. Ative o **"Overlay no Jogo"** na sidebar ou abra o **"⚙ Configurar Overlay..."** para customizar o posicionamento
 
 ### Linux (apenas a camada Vulkan — ainda não há front-end):
 1. Compile e instale a camada:
@@ -150,6 +155,9 @@ Consulte os guias específicos em [docs/funções/](docs/funções/):
 - [Formatação de sensores (SensorFormatter)](docs/funções/sensor-formatter.md)
 - [Sensores customizados (fórmulas)](docs/funções/sensores-customizados.md)
 - [Inventário de Hardware](docs/funções/inventário-hardware.md)
+- [Interface principal (MainWindow)](docs/funções/interface-principal.md)
+- [Modelos de dados (SensorType/SensorKey)](docs/funções/modelos-dados.md)
+- [Buffer de frametime (FrametimeBuffer)](docs/funções/frametime-buffer.md)
 - [SDK de Telemetria (memória compartilhada)](docs/telemetry-sdk.md)
 - [Estudo: OSD in-frame no Windows (P4)](docs/osd-in-frame-estudo.md)
 - [Roadmap de paridade funcional](docs/roadmap-paridade.md)

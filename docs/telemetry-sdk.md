@@ -86,9 +86,9 @@ Complemento de rede para o mapa de memória — mesma cadência, payload maior:
 ```
 
 - **Endpoints:** `GET /values` (snapshot JSON, **mesmo payload do
-  `sensors_latest.json`**: `values`, `series`, `seriesLabels`, `seriesStats`,
-  `timestamp`) e `GET /health` (`{"ok":true,"timestamp":"..."}` para health
-  checks). Outros caminhos → 404 em texto.
+  `sensors_latest.json`**: `timestamp`, `values`, `labels`, `series`,
+  `seriesLabels`, `seriesStats`, `monitors`) e `GET /health`
+  (`{"ok":true,"timestamp":"..."}` para health checks). Outros caminhos → 404 em texto.
 - **Escuta padrão:** `http://127.0.0.1:7317/` — loopback não requer permissão de
   URL do http.sys nem firewall. `listenAll: true` vira `http://+:porta/`
   (todas as interfaces, para consumo em 2ª máquina) e **pode** exigir liberação

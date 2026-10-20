@@ -29,8 +29,9 @@ Mais 2 s de cadência de atualização (DispatcherTimer local, sem tocar no serv
 ### Botão "Resetar estatísticas"
 
 No topo da janela: zera min/máx/média de todas as séries (mesma ação do item da
-bandeja) e grava um marcador `#marker,reset (inventário)` no CSV ativo — o
-segmento anterior fica delimitado na planilha.
+bandeja) e grava um marcador `#marker,reset (inventário)` no CSV ativo (+ nota
+equivalente no journal JSONL ativo) — o segmento anterior fica delimitado na
+planilha.
 
 ## Aba "Hardware detectado"
 

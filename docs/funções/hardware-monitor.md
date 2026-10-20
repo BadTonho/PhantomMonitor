@@ -11,10 +11,11 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - Leitura de uso e disponibilidade de RAM
 - Leitura de uso e I/O de disco
 - Leitura de velocidade de ventoinhas e temperatura da placa-mãe (inclui sensores de sub-hardware/SuperIO)
-- Fallback de temperatura da CPU via zona térmica ACPI (WMI `root\WMI`), **somente se o LibreHardwareMonitor não fornecer** a temperatura; consultado no máximo a cada 10 s e rotulado como aproximação
+- Fallback de temperatura da CPU via zona térmica ACPI (WMI `root\WMI`) e, em cascata, o contador térmico do sistema (`Win32_PerfFormattedData_Counters_ThermalZoneInformation`), **somente se o LibreHardwareMonitor não fornecer** a temperatura; consultado no máximo a cada 10 s e rotulado como aproximação
 - Fallback de RAM via WMI (`Win32_OperatingSystem`) e `PerformanceCounter` reutilizado entre ciclos
 - Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
 - **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo)
+- **Monitores (P8.4):** identidade dos painéis conectados via EDID/WMI (`WmiMonitorID` + `WmiMonitorBasicDisplayParams`, somente monitores ativos) — fabricante, modelo, serial, diagonal física, ano/semana de fabricação e flag de primário; cache de 60 s, lista ordenada pelo caminho de instância WMI (sem relato do WMI: lista vazia); modelo `MonitorInfo` em [modelos-dados.md](modelos-dados.md)
 - **Erros de hardware WHEA:** série `WheaErrorCount` (Windows apenas) = eventos do provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão; `0` é leitura real (alerta "Above > 0" dispara em qualquer erro novo)
 
 ## Regras de mapeamento de sensores
@@ -115,8 +116,10 @@ A cada ciclo publicado, o `SeriesStatsTracker` acumula **uma amostra por série*
 sessão. O resultado viaja no snapshot (`SensorData.SeriesStats`) e por isso chega
 ao inventário, ao JSON (`sensors_latest.json`) e a qualquer consumidor da API.
 Amostras não-finitas (NaN/Inf) são descartadas (números de leitura "balançada"
-não contaminam a média para sempre). FPS tem as próprias janelas móveis e não
-entra neste agregador.
+não contaminam a média para sempre). As séries de FPS publicadas no snapshot
+(`Fps`, `FrametimeMs`, `FpsP1`...) também entram no agregador (o `Commit` roda
+depois da coleta do FpsMonitor); as janelas móveis de ~60 s que produzem
+`FpsAvg`/min/percentis são independentes do `SeriesStatsTracker`.
 
 - **Reset:** item da bandeja ("Resetar estatísticas") e botão da janela de
   inventário; o CSV ativo recebe um marcador `#marker` delimitando o segmento

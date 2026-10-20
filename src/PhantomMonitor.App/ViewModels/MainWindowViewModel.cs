@@ -12,7 +12,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private const int HistoryLength = 60;
     private readonly AppConfig _config;
-    private readonly ISensorService _sensorService;
+    private ISensorService _sensorService;
+    private Action<SensorData>? _sensorUpdatedHandler;
     private readonly Queue<double> _cpuHistory = new();
     private readonly Queue<double> _gpuHistory = new();
     private readonly Queue<double> _ramHistory = new();
@@ -44,6 +45,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<InventoryGroupViewModel> _inventoryGroups = [];
     private bool _hasInventorySnapshot;
     private bool _isOverview = true;
+    private bool _isSettings;
+    private string _updateIntervalText;
+    private bool _intervalEdited;
+    private bool _logToCsv;
+    private bool _logToJson;
+    private bool _logToJsonJournal;
+    private string _settingsMessage = "As alterações são aplicadas ao salvar.";
     private IReadOnlyList<double> _cpuSamples = [];
     private IReadOnlyList<double> _gpuSamples = [];
     private IReadOnlyList<double> _ramSamples = [];
@@ -75,7 +83,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool HasInventorySnapshot { get => _hasInventorySnapshot; private set => Set(ref _hasInventorySnapshot, value); }
     public bool IsWaitingForInventorySnapshot => !HasInventorySnapshot;
     public bool IsOverview { get => _isOverview; private set => Set(ref _isOverview, value); }
-    public bool IsInventory => !IsOverview;
+    public bool IsInventory => !IsOverview && !IsSettings;
+    public bool IsSettings { get => _isSettings; private set => Set(ref _isSettings, value); }
+    public string UpdateIntervalText
+    {
+        get => _updateIntervalText;
+        set
+        {
+            if (!Set(ref _updateIntervalText, value)) return;
+            var unchanged = int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out var parsed)
+                && parsed == _config.UpdateIntervalMs;
+            if (Set(ref _intervalEdited, !unchanged, nameof(IsIntervalEdited)))
+                Raise(nameof(IsLegacyIntervalOutOfRange));
+        }
+    }
+    public bool IsIntervalEdited => _intervalEdited;
+    public bool IsLegacyIntervalOutOfRange => !IsIntervalEdited && _config.UpdateIntervalMs > 60_000;
+    public bool LogToCsv { get => _logToCsv; set => Set(ref _logToCsv, value); }
+    public bool LogToJson { get => _logToJson; set => Set(ref _logToJson, value); }
+    public bool LogToJsonJournal { get => _logToJsonJournal; set => Set(ref _logToJsonJournal, value); }
+    public string LogDirectoryText => UserDataPaths.LogDirectory;
+    public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
     public IReadOnlyList<double> GpuSamples { get => _gpuSamples; private set => Set(ref _gpuSamples, value); }
     public IReadOnlyList<double> RamSamples { get => _ramSamples; private set => Set(ref _ramSamples, value); }
@@ -90,8 +118,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public MainWindowViewModel()
     {
         _config = AppConfig.Load(ConfigPaths.ConfigFile);
+        _updateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
+        _logToCsv = _config.LogToCsv;
+        _logToJson = _config.LogToJson;
+        _logToJsonJournal = _config.LogToJsonJournal;
         _sensorService = LinuxSensorServiceFactory.Create(_config);
-        _sensorService.SensorUpdated += OnSensorUpdated;
+        AttachSensorService(_sensorService);
     }
 
     public void Start()
@@ -138,17 +170,165 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public void ShowOverview()
     {
         IsOverview = true;
+        IsSettings = false;
         Raise(nameof(IsInventory));
     }
 
     public void ShowInventory()
     {
         IsOverview = false;
+        IsSettings = false;
         Raise(nameof(IsInventory));
     }
 
-    private void OnSensorUpdated(SensorData data) =>
-        Dispatcher.UIThread.Post(() => UpdateSnapshot(data));
+    public void ShowSettings()
+    {
+        IsOverview = false;
+        IsSettings = true;
+        Raise(nameof(IsInventory));
+    }
+
+    private void AttachSensorService(ISensorService service)
+    {
+        _sensorUpdatedHandler = data => Dispatcher.UIThread.Post(() =>
+        {
+            if (ReferenceEquals(service, _sensorService))
+                UpdateSnapshot(data);
+        });
+        service.SensorUpdated += _sensorUpdatedHandler;
+    }
+
+    private void DetachSensorService(ISensorService service)
+    {
+        if (_sensorUpdatedHandler is null) return;
+        service.SensorUpdated -= _sensorUpdatedHandler;
+        _sensorUpdatedHandler = null;
+    }
+
+    public void SaveSettings()
+    {
+        int? newInterval = null;
+        if (IsIntervalEdited)
+        {
+            if (!int.TryParse(UpdateIntervalText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var parsed)
+                || parsed is < 100 or > 60_000)
+            {
+                SettingsMessage = "Informe um intervalo entre 100 e 60.000 ms.";
+                return;
+            }
+            newInterval = parsed;
+        }
+
+        var oldInterval = _config.UpdateIntervalMs;
+        var oldCsv = _config.LogToCsv;
+        var oldJson = _config.LogToJson;
+        var oldJournal = _config.LogToJsonJournal;
+        var collectionWasRunning = IsRunning;
+        var collectionWasPaused = IsPaused;
+        var intervalChanged = newInterval.HasValue && newInterval.Value != oldInterval;
+        var loggingChanged = LogToCsv != oldCsv || LogToJson != oldJson || LogToJsonJournal != oldJournal;
+
+        if (!intervalChanged && !loggingChanged)
+        {
+            SettingsMessage = "Nenhuma alteração para salvar.";
+            return;
+        }
+
+        if (newInterval.HasValue) _config.UpdateIntervalMs = newInterval.Value;
+        _config.LogToCsv = LogToCsv;
+        _config.LogToJson = LogToJson;
+        _config.LogToJsonJournal = LogToJsonJournal;
+
+        if (!_config.Save(ConfigPaths.ConfigFile))
+        {
+            _config.UpdateIntervalMs = oldInterval;
+            _config.LogToCsv = oldCsv;
+            _config.LogToJson = oldJson;
+            _config.LogToJsonJournal = oldJournal;
+            SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
+            return;
+        }
+
+        if (intervalChanged)
+        {
+            ReplaceSensorService();
+        }
+        else if (loggingChanged)
+        {
+            DisposeLoggers();
+            if (IsRunning) StartLoggers();
+        }
+
+        UpdateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
+        SettingsMessage = intervalChanged
+            ? collectionWasRunning
+                ? collectionWasPaused
+                    ? "Coleta reiniciada pausada; as estatísticas da sessão foram zeradas."
+                    : "Coleta reiniciada; as estatísticas da sessão foram zeradas."
+                : "Intervalo salvo. Será usado quando a coleta for iniciada."
+            : collectionWasRunning
+                ? "Logs atualizados sem reiniciar a coleta."
+                : "Opções de log salvas para a próxima coleta.";
+    }
+
+    private void ReplaceSensorService()
+    {
+        var wasRunning = IsRunning;
+        var wasPaused = IsPaused;
+        var oldService = _sensorService;
+
+        if (oldService.IsRunning)
+        {
+            oldService.SetPaused(false);
+            oldService.Stop();
+        }
+        _started = false;
+        DetachSensorService(oldService);
+        DisposeLoggers();
+        oldService.Dispose();
+
+        _sensorService = LinuxSensorServiceFactory.Create(_config);
+        AttachSensorService(_sensorService);
+        ResetDisplayedSession();
+
+        if (wasRunning)
+        {
+            if (wasPaused) _sensorService.SetPaused(true);
+            Start();
+            if (wasPaused)
+            {
+                StatusText = "Pausado";
+                Raise(nameof(IsPaused));
+                Raise(nameof(PauseButtonText));
+            }
+        }
+        else
+        {
+            StatusText = "Parado";
+            RaiseRunState();
+        }
+    }
+
+    private void ResetDisplayedSession()
+    {
+        _cpuHistory.Clear();
+        _gpuHistory.Clear();
+        _ramHistory.Clear();
+        CpuSamples = [];
+        GpuSamples = [];
+        RamSamples = [];
+        FrametimeSamples = [];
+    }
+
+    private void RaiseRunState()
+    {
+        Raise(nameof(IsRunning));
+        Raise(nameof(IsPaused));
+        Raise(nameof(CanStart));
+        Raise(nameof(CanStop));
+        Raise(nameof(CanPause));
+        Raise(nameof(PauseButtonText));
+    }
 
     private void UpdateSnapshot(SensorData data)
     {
@@ -269,11 +449,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         while (history.Count > HistoryLength) history.Dequeue();
     }
 
-    private void Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    private bool Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
+        if (EqualityComparer<T>.Default.Equals(field, value)) return false;
         field = value;
         Raise(propertyName);
+        return true;
     }
 
     private void Raise(string? propertyName) =>
@@ -283,7 +464,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _sensorService.SensorUpdated -= OnSensorUpdated;
+        DetachSensorService(_sensorService);
         if (IsRunning)
         {
             _sensorService.SetPaused(false);

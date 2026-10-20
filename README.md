@@ -95,6 +95,7 @@ Phantom/
    ENABLE_PHANTOM_OVERLAY=1 %command%
    ```
 5. A gravação é controlada pelas opções `logToCsv`, `logToJson` e `logToJsonJournal` do `config.json`. No Linux, os arquivos ficam em `~/.local/share/PhantomMonitor/logs/` (ou no diretório definido por `XDG_DATA_HOME`).
+6. Use **Configurações** na barra lateral para alterar o intervalo de coleta e os formatos de gravação pela interface.
 
 > [!IMPORTANT]
 > O dashboard Avalonia é, nesta primeira versão, o frontend Linux. O WPF permanece como o frontend Windows durante a migração; a coleta Windows ainda não foi ligada ao app Avalonia. No Linux, a UI mostra FPS quando um jogo Vulkan habilita a camada Phantom. O overlay de jogo ainda não faz parte do frontend Avalonia.

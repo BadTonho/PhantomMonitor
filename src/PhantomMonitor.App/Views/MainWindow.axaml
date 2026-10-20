@@ -28,6 +28,11 @@
       <Setter Property="Background" Value="#202C3B" />
       <Setter Property="Foreground" Value="#E6EDF6" />
     </Style>
+    <Style Selector="TextBox.settings-input">
+      <Setter Property="Width" Value="190" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="Padding" Value="10,8" />
+    </Style>
   </Window.Styles>
 
   <Grid ColumnDefinitions="210,*">
@@ -42,6 +47,7 @@
           <TextBlock Text="MONITORAMENTO" Foreground="#718096" FontSize="10" FontWeight="Bold" Margin="8,0,0,4" />
           <Button Classes="nav" Content="◉   Visão geral" Click="OnOverviewClick" />
           <Button Classes="nav" Content="▦   Inventário" Click="OnInventoryClick" />
+          <Button Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
           <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="#66758A" FontSize="9" Margin="8,13,0,0" />
         </StackPanel>
 
@@ -230,6 +236,43 @@
         </ItemsControl>
 
         <TextBlock Text="Os sensores indisponíveis dependem do hardware, dos drivers e dos dados expostos pelo kernel." Classes="muted" FontSize="10" TextWrapping="Wrap" Margin="2,0,0,0" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSettings}">
+      <StackPanel Margin="28,23,28,28" Spacing="16">
+        <StackPanel Spacing="4" Margin="0,0,0,3">
+          <TextBlock Text="Configurações" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Text="Ajuste a coleta e os arquivos de telemetria." Classes="muted" FontSize="11" />
+        </StackPanel>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="COLETA" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Intervalo global (milissegundos)" Foreground="#E6EDF6" FontSize="12" />
+            <TextBox Classes="settings-input" Text="{Binding UpdateIntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Text="Use um valor entre 100 e 60.000 ms. Um intervalo menor atualiza o painel com mais frequência." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <CheckBox Content="Exportar CSV" IsChecked="{Binding LogToCsv, Mode=TwoWay}" />
+            <CheckBox Content="Snapshot JSON mais recente" IsChecked="{Binding LogToJson, Mode=TwoWay}" />
+            <CheckBox Content="Journal JSON contínuo (JSONL)" IsChecked="{Binding LogToJsonJournal, Mode=TwoWay}" />
+            <StackPanel Spacing="4" Margin="0,6,0,0">
+              <TextBlock Text="PASTA DOS ARQUIVOS" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding LogDirectoryText}" Foreground="#C7D2E0" FontSize="11" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
+          <TextBlock Grid.Column="1" Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
       </StackPanel>
     </ScrollViewer>
   </Grid>

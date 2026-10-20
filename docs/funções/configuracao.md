@@ -16,7 +16,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `overlayPosition` - Posição inicial do overlay (X, Y)
 - `Overlay` - Configurações específicas do overlay
 - `Sensors` - Quais sensores estão habilitados
-- `alerts` - Regras de alerta com ações (popup/som/script/desligar) — ver [alertas.md](alertas.md)
+- `alerts` - Regras de alerta com ações (popup/som/script/desligar); a página Avalonia edita limites, cooldown e notificação interna — ver [alertas.md](alertas.md)
 - `telemetryExport` - Exportador HTTP do SDK de telemetria: `{ enabled: false, port: 7317, listenAll: false }` — publica o último snapshot como JSON em `GET /values` (mesmo payload do `sensors_latest.json`) e `GET /health`; padrão é loopback (`listenAll: true` abre para a LAN e pode exigir firewall) — ver [telemetry-sdk.md](../telemetry-sdk.md)
 - `profiles` - Perfis por aplicativo do OSD: `[{ name, appMatch, offsetX?, offsetY?, width?, fontSize?, opacity?, accentColor?, series?, visible? }]` — ver [overlay.md](overlay.md); `appMatch` vazio ou `*` casa com qualquer executável; `visible: false` esconde o OSD enquanto o perfil casa (`opacity` vazio/nulo usa a `overlayOpacity` global)
 - `overlay.templates` - Linhas personalizadas do OSD: `[{ text, color? }]` com placeholders `{Chave}`/`{Chave:N}`/ wildcard; linha oculta até todos os placeholders resolverem; cor só via config — ver [overlay.md](overlay.md)
@@ -61,6 +61,7 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - `toggleOverlayHotkey` registra um atalho global (Win32 `RegisterHotKey`) que alterna o OSD de qualquer aplicativo — ver [hotkey.md](hotkey.md). Editável na seção "ATALHO GLOBAL" do Editor Visual.
 - `sensors.*` está reservado no modelo, mas ainda não é consumido pela interface.
 - No Avalonia Linux, a página **Configurações** edita `updateIntervalMs` (100–60.000 ms), `logToCsv`, `logToJson` e `logToJsonJournal`. O diretório de logs é exibido como somente leitura.
+- No Avalonia Linux, a página **Alertas** edita regras do bloco `alerts`; som, scripts e desligamento já existentes são preservados, mas não executados nesse frontend.
 - **Aplicação no Linux:** salvar persiste com `AppConfig.Save()`. Alterar o intervalo recria o serviço de sensores, zera as estatísticas da sessão e preserva coleta pausada/parada. Alterar apenas os formatos de log atualiza os loggers sem reiniciar a coleta; se estiver parada, as opções valem ao próximo início.
 - Um intervalo já salvo acima de 60.000 ms é preservado enquanto o campo não for editado; após editar, a tela aceita somente 100–60.000 ms.
 - Na carga, `Normalize()` corrige valores fora de faixa: `updateIntervalMs` ≥ 100, `overlayOpacity` 0.1–1.0, `overlay.width` 140–700, `overlay.fontSize` 8–20, `overlayPosition.x/y` em ±5000, `accentColor` inválido volta para `#1E90FF`, `telemetryExport.port` travada em 1024–65535, cooldowns de alerta em 1–3600 s (regra: 0–3600 s), perfis com os mesmos clamps de offset/largura/fonte/opacidade e `appMatch` limpo (sem `.exe`), `customSensors` com máx. 64 fórmulas (inválidas são descartadas com nota em `logs/errors.log`) e `overlay.graphs` com altura 12–120 px, janela 30–1200 amostras e máx. 12 gráficos.

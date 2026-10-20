@@ -1,6 +1,12 @@
-# Alertas (AlertService)
+# Alertas (AlertRuleEvaluator / AlertService)
 
-Regras de alerta sobre sensores com ações automáticas — **popup, som, script e desligamento** — avaliadas a cada snapshot de sensores (mesma cadência do monitoramento), sem dependências externas.
+Regras de alerta sobre sensores avaliadas a cada snapshot (mesma cadência do monitoramento). A comparação, o disparo por condição, o cooldown e a checagem de sensores ausentes ficam no avaliador compartilhado do Core; cada frontend apresenta os disparos e executa somente suas ações suportadas.
+
+## Frontends
+
+- **Avalonia/Linux:** a página **Alertas** permite ativar a avaliação, ajustar o cooldown global e criar, editar, ativar ou remover regras. O seletor combina séries detectadas com sensores já usados em regras salvas, mesmo que estejam temporariamente ausentes. Limite, comparação, índice da série, cooldown e mensagem são configuráveis. As alterações só entram em vigor depois de salvar `config.json`.
+- O Avalonia exibe uma notificação interna por 6 segundos quando `popup` está ativo e mantém os 50 disparos mais recentes durante a execução do app. Um novo aviso substitui o visível; todos continuam no histórico. Regras sem `popup` ainda aparecem no histórico.
+- Som, scripts e desligamento são preservados ao salvar no Linux, mas não são executados pelo Avalonia. No WPF, as ações documentadas abaixo continuam disponíveis.
 
 ## Como funciona
 

@@ -47,6 +47,7 @@
           <TextBlock Text="MONITORAMENTO" Foreground="#718096" FontSize="10" FontWeight="Bold" Margin="8,0,0,4" />
           <Button Classes="nav" Content="◉   Visão geral" Click="OnOverviewClick" />
           <Button Classes="nav" Content="▦   Inventário" Click="OnInventoryClick" />
+          <Button Classes="nav" Content="♧   Alertas" Click="OnAlertsClick" />
           <Button Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
           <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="#66758A" FontSize="9" Margin="8,13,0,0" />
         </StackPanel>
@@ -275,5 +276,116 @@
         </Grid>
       </StackPanel>
     </ScrollViewer>
+
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsAlerts}">
+      <StackPanel Margin="28,23,28,28" Spacing="16">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Alertas" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Configure limites e acompanhe os disparos durante a coleta." Classes="muted" FontSize="11" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          </StackPanel>
+        </Grid>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="CONFIGURAÇÃO GERAL" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <CheckBox Content="Ativar avaliação de alertas" IsChecked="{Binding AlertsEnabled, Mode=TwoWay}" />
+            <StackPanel Spacing="5">
+              <TextBlock Text="Cooldown global (segundos)" Foreground="#E6EDF6" FontSize="12" />
+              <TextBox Classes="settings-input" Text="{Binding AlertsCooldownText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              <TextBlock Text="Use de 1 a 3.600 segundos. Cooldown 0 em uma regra usa este valor." Classes="muted" FontSize="10" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="4">
+            <TextBlock Text="REGRAS" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="A notificação aparece quando a condição é atendida; regras sem notificação continuam no histórico." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="action" Content="Adicionar regra" Click="OnAddAlertRuleClick" />
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding AlertRules}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                <StackPanel Spacing="11">
+                  <Grid ColumnDefinitions="*,Auto,Auto">
+                    <CheckBox Content="Regra ativa" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center" />
+                    <CheckBox Grid.Column="1" Content="Notificação" IsChecked="{Binding Popup, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <Button Grid.Column="2" Content="Remover" Click="OnRemoveAlertRuleClick" />
+                  </Grid>
+                  <Grid ColumnDefinitions="1.4*,*,*,*" ColumnSpacing="10">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="SENSOR" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <ComboBox ItemsSource="{Binding SensorOptions}" SelectedItem="{Binding SensorKey, Mode=TwoWay}" />
+                      <TextBlock Text="{Binding SensorUnit}" Classes="muted" FontSize="9" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="COMPARAÇÃO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <ComboBox ItemsSource="{Binding Comparisons}" SelectedItem="{Binding Comparison, Mode=TwoWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="5">
+                      <TextBlock Text="LIMITE" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBox Text="{Binding ThresholdText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Spacing="5">
+                      <TextBlock Text="COOLDOWN (S)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBox Text="{Binding CooldownText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="5">
+                    <TextBlock Text="MENSAGEM (OPCIONAL)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                    <TextBox Text="{Binding Message, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Watermark="Sensor {sensor}: {value} (limite: {threshold})" />
+                    <TextBlock Text="Placeholders: {sensor}, {value}, {threshold}." Classes="muted" FontSize="10" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+          <StackPanel Spacing="10">
+            <TextBlock Text="HISTÓRICO RECENTE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock IsVisible="{Binding !HasAlertHistory}" Text="Nenhum alerta disparado nesta execução." Classes="muted" FontSize="11" />
+            <ItemsControl ItemsSource="{Binding AlertHistory}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#29374A" BorderThickness="0,1,0,0" Padding="0,8">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+                      <TextBlock Text="{Binding Time}" Classes="muted" FontSize="10" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Sensor}" Foreground="#93C5FD" FontFamily="monospace" FontSize="10" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="#E6EDF6" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Value}" Foreground="#FBBF24" FontSize="10" VerticalAlignment="Center" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveAlertsClick" />
+          <TextBlock Grid.Column="1" Text="{Binding AlertsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+
+        <TextBlock Text="No Avalonia, som, scripts e desligamento configurados em regras existentes são preservados no arquivo, mas não executados." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Column="1" Panel.ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="#243345" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="10" Padding="16">
+      <StackPanel Spacing="5">
+        <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="#7DD3FC" FontSize="9" FontWeight="Bold" />
+        <TextBlock Text="{Binding AlertToastMessage}" Foreground="#F3F6FB" FontSize="12" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
   </Grid>
 </Window>

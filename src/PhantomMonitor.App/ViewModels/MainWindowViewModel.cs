@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
@@ -46,6 +47,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _hasInventorySnapshot;
     private bool _isOverview = true;
     private bool _isSettings;
+    private bool _isAlerts;
     private string _updateIntervalText;
     private bool _intervalEdited;
     private bool _logToCsv;
@@ -56,6 +58,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<double> _gpuSamples = [];
     private IReadOnlyList<double> _ramSamples = [];
     private IReadOnlyList<double> _frametimeSamples = [];
+    private readonly ObservableCollection<AlertRuleEditorViewModel> _alertRules = new();
+    private readonly ObservableCollection<AlertHistoryEntryViewModel> _alertHistory = new();
+    private AlertRuleEvaluator _alertEvaluator;
+    private IReadOnlyList<string> _alertSensorOptions = [];
+    private string _alertsCooldownText;
+    private bool _alertsEnabled;
+    private string _alertsMessage = "As alterações são aplicadas ao salvar.";
+    private bool _alertToastVisible;
+    private string _alertToastMessage = "";
+    private DispatcherTimer? _alertToastTimer;
+    private bool _alertEditorInitialized;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -83,8 +96,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool HasInventorySnapshot { get => _hasInventorySnapshot; private set => Set(ref _hasInventorySnapshot, value); }
     public bool IsWaitingForInventorySnapshot => !HasInventorySnapshot;
     public bool IsOverview { get => _isOverview; private set => Set(ref _isOverview, value); }
-    public bool IsInventory => !IsOverview && !IsSettings;
+    public bool IsInventory => !IsOverview && !IsSettings && !IsAlerts;
     public bool IsSettings { get => _isSettings; private set => Set(ref _isSettings, value); }
+    public bool IsAlerts { get => _isAlerts; private set => Set(ref _isAlerts, value); }
+    public ObservableCollection<AlertRuleEditorViewModel> AlertRules => _alertRules;
+    public ObservableCollection<AlertHistoryEntryViewModel> AlertHistory => _alertHistory;
+    public bool HasAlertHistory => AlertHistory.Count > 0;
+    public IReadOnlyList<string> AlertSensorOptions { get => _alertSensorOptions; private set => Set(ref _alertSensorOptions, value); }
+    public string AlertsCooldownText { get => _alertsCooldownText; set => Set(ref _alertsCooldownText, value); }
+    public bool AlertsEnabled { get => _alertsEnabled; set => Set(ref _alertsEnabled, value); }
+    public string AlertsMessage { get => _alertsMessage; private set => Set(ref _alertsMessage, value); }
+    public bool AlertToastVisible { get => _alertToastVisible; private set => Set(ref _alertToastVisible, value); }
+    public string AlertToastMessage { get => _alertToastMessage; private set => Set(ref _alertToastMessage, value); }
     public string UpdateIntervalText
     {
         get => _updateIntervalText;
@@ -122,6 +145,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _logToCsv = _config.LogToCsv;
         _logToJson = _config.LogToJson;
         _logToJsonJournal = _config.LogToJsonJournal;
+        _alertsCooldownText = _config.Alerts.CooldownSeconds.ToString(CultureInfo.CurrentCulture);
+        _alertsEnabled = _config.Alerts.Enabled;
+        _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
+        RefreshAlertEditor();
         _sensorService = LinuxSensorServiceFactory.Create(_config);
         AttachSensorService(_sensorService);
     }
@@ -171,6 +198,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         IsOverview = true;
         IsSettings = false;
+        IsAlerts = false;
         Raise(nameof(IsInventory));
     }
 
@@ -178,6 +206,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         IsOverview = false;
         IsSettings = false;
+        IsAlerts = false;
         Raise(nameof(IsInventory));
     }
 
@@ -185,7 +214,152 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         IsOverview = false;
         IsSettings = true;
+        IsAlerts = false;
         Raise(nameof(IsInventory));
+    }
+
+    public void ShowAlerts()
+    {
+        IsOverview = false;
+        IsSettings = false;
+        IsAlerts = true;
+        Raise(nameof(IsInventory));
+    }
+
+    public void AddAlertRule()
+    {
+        if (AlertSensorOptions.Count == 0)
+        {
+            AlertsMessage = "Aguarde a primeira leitura para detectar séries de sensores.";
+            return;
+        }
+
+        AlertRules.Add(new AlertRuleEditorViewModel(new AlertRule
+        {
+            Sensor = SensorKey.TryParse(AlertSensorOptions[0], out var key) ? key.Type : SensorType.CpuTemperature,
+            SensorIndex = key.Index,
+            Threshold = 80,
+            Popup = true
+        }, AlertSensorOptions));
+        AlertsMessage = "Regra adicionada. Salve para aplicá-la.";
+    }
+
+    public void RemoveAlertRule(AlertRuleEditorViewModel rule)
+    {
+        AlertRules.Remove(rule);
+        AlertsMessage = "Regra removida. Salve para aplicar a alteração.";
+    }
+
+    public void SaveAlerts()
+    {
+        if (!int.TryParse(AlertsCooldownText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var cooldown)
+            || cooldown is < 1 or > 3600)
+        {
+            AlertsMessage = "O cooldown global deve ficar entre 1 e 3.600 segundos.";
+            return;
+        }
+
+        var candidateRules = new List<AlertRule>(AlertRules.Count);
+        foreach (var editor in AlertRules)
+        {
+            if (!SensorKey.TryParse(editor.SensorKey, out var sensorKey))
+            {
+                AlertsMessage = $"Sensor inválido na regra: {editor.SensorKey}";
+                return;
+            }
+            if (!double.TryParse(editor.ThresholdText, NumberStyles.Float, CultureInfo.CurrentCulture, out var threshold)
+                || !double.IsFinite(threshold))
+            {
+                AlertsMessage = $"Informe um limite numérico válido para {editor.SensorKey}.";
+                return;
+            }
+            if (!int.TryParse(editor.CooldownText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var ruleCooldown)
+                || ruleCooldown is < 0 or > 3600)
+            {
+                AlertsMessage = $"O cooldown da regra {editor.SensorKey} deve ficar entre 0 e 3.600 segundos.";
+                return;
+            }
+            if (!Enum.TryParse<AlertComparison>(editor.Comparison, out _))
+            {
+                AlertsMessage = $"Comparação inválida na regra {editor.SensorKey}.";
+                return;
+            }
+            if (sensorKey.Index < 0)
+            {
+                AlertsMessage = $"Índice de sensor inválido: {editor.SensorKey}";
+                return;
+            }
+
+            candidateRules.Add(editor.CreateRule(threshold, ruleCooldown));
+        }
+
+        var previous = _config.Alerts;
+        var candidate = new AlertsConfig
+        {
+            Enabled = AlertsEnabled,
+            CooldownSeconds = cooldown,
+            AllowShutdown = previous.AllowShutdown,
+            Rules = candidateRules
+        };
+        _config.Alerts = candidate;
+        if (!_config.Save(ConfigPaths.ConfigFile))
+        {
+            _config.Alerts = previous;
+            AlertsMessage = "Não foi possível salvar o config.json. As regras em execução não foram alteradas.";
+            return;
+        }
+
+        _alertEvaluator = new AlertRuleEvaluator(candidate);
+        _alertsEnabled = candidate.Enabled;
+        _alertsCooldownText = candidate.CooldownSeconds.ToString(CultureInfo.CurrentCulture);
+        AlertsMessage = "Alertas salvos e aplicados. Serão avaliados na próxima leitura.";
+        Raise(nameof(AlertsEnabled));
+        Raise(nameof(AlertsCooldownText));
+    }
+
+    private void RefreshAlertEditor()
+    {
+        var keys = new HashSet<string>(_config.Alerts.Rules.Select(rule => new SensorKey(rule.Sensor, rule.SensorIndex).ToString()), StringComparer.Ordinal);
+        foreach (var group in InventoryGroups)
+            foreach (var row in group.Rows.Where(row => row.IsAvailable))
+                keys.Add(row.Key);
+
+        AlertSensorOptions = keys.OrderBy(key => key, StringComparer.Ordinal).ToArray();
+        foreach (var rule in AlertRules)
+            rule.SensorOptions = AlertSensorOptions;
+
+        if (!_alertEditorInitialized)
+        {
+            foreach (var rule in _config.Alerts.Rules)
+                AlertRules.Add(new AlertRuleEditorViewModel(rule, AlertSensorOptions));
+            _alertEditorInitialized = true;
+        }
+    }
+
+    private void RecordAlert(AlertTrigger trigger, DateTime timestamp)
+    {
+        AlertHistory.Insert(0, new AlertHistoryEntryViewModel(
+            timestamp.ToLocalTime().ToString("HH:mm:ss"),
+            trigger.SensorName,
+            trigger.Message,
+            trigger.Value.ToString("F1", CultureInfo.CurrentCulture)));
+        while (AlertHistory.Count > 50) AlertHistory.RemoveAt(AlertHistory.Count - 1);
+        Raise(nameof(HasAlertHistory));
+
+        if (!trigger.Rule.Popup) return;
+        AlertToastMessage = trigger.Message;
+        AlertToastVisible = true;
+        _alertToastTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+        _alertToastTimer.Stop();
+        _alertToastTimer.Tick -= OnAlertToastTimerTick;
+        _alertToastTimer.Tick += OnAlertToastTimerTick;
+        _alertToastTimer.Start();
+    }
+
+    private void OnAlertToastTimerTick(object? sender, EventArgs e)
+    {
+        _alertToastTimer?.Stop();
+        AlertToastVisible = false;
     }
 
     private void AttachSensorService(ISensorService service)
@@ -335,6 +509,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed || !_started) return;
 
         InventoryGroups = SensorInventoryBuilder.Build(data);
+        RefreshAlertEditor();
         HasInventorySnapshot = true;
         Raise(nameof(IsWaitingForInventorySnapshot));
         var availableCount = InventoryGroups.Sum(group => group.Rows.Count(row => row.IsAvailable));
@@ -378,6 +553,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _csvLogger?.Write(data);
         _jsonLogger?.Write(data);
         _jsonJournalLogger?.Write(data);
+
+        foreach (var alert in _alertEvaluator.Evaluate(data))
+            RecordAlert(alert, data.Timestamp);
     }
 
     private void StartLoggers()
@@ -472,6 +650,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _started = false;
         }
         DisposeLoggers();
+        _alertToastTimer?.Stop();
         _sensorService.Dispose();
     }
 }

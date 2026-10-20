@@ -137,6 +137,40 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
   `color` (#RRGGBB/#AARRGGBB) — só editável no config, a UI edita só o texto
   (mesmíssimo texto = cor preservada ao aplicar o editor).
 
+## Gráficos de histórico por série (P8.5)
+
+Sparklines embutidas no OSD — mesma linguagem visual do gráfico de frametime,
+com janela/eixo próprios por gráfico (paridade com o "gráfico de histórico no
+OSD" das suítes de referência):
+
+```json
+"graphs": [
+  { "series": "GpuTemperature" },
+  { "series": "Custom#1", "height": 48, "window": 600, "color": "#A3E635" },
+  { "series": "CpuCoreClock#*", "min": 2000, "max": 5500 }
+]
+```
+
+| Campo | Significado |
+|---|---|
+| `series` | Série alvo, resolvida **como as templates**: canônica (`GpuTemperature`), com fallback para a primeira instância da categoria; explícito (`GpuTemperature#1`); wildcard (`CpuCoreClock#*`); ou nome amigável de sensor customizado (`{DeltaTemp}` → `"DeltaTemp"`) |
+| `height` | Altura da sparkline em px (12–120; padrão 36) |
+| `window` | Amostras do buffer circular (30–1200; padrão 240 ≈ 4 min em 1 Hz) |
+| `color` | Cor da linha (#RRGGBB/#AARRGGBB); vazio = cor de acento do OSD |
+| `min`/`max` | Eixo Y fixo opcional (auto quando ausentes; série "plana" ganha piso de ±0.5) |
+
+- **Posição no painel:** logo **antes do bloco de templates**, depois das séries
+  dinâmicas — ambos os containers "vivem no fim" do painel.
+- **Série ausente:** a sparkline esconde até a série voltar a resolver; o buffer
+  circular preserva o histórico (não zera o gráfico por um ciclo caído).
+- **Eixo:** auto min/max pela janela atual, com guias tracejadas nos extremos —
+  os mesmos guias do frametime; valores fixos dão escala estável (benchmark).
+- **Edição:** via `config.json` (mesma política das templates — o Editor Visual
+  aplica recriando o overlay, então novos gráficos aparecem na hora em que o
+  config é aplicado). Teto de **12 gráficos** (normalização descarta o excesso).
+- **Fontes de dado:** qualquer série publicada — inclusive `Custom#i` (P8.1) e
+  `CPU/Gpu Busy` do PresentMon (P6.5).
+
 ## API Nativa
 
 - `WS_EX_LAYERED` + `WS_EX_TRANSPARENT` para janela transparente e clicável (não rouba cliques nem foco do jogo)

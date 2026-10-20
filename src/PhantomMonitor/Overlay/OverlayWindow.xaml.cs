@@ -183,6 +183,40 @@ public partial class OverlayWindow : Window
             _compiledTemplates.Add((segments, color));
         }
 
+        // Gráficos por série (P8.5): compile como placeholder de template única —
+        // a resolução (canônica → 1ª instância, wildcard, nome amigável) é a mesma
+        // das linhas de texto. Buffer circular por gráfico (window) + eixo fixo opcional.
+        foreach (var graph in config.Overlay.Graphs)
+        {
+            var segments = CompileTemplate($"{{{graph.Series}}}");
+            var segment = segments.FirstOrDefault(s => !s.IsLiteral);
+            if (segment is null) continue;
+
+            var canvas = new Canvas
+            {
+                Height = graph.Height,
+                Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
+                ClipToBounds = true
+            };
+            var border = new Border
+            {
+                CornerRadius = new CornerRadius(2),
+                BorderThickness = new Thickness(0.5),
+                BorderBrush = GuideBrush,
+                Child = canvas,
+                Margin = new Thickness(0, _rowMargin, 0, 0)
+            };
+
+            _graphRows.Add(new GraphRow(
+                new FrametimeBuffer(graph.Window),
+                segment,
+                border,
+                canvas,
+                TryParseTemplateColor(graph.Color) ?? _accentBrush,
+                graph.Min,
+                graph.Max));
+        }
+
         _baseOpacity = Math.Clamp(config.OverlayOpacity <= 0 ? 0.85 : config.OverlayOpacity, 0.1, 1.0);
         Opacity = _baseOpacity;
         _positionTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
@@ -192,6 +226,35 @@ public partial class OverlayWindow : Window
 
     private readonly List<(List<TemplateSegment> Segments, Brush Color)> _compiledTemplates = [];
     private StackPanel? _templatesPanel;
+
+    // Gráficos por série (P8.5): sparklines com buffer circular próprio; o container
+    // é criado no primeiro snapshot e fica sempre imediatamente ANTES do bloco de
+    // templates (ambos "sempre no fim" — ver MovePanelsToEnd).
+    private readonly List<GraphRow> _graphRows = [];
+    private StackPanel? _graphsPanel;
+
+    /// <summary>Estado de um gráfico por série compilado no construtor.</summary>
+    private sealed class GraphRow
+    {
+        public GraphRow(FrametimeBuffer buffer, TemplateSegment segment, Border border, Canvas canvas, Brush stroke, double? min, double? max)
+        {
+            Buffer = buffer;
+            Segment = segment;
+            Border = border;
+            Canvas = canvas;
+            Stroke = stroke;
+            MinAxis = min;
+            MaxAxis = max;
+        }
+
+        public FrametimeBuffer Buffer { get; }
+        public TemplateSegment Segment { get; }
+        public Border Border { get; }
+        public Canvas Canvas { get; }
+        public Brush Stroke { get; }
+        public double? MinAxis { get; }    // eixo Y fixo (null = auto)
+        public double? MaxAxis { get; }
+    }
 
     private double _offsetX;
     private double _offsetY;
@@ -714,11 +777,18 @@ public partial class OverlayWindow : Window
     public void Update(SensorData data)
     {
         EnsureDynamicRows(data);
+        EnsureGraphRows(data);
         EnsureTemplateRows(data); // P6.6: linhas personalizadas por último no painel
 
         foreach (var updater in _updaters)
         {
             updater(data);
+        }
+
+        // Gráficos por série (P8.5): resolvem a série como as templates e redesenham.
+        foreach (var row in _graphRows)
+        {
+            UpdateSeriesGraph(row, data);
         }
 
         // Atualizar o gráfico de frametime
@@ -802,13 +872,28 @@ public partial class OverlayWindow : Window
             if (_dynamicRows.ContainsKey(key)) continue;
             AddAdvancedRow(key, data);
 
-            // Container de templates (P6.6) permanece o último filho do painel:
-            // séries que aparecem depois não "passam por baixo" do bloco de templates.
-            if (_templatesPanel is { } panel)
-            {
-                SensorPanel.Children.Remove(panel);
-                SensorPanel.Children.Add(panel);
-            }
+            // Containers do fim (gráficos P8.5 + templates P6.6) permanecem os
+            // últimos filhos do painel: séries que aparecem depois não "passam
+            // por baixo" desses blocos.
+            MovePanelsToEnd();
+        }
+    }
+
+    /// <summary>
+    /// Mantém os containers de fim do painel (gráficos por série, templates) sempre
+    /// nas duas últimas posições — após as linhas dinâmicas recém-criadas.
+    /// </summary>
+    private void MovePanelsToEnd()
+    {
+        if (_graphsPanel is { } graphs && SensorPanel.Children.Contains(graphs))
+        {
+            SensorPanel.Children.Remove(graphs);
+            SensorPanel.Children.Add(graphs);
+        }
+        if (_templatesPanel is { } templates && SensorPanel.Children.Contains(templates))
+        {
+            SensorPanel.Children.Remove(templates);
+            SensorPanel.Children.Add(templates);
         }
     }
 
@@ -899,6 +984,124 @@ public partial class OverlayWindow : Window
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         return brush;
+    }
+
+    // ---------- Gráficos de histórico por série (P8.5) ----------
+
+    /// <summary>
+    /// Container dos sparklines criado no primeiro snapshot com layout resolvido,
+    /// inserido imediatamente antes do bloco de templates (MovePanelsToEnd o mantém
+    /// após as linhas dinâmicas entre cada ciclo).
+    /// </summary>
+    private void EnsureGraphRows(SensorData data)
+    {
+        if (_graphsPanel != null || _graphRows.Count == 0) return;
+        _ = data;
+
+        _graphsPanel = new StackPanel();
+        foreach (var row in _graphRows)
+        {
+            _graphsPanel.Children.Add(row.Border);
+        }
+        InsertGraphsPanel(_graphsPanel);
+    }
+
+    /// <summary>Insere o container antes do bloco de templates (ou no fim, enquanto a templates ainda não existe).</summary>
+    private void InsertGraphsPanel(StackPanel graphs)
+    {
+        if (_templatesPanel is { } templates && SensorPanel.Children.Contains(templates))
+        {
+            SensorPanel.Children.Insert(SensorPanel.Children.IndexOf(templates), graphs);
+        }
+        else
+        {
+            SensorPanel.Children.Add(graphs);
+        }
+    }
+
+    /// <summary>Resolve a série e empurra a amostra pro buffer + redesenha (sem dado → linha escondida).</summary>
+    private void UpdateSeriesGraph(GraphRow row, SensorData data)
+    {
+        if (!TryResolveTemplateValue(data, row.Segment, out var value))
+        {
+            row.Border.Visibility = Visibility.Collapsed; // série ausente esconde a sparkline (buffer fica)
+            return;
+        }
+
+        row.Border.Visibility = Visibility.Visible;
+        row.Buffer.Add((float)value);
+        DrawSeriesGraph(row);
+    }
+
+    /// <summary>
+    /// Desenho da sparkline (espelha o gráfico de frametime): polyline com espaçamento
+    /// uniforme, eixo Y fixo quando configurado (min/max) senão auto pela janela (com
+    /// piso de ε para séries "planas"), guias tracejadas nos extremos do eixo.
+    /// </summary>
+    private void DrawSeriesGraph(GraphRow row)
+    {
+        var canvas = row.Canvas;
+        canvas.Children.Clear();
+
+        double w = canvas.ActualWidth;
+        double h = canvas.ActualHeight;
+        if (w <= 0 || h <= 0) { w = canvas.Width; h = canvas.Height; }
+        if (w <= 0) w = _baseWidth - 24;
+        if (h <= 0) h = 36;
+
+        var history = row.Buffer.ToArray();
+        if (history.Length < 2) return;
+
+        // Eixo: fixo quando configurado; senão auto (mín/máx da janela). Séries
+        // "planas" (todos os valores iguais) ganham piso simétrico de ±0.5.
+        double lo = row.MinAxis ?? double.MaxValue;
+        double hi = row.MaxAxis ?? double.MinValue;
+        if (row.MinAxis is null || row.MaxAxis is null)
+        {
+            foreach (var v in history)
+            {
+                if (row.MinAxis is null && v < lo) lo = v;
+                if (row.MaxAxis is null && v > hi) hi = v;
+            }
+            if (hi - lo < 0.001)
+            {
+                lo -= 0.5;
+                hi += 0.5;
+            }
+        }
+        if (hi - lo <= 0) hi = lo + 1; // guarda final contra divisão por zero
+        var span = hi - lo;
+
+        // Guias tracejadas no topo e na base do eixo (mesmo estilo do frametime).
+        foreach (var y in new[] { 0.5, h - 1.5 })
+        {
+            canvas.Children.Add(new Line
+            {
+                X1 = 0,
+                X2 = w,
+                Y1 = y,
+                Y2 = y,
+                Stroke = GuideBrush,
+                StrokeThickness = 0.6,
+                StrokeDashArray = new DoubleCollection { 2, 2 }
+            });
+        }
+
+        var pts = new PointCollection(history.Length);
+        for (int i = 0; i < history.Length; i++)
+        {
+            double x = w - (history.Length - i) * (w / Math.Max(history.Length, 120));
+            var y = h - ((history[i] - lo) / span) * (h - 2) - 1;
+            pts.Add(new Point(x, Math.Clamp(y, 0, h)));
+        }
+
+        canvas.Children.Add(new Polyline
+        {
+            Points = pts,
+            Stroke = row.Stroke,
+            StrokeThickness = 1.2,
+            StrokeLineJoin = PenLineJoin.Round
+        });
     }
 
     // ---------- Templates do usuário (P6.6) ----------

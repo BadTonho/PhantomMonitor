@@ -203,6 +203,22 @@ public sealed class AppConfig
             CustomSensors.RemoveRange(CustomSensorEngine.MaxSensors,
                 CustomSensors.Count - CustomSensorEngine.MaxSensors);
         }
+
+        // Gráficos do OSD (P8.5): série obrigatória (descartada sem ela), altura e
+        // janela clamped; eixo fixo com min>max troca os valores; cor valida (hex).
+        Overlay.Graphs ??= new();
+        Overlay.Graphs.RemoveAll(g => g is null || string.IsNullOrWhiteSpace(g.Series));
+        foreach (var graph in Overlay.Graphs)
+        {
+            graph.Series = graph.Series!.Trim();
+            graph.Height = Math.Clamp(graph.Height, 12, 120);
+            graph.Window = (int)Math.Clamp(graph.Window, 30, 1200);
+            if (graph.Color is { } color && !IsValidHexColor(color)) graph.Color = null;
+            if (graph.Min is { } min && graph.Max is { } max && min > max) (graph.Min, graph.Max) = (graph.Max, graph.Min);
+            if (graph.Min is { } m1 && !double.IsFinite(m1)) graph.Min = null;
+            if (graph.Max is { } m2 && !double.IsFinite(m2)) graph.Max = null;
+        }
+        if (Overlay.Graphs.Count > 12) Overlay.Graphs.RemoveRange(12, Overlay.Graphs.Count - 12);
     }
 
     internal static bool IsValidHexColor(string? value) =>
@@ -262,6 +278,13 @@ public sealed class OverlayConfig
     public List<OverlayTemplate> Templates { get; set; } = [];
 
     /// <summary>
+    /// Gráficos de histórico por série (P8.5): sparkline embutida no OSD com
+    /// janela de amostras própria — resolve a série como as templates
+    /// (chave, wildcard ou nome amigável). Ver OverlayGraph.
+    /// </summary>
+    public List<OverlayGraph> Graphs { get; set; } = [];
+
+    /// <summary>
     /// Whitelist (padrões wildcard) das séries por instância exibidas no OSD além das
     /// linhas canônicas. Ex.: "Gpu*" (multi-GPU), "FanSpeed*" (ventoinhas extras),
     /// "Disk*" (rendimento/saúde por disco), "CpuTemperature#*" (temp por núcleo),
@@ -285,6 +308,36 @@ public sealed class OverlayTemplate
 
     /// <summary>Cor da linha (#RRGGBB ou #AARRGGBB); null/válido ausente = branco padrão.</summary>
     public string? Color { get; set; }
+}
+
+/// <summary>
+/// Gráfico de histórico de uma série no OSD (P8.5): sparkline azul-escura
+/// embutida no painel — reusa o mesmo buffer circular do frametime. A série é
+/// resolvida como nos placeholders de template (canônica → primeira instância,
+/// wildcard "GpuTemperature#*", nome amigável "DeltaTemp"). Eixo Y automático
+/// (janela atual) ou fixo com <c>min</c>/<c>max</c> opcionais; cor segue o
+/// acento do OSD quando <c>color</c> fica vazio. Entrada só via config
+/// (mesma política das templates): novas voltas do editor aplicam recriando o overlay.
+/// </summary>
+public sealed class OverlayGraph
+{
+    /// <summary>Série monitorada: "GpuTemperature", "GpuTemperature#1", "Custom#*" ou nome amigável.</summary>
+    public string Series { get; set; } = "";
+
+    /// <summary>Altura da sparkline em px (padrão 36).</summary>
+    public double Height { get; set; } = 36;
+
+    /// <summary>Amostras na janela circular (30–1200; padrão 240 ≈ 4 min em 1 Hz).</summary>
+    public int Window { get; set; } = 240;
+
+    /// <summary>Cor da linha (#RRGGBB/#AARRGGBB); null/vazio = cor de acento do OSD.</summary>
+    public string? Color { get; set; }
+
+    /// <summary>Piso do eixo Y (opcional; auto quando null).</summary>
+    public double? Min { get; set; }
+
+    /// <summary>Teto do eixo Y (opcional; auto quando null).</summary>
+    public double? Max { get; set; }
 }
 
 public sealed class SensorConfig

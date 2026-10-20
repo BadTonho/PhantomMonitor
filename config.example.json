@@ -27,7 +27,10 @@
     "accentColor": "#1E90FF",
     "fontSize": 11.5,
     "shownSeries": ["Gpu*", "FanSpeed*", "Disk*"],
-    "templates": []
+    "templates": [],
+    "graphs": [
+      { "series": "GpuTemperature", "height": 36, "window": 240 }
+    ]
   },
   "sensors": {
     "cpu": true,

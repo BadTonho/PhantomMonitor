@@ -625,6 +625,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _hotkeys.Dispose();
+        _pauseHotkeys.Dispose();
         _tray?.Dispose();
         if (_sensorService != null)
         {

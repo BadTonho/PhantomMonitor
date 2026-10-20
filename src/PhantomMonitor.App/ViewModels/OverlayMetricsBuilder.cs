@@ -1,10 +1,16 @@
 using PhantomMonitor.Models;
+using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.ViewModels;
 
 internal static class OverlayMetricsBuilder
 {
-    public static IReadOnlyList<OverlayMetricViewModel> Build(SensorData? data, OverlayConfigSelection selection)
+    private const int MaxInstanceRows = 24;
+
+    public static IReadOnlyList<OverlayMetricViewModel> Build(
+        SensorData? data,
+        OverlayConfigSelection selection,
+        IReadOnlyList<string>? shownSeries = null)
     {
         var rows = new List<OverlayMetricViewModel>();
 
@@ -95,8 +101,45 @@ internal static class OverlayMetricsBuilder
             rows.Add(new OverlayMetricViewModel("JOGO", $"{fps} · {frametime}"));
         }
 
+        if (data is not null && shownSeries is { Count: > 0 })
+        {
+            var instanceRows = data.Series.Keys
+                .Where(key => !key.IsPrimary && shownSeries.Any(key.MatchesPattern))
+                .Distinct()
+                .OrderBy(FamilyOrder)
+                .ThenBy(key => key.Type.ToString(), StringComparer.Ordinal)
+                .ThenBy(key => key.Index)
+                .Take(MaxInstanceRows);
+
+            foreach (var key in instanceRows)
+            {
+                var formatted = SensorFormatter.FormatSeries(key, data.Series[key], showZero: true);
+                var label = data.GetLabel(key);
+                var description = string.Equals(label, key.ToString(), StringComparison.OrdinalIgnoreCase)
+                    ? formatted
+                    : $"{formatted} · {label}";
+                rows.Add(new OverlayMetricViewModel(key.ToString(), description));
+            }
+        }
+
         return rows;
     }
+
+    private static int FamilyOrder(SensorKey key) => key.Type switch
+    {
+        SensorType.GpuCore or SensorType.GpuTemperature or SensorType.GpuMemory or SensorType.GpuMemoryUsed or
+            SensorType.GpuMemoryTotal or SensorType.GpuFan or SensorType.GpuPower or SensorType.GpuCoreClock or
+            SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuHotSpot or SensorType.GpuVramTemperature => 0,
+        SensorType.FanSpeed => 1,
+        SensorType.DiskRead or SensorType.DiskWrite or SensorType.DiskTotalRead or SensorType.DiskTotalWritten or
+            SensorType.DiskUsage or SensorType.DiskHealth or SensorType.DiskTemperature => 2,
+        SensorType.RamTemperature => 3,
+        SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.CpuTemperature or SensorType.CpuClock or
+            SensorType.CpuPower or SensorType.CpuVoltage => 4,
+        SensorType.NetworkUp or SensorType.NetworkDown or SensorType.NetworkUpTotal or SensorType.NetworkDownTotal => 5,
+        SensorType.BatteryLevel or SensorType.BatteryWearLevel or SensorType.BatteryVoltage or SensorType.BatteryPower => 6,
+        _ => 7
+    };
 
     private static bool TryValue(SensorData? data, SensorType type, out double value)
     {

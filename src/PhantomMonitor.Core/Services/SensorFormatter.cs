@@ -78,9 +78,12 @@ public static class SensorFormatter
     }
 
     /// <summary>Formata o valor de uma série arbitraria (linhas por instância no OSD/inventário).</summary>
-    public static string FormatSeries(SensorKey key, double value)
+    public static string FormatSeries(SensorKey key, double value) => FormatSeries(key, value, showZero: false);
+
+    /// <summary>Formats an instance series, optionally preserving a valid zero reading.</summary>
+    public static string FormatSeries(SensorKey key, double value, bool showZero)
     {
-        if (value <= 0) return "--";
+        if (!showZero && value <= 0) return "--";
         return key.Type switch
         {
             SensorType.CpuTemperature or SensorType.GpuTemperature or SensorType.GpuHotSpot or
@@ -108,7 +111,7 @@ public static class SensorFormatter
 
             SensorType.NetworkUpTotal or SensorType.NetworkDownTotal => FormatBytes(value),
 
-            SensorType.FanSpeed => FormatFan(value),
+            SensorType.FanSpeed => showZero && value == 0 ? "0 RPM" : FormatFan(value),
 
             SensorType.Fps or SensorType.FpsAvg or SensorType.FpsMin or SensorType.Fps1Low or
             SensorType.Fps01Low or SensorType.FpsMax => $"{value:F0}",

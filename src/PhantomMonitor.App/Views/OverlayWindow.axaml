@@ -30,8 +30,8 @@
       <ItemsControl ItemsSource="{Binding OverlayRows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Grid ColumnDefinitions="74,*" ColumnSpacing="10" Margin="0,2">
-              <TextBlock Text="{Binding Name}" Foreground="#9FB0C5" FontSize="10" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="120,*" ColumnSpacing="8" Margin="0,2">
+              <TextBlock Text="{Binding Name}" Foreground="#9FB0C5" FontSize="9" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="#F3F6FB" FontSize="11"
                          FontFamily="monospace" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
             </Grid>

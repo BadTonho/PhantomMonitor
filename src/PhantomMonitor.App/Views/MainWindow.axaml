@@ -274,6 +274,31 @@
               <CheckBox Content="Placa-mãe" IsChecked="{Binding OverlayShowMotherboard, Mode=TwoWay}" />
               <CheckBox Content="FPS e frametime" IsChecked="{Binding OverlayShowFps, Mode=TwoWay}" />
             </WrapPanel>
+            <TextBlock Text="SÉRIES POR INSTÂNCIA" Foreground="#748399" FontSize="9" FontWeight="Bold" Margin="0,4,0,0" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <ComboBox ItemsSource="{Binding OverlaySeriesOptions}" SelectedItem="{Binding SelectedOverlaySeries, Mode=TwoWay}"
+                        PlaceholderText="Escolha uma série detectada" />
+              <Button Grid.Column="1" Classes="action" Content="Adicionar" Click="OnAddDetectedOverlaySeriesClick" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBox Text="{Binding OverlaySeriesPatternInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       PlaceholderText="Ex.: Gpu*, CpuTemperature#* ou DiskRead#1" />
+              <Button Grid.Column="1" Classes="action" Content="Adicionar padrão" Click="OnAddOverlaySeriesPatternClick" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding OverlaySeriesPatterns}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                    <TextBlock Text="{Binding Pattern}" Foreground="#C7D2E0" FontSize="11" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="Remover" Padding="8,3" Click="OnRemoveOverlaySeriesPatternClick" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Restaurar padrões" Click="OnRestoreOverlaySeriesDefaultsClick" />
+              <TextBlock Text="A lista funciona como whitelist. Padrões aceitam chave exata, *, prefixo* ou *sufixo; os não detectados ficam salvos." Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
             <TextBlock Text="O overlay é arrastável e recebe cliques. No Wayland, o compositor define sua posição inicial e seu comportamento sobre janelas em tela cheia." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>

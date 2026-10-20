@@ -5,7 +5,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 ## Funcionalidades
 
 - **Monitoramento completo**: CPU (uso, temperatura, clock, potência, voltagem), GPU (uso, temperatura, VRAM usada/total, **temperatura da VRAM**, clock, potência, hotspot), RAM (uso, disponível), disco (uso, I/O, temperatura, saúde e totais SMART), rede (↓/↑ e totais da sessão), ventoinhas (GPU/sistema), temperaturas de placa-mãe/SuperIO (**rails de tensão, VRM e módulos de RAM**) e **bateria** (carga, tensão, potência, desgaste e fonte AC — laptops/UPs; Windows via WMI, Linux via `/sys/class/power_supply`) + **identidade dos monitores** (fabricante/modelo/série/diagonal do EDID via WMI, no inventário e no snapshot JSON)
-- **Overlay configurável**: O WPF oferece o OSD avançado e seu Editor Visual; o Avalonia/Linux inclui uma janela flutuante compacta com categorias selecionáveis e atualização em tempo real
+- **Overlay configurável**: O WPF oferece o OSD avançado e seu Editor Visual; o Avalonia/Linux inclui uma janela flutuante compacta com categorias e séries por instância selecionáveis em tempo real
 - **Linhas personalizadas no OSD (templates)**: texto livre com placeholders `{Chave}`/`{Chave:N}`/wildcard resolvidos a cada ciclo; linha invisível até todos os sensores existirem (`overlay.templates`)
 - **Sensores customizados (fórmulas)**: o Avalonia oferece editor visual para criar, remover e reordenar séries derivadas (`Custom#i`), com validação e aplicação ao salvar; fórmulas usam operadores `+ - * /`, funções `min/max/abs` e referências por chave/wildcard/nome, e entram nas estatísticas, CSV/JSON, SDK e alertas como séries nativas (`customSensors`)
 - **Cadência e suavização por série**: polling por dono da série (`sensorTuning`: `intervalMs` por regra — entre amostras a série repete o último valor, estatísticas só contam amostras frescas) + filtro de média móvel (`smoothing` até 60 amostras) para matar jitter de temperatura/uso sem amansar as médias
@@ -99,7 +99,7 @@ Phantom/
 6. Use **Configurações → Exportador HTTP** para ativar `GET /values` e `GET /health`, escolher a porta e, opcionalmente, permitir acesso pela rede local. O padrão é desativado e restrito ao próprio computador.
 7. A gravação é controlada pelas opções `logToCsv`, `logToJson` e `logToJsonJournal` do `config.json`. No Linux, os arquivos ficam em `~/.local/share/PhantomMonitor/logs/` (ou no diretório definido por `XDG_DATA_HOME`).
 8. Use **Configurações** na barra lateral para alterar o intervalo global de coleta e os formatos de gravação pela interface.
-9. Use **Mostrar/Ocultar overlay** na visão geral; escolha as categorias exibidas em **Configurações → Overlay flutuante**.
+9. Use **Mostrar/Ocultar overlay** na visão geral; escolha as categorias e configure séries por instância detectadas ou padrões manuais em **Configurações → Overlay flutuante**.
 
 > [!IMPORTANT]
 > O dashboard Avalonia é, nesta primeira versão, o frontend Linux. O WPF permanece como o frontend Windows durante a migração; a coleta Windows ainda não foi ligada ao app Avalonia. No Linux, a UI e o overlay mostram FPS quando um jogo Vulkan habilita a camada Phantom. O overlay Linux é uma janela desktop arrastável e interativa; o compositor controla sua posição inicial e se ela aparece sobre aplicativos em tela cheia.

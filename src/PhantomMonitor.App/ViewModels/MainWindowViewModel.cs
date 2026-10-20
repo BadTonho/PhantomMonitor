@@ -75,6 +75,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _overlayShowMotherboard;
     private bool _overlayShowFps;
     private readonly ObservableCollection<OverlayMetricViewModel> _overlayRows = new();
+    private readonly ObservableCollection<OverlaySeriesPatternViewModel> _overlaySeriesPatterns = new();
+    private IReadOnlyList<string> _overlaySeriesOptions = [];
+    private string? _selectedOverlaySeries;
+    private string _overlaySeriesPatternInput = "";
     private IReadOnlyList<double> _cpuSamples = [];
     private IReadOnlyList<double> _gpuSamples = [];
     private IReadOnlyList<double> _ramSamples = [];
@@ -186,6 +190,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string LogDirectoryText => UserDataPaths.LogDirectory;
     public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
     public ObservableCollection<OverlayMetricViewModel> OverlayRows => _overlayRows;
+    public ObservableCollection<OverlaySeriesPatternViewModel> OverlaySeriesPatterns => _overlaySeriesPatterns;
+    public IReadOnlyList<string> OverlaySeriesOptions { get => _overlaySeriesOptions; private set => Set(ref _overlaySeriesOptions, value); }
+    public string? SelectedOverlaySeries { get => _selectedOverlaySeries; set => Set(ref _selectedOverlaySeries, value); }
+    public string OverlaySeriesPatternInput { get => _overlaySeriesPatternInput; set => Set(ref _overlaySeriesPatternInput, value); }
     public bool OverlayVisible => _config.ShowOverlay;
     public string OverlayButtonText => OverlayVisible ? "Ocultar overlay" : "Mostrar overlay";
     public double OverlayOpacity => _config.OverlayOpacity;
@@ -230,6 +238,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _overlayShowFans = _config.Overlay.ShowFans;
         _overlayShowMotherboard = _config.Overlay.ShowMotherboard;
         _overlayShowFps = _config.Overlay.ShowFps;
+        LoadOverlaySeriesPatterns();
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
         LoadCustomSensorEditors();
@@ -324,8 +333,85 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OverlayShowFans,
             OverlayShowMotherboard,
             OverlayShowFps);
-        foreach (var row in OverlayMetricsBuilder.Build(data, selection))
+        foreach (var row in OverlayMetricsBuilder.Build(data, selection, _config.Overlay.ShownSeries))
             OverlayRows.Add(row);
+    }
+
+    private void LoadOverlaySeriesPatterns()
+    {
+        _overlaySeriesPatterns.Clear();
+        foreach (var pattern in _config.Overlay.ShownSeries ?? ["Gpu*", "FanSpeed*", "Disk*"])
+            _overlaySeriesPatterns.Add(new OverlaySeriesPatternViewModel(pattern));
+    }
+
+    public void AddDetectedOverlaySeries()
+    {
+        if (!SensorKey.TryParse(SelectedOverlaySeries, out var key) || key.IsPrimary)
+        {
+            SettingsMessage = "Selecione uma série por instância detectada.";
+            return;
+        }
+        AddOverlaySeriesPattern(key.ToString());
+    }
+
+    public void AddManualOverlaySeriesPattern()
+    {
+        var pattern = OverlaySeriesPatternInput.Trim();
+        if (!IsValidOverlaySeriesPattern(pattern))
+        {
+            SettingsMessage = "Informe uma chave de sensor válida ou um padrão com * no início/fim (ex.: Gpu*).";
+            return;
+        }
+        AddOverlaySeriesPattern(pattern);
+        OverlaySeriesPatternInput = "";
+    }
+
+    private void AddOverlaySeriesPattern(string pattern)
+    {
+        if (_overlaySeriesPatterns.Any(item => string.Equals(item.Pattern, pattern, StringComparison.OrdinalIgnoreCase)))
+        {
+            SettingsMessage = "Esse padrão já está na lista.";
+            return;
+        }
+        _overlaySeriesPatterns.Add(new OverlaySeriesPatternViewModel(pattern));
+        SettingsMessage = "Padrão adicionado. Salve para aplicar ao overlay.";
+    }
+
+    public void RemoveOverlaySeriesPattern(OverlaySeriesPatternViewModel item)
+    {
+        _overlaySeriesPatterns.Remove(item);
+    }
+
+    public void RestoreDefaultOverlaySeriesPatterns()
+    {
+        _overlaySeriesPatterns.Clear();
+        foreach (var pattern in new[] { "Gpu*", "FanSpeed*", "Disk*" })
+            _overlaySeriesPatterns.Add(new OverlaySeriesPatternViewModel(pattern));
+        SettingsMessage = "Padrões do overlay restaurados. Salve para aplicar.";
+    }
+
+    private static bool IsValidOverlaySeriesPattern(string pattern)
+    {
+        if (pattern == "*") return true;
+        if (pattern.Count(character => character == '*') == 0)
+            return SensorKey.TryParse(pattern, out var key) && !key.IsPrimary && Enum.IsDefined(key.Type);
+        if (pattern.Count(character => character == '*') != 1) return false;
+        if (pattern.EndsWith('*')) return pattern.Length > 1;
+        return pattern.StartsWith('*') && pattern.Length > 1;
+    }
+
+    private void RefreshOverlaySeriesOptions()
+    {
+        var options = _latestSensorData?.Series.Keys
+            .Where(key => !key.IsPrimary)
+            .Select(key => key.ToString())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+        if (!OverlaySeriesOptions.SequenceEqual(options, StringComparer.OrdinalIgnoreCase))
+            OverlaySeriesOptions = options;
+        if (SelectedOverlaySeries is not null && !options.Contains(SelectedOverlaySeries, StringComparer.OrdinalIgnoreCase))
+            SelectedOverlaySeries = null;
     }
 
     public void ShowOverview()
@@ -856,6 +942,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var oldOverlayFans = _config.Overlay.ShowFans;
         var oldOverlayMotherboard = _config.Overlay.ShowMotherboard;
         var oldOverlayFps = _config.Overlay.ShowFps;
+        var oldOverlayShownSeries = _config.Overlay.ShownSeries?.ToList() ?? ["Gpu*", "FanSpeed*", "Disk*"];
+        var newOverlayShownSeries = _overlaySeriesPatterns.Select(item => item.Pattern).ToList();
+        if (newOverlayShownSeries.Count == 0)
+        {
+            SettingsMessage = "Adicione ao menos um padrão de série ou restaure os padrões antes de salvar.";
+            return;
+        }
+        var invalidPattern = newOverlayShownSeries.FirstOrDefault(pattern => !IsValidOverlaySeriesPattern(pattern));
+        if (invalidPattern is not null)
+        {
+            SettingsMessage = $"O padrão '{invalidPattern}' é inválido.";
+            return;
+        }
         var collectionWasRunning = IsRunning;
         var collectionWasPaused = IsPaused;
         var intervalChanged = newInterval.HasValue && newInterval.Value != oldInterval;
@@ -870,7 +969,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             || OverlayShowNetwork != oldOverlayNetwork
             || OverlayShowFans != oldOverlayFans
             || OverlayShowMotherboard != oldOverlayMotherboard
-            || OverlayShowFps != oldOverlayFps;
+            || OverlayShowFps != oldOverlayFps
+            || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase);
 
         if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
         {
@@ -894,7 +994,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _config.Overlay.ShowFans = OverlayShowFans;
         _config.Overlay.ShowMotherboard = OverlayShowMotherboard;
         _config.Overlay.ShowFps = OverlayShowFps;
-        UpdateOverlayRows(_latestSensorData);
+        _config.Overlay.ShownSeries = newOverlayShownSeries;
 
         if (!_config.Save(ConfigPaths.ConfigFile))
         {
@@ -913,6 +1013,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _config.Overlay.ShowFans = oldOverlayFans;
             _config.Overlay.ShowMotherboard = oldOverlayMotherboard;
             _config.Overlay.ShowFps = oldOverlayFps;
+            _config.Overlay.ShownSeries = oldOverlayShownSeries;
             OverlayShowCpu = oldOverlayCpu;
             OverlayShowGpu = oldOverlayGpu;
             OverlayShowRam = oldOverlayRam;
@@ -922,6 +1023,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OverlayShowMotherboard = oldOverlayMotherboard;
             OverlayShowFps = oldOverlayFps;
             UpdateOverlayRows(_latestSensorData);
+            LoadOverlaySeriesPatterns();
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
             return;
         }
@@ -937,6 +1039,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         ConfigureTelemetryExporter();
+
+        LoadOverlaySeriesPatterns();
+        UpdateOverlayRows(_latestSensorData);
 
         UpdateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
         TelemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);
@@ -1107,6 +1212,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed || !_started) return;
 
         _latestSensorData = data;
+        RefreshOverlaySeriesOptions();
         _telemetryHttpExporter?.Publish(data);
         InventoryGroups = SensorInventoryBuilder.Build(data);
         UpdateOverlayRows(data);

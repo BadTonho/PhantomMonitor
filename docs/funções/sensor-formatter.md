@@ -11,7 +11,7 @@ Utilitário estático de formatação de métricas compartilhado entre a janela 
 - `BuildCpuDetail(data)` → linha compacta com clock, potência e voltagem disponíveis (`null` quando não há nenhum)
 - `BuildGpuDetail(data)` → linha compacta com VRAM usada/total, clock core/memória, potência, voltagem, hot spot (`HS`) e temperatura da VRAM (`MEM`) (`null` quando não há nenhum)
 - `BuildFanSummary(data)` → resumo de ventoinhas para os cards (`Ventoinhas: GPU 45% | Sistema 1200 RPM`)
-- `FormatSeries(key, value)` → valor de qualquer série formatado pela categoria (°C, %, MHz, GB/s, FPS, ms, "3 err"...; `--` quando ≤ 0) — usado nas linhas por instância do OSD e no inventário
+- `FormatSeries(key, value)` → valor de qualquer série formatado pela categoria (°C, %, MHz, GB/s, FPS, ms, "3 err"...; `--` quando ≤ 0) — usado nas linhas por instância do WPF e no inventário. O Avalonia chama a sobrecarga com `showZero: true`, pois uma chave presente com valor 0 é uma leitura válida.
 
 ## Consumidores
 

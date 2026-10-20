@@ -1,5 +1,30 @@
 # Inventário de Hardware
 
+## Inventário no dashboard Avalonia (Linux)
+
+No frontend Linux, **Inventário** é uma página da janela principal, acessível pela
+barra lateral. Ela acompanha os snapshots do serviço Linux e agrupa as séries em
+CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. Cada linha mostra a
+chave (`CpuPerCore#1`), o rótulo da origem, o valor atual e a unidade. Séries por
+núcleo, dispositivo, interface e demais instâncias são exibidas individualmente.
+
+Quando o serviço não publica nenhum valor de um tipo Linux esperado, o inventário
+inclui uma linha **Indisponível** para esse tipo. A lista considera somente as
+categorias que o coletor Linux atual expõe; sensores exclusivos do Windows não
+são tratados como ausentes no Linux. Um valor publicado igual a zero continua
+sendo uma leitura disponível. Por exemplo, bateria AC desconectada aparece como
+“Desconectada”, em vez de ser confundida com falta de leitura.
+
+O inventário atualiza junto com cada snapshot. Enquanto aguarda a primeira
+leitura, mostra um estado de espera; se a coleta for pausada ou parada, mantém
+os últimos valores recebidos. A página é somente de consulta.
+
+## Inventário WPF (Windows)
+
+O restante desta página descreve a janela de inventário do frontend WPF para
+Windows. Seus recursos de estatísticas de sessão, hardware enumerado e monitores
+EDID são específicos desse frontend e não fazem parte do inventário Avalonia Linux.
+
 Janela que lista **o que o monitor enxerga do hardware** em tempo real. Serve para
 duas tarefas práticas: diagnosticar por que um sensor não aparece (ex.: falta de
 administrador) e descobrir **chaves de série** para usar em alertas

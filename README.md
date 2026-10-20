@@ -24,6 +24,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Logging**: Exportação contínua para CSV e JSON — CSV aceita **marcadores `#marker`** para delimitar segmentos de sessão/benchmark; **journal JSON contínuo (JSONL)** opcional com uma linha por amostra e notas automáticas (início de sessão/reset) (`logToJsonJournal`)
 - **SDK de telemetria**: memória compartilhada sempre ativa + **exportador HTTP opt-in** (`telemetryExport`) — consuma o snapshot em JSON (mesmo payload do `sensors_latest.json`) via `GET /values` no loopback ou LAN (ver `docs/telemetry-sdk.md`)
 - **Visual Clean**: Design profissional refinado (paleta Slate Dark), eliminando efeitos excessivos de neon
+- **Inventário no Linux**: Página no dashboard Avalonia com séries publicadas por CPU, GPU, RAM, disco, rede, ventoinhas, bateria e FPS; tipos Linux esperados sem leitura aparecem como indisponíveis
 - **Configurável**: `config.json` com fallback automático para `config.example.json`
 
 ## Arquitetura Multiplataforma
@@ -88,7 +89,8 @@ Phantom/
    ```bash
    dotnet run --project src/PhantomMonitor.App
    ```
-3. Para coletar FPS, inicie um jogo Vulkan com a camada ativada (ex.: opções de inicialização da Steam):
+3. Abra **Inventário** na barra lateral para consultar os valores recebidos e os tipos de sensor sem leitura disponível.
+4. Para coletar FPS, inicie um jogo Vulkan com a camada ativada (ex.: opções de inicialização da Steam):
    ```bash
    ENABLE_PHANTOM_OVERLAY=1 %command%
    ```

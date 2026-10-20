@@ -36,6 +36,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _frametimeText = "—";
     private string _fpsStatsText = "Mín —   Média —   1% low —   0,1% low —";
     private string _fpsHint = "Aguardando jogo Vulkan com a camada Phantom ativada.";
+    private string _inventorySummaryText = "Aguardando primeira leitura dos sensores…";
+    private string _inventoryUpdatedText = "";
+    private IReadOnlyList<InventoryGroupViewModel> _inventoryGroups = [];
+    private bool _hasInventorySnapshot;
+    private bool _isOverview = true;
     private IReadOnlyList<double> _cpuSamples = [];
     private IReadOnlyList<double> _gpuSamples = [];
     private IReadOnlyList<double> _ramSamples = [];
@@ -61,6 +66,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string FrametimeText { get => _frametimeText; private set => Set(ref _frametimeText, value); }
     public string FpsStatsText { get => _fpsStatsText; private set => Set(ref _fpsStatsText, value); }
     public string FpsHint { get => _fpsHint; private set => Set(ref _fpsHint, value); }
+    public string InventorySummaryText { get => _inventorySummaryText; private set => Set(ref _inventorySummaryText, value); }
+    public string InventoryUpdatedText { get => _inventoryUpdatedText; private set => Set(ref _inventoryUpdatedText, value); }
+    public IReadOnlyList<InventoryGroupViewModel> InventoryGroups { get => _inventoryGroups; private set => Set(ref _inventoryGroups, value); }
+    public bool HasInventorySnapshot { get => _hasInventorySnapshot; private set => Set(ref _hasInventorySnapshot, value); }
+    public bool IsWaitingForInventorySnapshot => !HasInventorySnapshot;
+    public bool IsOverview { get => _isOverview; private set => Set(ref _isOverview, value); }
+    public bool IsInventory => !IsOverview;
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
     public IReadOnlyList<double> GpuSamples { get => _gpuSamples; private set => Set(ref _gpuSamples, value); }
     public IReadOnlyList<double> RamSamples { get => _ramSamples; private set => Set(ref _ramSamples, value); }
@@ -118,11 +130,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         Raise(nameof(PauseButtonText));
     }
 
+    public void ShowOverview()
+    {
+        IsOverview = true;
+        Raise(nameof(IsInventory));
+    }
+
+    public void ShowInventory()
+    {
+        IsOverview = false;
+        Raise(nameof(IsInventory));
+    }
+
     private void OnSensorUpdated(SensorData data) =>
         Dispatcher.UIThread.Post(() => UpdateSnapshot(data));
 
     private void UpdateSnapshot(SensorData data)
     {
+        InventoryGroups = SensorInventoryBuilder.Build(data);
+        HasInventorySnapshot = true;
+        Raise(nameof(IsWaitingForInventorySnapshot));
+        var availableCount = InventoryGroups.Sum(group => group.Rows.Count(row => row.IsAvailable));
+        var unavailableCount = InventoryGroups.Sum(group => group.Rows.Count(row => !row.IsAvailable));
+        InventorySummaryText = $"{availableCount} séries disponíveis · {unavailableCount} tipos comuns indisponíveis";
+        InventoryUpdatedText = $"Atualizado às {data.Timestamp.ToLocalTime():HH:mm:ss}";
+
         CpuUsageText = Percent(data, SensorType.CpuTotal);
         CpuTempText = Temperature(data, SensorType.CpuTemperature);
         CpuClockText = Clock(data, SensorType.CpuClock);

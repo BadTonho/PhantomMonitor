@@ -831,7 +831,24 @@ public sealed class HardwareMonitorService : ISensorService
                 Put(data, SType.GpuHotSpot, val, label);
                 PutInstance(data, SType.GpuHotSpot, instance, val, gpuName);
                 break;
-            case LhmSensorType.Temperature:
+            // Temperatura da junction da VRAM: NVIDIA "GPU Memory Temperature", AMD "GPU VRAM"
+            // e nome legado "Memory Junction". "GPU VRM Memory" (fase do VRM, não a memória) fica
+            // de fora do match pelo guard de "VRM"; antes caiam em GpuTemperature e sobrescreviam
+            // a instância por GPU.
+            case LhmSensorType.Temperature when
+                (sensor.Name.Contains("Memory", StringComparison.OrdinalIgnoreCase) ||
+                 sensor.Name.Contains("VRAM", StringComparison.OrdinalIgnoreCase)) &&
+                !sensor.Name.Contains("VRM", StringComparison.OrdinalIgnoreCase):
+                Put(data, SType.GpuVramTemperature, val, label);
+                PutInstance(data, SType.GpuVramTemperature, instance, val, gpuName);
+                break;
+            // Fallthrough do restante: "GPU Core" tem prioridade sobre os demais diodos da GPU.
+            // VRM/Liquid/PLX da AMD não são temperatura de diodo da GPU — não mapeiam nenhuma
+            // série ainda (podiam despintar GpuTemperature#i com valor de fase do VRM).
+            case LhmSensorType.Temperature when
+                !sensor.Name.Contains("VRM", StringComparison.OrdinalIgnoreCase) &&
+                !sensor.Name.Contains("Liquid", StringComparison.OrdinalIgnoreCase) &&
+                !sensor.Name.Contains("PLX", StringComparison.OrdinalIgnoreCase):
                 // "GPU Core" tem prioridade sobre "Memory Junction", etc.
                 PutPreferred(data, SType.GpuTemperature, val, label,
                     sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ? 2 : 1);

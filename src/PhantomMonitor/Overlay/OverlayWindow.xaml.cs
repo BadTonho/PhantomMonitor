@@ -1323,7 +1323,8 @@ public partial class OverlayWindow : Window
             SensorType.CpuClock or SensorType.CpuVoltage or SensorType.CpuPower => "CPU" + num,
 
             SensorType.GpuCore or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal or
-            SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuCoreClock or
+            SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuVramTemperature or
+            SensorType.GpuCoreClock or
             SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan or SensorType.GpuPower =>
                 "GPU" + num,
 
@@ -1349,7 +1350,8 @@ public partial class OverlayWindow : Window
         SensorType.CpuClock or SensorType.CpuVoltage or SensorType.CpuPower => Color.FromRgb(0x00, 0xD2, 0xFF),
 
         SensorType.GpuCore or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal or
-        SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuCoreClock or
+        SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuVramTemperature or
+        SensorType.GpuCoreClock or
         SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan or SensorType.GpuPower =>
             Color.FromRgb(0xFF, 0x8A, 0x00),
 
@@ -1371,7 +1373,8 @@ public partial class OverlayWindow : Window
     private static int FamilyOrder(SensorType type) => type switch
     {
         SensorType.GpuCore or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal or
-        SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuCoreClock or
+        SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuVramTemperature or
+        SensorType.GpuCoreClock or
         SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan or SensorType.GpuPower => 0,
 
         SensorType.FanSpeed => 1,

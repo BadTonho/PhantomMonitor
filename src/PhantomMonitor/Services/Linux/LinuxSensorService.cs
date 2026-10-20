@@ -342,9 +342,32 @@ public sealed class LinuxSensorService : ISensorService
                         }
                         else if (isGpuHwmon)
                         {
-                            data.SetValue(new SensorKey(SensorType.GpuTemperature, hwmonSlot), deg, hwLabel);
-                            if (data.GpuTemp <= 0 || deg > data.GpuTemp)
-                                data.SetValue(SensorType.GpuTemperature, deg, "GPU Temp");
+                            // Rótulo do hwmon distingue os diodos (amdgpu/nouveau): "edge" =
+                            // diodo principal, "junction"/"hotspot" = hot spot, "mem"/"vram" =
+                            // junction da VRAM. Sem rótulo (NVIDIA legado), tudo vira a
+                            // temperatura canônica da GPU.
+                            TryReadSysfsFile(Path.Combine(dir, $"temp{fileSlot}_label"), out var labelRaw);
+                            var tempLabel = labelRaw.ToLowerInvariant();
+                            if (tempLabel.Contains("junction") || tempLabel.Contains("hotspot"))
+                            {
+                                data.SetValue(new SensorKey(SensorType.GpuHotSpot, hwmonSlot), deg, hwLabel);
+                                var hotSpot = data.GetValue(SensorType.GpuHotSpot);
+                                if (hotSpot <= 0 || deg > hotSpot)
+                                    data.SetValue(SensorType.GpuHotSpot, deg, "Hot Spot");
+                            }
+                            else if (tempLabel.Contains("mem") || tempLabel.Contains("vram"))
+                            {
+                                data.SetValue(new SensorKey(SensorType.GpuVramTemperature, hwmonSlot), deg, hwLabel);
+                                var vramTemp = data.GetValue(SensorType.GpuVramTemperature);
+                                if (vramTemp <= 0 || deg > vramTemp)
+                                    data.SetValue(SensorType.GpuVramTemperature, deg, "Temp VRAM");
+                            }
+                            else
+                            {
+                                data.SetValue(new SensorKey(SensorType.GpuTemperature, hwmonSlot), deg, hwLabel);
+                                if (data.GpuTemp <= 0 || deg > data.GpuTemp)
+                                    data.SetValue(SensorType.GpuTemperature, deg, "GPU Temp");
+                            }
                         }
                         else if (isFanController)
                         {

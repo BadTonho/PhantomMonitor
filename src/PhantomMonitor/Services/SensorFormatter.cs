@@ -63,6 +63,8 @@ public static class SensorFormatter
         if (voltage > 0) parts.Add($"{voltage:F3} V");
         double hotspot = data.GetValue(SensorType.GpuHotSpot);
         if (hotspot > 0) parts.Add($"HS {hotspot:F0}°C");
+        double vramTemp = data.GetValue(SensorType.GpuVramTemperature);
+        if (vramTemp > 0) parts.Add($"MEM {vramTemp:F0}°C");
         return parts.Count > 0 ? string.Join("  ", parts) : null;
     }
 
@@ -82,7 +84,8 @@ public static class SensorFormatter
         return key.Type switch
         {
             SensorType.CpuTemperature or SensorType.GpuTemperature or SensorType.GpuHotSpot or
-            SensorType.MotherboardTemp or SensorType.VrmTemperature or SensorType.RamTemperature or
+            SensorType.GpuVramTemperature or SensorType.MotherboardTemp or SensorType.VrmTemperature or
+            SensorType.RamTemperature or
             SensorType.DiskTemperature => $"{value:F0}°C",
 
             SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.GpuCore or SensorType.GpuMemory or

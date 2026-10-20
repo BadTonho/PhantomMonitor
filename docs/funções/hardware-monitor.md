@@ -6,6 +6,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 
 - Leitura de temperatura, uso, clock, voltagem e potência da CPU
 - Leitura de temperatura, uso, clock e potência da GPU
+- **Temperaturas por diodo da GPU:** `GpuHotSpot` (Hot Spot) e `GpuVramTemperature` (junction da memória — NVIDIA `GPU Memory Temperature`/legado `Memory Junction`, AMD `GPU VRAM`); diodos `VRM`/`Liquid`/`PLX` da AMD não publicam série (`GpuTemperature` só aceita diodos do chip)
 - Leitura de VRAM usada/total (`SmallData`: `GPU Memory Used/Total` em MB; reserva `D3D Dedicated Memory Used/Total` para GPUs integradas)
 - Leitura de uso e disponibilidade de RAM
 - Leitura de uso e I/O de disco
@@ -19,7 +20,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 ## Regras de mapeamento de sensores
 
 - **Temperatura da CPU:** prioridade `Package/Tctl/Tdie/Average` > `Max` > demais.
-- **Temperatura da GPU:** `GPU Core` tem prioridade sobre `Memory Junction` etc.; GPU Intel integrada é processada antes, e a GPU dedicada prevalece.
+- **Temperatura da GPU:** `GPU Core` tem prioridade sobre os demais diodos; `Memory`/`VRAM` (junction da memória) vai para `GpuVramTemperature` e diodos `VRM`/`Liquid`/`PLX` ficam sem série. GPU Intel integrada é processada antes, e a GPU dedicada prevalece.
 - **Vários núcleos/discos:** uso por núcleo, uso de disco, clock, ventoinhas e temperatura da placa-mãe guardam o **maior** valor; throughput de disco e rede é **somado**.
 - **VRAM da GPU:** prioridade `GPU Memory Used/Total` > `D3D Dedicated Memory Used/Total` (sensores `SmallData`, em MB).
 - **Disco (`DiskUsage`):** usa o sensor `Total Activity` (% de atividade), não `Used Space`.

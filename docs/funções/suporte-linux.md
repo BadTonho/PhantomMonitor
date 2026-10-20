@@ -52,7 +52,7 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
 * **Temperaturas e Ventoinhas:**
   * Subsistema unificado `hwmon` em `/sys/class/hwmon/hwmon*`.
   * CPU: drivers de temperatura nativos `coretemp` (Intel), `k10temp` ou `zenpower` (AMD) — série por arquivo (`temp1_input` → `CpuTemperature#1`).
-  * GPU: drivers de kernel DRM (`amdgpu`, `nouveau`, `nvidia`) — `GpuTemperature#hwmon` por card; `GpuFan` canônico + `FanSpeed#hwmon` por ventoinha.
+  * GPU: drivers de kernel DRM (`amdgpu`, `nouveau`, `nvidia`) — `GpuTemperature#hwmon` por card; `GpuFan` canônico + `FanSpeed#hwmon` por ventoinha. O arquivo `tempN_label` diferencia os diodos quando existe: `edge` → `GpuTemperature`, `junction`/`hotspot` → `GpuHotSpot`, `mem`/`vram` → `GpuVramTemperature` (canônicas = maior valor entre os cards).
   * Controladores/EC: temperaturas por slot + canônica máxima (`MotherboardTemp`, `MotherboardTemp#i`).
 * **Disco:**
   * Leitura e escrita em `/proc/diskstats`, convertendo setores (512 bytes) em throughput: canônico somado ("Discos (somatório)") + `DiskRead#i`/`DiskWrite#i` por device (slot estável por nome).

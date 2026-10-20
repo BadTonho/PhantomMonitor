@@ -14,6 +14,10 @@ public enum SensorType
     GpuMemoryTotal,
     GpuTemperature,
     GpuHotSpot,
+
+    /// <summary>Temperatura da junction da memória (NVIDIA "GPU Memory Temperature", AMD "GPU VRAM"/"Memory Junction").</summary>
+    GpuVramTemperature,
+
     GpuCoreClock,
     GpuMemoryClock,
     GpuVoltage,

@@ -127,7 +127,7 @@ public static class SensorUnits
     public static string Of(SensorType type) => type switch
     {
         SensorType.CpuTemperature or SensorType.GpuTemperature or SensorType.GpuHotSpot or
-        SensorType.MotherboardTemp or SensorType.VrmTemperature or SensorType.RamTemperature or
+        SensorType.GpuVramTemperature or SensorType.MotherboardTemp or SensorType.VrmTemperature or SensorType.RamTemperature or
         SensorType.DiskTemperature => "°C",
 
         SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.GpuCore or SensorType.GpuMemory or

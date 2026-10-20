@@ -124,6 +124,22 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 - **P8.5** Gráficos de histórico por série no OSD (`overlay.graphs`: sparkline
   com buffer circular próprio, eixo auto/fixo, cor por gráfico; reusa o buffer do
   frametime e a resolução das templates; container sempre antes das templates) — `cd197ed`
+- **P8.6** Junction de memória da GPU como série separada (`GpuVramTemperature`:
+  NVIDIA `GPU Memory Temperature`/`Memory Junction` + AMD `GPU VRAM`; Linux lê
+  `tempN_label` — edge/junction/mem, com Hot Spot já mapeado; VRM/Liquid/PLX da AMD
+  deixaram de poluir `GpuTemperature#i`) — `dc97490`
+
+## Rodada 4 — P9: documentação completa + polling por série (2026-10-20) — ✅ CONCLUÍDO
+
+- **P9.0** Auditoria 100% da documentação (18 guias verificados afirmação por
+  afirmação contra o código; 17 corrigidos) + achados de código resolvidos
+  (dispose do `_pauseHotkeys`, chave `showGpuProcesses` removida) — `7f1203a`,
+  `4dbb894`, `ac4e76f`
+- **P9.1** Cadência de amostragem e suavização por série (`sensorTuning`
+  `[{series, intervalMs?, smoothing?}]`: repetição do último valor entre
+  amostras com estatísticas pulando repetidos, média móvel 2–60 sobre
+  amostras frescas, padrões `SensorKey`, última regra vence; harness
+  30 checks PASS) — `45c5fc4`
 
 ## Deliberadamente NÃO planejado (decisões já tomadas)
 
@@ -180,7 +196,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 | Polling **multithread/assíncrono** de sensores | A (caveat) | LHM é sequencial por design; paralelizar entre hardwares exige testes de concorrência no driver |
 | Identidade dos monitores (fabricante/modelo via EDID); chroma/HDR/VRR | A-parcial | ✅ Fechado pelo **P8.4** no EDID (aba "Monitores" no inventário: PnP/Modelo/Serial/diagonal/fabricação/primário via `WmiMonitorID`+`WmiMonitorBasicDisplayParams`, cache 60 s + snapshot JSON); flags HDR/VRR exigem descriptor completo (P7) |
 | Polimento de monitoramento: pesquisa, ordenação custom, colapso de grupos, tooltips, destaque de mudanças | A (menor) | Inventário absorve aos poucos |
-| Intervalo de polling **por sensor** + smoothing/filtro médio por item | A (menor) | Hoje cadência global única; item de UX de nicho |
+| Intervalo de polling **por sensor** + smoothing/filtro médio por item | A (menor) | ✅ Fechado pelo **P9.1** (`sensorTuning`: cadência de publicação por série com repetição entre amostras, estatísticas pulando os repetidos e média móvel 2–60 das amostras frescas — `45c5fc4`; a leitura física permanece global no tick, como nas suítes de referência) |
 | Tabela SMART atributo a atributo (realocados, erros de mídia etc.) | C | LHM sintetiza pouco; viria de SMART bruto via WMI/Win32 — maior esforço, P7 |
 | GPU: Hot Spot / Memory Junction como **séries separadas** (LHM expõe p/ NVIDIA) e per-chip VRAM de GDDR6X/GDDR7 | A-parcial | 🟡 **quase fechado**: Hot Spot já estava mapeado (`GpuHotSpot` — linha defasada) e **P8.6** fechou o junction de memória como série própria `GpuVramTemperature` (`dc97490`: NVIDIA `GPU Memory Temperature`/`Memory Junction` + AMD `GPU VRAM` no LHM; Linux lê `tempN_label` — edge/junction/mem; VRM/Liquid/PLX da AMD deixaram de poluir `GpuTemperature#i`); per-chip (VRAM temp por die) continua P7 (engine) |
 | GPU: "throttle reasons" e power-limit flags (NVAPI/AMD; "Performance Limiting Reasons") | C | NVAPI interop + AMD User Mode — esforço real por vendor (P7) |

@@ -14,6 +14,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - Fallback de RAM via WMI (`Win32_OperatingSystem`) e `PerformanceCounter` reutilizado entre ciclos
 - Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
 - **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo)
+- **Erros de hardware WHEA:** série `WheaErrorCount` (Windows apenas) = eventos do provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão; `0` é leitura real (alerta "Above > 0" dispara em qualquer erro novo)
 
 ## Regras de mapeamento de sensores
 
@@ -71,6 +72,30 @@ gera nenhuma linha — nem no CSV, nem no JSON, nem no OSD:
   expõem (propriedade ausente devolve fallback em vez de derrubar o ciclo).
 - OSD: família `BAT` com cor lima própria (só aparece com `Battery*` na whitelist
   `overlay.shownSeries`).
+
+## Erros de hardware WHEA (`WheaErrorCount`)
+
+Contador **Windows-apenas** de erros de hardware reportados pela Windows Hardware
+Error Architecture: eventos do provedor **`Microsoft-Windows-WHEA-Logger`** no log
+System (falhas de PCIe/device corrigidas ou fatais, CPU, memória, cache...).
+
+| Série | Unidade | Significado |
+|---|---|---|
+| `WheaErrorCount` | err | Nº de eventos WHEA **desde o início da sessão de monitoramento** |
+
+- Publicada **sempre** (contador em `0` é leitura real, não série ausente) — por
+  isso alertas funcionam com rule `"sensor": "WheaErrorCount"`, `"comparison":
+  "Above"`, `"threshold": 0`: qualquer erro novo dispara o alerta.
+- Consulta ao log de eventos **a cada 10 s**, direção reversa com early-break
+  (para no primeiro evento anterior ao início da sessão; teto de 5000 eventos).
+- Sem permissão de leitura ou provedor ausente: contador segue em `0` e o erro é
+  registrado em `logs/errors.log` (`Whea.Reader`).
+
+## Sensores customizados (`Custom#i`)
+
+Fórmulas do usuário derivadas de outras séries, avaliadas no fim de cada snapshot
+(antes do commit das estatísticas) — detalhes completos em
+[sensores-customizados.md](sensores-customizados.md).
 
 ## Principais métodos
 

@@ -112,6 +112,9 @@ public static class SensorFormatter
 
             SensorType.FrametimeMs => $"{value:F1} ms",
 
+            // Contadores inteiros (WHEA): "3 err" — não mostra "3.0" do fallback F1.
+            SensorType.WheaErrorCount => $"{value:F0} err",
+
             _ => value.ToString("F1")
         };
     }

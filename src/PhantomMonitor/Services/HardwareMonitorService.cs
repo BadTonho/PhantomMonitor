@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Management;
@@ -65,6 +66,14 @@ public sealed class HardwareMonitorService : ISensorService
     // Sensores customizados (fórmulas do usuário): avaliados no fim de cada snapshot.
     private readonly CustomSensorEngine? _customSensors;
 
+    // WHEA (paridade HWiNFO): contagem de erros de hardware desde o início da sessão.
+    // Consulta ao log de eventos é direção reversa com early-break (a assinatura do
+    // log é estável; reler tudo a cada ciclo encheria buffers desnecessariamente).
+    private DateTime? _wheaSessionStart;
+    private int _wheaSessionCount;
+    private DateTime _lastWheaRead = DateTime.MinValue;
+    private static readonly TimeSpan WheaInterval = TimeSpan.FromSeconds(10);
+
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
 
@@ -103,6 +112,7 @@ public sealed class HardwareMonitorService : ISensorService
             _computer.Open();
             _fpsMonitor.Start();
             IsRunning = true;
+            _wheaSessionStart = DateTime.Now; // EventLogReader.TimeCreated é hora local
             _timer.Change(0, _updateIntervalMs);
         }
     }
@@ -190,6 +200,7 @@ public sealed class HardwareMonitorService : ISensorService
         ApplyCpuTempFallback(data, debugInfo);
         ApplyRamFallbacks(data, debugInfo);
         ReadBattery(data, debugInfo);
+        ReadWheaErrors(data, debugInfo);
 
         data.GpuProcesses = GetGpuProcesses();
 
@@ -510,6 +521,66 @@ public sealed class HardwareMonitorService : ISensorService
             using (obj) return WmiProp(obj, property);
         }
         return 0;
+    }
+
+    // ---------- Erros de hardware WHEA ----------
+
+    /// <summary>
+    /// WHEA (paridade HWiNFO): publica a série canônica <c>WheaErrorCount</c> — nº de
+    /// eventos do provedor "Microsoft-Windows-WHEA-Logger" no log System desde o
+    /// início da sessão. Contagem em 0 é leitura REAL (não "ausente"): alertas
+    /// "Above &gt; 0" disparam em qualquer erro novo; cover Windows apenas.
+    /// Consultas a cada 10 s, direção reversa com early-break (o provedor é estável;
+    /// varrer o log inteiro a cada ciclo seria desperdício). Teto defensivo de 5000
+    /// eventos por consulta (log gigante/repasse de hardware antigo).
+    /// </summary>
+    private void ReadWheaErrors(SensorData data, List<string> debugInfo)
+    {
+        if (DateTime.UtcNow - _lastWheaRead < WheaInterval)
+        {
+            // Valor congelado entre consultas continua sendo publicado (série presente).
+            data.SetValue(SType.WheaErrorCount, _wheaSessionCount, "Erros de hardware WHEA (sessão)");
+            return;
+        }
+        _lastWheaRead = DateTime.UtcNow;
+        _wheaSessionCount = 0;
+
+        try
+        {
+            if (_wheaSessionStart is not { } start) return; // Start() não rodou
+
+            var query = new EventLogQuery(
+                "System",
+                PathType.LogName,
+                "*[System[Provider[@Name='Microsoft-Windows-WHEA-Logger']]]");
+            query.ReverseDirection = true; // do mais novo para o mais velho
+
+            using var reader = new EventLogReader(query);
+            var scanned = 0;
+            while (reader.ReadEvent() is { } entry)
+            {
+                using (entry)
+                {
+                    scanned++;
+                    if (entry.TimeCreated is not { } created) continue;
+                    if (created < start)
+                        break; // direção reversa: os próximos são mais antigos
+                    _wheaSessionCount++;
+                }
+                if (scanned >= 5000) break;
+            }
+
+            debugInfo.Add($"[WHEA] Erros de hardware na sessão: {_wheaSessionCount}");
+        }
+        catch (Exception ex)
+        {
+            // Provedor ausente/sem permissão de leitura: contador segue em 0 (leitura real).
+            ErrorLog.Write("Whea.Reader", ex);
+        }
+        finally
+        {
+            data.SetValue(SType.WheaErrorCount, _wheaSessionCount, "Erros de hardware WHEA (sessão)");
+        }
     }
 
     private static double ReadCpuTempFromThermalZone()

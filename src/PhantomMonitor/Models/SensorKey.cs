@@ -159,6 +159,9 @@ public static class SensorUnits
         SensorType.FrametimeMs or SensorType.PresentLatency or
         SensorType.FrametimeP1 or SensorType.FrametimeP99 => "ms",
 
+        // Contador de eventos (WHEA): mostra "3 err" em inventário/OSD; CSV/JSON brutos.
+        SensorType.WheaErrorCount => "err",
+
         _ => ""
     };
 }

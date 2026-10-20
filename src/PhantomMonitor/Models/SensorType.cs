@@ -111,5 +111,14 @@ public enum SensorType
     /// CustomSensorEngine). Sem canônica: toda a família é por instância
     /// ("Custom#i" = posição da fórmula no config; rótulo = nome amigável).
     /// </summary>
-    Custom
+    Custom,
+
+    /// <summary>
+    /// Contador de erros de hardware WHEA (Windows Hardware Error Architecture)
+    /// desde o início da sessão de monitoramento: eventos do provedor
+    /// "Microsoft-Windows-WHEA-Logger" no log System (inclui falhas de PCIe/device,
+    /// CPU, memória). 0 presente = nenhuma ocorrência (leitura real; alertas
+    /// "Above &gt; 0" disparam em qualquer erro novo). Windows apenas.
+    /// </summary>
+    WheaErrorCount
 }

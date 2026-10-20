@@ -38,6 +38,19 @@ Regras de alerta sobre sensores com ações automáticas — **popup, som, scrip
 
 O `config.example.json` traz uma regra de exemplo **desabilitada** com todos os campos.
 
+## Exemplos úteis (séries novas)
+
+- **Erro de hardware WHEA** (`WheaErrorCount`, Windows; contador em `0` é leitura
+  real —por isso `"comparison": "Above"` com `"threshold": 0` dispara em
+  **qualquer erro novo** da sessão e respeita o cooldown no log cheio de repetições):
+  ```json
+  { "enabled": true, "sensor": "WheaErrorCount", "comparison": "Above",
+    "threshold": 0, "popup": true, "sound": true,
+    "message": "Erro de hardware WHEA registrado ({value} na sessão)" }
+  ```
+- **Série customizada** (`Custom#i`): `"sensor": "Custom"` + `sensorIndex` da
+  fórmula (ordem no `customSensors` do config).
+
 ## Alertas por instância
 
 `sensorIndex` (padrão 0) mira séries **por instância**: `"sensor": "GpuTemperature",

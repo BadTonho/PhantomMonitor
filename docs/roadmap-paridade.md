@@ -182,7 +182,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 | Polimento de monitoramento: pesquisa, ordenação custom, colapso de grupos, tooltips, destaque de mudanças | A (menor) | Inventário absorve aos poucos |
 | Intervalo de polling **por sensor** + smoothing/filtro médio por item | A (menor) | Hoje cadência global única; item de UX de nicho |
 | Tabela SMART atributo a atributo (realocados, erros de mídia etc.) | C | LHM sintetiza pouco; viria de SMART bruto via WMI/Win32 — maior esforço, P7 |
-| GPU: Hot Spot / Memory Junction como **séries separadas** (LHM expõe p/ NVIDIA) e per-chip VRAM de GDDR6X/GDDR7 | A-parcial | NVIDIA: basta mapear; per-chip/AMD: P7 (engine) |
+| GPU: Hot Spot / Memory Junction como **séries separadas** (LHM expõe p/ NVIDIA) e per-chip VRAM de GDDR6X/GDDR7 | A-parcial | 🟡 **quase fechado**: Hot Spot já estava mapeado (`GpuHotSpot` — linha defasada) e **P8.6** fechou o junction de memória como série própria `GpuVramTemperature` (`dc97490`: NVIDIA `GPU Memory Temperature`/`Memory Junction` + AMD `GPU VRAM` no LHM; Linux lê `tempN_label` — edge/junction/mem; VRM/Liquid/PLX da AMD deixaram de poluir `GpuTemperature#i`); per-chip (VRAM temp por die) continua P7 (engine) |
 | GPU: "throttle reasons" e power-limit flags (NVAPI/AMD; "Performance Limiting Reasons") | C | NVAPI interop + AMD User Mode — esforço real por vendor (P7) |
 | CPU: C-states residency, VID per-core, Effective Clock, DRAM R/W bandwidth, PL1/PL2 dinâmico, % thermal throttle | C | MSR/SMN próprios — LHM não expõe (documentar como limite de engine) |
 | NPU dedicado (AMD/Intel/Qualcomm) | C | Sem fonte via LHM hoje |

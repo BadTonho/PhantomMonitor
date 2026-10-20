@@ -13,12 +13,21 @@ public sealed class SeriesStatsTracker
     private readonly Dictionary<SensorKey, SeriesStats> _stats = [];
     private readonly object _sync = new();
 
-    public void Commit(SensorData data)
+    /// <summary>
+    /// Consolida um snapshot nas estatísticas por série. Séries apontadas em
+    /// <c>repeated</c> (repetições de cadência do SensorTuningEngine, P9.1) são
+    /// puladas: o valor/publicação constante entre amostras não pode "amansar" o
+    /// min/máx/média — a média da sessão amostra na cadência configurada, não no
+    /// tick global.
+    /// </summary>
+    public void Commit(SensorData data, ISet<SensorKey>? repeated = null)
     {
         lock (_sync)
         {
             foreach (var key in data.GetSeriesKeys())
             {
+                if (repeated is not null && repeated.Contains(key)) continue;
+
                 var value = data.GetValue(key);
                 if (!double.IsFinite(value)) continue;
 

@@ -121,6 +121,12 @@ não contaminam a média para sempre). As séries de FPS publicadas no snapshot
 depois da coleta do FpsMonitor); as janelas móveis de ~60 s que produzem
 `FpsAvg`/min/percentis são independentes do `SeriesStatsTracker`.
 
+Com ajuste por série (**P9.1**), o `Commit` recebe o conjunto de séries
+**repetidas** do `SensorTuningEngine` e **não conta** essas amostras: quando uma
+série tem `intervalMs` próprio e repete o último valor entre refreshes, min/máx
+/média amostram na cadência dela — o tick global não duplica pontos (ver
+[ajuste-de-series.md](ajuste-de-series.md)).
+
 - **Reset:** item da bandeja ("Resetar estatísticas") e botão da janela de
   inventário; o CSV ativo recebe um marcador `#marker` delimitando o segmento
   (ver [logging.md](logging.md)).

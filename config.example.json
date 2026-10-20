@@ -40,6 +40,7 @@
     "motherboard": false
   },
   "customSensors": [],
+  "sensorTuning": [],
   "profiles": [],
   "telemetryExport": { "enabled": false, "port": 7317, "listenAll": false },
   "alerts": {

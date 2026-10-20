@@ -12,12 +12,15 @@ public static class SensorServiceFactory
         // com o provedor escolhido; configuração vazia custa zero por ciclo.
         var customSensors = CustomSensorEngine.FromConfig(config);
 
+        // Ajuste por série (P9.1): cadência de amostragem + suavização por padrão SensorKey.
+        var sensorTuning = SensorTuningEngine.FromConfig(config);
+
         if (OperatingSystem.IsWindows())
         {
-            return new HardwareMonitorService(updateIntervalMs, customSensors);
+            return new HardwareMonitorService(updateIntervalMs, customSensors, sensorTuning);
         }
 
         // Linux e demais sistemas POSIX (macOS usa o mesmo caminho /proc best-effort).
-        return new Linux.LinuxSensorService(updateIntervalMs, customSensors);
+        return new Linux.LinuxSensorService(updateIntervalMs, customSensors, sensorTuning);
     }
 }

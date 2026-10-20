@@ -39,6 +39,9 @@ public sealed class AppConfig
     /// <summary>Sensores customizados (fórmulas sobre outras séries; ver CustomSensorEngine).</summary>
     public List<CustomSensorConfig> CustomSensors { get; set; } = [];
 
+    /// <summary>Cadência de amostragem e suavização por série (P9.1; ver SensorTuningEngine).</summary>
+    public List<SensorTuningConfig> SensorTunings { get; set; } = [];
+
     /// <summary>Perfis por aplicativo do OSD (aplicam overrides quando o executável em foco casa).</summary>
     public List<OverlayProfile> Profiles { get; set; } = [];
 
@@ -219,6 +222,24 @@ public sealed class AppConfig
             if (graph.Max is { } m2 && !double.IsFinite(m2)) graph.Max = null;
         }
         if (Overlay.Graphs.Count > 12) Overlay.Graphs.RemoveRange(12, Overlay.Graphs.Count - 12);
+
+        // Ajuste por série (P9.1): série obrigatória; cadência nunca fica abaixo do
+        // tick global (intervalo menor seria no-op — o Normalize já rodou o clamp do
+        // UpdateIntervalMs acima); suavização 0–60 (0/1 desligada). Teto de 64 regras.
+        SensorTunings ??= new();
+        SensorTunings.RemoveAll(t => t is null || string.IsNullOrWhiteSpace(t.Series));
+        foreach (var tuning in SensorTunings)
+        {
+            tuning.Series = tuning.Series!.Trim();
+            if (tuning.IntervalMs > 0)
+                tuning.IntervalMs = Math.Max(UpdateIntervalMs, Math.Clamp(tuning.IntervalMs, 100, 3_600_000));
+            tuning.Smoothing = (int)Math.Clamp(tuning.Smoothing, 0, SensorTuningEngine.MaxSmoothing);
+        }
+        if (SensorTunings.Count > SensorTuningEngine.MaxTunings)
+        {
+            SensorTunings.RemoveRange(SensorTuningEngine.MaxTunings,
+                SensorTunings.Count - SensorTuningEngine.MaxTunings);
+        }
     }
 
     internal static bool IsValidHexColor(string? value) =>
@@ -337,6 +358,27 @@ public sealed class OverlayGraph
 
     /// <summary>Teto do eixo Y (opcional; auto quando null).</summary>
     public double? Max { get; set; }
+}
+
+/// <summary>
+/// Cadência de amostragem + suavização por série (P9.1; ver SensorTuningEngine):
+/// entre amostras a série repete o último valor publicado e as estatísticas da
+/// sessão contam só amostras frescas — min/máx/média amostram na cadência
+/// configurada. A casamento do padrão reusa SensorKey.MatchesPattern ("GpuTemperature"
+/// canônica, "GpuTemperature#1", "CpuTemperature#*", "Gpu*"...); duas regras que
+/// casam a mesma série: a última vence. Série de contador/somatório não deve ser
+/// suavizada (não faz sentido físico).
+/// </summary>
+public sealed class SensorTuningConfig
+{
+    /// <summary>Padrão da série alvo no formato SensorKey ("GpuTemperature", "Custom#1"...).</summary>
+    public string Series { get; set; } = "";
+
+    /// <summary>Intervalo de refresh em ms (0 = publicar toda amostra do tick global; clamped ao tick).</summary>
+    public int IntervalMs { get; set; } = 0;
+
+    /// <summary>Janela da média móvel sobre amostras frescas (0/1 = desligado; teto 60).</summary>
+    public int Smoothing { get; set; } = 0;
 }
 
 public sealed class SensorConfig

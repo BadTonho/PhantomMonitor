@@ -46,6 +46,9 @@ public sealed class LinuxSensorService : ISensorService
     // Sensores customizados (fórmulas do usuário): avaliados no fim de cada snapshot.
     private readonly CustomSensorEngine? _customSensors;
 
+    // Ajuste por série (P9.1): cadência de amostragem + suavização antes das estatísticas.
+    private readonly SensorTuningEngine? _sensorTuning;
+
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
 
@@ -54,10 +57,11 @@ public sealed class LinuxSensorService : ISensorService
 
     public void SetPaused(bool paused) => Paused = paused;
 
-    public LinuxSensorService(int updateIntervalMs = 1000, CustomSensorEngine? customSensors = null)
+    public LinuxSensorService(int updateIntervalMs = 1000, CustomSensorEngine? customSensors = null, SensorTuningEngine? sensorTuning = null)
     {
         _updateIntervalMs = updateIntervalMs;
         _customSensors = customSensors;
+        _sensorTuning = sensorTuning;
         _timer = new Timer(_ => Update(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
@@ -119,8 +123,12 @@ public sealed class LinuxSensorService : ISensorService
             // min/máx/média da sessão, CSV/SDK/HTTP e inventário enxergam como nativas.
             _customSensors?.Evaluate(data);
 
+            // Ajuste por série (P9.1): cadência + suavização; repetidas pulam as
+            // estatísticas (mesma semântica do serviço Windows).
+            var repeated = _sensorTuning?.Apply(data);
+
             // Estatísticas por série: uma amostra por snapshot publicado.
-            _seriesStats.Commit(data);
+            _seriesStats.Commit(data, repeated);
             data.SeriesStats = _seriesStats.CopySnapshot();
 
             _current = data;

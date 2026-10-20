@@ -68,6 +68,9 @@ public sealed class HardwareMonitorService : ISensorService
     // Sensores customizados (fórmulas do usuário): avaliados no fim de cada snapshot.
     private readonly CustomSensorEngine? _customSensors;
 
+    // Ajuste por série (P9.1): cadência de amostragem + suavização antes das estatísticas.
+    private readonly SensorTuningEngine? _sensorTuning;
+
     // WHEA (paridade HWiNFO): contagem de erros de hardware desde o início da sessão.
     // Consulta ao log de eventos é direção reversa com early-break (a assinatura do
     // log é estável; reler tudo a cada ciclo encheria buffers desnecessariamente).
@@ -93,10 +96,11 @@ public sealed class HardwareMonitorService : ISensorService
         lock (_sync) Paused = paused;
     }
 
-    public HardwareMonitorService(int updateIntervalMs = 1000, CustomSensorEngine? customSensors = null)
+    public HardwareMonitorService(int updateIntervalMs = 1000, CustomSensorEngine? customSensors = null, SensorTuningEngine? sensorTuning = null)
     {
         _updateIntervalMs = Math.Max(100, updateIntervalMs);
         _customSensors = customSensors;
+        _sensorTuning = sensorTuning;
         _timer = new Timer(_ => Update(), null, Timeout.Infinite, Timeout.Infinite);
 
         _computer = new Computer
@@ -260,7 +264,11 @@ public sealed class HardwareMonitorService : ISensorService
         // qualquer série (LHM, FPS/present, NETWORK…) e entram nas estatísticas/exportações.
         _customSensors?.Evaluate(data);
 
-        _seriesStats.Commit(data);
+        // Ajuste por série (P9.1): cadência + suavização; séries repetidas não
+        // entram nas estatísticas (a média da sessão amostra na cadência delas).
+        var repeated = _sensorTuning?.Apply(data);
+
+        _seriesStats.Commit(data, repeated);
         data.SeriesStats = _seriesStats.CopySnapshot();
 
         return data;

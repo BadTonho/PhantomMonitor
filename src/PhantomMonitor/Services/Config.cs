@@ -262,7 +262,6 @@ public sealed class OverlayConfig
     public bool ShowRam { get; set; } = true;
     public bool ShowDisk { get; set; } = true;
     public bool ShowNetwork { get; set; } = false;
-    public bool ShowGpuProcesses { get; set; } = false;
     public bool ShowFans { get; set; } = true;
     public bool ShowMotherboard { get; set; } = false;
     public bool ShowFps { get; set; } = true;

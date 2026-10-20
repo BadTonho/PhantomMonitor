@@ -54,7 +54,6 @@ Configurado via `config.json` ou pelo Editor Visual:
 - `showNetwork` - Linha de rede (`NET`) com ↓/↑ (oculta até o primeiro dado real)
 - `showFans` - Linha de ventoinhas (`FAN`): GPU e sistema (oculta até o primeiro dado real)
 - `showMotherboard` - Linha de placa-mãe (`MB`) com a maior temperatura (oculta até o primeiro dado real)
-- `showGpuProcesses` - **sem efeito no código atual** (chave legada de config, definida mas nunca lida; a lista "Processos ativos na GPU" fica na janela principal independentemente dela)
 - `shownSeries` - Whitelist (padrões wildcard) das séries por instância; padrão `["Gpu*", "FanSpeed*", "Disk*"]` (ver seção "Linhas por Instância" acima)
 - `compactMode` - Modo compacto: reduz paddings, espaçamento das linhas e a altura do gráfico de frametime
 - `accentColor` - Cor de destaque (hex) aplicada à linha do gráfico de frametime e ao contorno do painel

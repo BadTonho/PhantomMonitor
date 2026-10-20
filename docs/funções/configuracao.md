@@ -26,7 +26,6 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 ### OverlayConfig
 - `width` - Largura do overlay em pixels
 - `showCpu/Gpu/Ram/Disk/Network/Fans/Motherboard/Fps/FrametimeGraph` - Visibilidade de cada seção (`showFrametimeGraph` controla a sparkline de frametime dentro da seção FPS)
-- `showGpuProcesses` - Mostrar processos da GPU no overlay
 - `compactMode` - Modo compacto
 - `accentColor` - Cor de destaque (hex, ex: "#1E90FF")
 - `shownSeries` - Whitelist (padrões wildcard) das séries **por instância** exibidas no OSD
@@ -59,5 +58,5 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - `overlay.showNetwork`, `overlay.showFans` e `overlay.showMotherboard` já são consumidos pelo overlay (linhas NET/FAN/MB, com auto-revelação no primeiro dado real) e editáveis pelo Editor Visual.
 - `overlay.compactMode`, `overlay.accentColor` e `overlay.fontSize` são aplicados ao overlay (espaçamento reduzido, cor de destaque e tamanho base da fonte) e editáveis no Editor Visual.
 - `toggleOverlayHotkey` registra um atalho global (Win32 `RegisterHotKey`) que alterna o OSD de qualquer aplicativo — ver [hotkey.md](hotkey.md). Editável na seção "ATALHO GLOBAL" do Editor Visual.
-- `sensors.*` e `overlay.showGpuProcesses` estão reservados no modelo, mas ainda não são consumidos pela interface.
+- `sensors.*` está reservado no modelo, mas ainda não é consumido pela interface.
 - Na carga, `Normalize()` corrige valores fora de faixa: `updateIntervalMs` ≥ 100, `overlayOpacity` 0.1–1.0, `overlay.width` 140–700, `overlay.fontSize` 8–20, `overlayPosition.x/y` em ±5000, `accentColor` inválido volta para `#1E90FF`, `telemetryExport.port` travada em 1024–65535, cooldowns de alerta em 1–3600 s (regra: 0–3600 s), perfis com os mesmos clamps de offset/largura/fonte/opacidade e `appMatch` limpo (sem `.exe`), `customSensors` com máx. 64 fórmulas (inválidas são descartadas com nota em `logs/errors.log`) e `overlay.graphs` com altura 12–120 px, janela 30–1200 amostras e máx. 12 gráficos.

@@ -18,7 +18,6 @@
     "showRam": true,
     "showDisk": true,
     "showNetwork": false,
-    "showGpuProcesses": false,
     "showFans": true,
     "showMotherboard": false,
     "showFps": true,

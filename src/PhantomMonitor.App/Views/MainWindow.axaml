@@ -48,6 +48,7 @@
           <Button Classes="nav" Content="◉   Visão geral" Click="OnOverviewClick" />
           <Button Classes="nav" Content="▦   Inventário" Click="OnInventoryClick" />
           <Button Classes="nav" Content="ƒ   Sensores customizados" Click="OnCustomSensorsClick" />
+          <Button Classes="nav" Content="↻   Ajuste por série" Click="OnSensorTuningClick" />
           <Button Classes="nav" Content="♧   Alertas" Click="OnAlertsClick" />
           <Button Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
           <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="#66758A" FontSize="9" Margin="8,13,0,0" />
@@ -343,6 +344,81 @@
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
           <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveCustomSensorsClick" />
           <TextBlock Grid.Column="1" Text="{Binding CustomSensorsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSensorTuning}">
+      <StackPanel Margin="28,23,28,28" Spacing="16">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Ajuste por série" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Configure a cadência de publicação e a suavização das leituras." Classes="muted" FontSize="11" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          </StackPanel>
+        </Grid>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+          <StackPanel Spacing="7">
+            <TextBlock Text="COMO AS REGRAS SE APLICAM" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Intervalo 0 usa cada tick global; valores positivos são limitados a 100–3.600.000 ms e elevados ao intervalo global quando necessário. Suavização 0 ou 1 desliga o filtro; 2–60 usa uma média móvel das amostras frescas." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock Text="Padrões podem sobrepor várias séries. A última regra correspondente na lista prevalece; use as setas para mudar a ordem. Série ausente fica preservada e será ajustada quando aparecer." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Salvar recria a sessão de sensores e zera as estatísticas. Coleta parada permanece parada; coleta pausada continua pausada." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="4">
+            <TextBlock Text="REGRAS DE AJUSTE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Até 64 regras. Selecione uma série detectada/salva ou digite uma série/padrão." Classes="muted" FontSize="10" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="action" Content="Adicionar regra" Click="OnAddSensorTuningClick" />
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding SensorTuningEditors}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                <StackPanel Spacing="10">
+                  <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding SeriesLabel}" Foreground="#93C5FD" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="↑" IsEnabled="{Binding CanMoveUp}" Click="OnMoveSensorTuningUpClick" />
+                    <Button Grid.Column="2" Content="↓" IsEnabled="{Binding CanMoveDown}" Click="OnMoveSensorTuningDownClick" />
+                    <Button Grid.Column="3" Content="Remover" Click="OnRemoveSensorTuningClick" />
+                  </Grid>
+                  <Grid ColumnDefinitions="1.3*,*" ColumnSpacing="10">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="SÉRIE OU PADRÃO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBox Text="{Binding Series, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Watermark="GpuTemperature ou Gpu*" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="SUGESTÕES DO INVENTÁRIO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <ComboBox ItemsSource="{Binding SeriesOptions}" SelectedItem="{Binding SelectedSeriesOption, Mode=TwoWay}" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="INTERVALO (MS)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBox Text="{Binding IntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Watermark="0 = global" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="SUAVIZAÇÃO (AMOSTRAS)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBox Text="{Binding SmoothingText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Watermark="0 = desativada" />
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSensorTuningsClick" />
+          <TextBlock Grid.Column="1" Text="{Binding SensorTuningMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
       </StackPanel>
     </ScrollViewer>

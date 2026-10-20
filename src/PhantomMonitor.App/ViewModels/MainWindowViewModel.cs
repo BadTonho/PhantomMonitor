@@ -50,6 +50,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isSettings;
     private bool _isAlerts;
     private bool _isCustomSensors;
+    private bool _isSensorTuning;
     private string _updateIntervalText;
     private bool _intervalEdited;
     private bool _logToCsv;
@@ -64,6 +65,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly ObservableCollection<AlertHistoryEntryViewModel> _alertHistory = new();
     private readonly ObservableCollection<CustomSensorEditorViewModel> _customSensorEditors = new();
     private string _customSensorsMessage = "As alterações são aplicadas ao salvar.";
+    private readonly ObservableCollection<SensorTuningEditorViewModel> _sensorTuningEditors = new();
+    private IReadOnlyList<string> _sensorTuningSeriesOptions = [];
+    private string _sensorTuningMessage = "As alterações são aplicadas ao salvar.";
     private AlertRuleEvaluator _alertEvaluator;
     private IReadOnlyList<string> _alertSensorOptions = [];
     private string _alertsCooldownText;
@@ -104,14 +108,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool HasInventorySnapshot { get => _hasInventorySnapshot; private set => Set(ref _hasInventorySnapshot, value); }
     public bool IsWaitingForInventorySnapshot => !HasInventorySnapshot;
     public bool IsOverview { get => _isOverview; private set => Set(ref _isOverview, value); }
-    public bool IsInventory => !IsOverview && !IsSettings && !IsAlerts && !IsCustomSensors;
+    public bool IsInventory => !IsOverview && !IsSettings && !IsAlerts && !IsCustomSensors && !IsSensorTuning;
     public bool IsSettings { get => _isSettings; private set => Set(ref _isSettings, value); }
     public bool IsAlerts { get => _isAlerts; private set => Set(ref _isAlerts, value); }
     public bool IsCustomSensors { get => _isCustomSensors; private set => Set(ref _isCustomSensors, value); }
+    public bool IsSensorTuning { get => _isSensorTuning; private set => Set(ref _isSensorTuning, value); }
     public ObservableCollection<AlertRuleEditorViewModel> AlertRules => _alertRules;
     public ObservableCollection<AlertHistoryEntryViewModel> AlertHistory => _alertHistory;
     public ObservableCollection<CustomSensorEditorViewModel> CustomSensorEditors => _customSensorEditors;
     public string CustomSensorsMessage { get => _customSensorsMessage; private set => Set(ref _customSensorsMessage, value); }
+    public ObservableCollection<SensorTuningEditorViewModel> SensorTuningEditors => _sensorTuningEditors;
+    public IReadOnlyList<string> SensorTuningSeriesOptions { get => _sensorTuningSeriesOptions; private set => Set(ref _sensorTuningSeriesOptions, value); }
+    public string SensorTuningMessage { get => _sensorTuningMessage; private set => Set(ref _sensorTuningMessage, value); }
     public bool HasAlertHistory => AlertHistory.Count > 0;
     public IReadOnlyList<string> AlertSensorOptions { get => _alertSensorOptions; private set => Set(ref _alertSensorOptions, value); }
     public string AlertsCooldownText { get => _alertsCooldownText; set => Set(ref _alertsCooldownText, value); }
@@ -161,6 +169,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
         LoadCustomSensorEditors();
+        LoadSensorTuningEditors();
         RefreshAlertEditor();
         _sensorService = LinuxSensorServiceFactory.Create(_config);
         AttachSensorService(_sensorService);
@@ -213,6 +222,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsSettings = false;
         IsAlerts = false;
         IsCustomSensors = false;
+        IsSensorTuning = false;
         Raise(nameof(IsInventory));
     }
 
@@ -222,6 +232,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsSettings = false;
         IsAlerts = false;
         IsCustomSensors = false;
+        IsSensorTuning = false;
         Raise(nameof(IsInventory));
     }
 
@@ -231,6 +242,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsSettings = true;
         IsAlerts = false;
         IsCustomSensors = false;
+        IsSensorTuning = false;
         Raise(nameof(IsInventory));
     }
 
@@ -240,6 +252,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsSettings = false;
         IsAlerts = true;
         IsCustomSensors = false;
+        IsSensorTuning = false;
         Raise(nameof(IsInventory));
     }
 
@@ -249,6 +262,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsSettings = false;
         IsAlerts = false;
         IsCustomSensors = true;
+        IsSensorTuning = false;
+        Raise(nameof(IsInventory));
+    }
+
+    public void ShowSensorTuning()
+    {
+        IsOverview = false;
+        IsSettings = false;
+        IsAlerts = false;
+        IsCustomSensors = false;
+        IsSensorTuning = true;
         Raise(nameof(IsInventory));
     }
 
@@ -372,6 +396,142 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             string.Equals(pair.First.Name, pair.Second.Name, StringComparison.Ordinal)
             && string.Equals(pair.First.Formula, pair.Second.Formula, StringComparison.Ordinal)
             && string.Equals(pair.First.Unit, pair.Second.Unit, StringComparison.Ordinal));
+
+    public void AddSensorTuning()
+    {
+        if (SensorTuningEditors.Count >= SensorTuningEngine.MaxTunings)
+        {
+            SensorTuningMessage = $"O limite de {SensorTuningEngine.MaxTunings} regras foi atingido.";
+            return;
+        }
+
+        var series = SensorTuningSeriesOptions.FirstOrDefault() ?? "";
+        var tuning = new SensorTuningConfig { Series = series };
+        SensorTuningEditors.Add(new SensorTuningEditorViewModel(tuning, SensorTuningSeriesOptions, SensorTuningEditors.Count));
+        UpdateSensorTuningPositions();
+        SensorTuningMessage = "Regra adicionada. Configure a série e salve para aplicar.";
+    }
+
+    public void RemoveSensorTuning(SensorTuningEditorViewModel editor)
+    {
+        if (!SensorTuningEditors.Remove(editor)) return;
+        UpdateSensorTuningPositions();
+        SensorTuningMessage = "Regra removida. Salve para aplicar a alteração.";
+    }
+
+    public void MoveSensorTuning(SensorTuningEditorViewModel editor, int offset)
+    {
+        var oldIndex = SensorTuningEditors.IndexOf(editor);
+        var newIndex = oldIndex + offset;
+        if (oldIndex < 0 || newIndex < 0 || newIndex >= SensorTuningEditors.Count) return;
+
+        SensorTuningEditors.Move(oldIndex, newIndex);
+        UpdateSensorTuningPositions();
+        SensorTuningMessage = "Ordem alterada. A última regra correspondente à série terá prioridade.";
+    }
+
+    public void SaveSensorTunings()
+    {
+        if (SensorTuningEditors.Count > SensorTuningEngine.MaxTunings)
+        {
+            SensorTuningMessage = $"O limite é de {SensorTuningEngine.MaxTunings} regras.";
+            return;
+        }
+
+        var candidate = new List<SensorTuningConfig>(SensorTuningEditors.Count);
+        for (var index = 0; index < SensorTuningEditors.Count; index++)
+        {
+            var editor = SensorTuningEditors[index];
+            var series = editor.Series.Trim();
+            if (string.IsNullOrWhiteSpace(series))
+            {
+                SensorTuningMessage = $"Informe uma série ou padrão para a regra {index + 1}.";
+                return;
+            }
+
+            if (!int.TryParse(editor.IntervalText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intervalMs)
+                || intervalMs < 0
+                || (intervalMs > 0 && intervalMs is < 100 or > 3_600_000))
+            {
+                SensorTuningMessage = $"O intervalo da regra {index + 1} deve ser 0 ou entre 100 e 3.600.000 ms.";
+                return;
+            }
+
+            if (!int.TryParse(editor.SmoothingText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var smoothing)
+                || smoothing is < 0 or > SensorTuningEngine.MaxSmoothing)
+            {
+                SensorTuningMessage = $"A suavização da regra {index + 1} deve ficar entre 0 e {SensorTuningEngine.MaxSmoothing}.";
+                return;
+            }
+
+            if (intervalMs > 0)
+                intervalMs = Math.Max(_config.UpdateIntervalMs, Math.Clamp(intervalMs, 100, 3_600_000));
+            candidate.Add(new SensorTuningConfig { Series = series, IntervalMs = intervalMs, Smoothing = smoothing });
+        }
+
+        if (SensorTuningConfigsEqual(_config.SensorTunings, candidate))
+        {
+            SensorTuningMessage = "Nenhuma alteração para salvar.";
+            return;
+        }
+
+        var previous = _config.SensorTunings;
+        var wasRunning = IsRunning;
+        var wasPaused = IsPaused;
+        _config.SensorTunings = candidate;
+        if (!_config.Save(ConfigPaths.ConfigFile))
+        {
+            _config.SensorTunings = previous;
+            SensorTuningMessage = "Não foi possível salvar o config.json. As regras em execução não foram alteradas.";
+            return;
+        }
+
+        ReplaceSensorService();
+        LoadSensorTuningEditors();
+        SensorTuningMessage = wasRunning
+            ? wasPaused
+                ? "Ajustes salvos e aplicados. Coleta continua pausada; as estatísticas da sessão foram zeradas."
+                : "Ajustes salvos e aplicados; as estatísticas da sessão foram zeradas."
+            : "Ajustes salvos e aplicados à próxima coleta.";
+    }
+
+    private void LoadSensorTuningEditors()
+    {
+        RefreshSensorTuningSeriesOptions();
+        SensorTuningEditors.Clear();
+        for (var index = 0; index < _config.SensorTunings.Count; index++)
+            SensorTuningEditors.Add(new SensorTuningEditorViewModel(_config.SensorTunings[index], SensorTuningSeriesOptions, index));
+        UpdateSensorTuningPositions();
+    }
+
+    private void RefreshSensorTuningSeriesOptions()
+    {
+        var series = new HashSet<string>(_config.SensorTunings.Select(tuning => tuning.Series), StringComparer.OrdinalIgnoreCase);
+        foreach (var group in InventoryGroups)
+            foreach (var row in group.Rows.Where(row => row.IsAvailable))
+                series.Add(row.Key);
+
+        var options = series.Where(value => !string.IsNullOrWhiteSpace(value))
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (SensorTuningSeriesOptions.SequenceEqual(options, StringComparer.OrdinalIgnoreCase)) return;
+
+        SensorTuningSeriesOptions = options;
+        foreach (var editor in SensorTuningEditors)
+            editor.SeriesOptions = options;
+    }
+
+    private void UpdateSensorTuningPositions()
+    {
+        for (var index = 0; index < SensorTuningEditors.Count; index++)
+            SensorTuningEditors[index].SetPosition(index, SensorTuningEditors.Count);
+    }
+
+    private static bool SensorTuningConfigsEqual(IReadOnlyList<SensorTuningConfig> left, IReadOnlyList<SensorTuningConfig> right) =>
+        left.Count == right.Count && left.Zip(right).All(pair =>
+            string.Equals(pair.First.Series, pair.Second.Series, StringComparison.Ordinal)
+            && pair.First.IntervalMs == pair.Second.IntervalMs
+            && pair.First.Smoothing == pair.Second.Smoothing);
 
     public void AddAlertRule()
     {
@@ -678,6 +838,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed || !_started) return;
 
         InventoryGroups = SensorInventoryBuilder.Build(data);
+        RefreshSensorTuningSeriesOptions();
         RefreshAlertEditor();
         HasInventorySnapshot = true;
         Raise(nameof(IsWaitingForInventorySnapshot));

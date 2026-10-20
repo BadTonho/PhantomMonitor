@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using PhantomMonitor.Models;
 
 namespace PhantomMonitor.Services;
@@ -40,7 +41,23 @@ public sealed class AppConfig
     public List<CustomSensorConfig> CustomSensors { get; set; } = [];
 
     /// <summary>Cadência de amostragem e suavização por série (P9.1; ver SensorTuningEngine).</summary>
+    [JsonPropertyName("sensorTuning")]
     public List<SensorTuningConfig> SensorTunings { get; set; } = [];
+
+    // Builds predating the Avalonia editor serialized this property using the
+    // CLR name in camel case (`sensorTunings`). Read that spelling for
+    // compatibility, but write the documented canonical key above.
+    [JsonPropertyName("sensorTunings")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<SensorTuningConfig>? LegacySensorTunings
+    {
+        get => null;
+        set
+        {
+            if (value is not null && (SensorTunings?.Count ?? 0) == 0)
+                SensorTunings = value;
+        }
+    }
 
     /// <summary>Perfis por aplicativo do OSD (aplicam overrides quando o executável em foco casa).</summary>
     public List<OverlayProfile> Profiles { get; set; } = [];

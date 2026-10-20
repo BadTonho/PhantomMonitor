@@ -69,8 +69,24 @@ atravessa o jitter.
 - O engine não distingue natureza da série: cabe ao config não suavizar o que
   não é leitura instantânea.
 
-## Editor visual
+## Página Avalonia
 
-Como templates e gráficos, o ajuste por série é **config-only**: o Editor
-Visual não expõe `sensorTuning`; salvar/aplicar config recria o overlay e os
-services já nascem com o engine novo.
+No Linux, a página **Ajuste por série** edita a lista `sensorTuning` sem edição
+manual do JSON. É possível selecionar uma série detectada no inventário, manter
+um alvo já salvo mesmo quando está ausente no momento, ou digitar uma chave ou
+padrão manual como `Gpu*` e `CpuTemperature#*`. Padrões sem correspondência são
+preservados para séries que apareçam depois.
+
+O editor aceita até 64 regras. `intervalMs` pode ser `0` (tick global) ou um
+valor positivo entre 100 e 3.600.000 ms; intervalos positivos abaixo de
+`updateIntervalMs` são elevados ao tick global. `smoothing` aceita 0–60; 0 e 1
+desativam a média móvel e 2–60 definem sua janela. A interface permite subir e
+descer regras. Como no engine, a última regra correspondente vence quando há
+sobreposição.
+
+**Salvar e aplicar** grava com `AppConfig.Save()` e recria o serviço Linux para
+usar as regras novas. Uma falha de gravação preserva a configuração em execução.
+A coleta parada continua parada; a coleta pausada continua pausada. Quando a
+coleta está ativa, a recriação inicia uma nova sessão de sensores e zera suas
+estatísticas. O WPF continua consumindo o mesmo bloco `sensorTuning` do
+`config.json`.

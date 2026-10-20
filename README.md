@@ -9,6 +9,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Linhas personalizadas no OSD (templates)**: texto livre com placeholders `{Chave}`/`{Chave:N}`/wildcard resolvidos a cada ciclo; linha invisível até todos os sensores existirem (`overlay.templates`)
 - **Sensores customizados (fórmulas)**: o Avalonia oferece editor visual para criar, remover e reordenar séries derivadas (`Custom#i`), com validação e aplicação ao salvar; fórmulas usam operadores `+ - * /`, funções `min/max/abs` e referências por chave/wildcard/nome, e entram nas estatísticas, CSV/JSON, SDK e alertas como séries nativas (`customSensors`)
 - **Cadência e suavização por série**: polling por dono da série (`sensorTuning`: `intervalMs` por regra — entre amostras a série repete o último valor, estatísticas só contam amostras frescas) + filtro de média móvel (`smoothing` até 60 amostras) para matar jitter de temperatura/uso sem amansar as médias
+- **Editor de ajuste por série**: no Avalonia, escolha séries do inventário ou digite padrões, configure intervalo e suavização, reordene regras sobrepostas e aplique sem editar o `config.json`
 - **Gráficos de histórico por série no OSD**: sparklines configuráveis (`overlay.graphs`) para qualquer série — resolução por chave/wildcard/nome, janela circular própria (30–1200 amostras), eixo auto ou fixo, cor por gráfico; renderizados logo antes das linhas de template
 - **Perfis por aplicativo**: overrides de posição/largura/fonte/acento/séries por app — e `visible: false` para esconder o OSD completo em jogos específicos
 - **FPS 100% independente de terceiros**:
@@ -90,12 +91,13 @@ Phantom/
    dotnet run --project src/PhantomMonitor.App
    ```
 3. Abra **Inventário** na barra lateral para consultar os valores recebidos e os tipos de sensor sem leitura disponível.
-4. Para coletar FPS, inicie um jogo Vulkan com a camada ativada (ex.: opções de inicialização da Steam):
+4. Use **Ajuste por série** para editar as regras `sensorTuning`: selecione séries do inventário ou digite padrões como `Gpu*`, ajuste intervalo/suavização e reordene regras sobrepostas.
+5. Para coletar FPS, inicie um jogo Vulkan com a camada ativada (ex.: opções de inicialização da Steam):
    ```bash
    ENABLE_PHANTOM_OVERLAY=1 %command%
    ```
-5. A gravação é controlada pelas opções `logToCsv`, `logToJson` e `logToJsonJournal` do `config.json`. No Linux, os arquivos ficam em `~/.local/share/PhantomMonitor/logs/` (ou no diretório definido por `XDG_DATA_HOME`).
-6. Use **Configurações** na barra lateral para alterar o intervalo de coleta e os formatos de gravação pela interface.
+6. A gravação é controlada pelas opções `logToCsv`, `logToJson` e `logToJsonJournal` do `config.json`. No Linux, os arquivos ficam em `~/.local/share/PhantomMonitor/logs/` (ou no diretório definido por `XDG_DATA_HOME`).
+7. Use **Configurações** na barra lateral para alterar o intervalo global de coleta e os formatos de gravação pela interface.
 
 > [!IMPORTANT]
 > O dashboard Avalonia é, nesta primeira versão, o frontend Linux. O WPF permanece como o frontend Windows durante a migração; a coleta Windows ainda não foi ligada ao app Avalonia. No Linux, a UI mostra FPS quando um jogo Vulkan habilita a camada Phantom. O overlay de jogo ainda não faz parte do frontend Avalonia.
@@ -132,7 +134,7 @@ Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 ## Build e notas
 
 - `PhantomMonitor.App` usa Avalonia e `PhantomMonitor.Core` (`net10.0`) para compartilhar modelos e serviços; `PhantomMonitor` (WPF) continua sendo o frontend Windows durante a transição.
-- O dashboard Avalonia inclui visão geral, inventário, editor de sensores customizados, configurações de coleta e logs, além de edição de alertas com notificações internas e scripts Linux. Overlay, bandeja, som e desligamento continuam disponíveis somente no WPF.
+- O dashboard Avalonia inclui visão geral, inventário, editor de sensores customizados, ajuste por série, configurações de coleta e logs, além de edição de alertas com notificações internas e scripts Linux. Overlay, bandeja, som e desligamento continuam disponíveis somente no WPF.
 - Os fontes de `PhantomSensorLib` (C++, stub) ficam no repositório como extensão futura, **sem pipeline de build ativo** — nenhum código consome a DLL hoje (ver [sensor-nativo.md](docs/funções/sensor-nativo.md)).
 - O FPS no Windows requer **Administrador** (PresentMon/ETW). Erros internos ficam em `logs/errors.log`.
 - O `PhantomVulkanLayer` é compilado via CMake/`install_layer.sh` e não faz parte do `PhantomMonitor.slnx`.

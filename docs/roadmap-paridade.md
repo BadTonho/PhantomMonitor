@@ -121,6 +121,9 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
   notas "início da sessão"/"reset" — mesma política append-only do CSV) — `a72c0fb`
 - **P8.4** Identidade dos monitores via EDID/WMI (aba "Monitores" do inventário +
   `monitors` no snapshot JSON; PnP/Modelo/Série/Diagonal/Fabricação/Primário) — `bb8342f`
+- **P8.5** Gráficos de histórico por série no OSD (`overlay.graphs`: sparkline
+  com buffer circular próprio, eixo auto/fixo, cor por gráfico; reusa o buffer do
+  frametime e a resolução das templates; container sempre antes das templates) — `cd197ed`
 
 ## Deliberadamente NÃO planejado (decisões já tomadas)
 
@@ -172,7 +175,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 | Contadores de erros de hardware **WHEA** (incl. device PCIe com falha) | A (médio) | ✅ Fechado pelo **P8.2** (`WheaErrorCount`: provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão, EventLogQuery reversa com early-break e cache de 10 s; Windows apenas) |
 | Sensores **customizados pelo usuário** (fórmulas sobre outros sensores) | A (médio) | ✅ Fechado pelo **P8.1** (`customSensors` → engine `CustomSensorEngine` com AST compilada; série `Custom#i` entra em stats/CSV/SDK/alertas; templates do OSD resolvem por nome) |
 | Log de sensores em **JSON/YAML** | A (menor) | ✅ Fechado pelo **P8.3** para JSON (journal JSONL contínuo com notas de sessão — `JsonJournalLogger` e `logToJsonJournal`); YAML não planejado (consumidores práticos preferem JSONL/jq) |
-| OSD próprio da suíte de hardware: gráfico de histórico no OSD, cor de fundo, múltiplos valores por linha, eixo com min/max global | A (menor) | Nosso overlay (P1/P3) cobre texto/séries; gráfico embutido e cor de fundo = melhorias de UI |
+| OSD próprio da suíte de hardware: gráfico de histórico no OSD, cor de fundo, múltiplos valores por linha, eixo com min/max global | A (menor) | 🟡 **P8.5 fechou o gráfico** (`overlay.graphs`: sparkline por série, janela circular própria, eixo **auto ou fixo** `min`/`max` por gráfico, cor por gráfico — `cd197ed`); cor de fundo do painel e eixo global compartilhado continuam como melhorias de UI |
 | Alerts por e-mail/webhook e "destinos de log" extras | A | Diferencial menor; o script externo já permite enviar — decidir depois |
 | Polling **multithread/assíncrono** de sensores | A (caveat) | LHM é sequencial por design; paralelizar entre hardwares exige testes de concorrência no driver |
 | Identidade dos monitores (fabricante/modelo via EDID); chroma/HDR/VRR | A-parcial | ✅ Fechado pelo **P8.4** no EDID (aba "Monitores" no inventário: PnP/Modelo/Serial/diagonal/fabricação/primário via `WmiMonitorID`+`WmiMonitorBasicDisplayParams`, cache 60 s + snapshot JSON); flags HDR/VRR exigem descriptor completo (P7) |

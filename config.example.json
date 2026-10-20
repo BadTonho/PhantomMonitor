@@ -2,6 +2,7 @@
   "updateIntervalMs": 1000,
   "logToCsv": false,
   "logToJson": true,
+  "logToJsonJournal": false,
   "showOverlay": false,
   "toggleOverlayHotkey": "",
   "pauseMonitorHotkey": "Ctrl+Alt+P",

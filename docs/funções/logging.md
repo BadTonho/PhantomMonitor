@@ -36,6 +36,29 @@ consome só as colunas numéricas ignora a linha. Na prática é gerado pelo
 **reset de estatísticas** (bandeja/inventário) com o rótulo `reset (<origem>)`.
 Só tem efeito com o CSV já aberto (a partir da primeira linha de valores).
 
+## JsonJournalLogger (journal JSON contínuo, JSONL)
+
+Journal **append-only** em `logs/sensors_YYYYMMDD_HHmmss.jsonl`: **uma linha por
+evento**, custo de gravação constante (nada é reescrito a cada ciclo, diferente
+do snapshot sensors_latest.json) — indicado para benchmarks longos e replay.
+
+```json
+{"kind":"meta","ts":"...","labels":{"GpuCore":"GPU Core (Usage)","Custom#1":"DeltaTemp (°C)"}}
+{"kind":"sample","ts":"...","series":{"GpuCore":12.3,"GpuCore#1":8.1,"Custom#1":7.7}}
+{"kind":"note","ts":"...","text":"reset (bandeja)"}
+```
+
+- **`meta`**: única linha de cabeçalho (na primeira amostra) com o mapa
+  série→rótulo do ciclo; amostras seguintes carregam só chave→valor.
+- **`sample`**: uma por snapshot com TODAS as séries presentes (canônicas +
+  por instância + `Custom#i`).
+- **`note`**: marcadores da sessão — **início** ("início da sessão") e **resets
+  de estatísticas** (`"reset (<origem>)"`, mesmos gatilhos do `#marker` do CSV).
+- Escrita UTF-8 com flush imediato; qualquer falha de I/O cai no `errors.log`
+  (`JsonJournal.Write`) e nunca derruba o monitoramento.
+- Consumo típico: `Get-Content -Wait logs\sensors_*.jsonl -Tail 1` (tail
+  client) ou `jq -s` sobre o arquivo fechado no fim da sessão.
+
 ## ErrorLog (`logs/errors.log`)
 
 Registro de erros internos (substitui os antigos `catch` vazios). Fica em `logs/` ao lado do executável.
@@ -54,5 +77,6 @@ Também é o destino de todos os tratadores globais de exceção do app:
 Controlado pelo `config.json`:
 - `logToCsv` - Ativar logging CSV
 - `logToJson` - Ativar logging JSON
+- `logToJsonJournal` - Ativar journal JSON contínuo (JSONL)
 
 Também pode ser ativado via checkboxes na sidebar da interface principal.

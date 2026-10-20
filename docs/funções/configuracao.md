@@ -8,6 +8,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `updateIntervalMs` - Intervalo de atualização em milissegundos (padrão: 1000)
 - `logToCsv` - Habilitar logging em CSV
 - `logToJson` - Habilitar logging em JSON
+- `logToJsonJournal` - Journal JSON contínuo (JSONL): uma linha por amostra em `logs/sensors_*.jsonl` + notas nos marcadores de sessão (início/resets) — ver [logging.md](logging.md)
 - `showOverlay` - Mostrar overlay na inicialização
 - `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex: "Ctrl+Shift+O"; vazio = desativado)
 - `pauseMonitorHotkey` - 2º atalho global (P6.7): pausa/retoma o monitoramento (padrão `Ctrl+Alt+P`; vazio = desativado; estado de pausa não persiste) — ver [hotkey.md](hotkey.md) e [hardware-monitor.md](hardware-monitor.md)

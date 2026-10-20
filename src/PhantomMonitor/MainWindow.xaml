@@ -87,6 +87,9 @@
                                   Checked="OnLoggingToggled" Unchecked="OnLoggingToggled"/>
                         <CheckBox x:Name="JsonToggle" Content="Exportar JSON"
                                   Checked="OnLoggingToggled" Unchecked="OnLoggingToggled"/>
+                        <CheckBox x:Name="JournalToggle" Content="Journal JSON (jsonl)"
+                                  ToolTip="Journal contínuo: uma linha por amostra + notas de sessão/reset (logs/sensors_*.jsonl). Rendimento constante — indicado para benchmarks e replay."
+                                  Checked="OnLoggingToggled" Unchecked="OnLoggingToggled"/>
                         <CheckBox x:Name="StartupToggle" Content="Iniciar com o Windows"
                                   Checked="OnStartupToggled" Unchecked="OnStartupToggled"/>
                     </StackPanel>

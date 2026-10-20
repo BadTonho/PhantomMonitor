@@ -9,6 +9,14 @@ public sealed class AppConfig
     public int UpdateIntervalMs { get; set; } = 1000;
     public bool LogToCsv { get; set; } = false;
     public bool LogToJson { get; set; } = true;
+
+    /// <summary>
+    /// Journal JSON contínuo (JSONL): uma linha por amostra em
+    /// <c>logs/sensors_*.jsonl</c>, com linhas "note" nos marcadores da sessão
+    /// (início e resets de estatística) — replay de benchmarks sem reescrever
+    /// o snapshot por inteiro. Ver JsonJournalLogger e docs/logging.md.
+    /// </summary>
+    public bool LogToJsonJournal { get; set; } = false;
     public bool ShowOverlay { get; set; } = true;
     public string ToggleOverlayHotkey { get; set; } = "";
 

@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private OverlayWindow? _overlay;
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
+    private JsonJournalLogger? _jsonJournal;
     private readonly HotkeyService _hotkeys = new(HotkeyService.DefaultHotkeyId);
 
     /// <summary>2º atalho global (P6.7): pausar/retomar o monitoramento em runtime.</summary>
@@ -43,6 +44,7 @@ public partial class MainWindow : Window
 
         CsvToggle.IsChecked = _config.LogToCsv;
         JsonToggle.IsChecked = _config.LogToJson;
+        JournalToggle.IsChecked = _config.LogToJsonJournal;
         OverlayToggle.IsChecked = _config.ShowOverlay;
 
         if (!IsRunningAsAdmin())
@@ -260,6 +262,7 @@ public partial class MainWindow : Window
     {
         _sensorService?.ResetSeriesStats();
         _csvLogger?.WriteMarker($"reset ({source})");
+        _jsonJournal?.WriteNote($"reset ({source})");
 
         StatusText.Text = "Estatísticas resetadas";
         StatusText.Foreground = TryFindResource("TextSecondaryBrush") as Brush;
@@ -307,6 +310,14 @@ public partial class MainWindow : Window
             _jsonLogger = new JsonLogger(path);
         }
 
+        // Journal JSON contínuo (JSONL, opt-in): uma linha por amostra + notas.
+        if (JournalToggle.IsChecked == true)
+        {
+            var path = Path.Combine(_logDir, $"sensors_{DateTime.Now:yyyyMMdd_HHmmss}.jsonl");
+            _jsonJournal = new JsonJournalLogger(path);
+            _jsonJournal.WriteNote("início da sessão");
+        }
+
         // SDK de telemetria (memória compartilhada): sempre ativo junto ao monitoramento —
         // consumidores externos (OBS, AHK, dashboards) leem em tempo real sem parse.
         _telemetrySdk = new TelemetrySdkWriter();
@@ -341,11 +352,13 @@ public partial class MainWindow : Window
         _overlay?.Close();
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
+        _jsonJournal?.Dispose();
 
         _sensorService = null;
         _overlay = null;
         _csvLogger = null;
         _jsonLogger = null;
+        _jsonJournal = null;
         _telemetrySdk?.Dispose();
         _telemetrySdk = null;
         _telemetryHttp?.Dispose();
@@ -386,6 +399,7 @@ public partial class MainWindow : Window
 
         _config.LogToCsv = CsvToggle.IsChecked == true;
         _config.LogToJson = JsonToggle.IsChecked == true;
+        _config.LogToJsonJournal = JournalToggle.IsChecked == true;
         SaveConfig();
         // Os loggers são (re)criados pelo BeginMonitoring na próxima sessão de monitoramento.
     }
@@ -620,6 +634,7 @@ public partial class MainWindow : Window
         }
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
+        _jsonJournal?.Dispose();
         _overlay?.Close();
         base.OnClosed(e);
     }

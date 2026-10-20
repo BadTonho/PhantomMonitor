@@ -19,7 +19,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Erros de hardware WHEA**: série `WheaErrorCount` (Windows) contando eventos do provedor `Microsoft-Windows-WHEA-Logger` desde o início da sessão — combinável com alertas e exportações
 - **Estatísticas por série**: mín/máx/média da sessão para **qualquer série** (canônica e por instância), com reset pela bandeja/inventário e ranking na janela de inventário
 - **Alertas com ações**: Regras por sensor (acima/abaixo de um limiar) com popup, som, script externo e desligamento agendado (com trava de segurança `allowShutdown`)
-- **Logging**: Exportação contínua para CSV e JSON — CSV aceita **marcadores `#marker`** para delimitar segmentos de sessão/benchmark
+- **Logging**: Exportação contínua para CSV e JSON — CSV aceita **marcadores `#marker`** para delimitar segmentos de sessão/benchmark; **journal JSON contínuo (JSONL)** opcional com uma linha por amostra e notas automáticas (início de sessão/reset) (`logToJsonJournal`)
 - **SDK de telemetria**: memória compartilhada sempre ativa + **exportador HTTP opt-in** (`telemetryExport`) — consuma o snapshot em JSON (mesmo payload do `sensors_latest.json`) via `GET /values` no loopback ou LAN (ver `docs/telemetry-sdk.md`)
 - **Visual Clean**: Design profissional refinado (paleta Slate Dark), eliminando efeitos excessivos de neon
 - **Configurável**: `config.json` com fallback automático para `config.example.json`

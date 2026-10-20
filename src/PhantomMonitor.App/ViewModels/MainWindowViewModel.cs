@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
+using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 using PhantomMonitor.Services.Linux;
@@ -69,6 +70,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _alertToastMessage = "";
     private DispatcherTimer? _alertToastTimer;
     private bool _alertEditorInitialized;
+    private readonly LinuxDesktopNotificationService? _desktopNotificationService;
+    private bool _windowActive;
+    private bool _windowMinimized;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -148,6 +152,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _alertsCooldownText = _config.Alerts.CooldownSeconds.ToString(CultureInfo.CurrentCulture);
         _alertsEnabled = _config.Alerts.Enabled;
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
+        _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
         RefreshAlertEditor();
         _sensorService = LinuxSensorServiceFactory.Create(_config);
         AttachSensorService(_sensorService);
@@ -354,6 +359,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _alertToastTimer.Tick -= OnAlertToastTimerTick;
         _alertToastTimer.Tick += OnAlertToastTimerTick;
         _alertToastTimer.Start();
+
+        if (!_windowActive || _windowMinimized)
+            _ = SendDesktopNotificationAsync(trigger.Message);
+    }
+
+    public void SetWindowPresentationState(bool isActive, bool isMinimized)
+    {
+        _windowActive = isActive;
+        _windowMinimized = isMinimized;
+    }
+
+    private async Task SendDesktopNotificationAsync(string message)
+    {
+        if (_desktopNotificationService is null || _disposed) return;
+        try
+        {
+            await _desktopNotificationService.NotifyAsync(message);
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("LinuxDesktopNotification", ex);
+        }
     }
 
     private void OnAlertToastTimerTick(object? sender, EventArgs e)
@@ -651,6 +678,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         DisposeLoggers();
         _alertToastTimer?.Stop();
+        _desktopNotificationService?.Dispose();
         _sensorService.Dispose();
     }
 }

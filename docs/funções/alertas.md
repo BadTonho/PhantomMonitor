@@ -5,7 +5,8 @@ Regras de alerta sobre sensores avaliadas a cada snapshot (mesma cadência do mo
 ## Frontends
 
 - **Avalonia/Linux:** a página **Alertas** permite ativar a avaliação, ajustar o cooldown global e criar, editar, ativar ou remover regras. O seletor combina séries detectadas com sensores já usados em regras salvas, mesmo que estejam temporariamente ausentes. Limite, comparação, índice da série, cooldown e mensagem são configuráveis. As alterações só entram em vigor depois de salvar `config.json`.
-- O Avalonia exibe uma notificação interna por 6 segundos quando `popup` está ativo e mantém os 50 disparos mais recentes durante a execução do app. Um novo aviso substitui o visível; todos continuam no histórico. Regras sem `popup` ainda aparecem no histórico.
+- O Avalonia exibe o toast interno por 6 segundos quando `popup` está ativo e mantém os 50 disparos mais recentes durante a execução do app. Quando a janela está inativa ou minimizada, envia também uma notificação nativa pelo serviço freedesktop `org.freedesktop.Notifications` na sessão D-Bus; o aviso mais recente substitui o anterior. Regras sem `popup` ainda aparecem no histórico.
+- Se a sessão D-Bus ou o serviço de notificações não estiver disponível, o erro é registrado e a coleta, o toast interno e o histórico continuam funcionando. Não é necessário instalar `notify-send`.
 - Som, scripts e desligamento são preservados ao salvar no Linux, mas não são executados pelo Avalonia. No WPF, as ações documentadas abaixo continuam disponíveis.
 
 ## Como funciona

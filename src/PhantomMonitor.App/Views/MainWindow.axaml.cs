@@ -10,9 +10,23 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Opened += (_, _) => ViewModel.Start();
+        Opened += (_, _) =>
+        {
+            RefreshWindowPresentationState();
+            ViewModel.Start();
+        };
+        Activated += (_, _) => RefreshWindowPresentationState();
+        Deactivated += (_, _) => RefreshWindowPresentationState();
+        PropertyChanged += (_, args) =>
+        {
+            if (args.Property == Window.WindowStateProperty)
+                RefreshWindowPresentationState();
+        };
         Closed += (_, _) => ViewModel.Dispose();
     }
+
+    private void RefreshWindowPresentationState() =>
+        ViewModel.SetWindowPresentationState(IsActive, WindowState == Avalonia.Controls.WindowState.Minimized);
 
     private void OnStartClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Start();
     private void OnPauseClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.TogglePause();

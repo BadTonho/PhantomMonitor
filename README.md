@@ -20,7 +20,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Estatísticas avançadas de FPS**: instantâneo, médio, mínimo, máximo, 1% Low, 0.1% Low e **percentis puros 1st/99th de FPS e frametime**
 - **Erros de hardware WHEA**: série `WheaErrorCount` (Windows) contando eventos do provedor `Microsoft-Windows-WHEA-Logger` desde o início da sessão — combinável com alertas e exportações
 - **Estatísticas por série**: mín/máx/média da sessão para **qualquer série** (canônica e por instância), com reset pela bandeja/inventário e ranking na janela de inventário
-- **Alertas por sensor**: Regras acima/abaixo de um limite com cooldown e seleção por instância; o WPF oferece popup, som, scripts e desligamento protegido por `allowShutdown`, enquanto o dashboard Avalonia oferece notificações internas e histórico
+- **Alertas por sensor**: Regras acima/abaixo de um limite com cooldown e seleção por instância; o WPF oferece popup, som, scripts e desligamento protegido por `allowShutdown`, enquanto o Avalonia oferece toast interno, histórico e notificações nativas do Linux quando a janela está em segundo plano
 - **Logging**: Exportação contínua para CSV e JSON — CSV aceita **marcadores `#marker`** para delimitar segmentos de sessão/benchmark; **journal JSON contínuo (JSONL)** opcional com uma linha por amostra e notas automáticas (início de sessão/reset) (`logToJsonJournal`)
 - **SDK de telemetria**: memória compartilhada sempre ativa + **exportador HTTP opt-in** (`telemetryExport`) — consuma o snapshot em JSON (mesmo payload do `sensors_latest.json`) via `GET /values` no loopback ou LAN (ver `docs/telemetry-sdk.md`)
 - **Visual Clean**: Design profissional refinado (paleta Slate Dark), eliminando efeitos excessivos de neon

@@ -4,10 +4,10 @@ Regras de alerta sobre sensores avaliadas a cada snapshot (mesma cadência do mo
 
 ## Frontends
 
-- **Avalonia/Linux:** a página **Alertas** permite ativar a avaliação, ajustar o cooldown global e criar, editar, ativar ou remover regras. O seletor combina séries detectadas com sensores já usados em regras salvas, mesmo que estejam temporariamente ausentes. Limite, comparação, índice da série, cooldown e mensagem são configuráveis. As alterações só entram em vigor depois de salvar `config.json`.
+- **Avalonia/Linux:** a página **Alertas** permite ativar a avaliação, ajustar o cooldown global e criar, editar, ativar ou remover regras. O seletor combina séries detectadas com sensores já usados em regras salvas, mesmo que estejam temporariamente ausentes. Limite, comparação, índice da série, cooldown, mensagem, script e argumentos são configuráveis. As alterações só entram em vigor depois de salvar `config.json`.
 - O Avalonia exibe o toast interno por 6 segundos quando `popup` está ativo e mantém os 50 disparos mais recentes durante a execução do app. Quando a janela está inativa ou minimizada, envia também uma notificação nativa pelo serviço freedesktop `org.freedesktop.Notifications` na sessão D-Bus; o aviso mais recente substitui o anterior. Regras sem `popup` ainda aparecem no histórico.
 - Se a sessão D-Bus ou o serviço de notificações não estiver disponível, o erro é registrado e a coleta, o toast interno e o histórico continuam funcionando. Não é necessário instalar `notify-send`.
-- Som, scripts e desligamento são preservados ao salvar no Linux, mas não são executados pelo Avalonia. No WPF, as ações documentadas abaixo continuam disponíveis.
+- Som e desligamento são preservados ao salvar no Linux, mas não são executados pelo Avalonia. Scripts configurados são iniciados quando a regra dispara; isso não depende de `popup`. No WPF, o comportamento atual das ações permanece disponível.
 
 ## Como funciona
 
@@ -72,6 +72,7 @@ seguem o número do sensor no hardware). A mensagem usa o sensor com sufixo
 - **popup**: toast no canto inferior direito (`AlertPopupWindow`) — topmost, não rouba foco, fecha em 6 s ou com um clique; um novo alerta substitui o anterior.
 - **sound**: bipe de aviso do sistema (`MessageBeep`, ícone de exclamação).
 - **script**: executa o arquivo configurado (`.exe`/`.bat`/`.cmd`/`.ps1` via associação padrão) com os argumentos informados; os placeholders `{value}` e `{sensor}` nos argumentos são substituídos com **cultura invariante** (ponto decimal — o `cmd` trata a vírgula como separador de argumentos).
+- **script no Avalonia/Linux**: arquivos `.sh` são executados por `/bin/sh` e não precisam de permissão de execução; outros arquivos são iniciados diretamente e precisam ter ao menos um bit de execução Unix. O caminho pode ser digitado ou escolhido pelo seletor de arquivos. Argumentos são separados por espaços; aspas simples/duplas agrupam um argumento e são removidas, e `\` escapa o caractere seguinte. `{value}` é substituído por valor com uma casa decimal e ponto decimal; `{sensor}` pelo nome da série. Os argumentos são passados sem shell, então pipes, redirecionamentos, expansões e encadeamento de comandos não são interpretados. Aspas não fechadas ou `\` final impedem a execução e são registrados.
 - **shutdown**: agenda `shutdown /s /t 60 /c "<mensagem>"` (60 s de carência; cancele com `shutdown /a`). **Só executa se `allowShutdown=true`** — caso contrário registra o motivo em `logs/errors.log` e ignora.
 
 ## Mensagem
@@ -82,11 +83,11 @@ seguem o número do sensor no hardware). A mensagem usa o sensor com sufixo
 ## Diagnóstico
 
 - Cada disparo é registrado em `logs/errors.log` (`[AlertService]`) com sensor, condição e valor.
-- Script inexistente, ação `shutdown` bloqueada e falhas de execução são registrados sem interromper o monitoramento.
+- Script inexistente, arquivo não executável, argumentos malformados, falhas ao iniciar e ação `shutdown` bloqueada são registrados sem interromper o monitoramento.
 - O Editor de Overlay salva o `config.json` preservando o bloco `alerts`.
 
 ## Limites conhecidos
 
-- Sem UI de edição: as regras são configuradas no `config.json`.
+- O Avalonia não executa ações de som e desligamento; essas configurações são preservadas para compatibilidade com o WPF.
 - A avaliação usa o valor do snapshot no momento da atualização; picos entre amostras não são capturados.
 - O desligamento depende do `shutdown.exe` do Windows (políticas restritas podem impedi-lo; a falha fica no log).

@@ -15,6 +15,8 @@ public sealed class AlertRuleEditorViewModel : INotifyPropertyChanged
     private bool _enabled;
     private bool _popup;
     private string _message;
+    private string _script;
+    private string _scriptArguments;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -43,6 +45,8 @@ public sealed class AlertRuleEditorViewModel : INotifyPropertyChanged
     public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
     public bool Popup { get => _popup; set => Set(ref _popup, value); }
     public string Message { get => _message; set => Set(ref _message, value); }
+    public string Script { get => _script; set => Set(ref _script, value); }
+    public string ScriptArguments { get => _scriptArguments; set => Set(ref _scriptArguments, value); }
 
     public AlertRuleEditorViewModel(AlertRule rule, IReadOnlyList<string> sensorOptions)
     {
@@ -55,6 +59,8 @@ public sealed class AlertRuleEditorViewModel : INotifyPropertyChanged
         _enabled = rule.Enabled;
         _popup = rule.Popup;
         _message = rule.Message ?? "";
+        _script = rule.Script ?? "";
+        _scriptArguments = rule.ScriptArguments ?? "";
     }
 
     public AlertRule CreateRule(double threshold, int cooldownSeconds)
@@ -71,6 +77,8 @@ public sealed class AlertRuleEditorViewModel : INotifyPropertyChanged
         rule.CooldownSeconds = cooldownSeconds;
         rule.Popup = Popup;
         rule.Message = Message ?? "";
+        rule.Script = Script ?? "";
+        rule.ScriptArguments = ScriptArguments ?? "";
         return rule;
     }
 

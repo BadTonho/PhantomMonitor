@@ -71,6 +71,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private DispatcherTimer? _alertToastTimer;
     private bool _alertEditorInitialized;
     private readonly LinuxDesktopNotificationService? _desktopNotificationService;
+    private readonly LinuxAlertScriptRunner _alertScriptRunner = new();
     private bool _windowActive;
     private bool _windowMinimized;
 
@@ -582,7 +583,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _jsonJournalLogger?.Write(data);
 
         foreach (var alert in _alertEvaluator.Evaluate(data))
+        {
+            _alertScriptRunner.Run(alert);
             RecordAlert(alert, data.Timestamp);
+        }
     }
 
     private void StartLoggers()

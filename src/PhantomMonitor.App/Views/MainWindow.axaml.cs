@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using PhantomMonitor.App.ViewModels;
+using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.Views;
 
@@ -38,6 +40,28 @@ public sealed partial class MainWindow : Window
     private void OnAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowAlerts();
     private void OnAddAlertRuleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddAlertRule();
     private void OnSaveAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveAlerts();
+
+    private async void OnSelectAlertScriptClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not Control { DataContext: AlertRuleEditorViewModel rule })
+            return;
+
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Selecionar script de alerta",
+                AllowMultiple = false
+            });
+            var path = files.FirstOrDefault()?.TryGetLocalPath();
+            if (!string.IsNullOrWhiteSpace(path))
+                rule.Script = path;
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("AlertScriptPicker", ex);
+        }
+    }
 
     private void OnRemoveAlertRuleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

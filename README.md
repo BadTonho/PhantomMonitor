@@ -20,7 +20,7 @@ Monitor de hardware leve, elegante e de alta precisão com suporte multiplatafor
 - **Estatísticas avançadas de FPS**: instantâneo, médio, mínimo, máximo, 1% Low, 0.1% Low e **percentis puros 1st/99th de FPS e frametime**
 - **Erros de hardware WHEA**: série `WheaErrorCount` (Windows) contando eventos do provedor `Microsoft-Windows-WHEA-Logger` desde o início da sessão — combinável com alertas e exportações
 - **Estatísticas por série**: mín/máx/média da sessão para **qualquer série** (canônica e por instância), com reset pela bandeja/inventário e ranking na janela de inventário
-- **Alertas por sensor**: Regras acima/abaixo de um limite com cooldown e seleção por instância; o WPF oferece popup, som, scripts e desligamento protegido por `allowShutdown`, enquanto o Avalonia oferece toast interno, histórico e notificações nativas do Linux quando a janela está em segundo plano
+- **Alertas por sensor**: Regras acima/abaixo de um limite com cooldown e seleção por instância; o WPF oferece popup, som, scripts e desligamento protegido por `allowShutdown`, enquanto o Avalonia oferece toast interno, histórico, notificações nativas em segundo plano e execução de scripts Linux (`.sh` via `/bin/sh` ou arquivos executáveis)
 - **Logging**: Exportação contínua para CSV e JSON — CSV aceita **marcadores `#marker`** para delimitar segmentos de sessão/benchmark; **journal JSON contínuo (JSONL)** opcional com uma linha por amostra e notas automáticas (início de sessão/reset) (`logToJsonJournal`)
 - **SDK de telemetria**: memória compartilhada sempre ativa + **exportador HTTP opt-in** (`telemetryExport`) — consuma o snapshot em JSON (mesmo payload do `sensors_latest.json`) via `GET /values` no loopback ou LAN (ver `docs/telemetry-sdk.md`)
 - **Visual Clean**: Design profissional refinado (paleta Slate Dark), eliminando efeitos excessivos de neon
@@ -132,7 +132,7 @@ Exemplo (esquema real, veja [configuracao.md](docs/funções/configuracao.md)):
 ## Build e notas
 
 - `PhantomMonitor.App` usa Avalonia e `PhantomMonitor.Core` (`net10.0`) para compartilhar modelos e serviços; `PhantomMonitor` (WPF) continua sendo o frontend Windows durante a transição.
-- O dashboard Avalonia inclui visão geral, inventário, configurações de coleta e logs, além de edição de alertas com notificações internas. Overlay, bandeja e ações de som/scripts/desligamento continuam disponíveis somente no WPF.
+- O dashboard Avalonia inclui visão geral, inventário, configurações de coleta e logs, além de edição de alertas com notificações internas e scripts Linux. Overlay, bandeja, som e desligamento continuam disponíveis somente no WPF.
 - Os fontes de `PhantomSensorLib` (C++, stub) ficam no repositório como extensão futura, **sem pipeline de build ativo** — nenhum código consome a DLL hoje (ver [sensor-nativo.md](docs/funções/sensor-nativo.md)).
 - O FPS no Windows requer **Administrador** (PresentMon/ETW). Erros internos ficam em `logs/errors.log`.
 - O `PhantomVulkanLayer` é compilado via CMake/`install_layer.sh` e não faz parte do `PhantomMonitor.slnx`.

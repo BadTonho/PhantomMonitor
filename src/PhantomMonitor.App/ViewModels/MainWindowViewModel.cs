@@ -49,6 +49,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isOverview = true;
     private bool _isSettings;
     private bool _isAlerts;
+    private bool _isCustomSensors;
     private string _updateIntervalText;
     private bool _intervalEdited;
     private bool _logToCsv;
@@ -61,6 +62,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<double> _frametimeSamples = [];
     private readonly ObservableCollection<AlertRuleEditorViewModel> _alertRules = new();
     private readonly ObservableCollection<AlertHistoryEntryViewModel> _alertHistory = new();
+    private readonly ObservableCollection<CustomSensorEditorViewModel> _customSensorEditors = new();
+    private string _customSensorsMessage = "As alterações são aplicadas ao salvar.";
     private AlertRuleEvaluator _alertEvaluator;
     private IReadOnlyList<string> _alertSensorOptions = [];
     private string _alertsCooldownText;
@@ -101,11 +104,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool HasInventorySnapshot { get => _hasInventorySnapshot; private set => Set(ref _hasInventorySnapshot, value); }
     public bool IsWaitingForInventorySnapshot => !HasInventorySnapshot;
     public bool IsOverview { get => _isOverview; private set => Set(ref _isOverview, value); }
-    public bool IsInventory => !IsOverview && !IsSettings && !IsAlerts;
+    public bool IsInventory => !IsOverview && !IsSettings && !IsAlerts && !IsCustomSensors;
     public bool IsSettings { get => _isSettings; private set => Set(ref _isSettings, value); }
     public bool IsAlerts { get => _isAlerts; private set => Set(ref _isAlerts, value); }
+    public bool IsCustomSensors { get => _isCustomSensors; private set => Set(ref _isCustomSensors, value); }
     public ObservableCollection<AlertRuleEditorViewModel> AlertRules => _alertRules;
     public ObservableCollection<AlertHistoryEntryViewModel> AlertHistory => _alertHistory;
+    public ObservableCollection<CustomSensorEditorViewModel> CustomSensorEditors => _customSensorEditors;
+    public string CustomSensorsMessage { get => _customSensorsMessage; private set => Set(ref _customSensorsMessage, value); }
     public bool HasAlertHistory => AlertHistory.Count > 0;
     public IReadOnlyList<string> AlertSensorOptions { get => _alertSensorOptions; private set => Set(ref _alertSensorOptions, value); }
     public string AlertsCooldownText { get => _alertsCooldownText; set => Set(ref _alertsCooldownText, value); }
@@ -154,6 +160,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _alertsEnabled = _config.Alerts.Enabled;
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
+        LoadCustomSensorEditors();
         RefreshAlertEditor();
         _sensorService = LinuxSensorServiceFactory.Create(_config);
         AttachSensorService(_sensorService);
@@ -205,6 +212,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsOverview = true;
         IsSettings = false;
         IsAlerts = false;
+        IsCustomSensors = false;
         Raise(nameof(IsInventory));
     }
 
@@ -213,6 +221,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsOverview = false;
         IsSettings = false;
         IsAlerts = false;
+        IsCustomSensors = false;
         Raise(nameof(IsInventory));
     }
 
@@ -221,6 +230,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsOverview = false;
         IsSettings = true;
         IsAlerts = false;
+        IsCustomSensors = false;
         Raise(nameof(IsInventory));
     }
 
@@ -229,8 +239,139 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsOverview = false;
         IsSettings = false;
         IsAlerts = true;
+        IsCustomSensors = false;
         Raise(nameof(IsInventory));
     }
+
+    public void ShowCustomSensors()
+    {
+        IsOverview = false;
+        IsSettings = false;
+        IsAlerts = false;
+        IsCustomSensors = true;
+        Raise(nameof(IsInventory));
+    }
+
+    public void AddCustomSensor()
+    {
+        if (CustomSensorEditors.Count >= CustomSensorEngine.MaxSensors)
+        {
+            CustomSensorsMessage = $"O limite de {CustomSensorEngine.MaxSensors} sensores customizados foi atingido.";
+            return;
+        }
+
+        var name = "Novo sensor";
+        var suffix = 2;
+        while (CustomSensorEditors.Any(editor => string.Equals(editor.Name.Trim(), name, StringComparison.OrdinalIgnoreCase)))
+            name = $"Novo sensor {suffix++}";
+
+        CustomSensorEditors.Add(new CustomSensorEditorViewModel(name, "", "", CustomSensorEditors.Count));
+        UpdateCustomSensorPositions();
+        CustomSensorsMessage = "Sensor adicionado. Preencha a fórmula e salve para aplicar.";
+    }
+
+    public void RemoveCustomSensor(CustomSensorEditorViewModel editor)
+    {
+        if (!CustomSensorEditors.Remove(editor)) return;
+        UpdateCustomSensorPositions();
+        CustomSensorsMessage = "Sensor removido. Salve para aplicar a alteração.";
+    }
+
+    public void MoveCustomSensor(CustomSensorEditorViewModel editor, int offset)
+    {
+        var oldIndex = CustomSensorEditors.IndexOf(editor);
+        var newIndex = oldIndex + offset;
+        if (oldIndex < 0 || newIndex < 0 || newIndex >= CustomSensorEditors.Count) return;
+
+        CustomSensorEditors.Move(oldIndex, newIndex);
+        UpdateCustomSensorPositions();
+        CustomSensorsMessage = "Ordem alterada. Salvar pode mudar os índices Custom#i usados em alertas.";
+    }
+
+    public void SaveCustomSensors()
+    {
+        if (CustomSensorEditors.Count > CustomSensorEngine.MaxSensors)
+        {
+            CustomSensorsMessage = $"O limite é de {CustomSensorEngine.MaxSensors} sensores customizados.";
+            return;
+        }
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var candidate = new List<CustomSensorConfig>(CustomSensorEditors.Count);
+        for (var index = 0; index < CustomSensorEditors.Count; index++)
+        {
+            var editor = CustomSensorEditors[index];
+            var name = editor.Name.Trim();
+            var formula = editor.Formula.Trim();
+            var unit = editor.Unit.Trim();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                CustomSensorsMessage = $"Informe um nome para {editor.SeriesKey}.";
+                return;
+            }
+            if (!names.Add(name))
+            {
+                CustomSensorsMessage = $"O nome '{name}' está duplicado. Use nomes únicos.";
+                return;
+            }
+            if (!CustomSensorEngine.IsFormulaValid(formula))
+            {
+                CustomSensorsMessage = $"A fórmula de {editor.SeriesKey} ({name}) é inválida.";
+                return;
+            }
+
+            candidate.Add(new CustomSensorConfig { Name = name, Formula = formula, Unit = unit });
+        }
+
+        if (CustomSensorConfigsEqual(_config.CustomSensors, candidate))
+        {
+            CustomSensorsMessage = "Nenhuma alteração para salvar.";
+            return;
+        }
+
+        var previous = _config.CustomSensors;
+        var wasRunning = IsRunning;
+        var wasPaused = IsPaused;
+        _config.CustomSensors = candidate;
+        if (!_config.Save(ConfigPaths.ConfigFile))
+        {
+            _config.CustomSensors = previous;
+            CustomSensorsMessage = "Não foi possível salvar o config.json. As fórmulas em execução não foram alteradas.";
+            return;
+        }
+
+        ReplaceSensorService();
+        LoadCustomSensorEditors();
+        CustomSensorsMessage = wasRunning
+            ? wasPaused
+                ? "Sensores salvos e aplicados. Coleta retomada pausada; as estatísticas da sessão foram zeradas."
+                : "Sensores salvos e aplicados; as estatísticas da sessão foram zeradas."
+            : "Sensores salvos e aplicados à próxima coleta.";
+    }
+
+    private void LoadCustomSensorEditors()
+    {
+        CustomSensorEditors.Clear();
+        for (var index = 0; index < _config.CustomSensors.Count; index++)
+        {
+            var sensor = _config.CustomSensors[index];
+            CustomSensorEditors.Add(new CustomSensorEditorViewModel(sensor.Name, sensor.Formula, sensor.Unit, index));
+        }
+        UpdateCustomSensorPositions();
+    }
+
+    private void UpdateCustomSensorPositions()
+    {
+        for (var index = 0; index < CustomSensorEditors.Count; index++)
+            CustomSensorEditors[index].SetPosition(index, CustomSensorEditors.Count);
+    }
+
+    private static bool CustomSensorConfigsEqual(IReadOnlyList<CustomSensorConfig> left, IReadOnlyList<CustomSensorConfig> right) =>
+        left.Count == right.Count && left.Zip(right).All(pair =>
+            string.Equals(pair.First.Name, pair.Second.Name, StringComparison.Ordinal)
+            && string.Equals(pair.First.Formula, pair.Second.Formula, StringComparison.Ordinal)
+            && string.Equals(pair.First.Unit, pair.Second.Unit, StringComparison.Ordinal));
 
     public void AddAlertRule()
     {

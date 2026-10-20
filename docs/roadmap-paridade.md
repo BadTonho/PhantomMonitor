@@ -3,7 +3,9 @@
 > O que fazer para o Phantom Monitor alcançar as suítes de referência do mercado.
 > Gerado a partir da comparação com o código em fim de 2026 (pós a bateria de correções
 > `79913ed..6233267`). **Status: P1–P4 implementados/entregues em
-> `6b5c148..` (série "paridade"); P5 é decisão de escopo, não tarefa.**
+> `6b5c148..` (série "paridade"); P5 é decisão de escopo, não tarefa.
+> Rodada 3 (`bb8342f..` = P8): os 4 gaps "Camada A" da análise RTSS×HWiNFO
+> (sensores por fórmula, WHEA, journal JSON, EDID) também fechados.**
 
 ---
 
@@ -101,7 +103,24 @@ Sete sub-etapas, um commit Conventional cada, build 0 erros/0 avisos, docs sincr
 - **P6.7** Pausa/retomada do monitoramento (bandeja + 2º atalho global `Ctrl+Alt+P`): ciclos pulados, telemetria congelada no último snapshot, estado não persistente — `5c54f8f`
 
 A tabela da rodada 2 abaixo continua válida como registro dos gaps avaliados;
-as linhas fechadas por P6 estão marcadas ✅ na coluna "Ação definida".
+as linhas fechadas por P6/P8 estão marcadas ✅ na coluna "Ação definida".
+
+## Rodada 3 — P8: gaps "Camada A" da análise RTSS×HWiNFO (2026-10-20) — ✅ CONCLUÍDO
+
+Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harness
+(parser + WireUp de `SensorData`), documentação sincronizada por commit:
+
+- **P8.1** Sensores customizados por fórmula (`customSensors` → série `Custom#i`
+  com AST compilada; min/max/abs, referências por chave/wildcard/nome; avaliada
+  antes do commit das estatísticas em Windows e Linux; template do OSD ganha
+  fallback por rótulo) — `14ab0d3`
+- **P8.2** Contador WHEA (`WheaErrorCount`: provedor `Microsoft-Windows-WHEA-Logger`
+  no log System desde o início da sessão; reversa com early-break + cache 10 s;
+  Windows apenas) — `b8433f3`
+- **P8.3** Journal JSON contínuo (`logToJsonJournal` → JSONL com meta/sample &
+  notas "início da sessão"/"reset" — mesma política append-only do CSV) — `a72c0fb`
+- **P8.4** Identidade dos monitores via EDID/WMI (aba "Monitores" do inventário +
+  `monitors` no snapshot JSON; PnP/Modelo/Série/Diagonal/Fabricação/Primário) — `bb8342f`
 
 ## Deliberadamente NÃO planejado (decisões já tomadas)
 
@@ -147,16 +166,16 @@ as linhas fechadas por P6 estão marcadas ✅ na coluna "Ação definida".
 | Colunas Min/Máx/Média/Atual por sensor + hotkey de reset | A | ✅ Fechado pelo **P6.1** (SeriesStatsTracker por snapshot + "Resetar estatísticas" na bandeja/colunas Min/Máx/Média no inventário) |
 | Hotkey para **pausar/retomar** o monitoramento | A | ✅ Fechado pelo **P6.7** (tray com check + 2º atalho global; telemetria congelada no último snapshot) |
 | Percentis 1st/99th de FPS e frametime (percentis brutos sobre janela móvel) | A | ✅ Fechado pelo **P6.5** (FpsP1/FpsP99 + FrametimeP1/FrametimeP99 sobre a janela de ~60 s) |
-| Marcadores/hotkeys de benchmark: start/stop de log e segmento com marcador | A | ✅ Fechado pelo **P6.1** (`#marker,<ts>,<label>` no CSV a cada reset; start/stop de log por hotkey segue opcional) |
+| Marcadores/hotkeys de benchmark: start/stop de log e segmento com marcador | A | ✅ Fechado pelo **P6.1** + **P8.3** (`#marker,<ts>,<label>` no CSV a cada reset + notas `{"kind":"note"}` no journal JSONL) |
 | Acesso remoto: servidor de sensor remoto (TCP na LAN) para 2ª máquina e dashboards | A | ✅ Fechado pelo **P6.3** (mesma estrutura do P2 exportada por HTTP; LAN opt-in com `listenAll`) |
 | Bateria (laptop: carga %, desgaste, draw, AC) | A | ✅ Fechado pelo **P6.4** (WMI `root\WMI`+`Win32_Battery` no Windows; `/sys/class/power_supply` no Linux; desktop não publica) |
-| Contadores de erros de hardware **WHEA** (incl. device PCIe com falha) | A (médio) | Ler eventos WHEA via Event Log/WMI → série `WheaErrorCount` |
-| Sensores **customizados pelo usuário** (fórmulas sobre outros sensores) | A (médio) | Séries derivadas em config — puxa pela engine de expressões do P6.6 |
+| Contadores de erros de hardware **WHEA** (incl. device PCIe com falha) | A (médio) | ✅ Fechado pelo **P8.2** (`WheaErrorCount`: provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão, EventLogQuery reversa com early-break e cache de 10 s; Windows apenas) |
+| Sensores **customizados pelo usuário** (fórmulas sobre outros sensores) | A (médio) | ✅ Fechado pelo **P8.1** (`customSensors` → engine `CustomSensorEngine` com AST compilada; série `Custom#i` entra em stats/CSV/SDK/alertas; templates do OSD resolvem por nome) |
+| Log de sensores em **JSON/YAML** | A (menor) | ✅ Fechado pelo **P8.3** para JSON (journal JSONL contínuo com notas de sessão — `JsonJournalLogger` e `logToJsonJournal`); YAML não planejado (consumidores práticos preferem JSONL/jq) |
 | OSD próprio da suíte de hardware: gráfico de histórico no OSD, cor de fundo, múltiplos valores por linha, eixo com min/max global | A (menor) | Nosso overlay (P1/P3) cobre texto/séries; gráfico embutido e cor de fundo = melhorias de UI |
-| Log de sensores em **JSON/YAML** | A (menor) | Já temos CSV contínuo + snapshot JSON; journal JSON opcional |
 | Alerts por e-mail/webhook e "destinos de log" extras | A | Diferencial menor; o script externo já permite enviar — decidir depois |
 | Polling **multithread/assíncrono** de sensores | A (caveat) | LHM é sequencial por design; paralelizar entre hardwares exige testes de concorrência no driver |
-| Identidade dos monitores (fabricante/modelo via EDID); chroma/HDR/VRR | A-parcial | Nome do monitor via WMI é barato; flags HDR/VRR exigem descriptor completo (P7) |
+| Identidade dos monitores (fabricante/modelo via EDID); chroma/HDR/VRR | A-parcial | ✅ Fechado pelo **P8.4** no EDID (aba "Monitores" no inventário: PnP/Modelo/Serial/diagonal/fabricação/primário via `WmiMonitorID`+`WmiMonitorBasicDisplayParams`, cache 60 s + snapshot JSON); flags HDR/VRR exigem descriptor completo (P7) |
 | Polimento de monitoramento: pesquisa, ordenação custom, colapso de grupos, tooltips, destaque de mudanças | A (menor) | Inventário absorve aos poucos |
 | Intervalo de polling **por sensor** + smoothing/filtro médio por item | A (menor) | Hoje cadência global única; item de UX de nicho |
 | Tabela SMART atributo a atributo (realocados, erros de mídia etc.) | C | LHM sintetiza pouco; viria de SMART bruto via WMI/Win32 — maior esforço, P7 |
@@ -179,6 +198,10 @@ as linhas fechadas por P6 estão marcadas ✅ na coluna "Ação definida".
 
 **P6 integralmente concluído.** Próximo capítulo natural (P7, esforço grande e/ou
 dependente de engine tercerizada) permanece como "limitação de engine" documentada.
+
+**Rodada 3 (P8, 2026-10-20):** os 4 gaps aproveitáveis da análise RTSS×HWiNFO
+(sensores customizados, WHEA, journal JSON, EDID dos monitores) foram entregues
+(`14ab0d3`, `b8433f3`, `a72c0fb`, `bb8342f`) — detalhados na seção "Rodada 3" acima.
 
 **P7 (maiores, exigem NVAPI/AMD User Mode/MSR ou driver próprio): SMART completo, throttle
 reasons, EDID/SPD/PCIe detalhes, C-states/NPU — cada um documentado como "limitação da

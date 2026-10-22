@@ -1,5 +1,7 @@
 # SensorFormatter
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/sensor-formatting.md)
+
 Utilitário estático de formatação de métricas compartilhado entre a janela principal (cards) e o overlay OSD. Centraliza o estilo de exibição para que as duas superfícies mostrem os mesmos formatos, evitando duplicação de lógica.
 
 ## Funções

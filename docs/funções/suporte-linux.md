@@ -1,5 +1,7 @@
 # Suporte Nativo a Linux (Multiplataforma)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/linux-support.md)
+
 O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, GOverlay ou drivers proprietários adicionais).
 
 > [!IMPORTANT]

@@ -1,5 +1,7 @@
 # SDK de Telemetria (memória compartilhada + HTTP)
 
+> **Idioma:** Português (Brasil) · [English](en/telemetry-sdk.md)
+
 Terceiros (OBS, AutoHotkey, dashboards, scripts, outros apps) consomem a telemetria
 do Phantom Monitor de duas formas, **sem tocar em arquivos de log**:
 

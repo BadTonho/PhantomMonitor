@@ -1,5 +1,7 @@
 # Bandeja do Sistema (TrayIconService) e Inicialização com o Windows (StartupManager)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/system-tray.md)
+
 Integração com a bandeja do Windows **sem WinForms**: usa `Shell_NotifyIcon` do Win32 puro sobre o HWND da janela principal, e o ícone é desenhado em runtime com WPF (`RenderTargetBitmap` → `CreateDIBSection` → `CreateIconIndirect`) — sem assets externos nem pacotes adicionais.
 
 ## TrayIconService

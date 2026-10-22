@@ -1,5 +1,7 @@
 # Sensores customizados (fórmulas do usuário)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/custom-sensors.md)
+
 > Paridade com "custom user sensors" de suítes de referência (HWiNFO). Cada fórmula
 > do config vira uma série real de telemetria — `Custom#i` — avaliada a cada ciclo
 > **no fim do snapshot, antes do commit das estatísticas**; logo min/máx/média da

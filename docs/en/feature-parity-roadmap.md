@@ -1,0 +1,95 @@
+> **Language:** English · [Português (Brasil)](../roadmap-paridade.md)
+
+# Monitoring feature-parity roadmap
+
+This document records feature comparisons and implementation decisions for Phantom Monitor. It reflects the repository's late-2026 development history; completed items are historical status, not a promise of identical Windows and Linux interfaces.
+
+## Capabilities already delivered
+
+- Per-frame frametime through Windows ETW/PresentMon and the Linux Vulkan layer.
+- 1%/0.1% lows, min/max/average, and 600-sample frametime history.
+- Configurable alerts, including per-instance targets.
+- Configurable OSD, profiles, hotkey, and tray integration on Windows.
+- CSV/JSON logging and error log.
+- No game-process DLL injection; opt-in implicit Vulkan layer on Linux.
+
+## P1 — Dynamic sensor series (completed)
+
+`SensorKey` and `SensorData.Series/SeriesLabels` established the `Category#index` model while preserving canonical series. Implemented multi-GPU, per-core CPU, fan slots, per-drive metrics, VRM/rail sensors, CPU power domains, network-per-interface and session totals, inventory, OSD series allowlists, and Linux per-core/device/interface/card series.
+
+## P2 — Shared-memory telemetry SDK (completed)
+
+The versioned `phantom_monitor_telemetry_v1` map publishes a header and up to 256 fixed-size series entries per snapshot, with a seqlock protocol and a reference reader in `tools/TelemetrySdkReader/`. JSON remains available as a fallback. See [Telemetry SDK](telemetry-sdk.md).
+
+## P3 — Per-application OSD profiles (completed on Windows)
+
+Profiles can override position, size, font, opacity, series, accent, and visibility based on the focused executable. The Windows editor manages profile cards; the tray can pin one for the session or return to automatic matching. Active profiles are indicated in the OSD footer.
+
+## P4 — Windows in-frame OSD (architecture study)
+
+Hooks and injected DLLs were rejected due to anti-cheat risk. The documented safe alternative is an OBS plugin that consumes the telemetry SDK and draws inside OBS's capture pipeline. No hook or new configuration schema was added. See [in-frame OSD study](osd-in-frame-study.md).
+
+## P5 — Hardware control (out of scope)
+
+Overclocking, fan curves, and limiters require writes through vendor APIs or drivers. The product remains read-only; any future control feature should be a separate app or package.
+
+## P6 — Instrumentation parity (completed)
+
+- **P6.1:** per-series session min/max/average, reset from tray/inventory, CSV marker.
+- **P6.2:** hide the OSD for a matching application with `profiles[].visible: false`.
+- **P6.3:** optional HTTP exporter with `/values` and `/health`; loopback by default, all interfaces opt-in.
+- **P6.4:** battery series on Windows and Linux; desktops without a battery publish none.
+- **P6.5:** PresentMon GPU Busy, CPU Busy, CPU Wait, present latency, and FPS/frametime P1/P99 where available.
+- **P6.6:** OSD templates with key, decimal-format, and wildcard placeholders.
+- **P6.7:** pause/resume through the Windows tray and global hotkey; telemetry freezes at the last snapshot and pause state is runtime-only.
+
+## P8 — Additional reference-suite gaps (completed)
+
+- **P8.1:** user formulas in `customSensors`, compiled into `Custom#i` series and included in statistics/exports/alerts.
+- **P8.2:** Windows session WHEA event count.
+- **P8.3:** append-only JSONL journal with metadata, samples, and session notes.
+- **P8.4:** active monitor identity from EDID/WMI in inventory and JSON snapshots.
+- **P8.5:** per-series OSD sparklines with individual history windows and automatic or fixed axes.
+- **P8.6:** separate GPU memory junction series, `GpuVramTemperature`; GPU VRM/liquid/PLX diodes are not mixed into core temperature.
+
+These capabilities correspond to custom sensor formulas, Windows WHEA event counting, continuous JSONL journaling, EDID/WMI monitor inventory, OSD per-series history graphs, and separate GPU memory-junction reporting. P8.1–P8.4 closed the most practical gaps identified in the RTSS/HWiNFO comparison; P8.5 and P8.6 followed as additional OSD and sensor refinements.
+
+## P9 — Documentation audit and per-series tuning (completed)
+
+- **P9.0:** documentation audit against implementation and resulting corrections.
+- **P9.1:** `sensorTuning` controls series publication interval and moving-average smoothing. Repeated values do not count toward statistics; the last matching rule wins.
+
+## Deliberate non-goals and remaining gaps
+
+The project does not plan a Vulkan shared-memory seqlock at this time, placeholder values before first readings, or a different definition for 1%/0.1% lows with small sample counts. Bigger hardware-engine gaps include raw SMART attributes, vendor-specific GPU throttle reasons, CPU C-states/effective clocks, NPU sensors, detailed PCIe data, and third-party PSU/fan-controller ecosystems; they need vendor APIs, direct drivers, or sources not currently available through LibreHardwareMonitor.
+
+## Remaining comparison notes
+
+| Area | Status / decision |
+|---|---|
+| In-frame game capture, screenshots, and frame limiting | No injected hooks. OBS integration is the documented capture path; frame limiting remains out of scope. |
+| Fan curves, voltage/frequency tuning, and overclocking | Out of scope for the read-only monitor. |
+| PresentMon metrics | Busy/wait, present latency, and P1/P99 are published when present in the installed PresentMon output; mode-of-present/click-to-photon are not planned. |
+| Rich OSD markup, conditional layers, bars, and formulas | Templates cover basic text and resolved-series conditions; more advanced layout remains a UI project. |
+| External LCDs and remote dashboards | The open SDK and opt-in HTTP exporter provide data; third-party integrations remain external. |
+| VR overlay | Niche and not planned. |
+| Session stats and pause controls | Delivered in P6.1 and P6.7. |
+| Battery, WHEA, custom formulas, and JSONL | Delivered in P6.4, P8.2, P8.1, and P8.3. |
+| OSD graphs and monitor identity | Delivered in P8.5 and P8.4; HDR/VRR metadata remains unimplemented. |
+| Per-sensor polling/smoothing | Delivered in P9.1; physical reads still occur on the global tick. |
+| Concurrent polling | Not enabled; LibreHardwareMonitor is sequential, and parallel driver access needs concurrency validation. |
+
+Additional distinctions from the reference suites:
+
+- NVIDIA Reflex latency markers (input-to-GPU-render) rely on game-process hooks and remain excluded by policy.
+- Rich hypertext tags, time bands, conditional layers, macros, and expression/filter functions are not implemented; current templates resolve telemetry placeholders and simple missing-value visibility.
+- Email/webhook destinations are not built in. Alert scripts can implement external delivery.
+- External LCD integrations can use the SDK but remain separate products or plugins.
+- Full SMART attribute tables (for example, reallocated sectors and media errors), GPU power-limit reasons, CPU C-state residency/effective clocks, NPU data, VBIOS/ASIC details, PCIe counters, SPD timings, vendor PSU controllers, and ARM/Snapdragon platform data require sources beyond the current sensor engine.
+- HDR/VRR monitor metadata requires a fuller display descriptor; the current EDID work reports manufacturer/model/serial, diagonal, manufacture date, and primary status.
+
+## Project strengths
+
+The shared-memory SDK is open and documented, CSV columns grow dynamically with instance series, and the design avoids hooks into game processes. These choices keep telemetry available to external tools without granting them access to the game's address space.
+
+The implementation order recorded in the original roadmap prioritized session statistics/reset, per-app hide, HTTP export, battery, PresentMon metrics, templates, and pause/resume (P6.1–P6.7), followed by custom sensors, WHEA, JSONL, EDID, OSD graphs, GPU memory junction, and per-series tuning. The next larger work items remain vendor-dependent hardware sources rather than missing basic monitoring controls.

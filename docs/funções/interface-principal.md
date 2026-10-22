@@ -1,5 +1,7 @@
 # MainWindow
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/main-interface.md)
+
 Descrição da interface principal WPF do Phantom Monitor para Windows, com tema escuro e layout de sidebar + conteúdo. O dashboard Avalonia para Linux está descrito em [suporte-linux.md](suporte-linux.md) e inclui visão geral, inventário, sensores customizados, alertas e configurações.
 
 ## Funcionalidades

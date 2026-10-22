@@ -1,5 +1,7 @@
 # PhantomSensorLib (C++ DLL)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/native-sensor-library.md)
+
 Fontes nativas em C++ para leitura de sensores, mantidas em `src/PhantomSensorLib/`. **Atualmente é um stub sem pipeline ativo no aplicativo**: todas as leituras retornam `0.0` e **nada consome a DLL em runtime** — a leitura real de sensores no Windows é feita em C# pelo `HardwareMonitorService` (LibreHardwareMonitor).
 
 > Os fontes e o `CMakeLists.txt` permanecem no repositório como base para uma futura extensão nativa (ver "Próximos passos"), mas **não são mais compilados/copiados pelo build do WPF** — o target `BuildPhantomSensorLib` e o interop `SensorBridge.cs` foram removidos por serem código morto (DLL construída, copiada para a saída e nunca chamada).

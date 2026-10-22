@@ -44,7 +44,7 @@ Hardware and compositor support varies between systems. On Linux, FPS requires a
 
 ## Getting started
 
-Install the **.NET 10 SDK**. For platform-specific requirements, see the [Linux support guide (Portuguese)](docs/funções/suporte-linux.md) and [configuration guide (Portuguese)](docs/funções/configuracao.md).
+Install the **.NET 10 SDK**. For platform-specific requirements, see the [Linux support guide](docs/en/functions/linux-support.md) and [configuration guide](docs/en/functions/configuration.md).
 
 ### Linux
 
@@ -101,14 +101,11 @@ The Core shares models, configuration, alert evaluation, and telemetry services.
 
 ## Documentation
 
-The technical guides are currently maintained in Portuguese:
+The documentation is available in both English and Brazilian Portuguese. English is the default; each guide links to its counterpart.
 
-- **Platforms:** [Linux support and Vulkan layer](docs/funções/suporte-linux.md), [FPS and frametime](docs/funções/fps-monitor.md)
-- **Interface:** [Overlay](docs/funções/overlay.md), [Hardware inventory](docs/funções/inventário-hardware.md)
-- **Sensors:** [Custom sensors](docs/funções/sensores-customizados.md), [Per-series tuning](docs/funções/ajuste-de-series.md)
-- **Automation and output:** [Alerts](docs/funções/alertas.md), [Logging](docs/funções/logging.md), [Telemetry SDK](docs/telemetry-sdk.md)
-- **Project:** [Feature parity roadmap](docs/roadmap-paridade.md), [All function guides](docs/funções/)
+- [English documentation index](docs/en/README.md)
+- [Índice da documentação em português (Brasil)](docs/README.md)
 
 ## Project status
 
-Avalonia is the current Linux frontend. On Windows, WPF remains the primary app; available interface features and actions vary by platform. See the [roadmap](docs/roadmap-paridade.md) for the ongoing migration.
+Avalonia is the current Linux frontend. On Windows, WPF remains the primary app; available interface features and actions vary by platform. See the [roadmap](docs/en/feature-parity-roadmap.md) for the ongoing migration.

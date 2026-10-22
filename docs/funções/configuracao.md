@@ -1,5 +1,7 @@
 # AppConfig / Config
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/configuration.md)
+
 Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz do projeto e é carregado automaticamente.
 
 ## Modelos

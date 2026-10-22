@@ -1,5 +1,7 @@
 # Alertas (AlertRuleEvaluator / AlertService)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/alerts.md)
+
 Regras de alerta sobre sensores avaliadas a cada snapshot (mesma cadência do monitoramento). A comparação, o disparo por condição, o cooldown e a checagem de sensores ausentes ficam no avaliador compartilhado do Core; cada frontend apresenta os disparos e executa somente suas ações suportadas.
 
 ## Frontends

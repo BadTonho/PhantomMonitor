@@ -1,5 +1,7 @@
 # FrametimeBuffer
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/frametime-buffer.md)
+
 Buffer circular para armazenamento do histórico de frametime. Utilizado pelo FpsMonitor para manter as últimas N amostras de frametime para exibição do gráfico e cálculo de estatísticas. As sparklines por série do OSD do P8.5 também criam buffers dessa classe, cada gráfico com a própria capacidade (`overlay.graphs[].window`).
 
 ## Funcionalidades

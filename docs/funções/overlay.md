@@ -1,5 +1,7 @@
 # OverlayWindow
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/overlay.md)
+
 ## Overlay compacto no Avalonia/Linux
 
 O dashboard Avalonia oferece uma janela flutuante independente da janela principal. Ela é aberta conforme `showOverlay`, pode ser alternada pelo botão **Mostrar/Ocultar overlay** na visão geral e fechada pelo botão `×`. O botão atualiza o `config.json` imediatamente. Em **Configurações → Overlay flutuante**, ajuste a largura entre 140 e 700 px, opacidade entre 10% e 100%, fonte entre 8 e 20 pt e modo compacto. O tamanho da fonte pode ser digitado ou ajustado pelo slider em passos de 0,5 pt. Ao salvar, a janela aberta aplica as mudanças de aparência sem reiniciar a coleta; modo compacto reduz margens e espaçamento das linhas. As categorias CPU, GPU, RAM, disco, rede, ventoinhas, placa-mãe e FPS/frametime também são selecionadas nessa seção. A opção **Gráfico de frametime no overlay** controla a sparkline dourada exibida abaixo da linha JOGO quando FPS/frametime está ativado e há pelo menos duas amostras. O gráfico usa `overlay.showFrametimeGraph`, mede 24 px no modo normal e 18 px no modo compacto, acompanha as amostras e congela durante a pausa. A seção também permite adicionar séries detectadas ou padrões manuais para `overlay.shownSeries`; as mudanças são aplicadas ao salvar, usando o formato existente.

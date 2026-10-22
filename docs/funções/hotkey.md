@@ -1,5 +1,7 @@
 # Atalho Global (HotkeyService / HotkeyParser)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/global-hotkey.md)
+
 Permite mostrar/ocultar o overlay OSD a partir de qualquer aplicativo — inclusive com um jogo em foco — sem injeção de DLL nem hooks de teclado: usa o `RegisterHotKey` do Win32, que notifica a janela principal via `WM_HOTKEY`.
 
 ## HotkeyParser

@@ -1,5 +1,7 @@
 # OSD In-Frame no Windows — Estudo de Arquitetura (P4)
 
+> **Idioma:** Português (Brasil) · [English](en/osd-in-frame-study.md)
+
 **Status:** estudo de arquitetura. Nenhuma DLL nativa nova, nenhum hook, nenhum
 schema de config foi adicionado — a decisão deixa isso explícito por segurança
 (anti-cheat) e pela filosofia do projeto descrita no README.

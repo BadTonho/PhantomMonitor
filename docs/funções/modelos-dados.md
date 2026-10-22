@@ -1,5 +1,7 @@
 # Modelos de Dados
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/data-models.md)
+
 ## SensorType
 
 Enumeração com todos os tipos de sensores suportados:

@@ -1,5 +1,7 @@
 # Logging (CSV / JSON)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/logging.md)
+
 Sistema de logging para exportação dos dados de sensores em formato CSV e/ou JSON.
 Os formatos e estruturas são compartilhados pelo WPF e pelo Avalonia; a pasta de
 destino depende do frontend.
@@ -99,7 +101,8 @@ Controlado pelo `config.json`, carregado quando o app inicia:
 - `logToJsonJournal` - Ativar journal JSON contínuo (JSONL)
 
 No Avalonia Linux, essas opções são lidas ao iniciar o app e aplicadas quando a
-coleta inicia; a tela não oferece controles de log nesta etapa. No WPF, também
+coleta inicia; também podem ser editadas na página **Configurações**, que salva
+no `config.json` e aplica os novos loggers sem interromper o dashboard. No WPF,
 podem ser alteradas pelos checkboxes da interface principal e são aplicadas na
 próxima sessão de monitoramento. Pausar a coleta interrompe temporariamente a
 entrada de novas amostras; parar ou fechar o app fecha os arquivos ativos.

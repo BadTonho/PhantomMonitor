@@ -1,5 +1,7 @@
 # Roadmap — Paridade de Monitoramento (suítes de referência do mercado)
 
+> **Idioma:** Português (Brasil) · [English](en/feature-parity-roadmap.md)
+
 > O que fazer para o Phantom Monitor alcançar as suítes de referência do mercado.
 > Gerado a partir da comparação com o código em fim de 2026 (pós a bateria de correções
 > `79913ed..6233267`). **Status: P1–P4 implementados/entregues em

@@ -1,5 +1,7 @@
 # Inventário de Hardware
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/hardware-inventory.md)
+
 ## Inventário no dashboard Avalonia (Linux)
 
 No frontend Linux, **Inventário** é uma página da janela principal, acessível pela

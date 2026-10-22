@@ -1,5 +1,7 @@
 # Cadência de amostragem e suavização por série (P9.1)
 
+> **Idioma:** Português (Brasil) · [English](../en/functions/series-tuning.md)
+
 Ajuste fino **por série** do ritmo de publicação e do filtro de valor, no espírito
 do "polling por sensor + smoothing" das suítes de referência. A leitura física
 continua no tick global (`updateIntervalMs`); a camada de ajuste decide, série por

@@ -101,6 +101,8 @@ O Core compartilha modelos, configuração, avaliação de alertas e serviços d
 
 ## Documentação
 
+A documentação também está disponível em [English](docs/en/README.md); os originais em português estão organizados no [índice pt-BR](docs/README.md).
+
 - **Plataformas:** [Suporte a Linux e camada Vulkan](docs/funções/suporte-linux.md), [FPS e frametime](docs/funções/fps-monitor.md)
 - **Interface:** [Overlay](docs/funções/overlay.md), [Inventário de hardware](docs/funções/inventário-hardware.md)
 - **Sensores:** [Sensores customizados](docs/funções/sensores-customizados.md), [Ajuste por série](docs/funções/ajuste-de-series.md)

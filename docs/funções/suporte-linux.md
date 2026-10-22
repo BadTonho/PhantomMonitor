@@ -12,6 +12,7 @@ O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mant
 - A memória compartilhada POSIX (`/dev/shm/phantom_fps_<pid>`, fallback `/tmp/phantom_fps_<pid>.bin` — um objeto por processo Vulkan com a layer ativa) é criada com permissão `0600` (apenas o mesmo usuário), fds com `O_CLOEXEC` e o nome é removido (`shm_unlink`/`unlink`) quando a instância Vulkan é destruída. O leitor valida se o PID autoral ainda existe em `/proc/<pid>` e ignora objetos órfãos (nada de "FPS fantasma" do processo anterior).
 - O cabeçalho usa `#pragma pack(1)` e o `LinuxFpsMonitor` usa `StructLayout(Pack = 1)`: os layouts precisam permanecer idênticos (campos `uint64` ficam desalinhados, o que é aceito em x86-64/ARM64).
 - O estado global é atômico (`g_last_present_ns`, `g_telemetry_shm`) e o ciclo `init/cleanup` da memória compartilhada é protegido por mutex; as escritas de `present` e o `munmap` do cleanup são sincronizados por `std::shared_mutex` (lock compartilhado para escrever, exclusivo para desmapear) — um present em voo não pode escrever depois do `munmap`.
+- O repasse de funções de physical device (`Phantom_vkGetPhysicalDeviceProcAddr`, interface v2 do negotiate) encaminha cada chamada pelo GIPA da própria instância (tabela `g_instance_dispatch`), não pelo fallback global; com dois jogos simultâneos, nenhuma instância recebe funções resolvidas pela cadeia da outra.
 
 ---
 

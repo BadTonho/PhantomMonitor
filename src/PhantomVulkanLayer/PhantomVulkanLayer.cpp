@@ -409,6 +409,24 @@ static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetPhysicalDeviceProcA
 {
     if (pName == nullptr) return nullptr;
 
+    // Por instância: com dois jogos simultâneos, o fallback global (abaixo) podia
+    // devolver funções do GIPA da cadeia errada (o da última instância criada)
+    // resolvidas com o handle desta instância.
+    if (instance != VK_NULL_HANDLE) {
+        try {
+            void* key = get_dispatch_key(instance);
+            std::lock_guard<std::mutex> lock(g_mutex);
+            auto it = g_instance_dispatch.find(key);
+            if (it != g_instance_dispatch.end() && it->second.get_instance_proc_addr) {
+                return it->second.get_instance_proc_addr(instance, pName);
+            }
+        } catch (...) {
+            // fronteira extern "C": falha de alocação no lookup não termina o jogo
+        }
+    }
+
+    // Sem entrada registrada (chamada anterior a vkCreateInstance da instância):
+    // mantém o GIPA guardado no último vkCreateInstance bem-sucedido.
     PFN_vkGetInstanceProcAddr next_gipa = g_next_gipa.load();
     if (next_gipa != nullptr) {
         return next_gipa(instance, pName);

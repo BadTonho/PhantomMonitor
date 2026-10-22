@@ -43,7 +43,7 @@ Unavailable values display as `—` in the dashboard; a reported zero remains a 
 
 `PhantomVulkanLayer` is a native C++ implicit Vulkan layer in `src/PhantomVulkanLayer/`. The Vulkan loader discovers it automatically. The layer intercepts `vkQueuePresentKHR`, measures frame intervals with a monotonic clock, and writes data to a per-process POSIX shared-memory object. The C# `LinuxFpsMonitor` reads that data and calculates rolling FPS metrics and frametime history.
 
-Shared memory is normally named `/dev/shm/phantom_fps_<pid>`, with a `/tmp` fallback. Objects use user-only permissions, are removed during Vulkan teardown, and are ignored when their process ID is no longer present. The C++ and C# packed data structures must remain layout-compatible.
+Shared memory is normally named `/dev/shm/phantom_fps_<pid>`, with a `/tmp` fallback. Objects use user-only permissions, are removed during Vulkan teardown, and are ignored when their process ID is no longer present. The C++ and C# packed data structures must remain layout-compatible. Physical-device function forwarding (`Phantom_vkGetPhysicalDeviceProcAddr`, negotiate interface v2) is resolved from each instance's own chain GIPA, not the global fallback; with two games running simultaneously, no instance receives functions resolved by another instance's chain.
 
 ## Run and install the layer
 

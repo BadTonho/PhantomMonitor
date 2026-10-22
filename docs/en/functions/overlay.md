@@ -4,7 +4,7 @@
 
 ## Floating overlay in Avalonia/Linux
 
-The Avalonia dashboard offers a separate floating window controlled by `showOverlay` and the **Show/Hide overlay** button. The window is borderless, interactive, always on top of ordinary windows, and can be dragged by its header. It follows sensor snapshots; unavailable readings display `—`, and pausing collection freezes the last values. If the window is closed by the system (Alt+F4), the state returns to `showOverlay=false` and the next **Show overlay** activation recreates the window normally.
+The Avalonia dashboard offers a separate floating window controlled by `showOverlay` and the **Show/Hide overlay** button. The window is borderless, interactive, always on top of ordinary windows, and can be dragged by its header. It follows sensor snapshots; unavailable readings display `—`, and pausing collection freezes the last values. Rows are stable across snapshots: each update is reconciled by identity (`ReconcileOverlayRows` over the `OverlayMetricsBuilder.Plan` declarative output), so only strings that actually changed re-render instead of clearing and recreating the whole list per tick. If the window is closed by the system (Alt+F4), the state returns to `showOverlay=false` and the next **Show overlay** activation recreates the window normally.
 
 Under **Settings → Floating overlay**, choose categories, width (140–700 px), opacity (10–100%), font size (8–20 pt in 0.5 pt steps), and compact mode. Appearance changes apply after saving and do not restart collection. The frametime chart option uses `overlay.showFrametimeGraph`; it appears below the FPS row once at least two samples exist, using a gold line, 24 px high normally and 18 px in compact mode. The chart stops advancing while paused.
 

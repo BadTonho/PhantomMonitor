@@ -21,6 +21,14 @@ O inventário atualiza junto com cada snapshot. Enquanto aguarda a primeira
 leitura, mostra um estado de espera; se a coleta for pausada ou parada, mantém
 os últimos valores recebidos. A página é somente de consulta.
 
+A renderização é estável entre snapshots: os grupos fixos (CPU, GPU, memória,
+disco, rede, ventoinhas, bateria e FPS) e as linhas continuam sendo as mesmas
+instâncias, e cada leitura é reconciliada por chave — apenas a string que mudou
+re-renderiza. O grupo **Outros**, com séries fora das categorias fixas, entra e
+sai do fim da lista conforme o que o hardware publica. Fonte:
+`ViewModels/SensorInventoryBuilder.cs` (plano declarativo) e
+`MainWindowViewModel.ReconcileInventoryGroups`.
+
 ## Inventário WPF (Windows)
 
 O restante desta página descreve a janela de inventário do frontend WPF para

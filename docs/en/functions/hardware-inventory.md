@@ -8,6 +8,8 @@
 
 When the Linux service publishes no value for an expected Linux sensor type, the page marks it **Unavailable**. Windows-only categories are not treated as missing. A published zero remains a valid reading; for example, a disconnected AC source is shown as disconnected rather than unavailable. The page updates with each snapshot and retains the last values while collection is paused or stopped. It is read-only.
 
+Rendering is stable across snapshots: the fixed groups (CPU, GPU, memory, disk, network, fans, battery, and FPS) and their rows persist as the same instances, and each reading is reconciled by key — only strings that actually changed re-render. The **Other** group, for series outside the fixed categories, is added to and removed from the end of the list depending on what the hardware publishes. Source: `ViewModels/SensorInventoryBuilder.cs` (declarative plan) and `MainWindowViewModel.ReconcileInventoryGroups`.
+
 ## WPF inventory (Windows)
 
 The remaining features in this section describe the WPF inventory window and are not part of the Avalonia Linux page. Open it from the sidebar. It can help diagnose missing sensors and discover series keys for alerts and OSD configuration. Without an active snapshot it reports that monitoring must be started.

@@ -7,98 +7,112 @@ internal static class OverlayMetricsBuilder
 {
     private const int MaxInstanceRows = 24;
 
-    public static IReadOnlyList<OverlayMetricViewModel> Build(
+    /// <summary>Plano declarativo de uma row por tick: identidade estável para a
+    /// reconciliação + textos do tick. A instância do VM persiste; o plano só descreve.</summary>
+    public readonly record struct OverlayRowPlan(string Identity, string Name, string Value, bool ShowFrametimeGraph);
+
+    public static IReadOnlyList<OverlayRowPlan> Plan(
         SensorData? data,
         OverlayConfigSelection selection,
         IReadOnlyList<string>? shownSeries = null)
     {
-        var rows = new List<OverlayMetricViewModel>();
+        var rows = new List<OverlayRowPlan>();
+
+        // Chaves capturadas uma única vez por tick (antes: cada TryValue re-criava
+        // a lista ordenada — ~15x por snapshot).
+        var keys = data?.GetSeriesKeys();
 
         if (selection.ShowCpu)
         {
             var parts = new List<string>
             {
-                TryValue(data, SensorType.CpuTotal, out var usage) ? $"{usage:F0}%" : "—",
-                TryValue(data, SensorType.CpuTemperature, out var cpuTemp) ? $"{cpuTemp:F0} °C" : "—",
-                TryValue(data, SensorType.CpuClock, out var cpuClock) ? $"{cpuClock:F0} MHz" : "—"
+                TryValue(data, keys, SensorType.CpuTotal, out var usage) ? $"{usage:F0}%" : "—",
+                TryValue(data, keys, SensorType.CpuTemperature, out var cpuTemp) ? $"{cpuTemp:F0} °C" : "—",
+                TryValue(data, keys, SensorType.CpuClock, out var cpuClock) ? $"{cpuClock:F0} MHz" : "—"
             };
-            rows.Add(new OverlayMetricViewModel("CPU", string.Join(" · ", parts)));
+            rows.Add(new OverlayRowPlan("CPU", "CPU", string.Join(" · ", parts), false));
         }
 
         if (selection.ShowGpu)
         {
-            var hasGpuMemoryUsed = TryValue(data, SensorType.GpuMemoryUsed, out var gpuMemoryUsed);
-            var hasGpuMemoryTotal = TryValue(data, SensorType.GpuMemoryTotal, out var gpuMemoryTotal);
+            var hasGpuMemoryUsed = TryValue(data, keys, SensorType.GpuMemoryUsed, out var gpuMemoryUsed);
+            var hasGpuMemoryTotal = TryValue(data, keys, SensorType.GpuMemoryTotal, out var gpuMemoryTotal);
             var parts = new List<string>
             {
-                TryValue(data, SensorType.GpuCore, out var usage) ? $"{usage:F0}%" : "—",
-                TryValue(data, SensorType.GpuTemperature, out var gpuTemp) ? $"{gpuTemp:F0} °C" : "—",
+                TryValue(data, keys, SensorType.GpuCore, out var usage) ? $"{usage:F0}%" : "—",
+                TryValue(data, keys, SensorType.GpuTemperature, out var gpuTemp) ? $"{gpuTemp:F0} °C" : "—",
                 hasGpuMemoryUsed && hasGpuMemoryTotal
                     ? $"{gpuMemoryUsed / 1024:F1}/{gpuMemoryTotal / 1024:F1} GB"
                     : "—"
             };
-            rows.Add(new OverlayMetricViewModel("GPU", string.Join(" · ", parts)));
+            rows.Add(new OverlayRowPlan("GPU", "GPU", string.Join(" · ", parts), false));
         }
 
         if (selection.ShowRam)
         {
-            var hasRamUsed = TryValue(data, SensorType.RamUsed, out var ramUsed);
-            var hasRamTotal = TryValue(data, SensorType.RamTotal, out var ramTotal);
+            var hasRamUsed = TryValue(data, keys, SensorType.RamUsed, out var ramUsed);
+            var hasRamTotal = TryValue(data, keys, SensorType.RamTotal, out var ramTotal);
             var parts = new List<string>
             {
-                TryValue(data, SensorType.RamUsage, out var usage) ? $"{usage:F0}%" : "—",
+                TryValue(data, keys, SensorType.RamUsage, out var usage) ? $"{usage:F0}%" : "—",
                 hasRamUsed && hasRamTotal
                     ? $"{ramUsed:F1}/{ramTotal:F1} GB"
                     : "—"
             };
-            rows.Add(new OverlayMetricViewModel("RAM", string.Join(" · ", parts)));
+            rows.Add(new OverlayRowPlan("RAM", "RAM", string.Join(" · ", parts), false));
         }
 
         if (selection.ShowDisk)
         {
-            var read = TryValue(data, SensorType.DiskRead, out var readValue) ? RateValue(readValue) : "—";
-            var write = TryValue(data, SensorType.DiskWrite, out var writeValue) ? RateValue(writeValue) : "—";
-            rows.Add(new OverlayMetricViewModel("DISCO", $"↓ {read} · ↑ {write}"));
+            var read = TryValue(data, keys, SensorType.DiskRead, out var readValue) ? RateValue(readValue) : "—";
+            var write = TryValue(data, keys, SensorType.DiskWrite, out var writeValue) ? RateValue(writeValue) : "—";
+            rows.Add(new OverlayRowPlan("DISCO", "DISCO", $"↓ {read} · ↑ {write}", false));
         }
 
         if (selection.ShowNetwork)
         {
-            var down = TryValue(data, SensorType.NetworkDown, out var downValue) ? RateValue(downValue) : "—";
-            var up = TryValue(data, SensorType.NetworkUp, out var upValue) ? RateValue(upValue) : "—";
-            rows.Add(new OverlayMetricViewModel("REDE", $"↓ {down} · ↑ {up}"));
+            var down = TryValue(data, keys, SensorType.NetworkDown, out var downValue) ? RateValue(downValue) : "—";
+            var up = TryValue(data, keys, SensorType.NetworkUp, out var upValue) ? RateValue(upValue) : "—";
+            rows.Add(new OverlayRowPlan("REDE", "REDE", $"↓ {down} · ↑ {up}", false));
         }
 
         if (selection.ShowFans)
         {
-            var fans = data?.GetSeriesKeys()
+            var fans = keys?
                 .Where(key => key.Type is SensorType.FanSpeed or SensorType.GpuFan)
                 .Take(4)
                 .ToArray() ?? [];
             if (fans.Length == 0)
-                rows.Add(new OverlayMetricViewModel("VENTOINHA", "—"));
+                rows.Add(new OverlayRowPlan("VENTOINHA", "VENTOINHA", "—", false));
             else
                 foreach (var fan in fans)
-                    rows.Add(new OverlayMetricViewModel(
-                        fan.Type == SensorType.GpuFan ? "GPU FAN" : fan.Index > 0 ? $"FAN {fan.Index}" : "FAN",
-                        fan.Type == SensorType.GpuFan ? $"{data!.GetValue(fan):F0}%" : $"{data!.GetValue(fan):F0} RPM"));
+                {
+                    var fanName = fan.Type == SensorType.GpuFan ? "GPU FAN" : fan.Index > 0 ? $"FAN {fan.Index}" : "FAN";
+                    rows.Add(new OverlayRowPlan(
+                        fanName,
+                        fanName,
+                        fan.Type == SensorType.GpuFan ? $"{data!.GetValue(fan):F0}%" : $"{data!.GetValue(fan):F0} RPM",
+                        false));
+                }
         }
 
         if (selection.ShowMotherboard)
         {
-            var temperatures = data?.GetSeriesKeys()
+            var temperatures = keys?
                 .Where(key => key.Type is SensorType.MotherboardTemp or SensorType.VrmTemperature)
                 .Select(key => data!.GetValue(key))
                 .ToArray() ?? [];
-            rows.Add(new OverlayMetricViewModel("PLACA", temperatures.Length > 0
+            rows.Add(new OverlayRowPlan("PLACA", "PLACA", temperatures.Length > 0
                 ? $"{temperatures.Max():F0} °C"
-                : "—"));
+                : "—", false));
         }
 
         if (selection.ShowFps)
         {
-            var fps = TryValue(data, SensorType.Fps, out var fpsValue) ? $"{fpsValue:F0} FPS" : "— FPS";
-            var frametime = TryValue(data, SensorType.FrametimeMs, out var frameValue) ? $"{frameValue:F2} ms" : "— ms";
-            rows.Add(new OverlayMetricViewModel(
+            var fps = TryValue(data, keys, SensorType.Fps, out var fpsValue) ? $"{fpsValue:F0} FPS" : "— FPS";
+            var frametime = TryValue(data, keys, SensorType.FrametimeMs, out var frameValue) ? $"{frameValue:F2} ms" : "— ms";
+            rows.Add(new OverlayRowPlan(
+                "JOGO",
                 "JOGO",
                 $"{fps} · {frametime}",
                 selection.ShowFrametimeGraph && data is not null && data.FrametimeHistory.Length > 1));
@@ -121,7 +135,8 @@ internal static class OverlayMetricsBuilder
                 var description = string.Equals(label, key.ToString(), StringComparison.OrdinalIgnoreCase)
                     ? formatted
                     : $"{formatted} · {label}";
-                rows.Add(new OverlayMetricViewModel(key.ToString(), description));
+                var identity = key.ToString();
+                rows.Add(new OverlayRowPlan(identity, identity, description, false));
             }
         }
 
@@ -144,12 +159,20 @@ internal static class OverlayMetricsBuilder
         _ => 7
     };
 
-    private static bool TryValue(SensorData? data, SensorType type, out double value)
+    private static bool TryValue(SensorData? data, IReadOnlyList<SensorKey>? keys, SensorType type, out double value)
     {
-        if (data is not null)
+        if (data is not null && keys is not null)
         {
-            var key = data.GetSeriesKeys().FirstOrDefault(candidate => candidate.Type == type);
-            if (key.Type == type && (key.IsPrimary ? data.Values.ContainsKey(type) : data.Series.ContainsKey(key)))
+            SensorKey key = default;
+            var found = false;
+            for (var i = 0; i < keys.Count; i++)
+            {
+                if (keys[i].Type != type) continue;
+                key = keys[i];
+                found = true;
+                break;
+            }
+            if (found && (key.IsPrimary ? data.Values.ContainsKey(type) : data.Series.ContainsKey(key)))
             {
                 value = data.GetValue(key);
                 return true;

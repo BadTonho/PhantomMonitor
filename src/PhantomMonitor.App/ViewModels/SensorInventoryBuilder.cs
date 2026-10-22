@@ -1,7 +1,14 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using PhantomMonitor.Models;
 
 namespace PhantomMonitor.App.ViewModels;
+
+/// <summary>Plano declarativo de uma row do inventário: strings já formatadas, sem ViewModel.</summary>
+internal sealed record InventoryRowPlan(string Key, string Source, string Value, string Unit, bool Available);
+
+/// <summary>Plano declarativo de um grupo do inventário (os 8 fixos + "Outros" quando houver séries fora dos tipos fixos).</summary>
+internal sealed record InventoryGroupPlan(string Title, IReadOnlyList<InventoryRowPlan> Rows);
 
 internal static class SensorInventoryBuilder
 {
@@ -23,11 +30,30 @@ internal static class SensorInventoryBuilder
             SensorType.Fps1Low, SensorType.Fps01Low, SensorType.FpsMax])
     ];
 
-    public static IReadOnlyList<InventoryGroupViewModel> Build(SensorData data)
+    // O builder virou plano: antes (Build) devolvia ViewModels novas a cada snapshot,
+    // e o ItemsControl substituía a árvore inteira (grupos + rows) até 10x/s mesmo
+    // com a aba fora da tela. Hoje ele só produz dados; quem cria e reaproveita as
+    // VMs persistentes é a reconciliação na MainWindowViewModel (mesmo padrão do
+    // overlay: OverlayRowPlan + OverlayMetricViewModel).
+
+    /// <summary>Cascas dos 8 grupos fixos, criadas uma única vez pelo ViewModel no arranque.</summary>
+    public static IReadOnlyList<InventoryGroupViewModel> CreateShellGroups()
+    {
+        var groups = new InventoryGroupViewModel[Groups.Length];
+        for (var index = 0; index < Groups.Length; index++)
+            groups[index] = new InventoryGroupViewModel(Groups[index].Title, new ObservableCollection<InventoryRowViewModel>());
+        return groups;
+    }
+
+    /// <summary>Casca do grupo "Outros", reaproveitada quando a série fora dos tipos fixos alterna entre vazio e cheio.</summary>
+    public static InventoryGroupViewModel CreateOtherGroup() =>
+        new("Outros", new ObservableCollection<InventoryRowViewModel>());
+
+    public static IReadOnlyList<InventoryGroupPlan> Plan(SensorData data)
     {
         var keys = data.GetSeriesKeys();
         var knownTypes = Groups.SelectMany(group => group.ExpectedTypes).ToHashSet();
-        var result = new List<InventoryGroupViewModel>(Groups.Length + 1);
+        var result = new List<InventoryGroupPlan>(Groups.Length + 1);
 
         foreach (var group in Groups)
         {
@@ -42,7 +68,7 @@ internal static class SensorInventoryBuilder
             foreach (var type in group.ExpectedTypes)
             {
                 if (keys.Any(key => key.Type == type)) continue;
-                rows.Add(new InventoryRowViewModel(
+                rows.Add(new InventoryRowPlan(
                     new SensorKey(type, 0).ToString(),
                     "—",
                     "Indisponível",
@@ -50,7 +76,7 @@ internal static class SensorInventoryBuilder
                     false));
             }
 
-            result.Add(new InventoryGroupViewModel(group.Title, rows));
+            result.Add(new InventoryGroupPlan(group.Title, rows));
         }
 
         var otherRows = keys
@@ -60,16 +86,16 @@ internal static class SensorInventoryBuilder
             .Select(key => AvailableRow(data, key))
             .ToList();
         if (otherRows.Count > 0)
-            result.Add(new InventoryGroupViewModel("Outros", otherRows));
+            result.Add(new InventoryGroupPlan("Outros", otherRows));
 
         return result;
     }
 
-    private static InventoryRowViewModel AvailableRow(SensorData data, SensorKey key)
+    private static InventoryRowPlan AvailableRow(SensorData data, SensorKey key)
     {
         var value = data.GetValue(key);
         var (valueText, unit) = Format(key.Type, value);
-        return new InventoryRowViewModel(
+        return new InventoryRowPlan(
             key.ToString(),
             data.GetLabel(key),
             valueText,

@@ -50,7 +50,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _fpsHint = "Aguardando jogo Vulkan com a camada Phantom ativada.";
     private string _inventorySummaryText = "Aguardando primeira leitura dos sensores…";
     private string _inventoryUpdatedText = "";
-    private IReadOnlyList<InventoryGroupViewModel> _inventoryGroups = [];
+    // Cascas persistentes do inventário: os 8 grupos fixos existem desde o arranque;
+    // "Outros" entra/sai apenas do fim da lista. Antes, a lista era substituída por
+    // uma nova a cada snapshot (grupos + rows recriados).
+    private readonly ObservableCollection<InventoryGroupViewModel> _inventoryGroups =
+        new(SensorInventoryBuilder.CreateShellGroups());
+    private InventoryGroupViewModel? _inventoryOtherGroup;
     private bool _hasInventorySnapshot;
     private bool _isOverview = true;
     private bool _isSettings;
@@ -137,7 +142,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string FpsHint { get => _fpsHint; private set => Set(ref _fpsHint, value); }
     public string InventorySummaryText { get => _inventorySummaryText; private set => Set(ref _inventorySummaryText, value); }
     public string InventoryUpdatedText { get => _inventoryUpdatedText; private set => Set(ref _inventoryUpdatedText, value); }
-    public IReadOnlyList<InventoryGroupViewModel> InventoryGroups { get => _inventoryGroups; private set => Set(ref _inventoryGroups, value); }
+    // Referência estável: a coleção notifica estruturalmente (ObservableCollection);
+    // nunca é substituída, então não há mais PropertyChanged da lista por snapshot.
+    public IReadOnlyList<InventoryGroupViewModel> InventoryGroups => _inventoryGroups;
     public bool HasInventorySnapshot { get => _hasInventorySnapshot; private set => Set(ref _hasInventorySnapshot, value); }
     public bool IsWaitingForInventorySnapshot => !HasInventorySnapshot;
     public bool IsOverview { get => _isOverview; private set => Set(ref _isOverview, value); }
@@ -400,7 +407,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void UpdateOverlayRows(SensorData? data)
     {
-        OverlayRows.Clear();
         var selection = new OverlayConfigSelection(
             OverlayShowCpu,
             OverlayShowGpu,
@@ -411,8 +417,118 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OverlayShowMotherboard,
             OverlayShowFps,
             _config.Overlay.ShowFrametimeGraph);
-        foreach (var row in OverlayMetricsBuilder.Build(data, selection, _config.Overlay.ShownSeries))
-            OverlayRows.Add(row);
+
+        // Reconciliação de rows persistentes: rows são reutilizadas e só a string que
+        // mudou dispara PropertyChanged. Sem isso, OverlayRows era Clear+re-add
+        // por snapshot — o ItemsControl re-media/re-renderiza tudo (até 10x/s).
+        ReconcileOverlayRows(OverlayMetricsBuilder.Plan(data, selection, _config.Overlay.ShownSeries));
+    }
+
+    private void ReconcileOverlayRows(IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> plan)
+    {
+        var rows = OverlayRows;
+        var position = 0;
+        for (var p = 0; p < plan.Count; p++)
+        {
+            var entry = plan[p];
+            OverlayMetricViewModel row;
+
+            if (position < rows.Count && rows[position].Identity == entry.Identity)
+            {
+                row = rows[position];
+            }
+            else
+            {
+                // A row pode existir depois (reordenação dos planos: ventoinha
+                // detectada, ordem de instâncias): move para a posição correta.
+                int found = -1;
+                for (var s = position + 1; s < rows.Count && found < 0; s++)
+                    if (rows[s].Identity == entry.Identity)
+                        found = s;
+                if (found > 0)
+                {
+                    row = rows[found];
+                    rows.RemoveAt(found);
+                    rows.Insert(position, row);
+                }
+                else
+                {
+                    row = new OverlayMetricViewModel(entry.Identity, entry.Name);
+                    rows.Insert(position, row);
+                }
+            }
+
+            row.Name = entry.Name;
+            row.Value = entry.Value;
+            row.ShowFrametimeGraph = entry.ShowFrametimeGraph;
+            position++;
+        }
+
+        // Sobras: plan encolheu (série sumiu, opção desligada).
+        while (rows.Count > position)
+            rows.RemoveAt(rows.Count - 1);
+    }
+
+    // Inventário persistente, pelas mesmas razões do overlay: antes, todo snapshot
+    // substituía grupos e rows e o ItemsControl re-media toda a árvore (até 10x/s),
+    // mesmo com a aba de inventário fora de vista.
+    private void ReconcileInventoryGroups(IReadOnlyList<InventoryGroupPlan> plan)
+    {
+        var groups = _inventoryGroups;
+
+        // O plano contém "Outros" somente quando há séries fora dos tipos fixos;
+        // a casca entra/sai apenas do fim da lista e é criada uma única vez.
+        while (groups.Count > plan.Count)
+            groups.RemoveAt(groups.Count - 1);
+        while (groups.Count < plan.Count)
+            groups.Add(_inventoryOtherGroup ??= SensorInventoryBuilder.CreateOtherGroup());
+
+        for (var index = 0; index < plan.Count; index++)
+            ReconcileInventoryRows(groups[index], plan[index].Rows);
+    }
+
+    private void ReconcileInventoryRows(InventoryGroupViewModel group, IReadOnlyList<InventoryRowPlan> plan)
+    {
+        var rows = group.Rows;
+        var position = 0;
+        for (var p = 0; p < plan.Count; p++)
+        {
+            var entry = plan[p];
+            InventoryRowViewModel row;
+
+            if (position < rows.Count && rows[position].Key == entry.Key)
+            {
+                row = rows[position];
+            }
+            else
+            {
+                // A row já pode existir mais adiante (série por instância nova
+                // detectada, reordenação do plano): move para o lugar certo.
+                // Move dispara um único evento CollectionChanged.
+                int found = -1;
+                for (var s = position + 1; s < rows.Count && found < 0; s++)
+                    if (rows[s].Key == entry.Key)
+                        found = s;
+                if (found > 0)
+                {
+                    row = rows[found];
+                    rows.Move(found, position);
+                }
+                else
+                {
+                    row = new InventoryRowViewModel(entry.Key);
+                    rows.Insert(position, row);
+                }
+            }
+
+            row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available);
+            position++;
+        }
+
+        // Sobras: o plano encolheu (série deixou de ser publicada); a casca
+        // do grupo permanece.
+        while (rows.Count > position)
+            rows.RemoveAt(rows.Count - 1);
     }
 
     private void RaiseOverlayAppearanceProperties()
@@ -1467,7 +1583,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _latestSensorData = data;
         RefreshOverlaySeriesOptions();
-        InventoryGroups = SensorInventoryBuilder.Build(data);
+        ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data));
         UpdateOverlayRows(data);
         RefreshSensorTuningSeriesOptions();
         RefreshAlertEditor();

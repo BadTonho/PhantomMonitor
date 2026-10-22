@@ -2,7 +2,7 @@
 
 > **Language:** English · [Português (Brasil)](../../funções/atualizações.md)
 
-Phantom Monitor checks for newer versions published on GitHub Releases, notifies the UI and, on Windows, goes further: the "Atualizar e reiniciar" (Update and restart) button downloads, swaps the files and relaunches on its own. The check is shared by both frontends (implemented in `PhantomMonitor.Services.Update`, in Core); applying the update is platform-specific (appliers).
+Phantom Monitor checks for newer versions published on GitHub Releases and notifies the UI — and, on Windows and Linux (portable/AppImage), the "Atualizar e reiniciar" (Update and restart) button goes further: it downloads, swaps the files and relaunches on its own. The check is shared by both frontends (implemented in `PhantomMonitor.Services.Update`, in Core); applying the update is platform-specific (appliers).
 
 ## How it works
 
@@ -24,6 +24,12 @@ Network/rate-limit failures are logged to `logs/errors.log` and surfaced as a sh
 - **"Nova versão disponível" banner** in the main content when a newer version exists, with "Ver no GitHub" and — when the swap is possible — the **"Atualizar e reiniciar"** button (shows "Baixando: N %" while downloading and "Reiniciando..." during the swap).
 - **"Nova versão" badge** in the sidebar, next to the monitor state; clicking it opens the releases page.
 
+## Interface (Linux, Avalonia)
+
+- **"ATUALIZAÇÕES (GITHUB RELEASES)" card** on the Settings page: automatic-check and beta-channel toggles, a "Repository" field (empty uses the official one), installed version, last check and the "Buscar agora" (Check now), "Abrir página de releases" and — when the swap is possible — "Atualizar e reiniciar" buttons. The preferences go through the page's own "Salvar e aplicar" (Save and apply) button (validation: `owner/repo` or a GitHub URL).
+- **"PHANTOM MONITOR · ATUALIZAÇÃO" toast** in the right corner of the dashboard when a newer version exists or a download/swap is in progress, with the same buttons.
+- On a development build (`0.0.0-dev`), the card states that checking is disabled.
+
 ## Applying the update automatically (Windows)
 
 The "Atualizar e reiniciar" button runs the full cycle:
@@ -38,6 +44,19 @@ Honest limits:
 - Before swapping, the app probes its own install folder; if it is protected (a portable extracted into `Program Files`, for example), the swap is not offered and only the notify-with-link mode remains.
 - If the release has no asset in the expected format, the button does not appear and the card explains why ("this release does not have the expected file; download manually").
 - The executable closes during the swap: the overlay and monitoring stop and resume when the app reopens.
+
+## Applying the update automatically (Linux)
+
+On Linux the flow is detected at startup in two formats:
+
+- **Portable (tarball)** — asset `PhantomMonitor-<version>-linux-x64.tar.gz`: downloads, extracts with the system `tar` into `$XDG_DATA_HOME/PhantomMonitor/UpdateStaging/<version>/` and the one-shot `apply_update.sh` waits for the process to exit (up to 60 s, `kill -0`), swaps files with backups (`*.bak`) — restored on a failed copy — and relaunches the executable with `nohup` when the swap completes.
+- **AppImage** (`$APPIMAGE` set) — asset `PhantomMonitor-<version>-linux-x64.AppImage`: the script just replaces the AppImage file, runs `chmod +x` and relaunches it.
+
+Limits and fallbacks:
+
+- The install is tested with a write probe (AppImage: the folder containing the file; portable: the install folder). When swapping is not possible — a `.deb` or other system-package install in a protected directory — the button does not appear and the app stays in notify-with-link mode; the update is done through the system package manager.
+- The user config (`~/.config/PhantomMonitor/config.json`) and logs live outside the swapped folder and are untouched.
+- The Vulkan layer is not part of the app file swap: after updating, reinstall it with `install_layer.sh` from the new version (see [linux-support.md](linux-support.md)).
 
 ## Channels
 

@@ -9,6 +9,7 @@ using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 using PhantomMonitor.Services.Linux;
 using PhantomMonitor.Services.Telemetry;
+using PhantomMonitor.Services.Update;
 
 namespace PhantomMonitor.App.ViewModels;
 
@@ -58,6 +59,14 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        // Repository vazio usa o repositório oficial (decisão tomada no serviço).
+        var updateRepository = UpdateRepositoryText.Trim();
+        if (updateRepository.Length > 0 && UpdateService.NormalizeRepository(updateRepository) is null)
+        {
+            SettingsMessage = "O repositório deve estar como owner/repo ou em uma URL do GitHub.";
+            return;
+        }
+
         var oldInterval = _config.UpdateIntervalMs;
         var oldCsv = _config.LogToCsv;
         var oldJson = _config.LogToJson;
@@ -65,6 +74,9 @@ public sealed partial class MainWindowViewModel
         var oldTelemetryEnabled = _config.TelemetryExport.Enabled;
         var oldTelemetryPort = _config.TelemetryExport.Port;
         var oldTelemetryListenAll = _config.TelemetryExport.ListenAll;
+        var oldUpdateAutoCheck = _config.Update.AutoCheck;
+        var oldUpdateBeta = _config.Update.CheckBeta;
+        var oldUpdateRepository = _config.Update.Repository;
         var oldOverlayCpu = _config.Overlay.ShowCpu;
         var oldOverlayWidth = _config.Overlay.Width;
         var oldOverlayOpacity = _config.OverlayOpacity;
@@ -98,6 +110,9 @@ public sealed partial class MainWindowViewModel
         var telemetryChanged = TelemetryExportEnabled != oldTelemetryEnabled
             || telemetryPort != oldTelemetryPort
             || TelemetryExportListenAll != oldTelemetryListenAll;
+        var updateChanged = UpdateAutoCheck != oldUpdateAutoCheck
+            || UpdateBetaChannel != oldUpdateBeta
+            || updateRepository != oldUpdateRepository;
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
             || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
         var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
@@ -115,7 +130,7 @@ public sealed partial class MainWindowViewModel
             || overlayVisualChanged
             || overlayAppearanceChanged;
 
-        if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
+        if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged && !updateChanged)
         {
             ConfigureTelemetryExporter();
             SettingsMessage = "Nenhuma alteração para salvar.";
@@ -129,6 +144,9 @@ public sealed partial class MainWindowViewModel
         _config.TelemetryExport.Enabled = TelemetryExportEnabled;
         _config.TelemetryExport.Port = telemetryPort;
         _config.TelemetryExport.ListenAll = TelemetryExportListenAll;
+        _config.Update.AutoCheck = UpdateAutoCheck;
+        _config.Update.CheckBeta = UpdateBetaChannel;
+        _config.Update.Repository = updateRepository;
         _config.Overlay.ShowCpu = OverlayShowCpu;
         _config.Overlay.ShowGpu = OverlayShowGpu;
         _config.Overlay.ShowRam = OverlayShowRam;
@@ -153,6 +171,9 @@ public sealed partial class MainWindowViewModel
             _config.TelemetryExport.Enabled = oldTelemetryEnabled;
             _config.TelemetryExport.Port = oldTelemetryPort;
             _config.TelemetryExport.ListenAll = oldTelemetryListenAll;
+            _config.Update.AutoCheck = oldUpdateAutoCheck;
+            _config.Update.CheckBeta = oldUpdateBeta;
+            _config.Update.Repository = oldUpdateRepository;
             _config.Overlay.ShowCpu = oldOverlayCpu;
             _config.Overlay.ShowGpu = oldOverlayGpu;
             _config.Overlay.ShowRam = oldOverlayRam;
@@ -230,6 +251,11 @@ public sealed partial class MainWindowViewModel
                     : collectionWasRunning
                         ? "Logs atualizados sem reiniciar a coleta."
                         : "Opções de log salvas para a próxima coleta.";
+
+        if (updateChanged && !intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
+        {
+            SettingsMessage = "Preferências de atualização salvas.";
+        }
     }
 
     private void ReplaceSensorService()

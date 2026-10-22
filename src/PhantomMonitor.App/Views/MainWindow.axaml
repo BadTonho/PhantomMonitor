@@ -377,6 +377,30 @@
           </StackPanel>
         </Border>
 
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="ATUALIZAÇÕES (GITHUB RELEASES)" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <CheckBox Content="Verificar automaticamente (no arranque e a cada 24h)" IsChecked="{Binding UpdateAutoCheck, Mode=TwoWay}" />
+            <CheckBox Content="Canal beta (aceitar pré-releases do GitHub)" IsChecked="{Binding UpdateBetaChannel, Mode=TwoWay}" />
+            <StackPanel Spacing="5">
+              <TextBlock Text="REPOSITÓRIO (VAZIO USA O OFICIAL)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+              <TextBox Text="{Binding UpdateRepositoryText, Mode=TwoWay}" PlaceholderText="BadTonho/PhantomMonitor" />
+            </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock Text="ESTADO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding UpdateVersionText}" Foreground="#C7D2E0" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding UpdateStatusText}" Foreground="#C7D2E0" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="action" Content="Buscar agora" Click="OnCheckUpdatesClick" />
+              <Button Content="Abrir página de releases" Click="OnOpenReleasesPageClick" />
+              <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"
+                      IsVisible="{Binding CanApplyUpdate}" IsEnabled="{Binding CanApplyUpdateEnabled}" />
+            </StackPanel>
+            <TextBlock Text="A troca baixa a nova versão, aguarda o app encerrar e reabre sozinho. Config (config.json) e logs ficam fora da pasta trocada. Em instalação por pacote do sistema, a troca não é oferecida e o card fica apenas na notificação." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
           <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
           <TextBlock Grid.Column="1" Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -705,6 +729,19 @@
       <StackPanel Spacing="5">
         <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="#7DD3FC" FontSize="9" FontWeight="Bold" />
         <TextBlock Text="{Binding AlertToastMessage}" Foreground="#F3F6FB" FontSize="12" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <!-- Update update: same pattern as the alerts toast, in the top-right corner of the dashboard. -->
+    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding UpdateToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,60,18,0" MaxWidth="440" Background="#1E2B25" BorderBrush="#34D399" BorderThickness="1" CornerRadius="10" Padding="16">
+      <StackPanel Spacing="8">
+        <TextBlock Text="PHANTOM MONITOR · ATUALIZAÇÃO" Foreground="#6EE7B7" FontSize="9" FontWeight="Bold" />
+        <TextBlock Text="{Binding UpdateToastText}" Foreground="#F3F6FB" FontSize="11" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Content="Abrir GitHub" Click="OnOpenReleasesPageClick" />
+          <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"
+                  IsVisible="{Binding CanApplyUpdate}" IsEnabled="{Binding CanApplyUpdateEnabled}" />
+        </StackPanel>
       </StackPanel>
     </Border>
   </Grid>

@@ -106,6 +106,9 @@ public sealed partial class MainWindow : Window
     private void OnAddOverlaySeriesPatternClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddManualOverlaySeriesPattern();
     private void OnRestoreOverlaySeriesDefaultsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestoreDefaultOverlaySeriesPatterns();
     private void OnAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowAlerts();
+    private void OnCheckUpdatesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.CheckUpdatesNow();
+    private void OnOpenReleasesPageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.OpenReleasesPage();
+    private void OnApplyUpdateClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _ = ViewModel.ApplyUpdateAsync();
     private void OnDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowDiagnostics();
     private void OnRefreshDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RefreshDiagnostics();
     private void OnOpenErrorLogClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

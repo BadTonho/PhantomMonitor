@@ -333,6 +333,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         UpdateOverlayRows(null);
         LoadDiagnosticEntries();
         ErrorLog.EntryWritten += OnDiagnosticEntryWritten;
+        InitUpdateService();
     }
 
     public void Start()
@@ -703,6 +704,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         }
         DisposeTelemetryExporter();
         DisposeLoggers();
+        _updateTimer?.Stop();
+        _updateTimer = null;
+        _updates = null;
         _alertToastTimer?.Stop();
         _desktopNotificationService?.Dispose();
         _sensorService.Dispose();

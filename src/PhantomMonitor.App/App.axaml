@@ -5,4 +5,15 @@
   <Application.Styles>
     <FluentTheme />
   </Application.Styles>
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <!-- Tema ativo. Alternância manual (Fase 0): trocar a Source entre
+             Themes/Tokens.Neptune.axaml (visual Linux atual) e
+             Themes/Tokens.Slate.axaml (visual WPF). A troca em runtime via
+             config.json chega na Fase 3 — as views usam DynamicResource. -->
+        <ResourceInclude Source="avares://PhantomMonitor.App/Themes/Tokens.Neptune.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
 </Application>

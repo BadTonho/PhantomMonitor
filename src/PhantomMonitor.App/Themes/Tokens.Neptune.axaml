@@ -1,0 +1,51 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Tema "Neptune" — preserva o visual atual do Avalonia/Linux.
+      Fonte da verdade: src/PhantomMonitor.App/Views/MainWindow.axaml e OverlayWindow.axaml
+      (hex inline de out/2026, drenado para cá na Fase 0 da unificação visual).
+      Chaves espelham o dicionário do WPF (Resources/Styles.xaml) para que os temas
+      possam trocar por família de resource. Tokens de métricas (raios/paddings/tipografia)
+      entram na Fase 1, junto com a unificação dos controles.
+      Slates/ORIGEM do visual "Slate" ficam em Tokens.Slate.axaml.
+    -->
+
+    <!-- Superfícies -->
+    <SolidColorBrush x:Key="BgWindowBrush" Color="#111827" />
+    <SolidColorBrush x:Key="BgSidebarBrush" Color="#151E2B" />
+    <SolidColorBrush x:Key="BgSidebarBorderBrush" Color="#263244" />
+    <SolidColorBrush x:Key="BgSurfaceBrush" Color="#202C3B" />
+    <SolidColorBrush x:Key="BgCardBrush" Color="#1B2634" />
+    <SolidColorBrush x:Key="BgCardBorderBrush" Color="#29374A" />
+    <SolidColorBrush x:Key="BgChipBrush" Color="#243345" />
+    <SolidColorBrush x:Key="BgDividerBrush" Color="#39475A" />
+    <SolidColorBrush x:Key="BgOverlayPanelBrush" Color="#E6111824" />
+    <SolidColorBrush x:Key="BgOverlayButtonBrush" Color="#263448" />
+    <SolidColorBrush x:Key="BgToastUpdateBrush" Color="#1E2B25" />
+
+    <!-- Texto -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F3F6FB" />
+    <SolidColorBrush x:Key="TextBrightBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="TextBodyBrush" Color="#E6EDF6" />
+    <SolidColorBrush x:Key="TextStatusBrush" Color="#DCE5F0" />
+    <SolidColorBrush x:Key="TextMonoBrush" Color="#C7D2E0" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#AAB7C8" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#8B98AA" />
+    <SolidColorBrush x:Key="TextOverlaySecondaryBrush" Color="#9FB0C5" />
+    <SolidColorBrush x:Key="TextLabelBrush" Color="#748399" />
+    <SolidColorBrush x:Key="TextDimBrush" Color="#66758A" />
+
+    <!-- Acentos e séries de gráfico -->
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#38BDF8" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#7DD3FC" />
+    <SolidColorBrush x:Key="AccentChipCpuBrush" Color="#93C5FD" />
+    <SolidColorBrush x:Key="AccentPurpleChipBrush" Color="#C4B5FD" />
+    <SolidColorBrush x:Key="AccentPurpleSoftBrush" Color="#A78BFA" />
+    <SolidColorBrush x:Key="AccentGreenBrush" Color="#34D399" />
+    <SolidColorBrush x:Key="AccentGreenSoftBrush" Color="#6EE7B7" />
+    <SolidColorBrush x:Key="AccentWarningBrush" Color="#FBBF24" />
+
+    <!-- Borda translúcida do painel overlay (40% do acento) -->
+    <SolidColorBrush x:Key="OverlayBorderBrush" Color="#663B82F6" />
+</ResourceDictionary>

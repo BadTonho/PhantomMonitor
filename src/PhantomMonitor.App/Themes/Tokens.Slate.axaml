@@ -1,0 +1,49 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Tema "Slate" — preserva o visual atual do WPF/Windows.
+      Fonte da verdade: src/PhantomMonitor/Resources/Styles.xaml (paleta de 254 linhas).
+      Tokens sem equivalente direto no WPF (overlay, chips, toast de update) usam
+      estimativas da mesma família slate — refinadas quando os controles
+      compartilhados forem portados (Fase 1).
+    -->
+
+    <!-- Superfícies (valores verbatim do Styles.xaml do WPF) -->
+    <SolidColorBrush x:Key="BgWindowBrush" Color="#0F1117" />
+    <SolidColorBrush x:Key="BgSidebarBrush" Color="#141720" />
+    <SolidColorBrush x:Key="BgSidebarBorderBrush" Color="#232734" />
+    <SolidColorBrush x:Key="BgSurfaceBrush" Color="#202431" />
+    <SolidColorBrush x:Key="BgCardBrush" Color="#181B24" />
+    <SolidColorBrush x:Key="BgCardBorderBrush" Color="#2D3243" />
+    <SolidColorBrush x:Key="BgChipBrush" Color="#1E293B" />
+    <SolidColorBrush x:Key="BgDividerBrush" Color="#232734" />
+    <SolidColorBrush x:Key="BgOverlayPanelBrush" Color="#E60F1117" />
+    <SolidColorBrush x:Key="BgOverlayButtonBrush" Color="#202431" />
+    <SolidColorBrush x:Key="BgToastUpdateBrush" Color="#15271F" />
+
+    <!-- Texto (Primário/Secundário/Muted verbatim do Styles.xaml) -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F1F5F9" />
+    <SolidColorBrush x:Key="TextBrightBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="TextBodyBrush" Color="#E2E8F0" />
+    <SolidColorBrush x:Key="TextStatusBrush" Color="#D9E1EC" />
+    <SolidColorBrush x:Key="TextMonoBrush" Color="#A9B4C4" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="TextOverlaySecondaryBrush" Color="#84A0BF" />
+    <SolidColorBrush x:Key="TextLabelBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="TextDimBrush" Color="#475569" />
+
+    <!-- Acentos (accent/accentLight/verdes/alaranjados verbatim; chips estimados) -->
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#3B82F6" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#60A5FA" />
+    <SolidColorBrush x:Key="AccentChipCpuBrush" Color="#BFDBFE" />
+    <SolidColorBrush x:Key="AccentPurpleChipBrush" Color="#DDD6FE" />
+    <SolidColorBrush x:Key="AccentPurpleSoftBrush" Color="#818CF8" />
+    <SolidColorBrush x:Key="AccentGreenBrush" Color="#10B981" />
+    <SolidColorBrush x:Key="AccentGreenSoftBrush" Color="#34D399" />
+    <SolidColorBrush x:Key="AccentWarningBrush" Color="#F59E0B" />
+
+    <!-- Borda translúcida do painel overlay (40% do acento #2563EB do WPF) -->
+    <SolidColorBrush x:Key="OverlayBorderBrush" Color="#662563EB" />
+</ResourceDictionary>

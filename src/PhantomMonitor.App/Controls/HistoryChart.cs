@@ -9,8 +9,10 @@ public sealed class HistoryChart : Control
     public static readonly StyledProperty<IReadOnlyList<double>?> ValuesProperty =
         AvaloniaProperty.Register<HistoryChart, IReadOnlyList<double>?>(nameof(Values));
 
-    public static readonly StyledProperty<Color> StrokeProperty =
-        AvaloniaProperty.Register<HistoryChart, Color>(nameof(Stroke), Color.Parse("#38BDF8"));
+    /// <summary>Cor da linha. IBrush (e não Color) para os tokens de tema
+    /// serem consumíveis via {DynamicResource} direto do XAML.</summary>
+    public static readonly StyledProperty<IBrush?> StrokeProperty =
+        AvaloniaProperty.Register<HistoryChart, IBrush?>(nameof(Stroke));
 
     static HistoryChart()
     {
@@ -23,7 +25,7 @@ public sealed class HistoryChart : Control
         set => SetValue(ValuesProperty, value);
     }
 
-    public Color Stroke
+    public IBrush? Stroke
     {
         get => GetValue(StrokeProperty);
         set => SetValue(StrokeProperty, value);
@@ -70,20 +72,21 @@ public sealed class HistoryChart : Control
         }
     }
 
-    private SolidColorBrush? _brush;
     private Pen? _pen;
-    private Color _penColor;
+    private IBrush? _penBrush;
 
-    /// <summary>Pen/brush reusados entre frames: criar um par por render (até 10x/s
-    /// por gráfico, 5 gráficos) só alimentava o GC.</summary>
+    /// <summary>Pen reusado entre frames: criar um par por render (até 10x/s
+    /// por gráfico, 5 gráficos) só alimentava o GC. Referência trocada
+    /// (ex.: troca de tema via DynamicResource) recria o pen.</summary>
     private Pen? GetOrCreatePen()
     {
-        var color = Stroke;
-        if (_pen is null || _brush is null || !_penColor.Equals(color))
+        var brush = Stroke;
+        if (brush is null) return null;
+
+        if (_pen is null || !ReferenceEquals(_penBrush, brush))
         {
-            _brush = new SolidColorBrush(color);
-            _pen = new Pen(_brush, 2);
-            _penColor = color;
+            _pen = new Pen(brush, 2);
+            _penBrush = brush;
         }
         return _pen;
     }

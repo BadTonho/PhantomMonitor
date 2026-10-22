@@ -5,13 +5,13 @@
         Title="Phantom Monitor"
         Width="1120" Height="790" MinWidth="850" MinHeight="640"
         WindowStartupLocation="CenterScreen"
-        Background="#111827">
+        Background="{DynamicResource BgWindowBrush}">
   <Window.Styles>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="#8B98AA" />
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.metric">
-      <Setter Property="Foreground" Value="#F3F6FB" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="FontSize" Value="28" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
@@ -25,8 +25,8 @@
       <Setter Property="Padding" Value="10,9" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="Background" Value="#202C3B" />
-      <Setter Property="Foreground" Value="#E6EDF6" />
+      <Setter Property="Background" Value="{DynamicResource BgSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextBodyBrush}" />
     </Style>
     <Style Selector="TextBox.settings-input">
       <Setter Property="Width" Value="190" />
@@ -36,15 +36,15 @@
   </Window.Styles>
 
   <Grid ColumnDefinitions="210,*">
-    <Border Grid.Column="0" Background="#151E2B" BorderBrush="#263244" BorderThickness="0,0,1,0">
+    <Border Grid.Column="0" Background="{DynamicResource BgSidebarBrush}" BorderBrush="{DynamicResource BgSidebarBorderBrush}" BorderThickness="0,0,1,0">
       <Grid RowDefinitions="Auto,*,Auto" Margin="18,22">
         <StackPanel Spacing="3">
-          <TextBlock Text="PHANTOM" Foreground="#F8FAFC" FontSize="19" FontWeight="Bold" />
-          <TextBlock Text="HARDWARE MONITOR" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+          <TextBlock Text="PHANTOM" Foreground="{DynamicResource TextBrightBrush}" FontSize="19" FontWeight="Bold" />
+          <TextBlock Text="HARDWARE MONITOR" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Margin="0,38,0,0" Spacing="10">
-          <TextBlock Text="MONITORAMENTO" Foreground="#718096" FontSize="10" FontWeight="Bold" Margin="8,0,0,4" />
+          <TextBlock Text="MONITORAMENTO" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="Bold" Margin="8,0,0,4" />
           <Button Classes="nav" Content="◉   Visão geral" Click="OnOverviewClick" />
           <Button Classes="nav" Content="▦   Inventário" Click="OnInventoryClick" />
           <Button Classes="nav" Content="ƒ   Sensores customizados" Click="OnCustomSensorsClick" />
@@ -52,13 +52,13 @@
           <Button Classes="nav" Content="♧   Alertas" Click="OnAlertsClick" />
           <Button Classes="nav" Content="ⓘ   Diagnóstico" Click="OnDiagnosticsClick" />
           <Button Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
-          <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="#66758A" FontSize="9" Margin="8,13,0,0" />
+          <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="{DynamicResource TextDimBrush}" FontSize="9" Margin="8,13,0,0" />
         </StackPanel>
 
-        <Border Grid.Row="2" Background="#1B2634" CornerRadius="9" Padding="11">
+        <Border Grid.Row="2" Background="{DynamicResource BgCardBrush}" CornerRadius="9" Padding="11">
           <StackPanel Spacing="5">
-            <TextBlock Text="ESTADO" Foreground="#75859A" FontSize="9" FontWeight="Bold" />
-            <TextBlock Text="{Binding StatusText}" Foreground="#DCE5F0" FontSize="12" />
+            <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+            <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextStatusBrush}" FontSize="12" />
           </StackPanel>
         </Border>
       </Grid>
@@ -68,7 +68,7 @@
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
           <StackPanel Spacing="4">
-            <TextBlock Text="Visão geral do sistema" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Visão geral do sistema" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="{Binding LastUpdateText}" Classes="muted" FontSize="11" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -80,12 +80,12 @@
         </Grid>
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-          <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
             <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="PROCESSADOR" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
-                <Border Grid.Column="1" Background="#243345" CornerRadius="8" Padding="8,3">
-                  <TextBlock Text="CPU" Foreground="#93C5FD" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="PROCESSADOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <Border Grid.Column="1" Background="{DynamicResource BgChipBrush}" CornerRadius="8" Padding="8,3">
+                  <TextBlock Text="CPU" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="9" FontWeight="Bold" />
                 </Border>
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
@@ -94,20 +94,20 @@
                   <TextBlock Text="Utilização total" Classes="muted" FontSize="10" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
-                  <TextBlock Text="{Binding CpuTempText}" Foreground="#E6EDF6" FontSize="14" HorizontalAlignment="Right" />
+                  <TextBlock Text="{Binding CpuTempText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" HorizontalAlignment="Right" />
                   <TextBlock Text="{Binding CpuClockText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
                 </StackPanel>
               </Grid>
-              <charts:HistoryChart Grid.Row="2" Values="{Binding CpuSamples}" Stroke="#38BDF8" Height="42" />
+              <charts:HistoryChart Grid.Row="2" Values="{Binding CpuSamples}" Stroke="{DynamicResource AccentLightBrush}" Height="42" />
             </Grid>
           </Border>
 
-          <Border Grid.Column="1" Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+          <Border Grid.Column="1" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
             <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="PLACA DE VÍDEO" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
-                <Border Grid.Column="1" Background="#243345" CornerRadius="8" Padding="8,3">
-                  <TextBlock Text="GPU" Foreground="#C4B5FD" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="PLACA DE VÍDEO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <Border Grid.Column="1" Background="{DynamicResource BgChipBrush}" CornerRadius="8" Padding="8,3">
+                  <TextBlock Text="GPU" Foreground="{DynamicResource AccentPurpleChipBrush}" FontSize="9" FontWeight="Bold" />
                 </Border>
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
@@ -116,72 +116,72 @@
                   <TextBlock Text="Utilização do núcleo" Classes="muted" FontSize="10" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
-                  <TextBlock Text="{Binding GpuTempText}" Foreground="#E6EDF6" FontSize="14" HorizontalAlignment="Right" />
+                  <TextBlock Text="{Binding GpuTempText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" HorizontalAlignment="Right" />
                   <TextBlock Text="{Binding GpuMemoryText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
                 </StackPanel>
               </Grid>
-              <charts:HistoryChart Grid.Row="2" Values="{Binding GpuSamples}" Stroke="#A78BFA" Height="42" />
+              <charts:HistoryChart Grid.Row="2" Values="{Binding GpuSamples}" Stroke="{DynamicResource AccentPurpleSoftBrush}" Height="42" />
             </Grid>
           </Border>
         </Grid>
 
         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="14">
-          <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="17">
+          <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
             <StackPanel Spacing="11">
-              <TextBlock Text="MEMÓRIA RAM" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="MEMÓRIA RAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
               <TextBlock Text="{Binding RamUsageText}" Classes="metric" />
               <TextBlock Text="{Binding RamDetailText}" Classes="muted" FontSize="11" />
-              <charts:HistoryChart Values="{Binding RamSamples}" Stroke="#34D399" Height="34" />
+              <charts:HistoryChart Values="{Binding RamSamples}" Stroke="{DynamicResource AccentGreenBrush}" Height="34" />
             </StackPanel>
           </Border>
-          <Border Grid.Column="1" Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="17">
+          <Border Grid.Column="1" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
             <StackPanel Spacing="12">
-              <TextBlock Text="DISCO" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="DISCO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
               <StackPanel Spacing="4">
-                <TextBlock Text="LEITURA" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                <TextBlock Text="{Binding DiskReadText}" Foreground="#E6EDF6" FontSize="16" />
+                <TextBlock Text="LEITURA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding DiskReadText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
               <StackPanel Spacing="4">
-                <TextBlock Text="GRAVAÇÃO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                <TextBlock Text="{Binding DiskWriteText}" Foreground="#E6EDF6" FontSize="16" />
+                <TextBlock Text="GRAVAÇÃO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding DiskWriteText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
             </StackPanel>
           </Border>
-          <Border Grid.Column="2" Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="17">
+          <Border Grid.Column="2" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
             <StackPanel Spacing="12">
-              <TextBlock Text="REDE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="REDE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
               <StackPanel Spacing="4">
-                <TextBlock Text="DOWNLOAD" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                <TextBlock Text="{Binding NetworkDownText}" Foreground="#E6EDF6" FontSize="16" />
+                <TextBlock Text="DOWNLOAD" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding NetworkDownText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
               <StackPanel Spacing="4">
-                <TextBlock Text="UPLOAD" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                <TextBlock Text="{Binding NetworkUpText}" Foreground="#E6EDF6" FontSize="16" />
+                <TextBlock Text="UPLOAD" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding NetworkUpText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
             </StackPanel>
           </Border>
         </Grid>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="4">
-                <TextBlock Text="FPS EM JOGO" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="FPS EM JOGO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
                 <TextBlock Text="{Binding FpsHint}" Classes="muted" FontSize="10" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="22" VerticalAlignment="Center">
                 <StackPanel>
-                  <TextBlock Text="FPS" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Text="{Binding FpsText}" Foreground="#F3F6FB" FontSize="25" FontWeight="SemiBold" />
+                  <TextBlock Text="FPS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="{Binding FpsText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="25" FontWeight="SemiBold" />
                 </StackPanel>
                 <StackPanel>
-                  <TextBlock Text="FRAMETIME" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Text="{Binding FrametimeText}" Foreground="#E6EDF6" FontSize="16" />
+                  <TextBlock Text="FRAMETIME" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="{Binding FrametimeText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
                 </StackPanel>
               </StackPanel>
             </Grid>
-            <charts:HistoryChart Grid.Row="1" Values="{Binding FrametimeSamples}" Stroke="#FBBF24" Height="56" />
-            <TextBlock Grid.Row="2" Text="{Binding FpsStatsText}" Foreground="#AAB7C8" FontSize="10" />
+            <charts:HistoryChart Grid.Row="1" Values="{Binding FrametimeSamples}" Stroke="{DynamicResource AccentWarningBrush}" Height="56" />
+            <TextBlock Grid.Row="2" Text="{Binding FpsStatsText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" />
           </Grid>
         </Border>
 
@@ -193,7 +193,7 @@
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
           <StackPanel Spacing="4">
-            <TextBlock Text="Inventário de sensores" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Inventário de sensores" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="{Binding InventorySummaryText}" Classes="muted" FontSize="11" />
             <TextBlock Text="{Binding InventoryUpdatedText}" Classes="muted" FontSize="10" />
           </StackPanel>
@@ -204,31 +204,31 @@
           </StackPanel>
         </Grid>
 
-        <Border IsVisible="{Binding IsWaitingForInventorySnapshot}" Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="10" Padding="18">
+        <Border IsVisible="{Binding IsWaitingForInventorySnapshot}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="18">
           <TextBlock Text="Aguardando a primeira leitura dos sensores…" Classes="muted" FontSize="12" />
         </Border>
 
         <ItemsControl ItemsSource="{Binding InventoryGroups}" IsVisible="{Binding HasInventorySnapshot}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14">
+              <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="{Binding Title}" Foreground="#E6EDF6" FontSize="14" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
                   <Grid ColumnDefinitions="1.1*,1.5*,*,Auto" Margin="0,0,0,2">
-                    <TextBlock Text="SÉRIE" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                    <TextBlock Grid.Column="1" Text="ORIGEM" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                    <TextBlock Grid.Column="2" Text="VALOR" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                    <TextBlock Grid.Column="3" Text="UNIDADE" Foreground="#748399" FontSize="9" FontWeight="Bold" HorizontalAlignment="Right" />
+                    <TextBlock Text="SÉRIE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Grid.Column="1" Text="ORIGEM" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Grid.Column="2" Text="VALOR" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Grid.Column="3" Text="UNIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Right" />
                   </Grid>
                   <ItemsControl ItemsSource="{Binding Rows}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border BorderBrush="#29374A" BorderThickness="0,1,0,0" Padding="0,8">
+                        <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                           <Grid ColumnDefinitions="1.1*,1.5*,*,Auto">
-                            <TextBlock Text="{Binding Key}" Foreground="#C7D2E0" FontFamily="monospace" FontSize="11" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding Source}" Foreground="#AAB7C8" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="{Binding Value}" Foreground="#F3F6FB" FontSize="11" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="3" Text="{Binding Unit}" Foreground="#8B98AA" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Key}" Foreground="{DynamicResource TextMonoBrush}" FontFamily="monospace" FontSize="11" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding Source}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Text="{Binding Unit}" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center" />
                           </Grid>
                         </Border>
                       </DataTemplate>
@@ -247,33 +247,33 @@
     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSettings}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <StackPanel Spacing="4" Margin="0,0,0,3">
-          <TextBlock Text="Configurações" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Text="Configurações" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
           <TextBlock Text="Ajuste a coleta, o overlay e os arquivos de telemetria." Classes="muted" FontSize="11" />
         </StackPanel>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="12">
-            <TextBlock Text="COLETA" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
-            <TextBlock Text="Intervalo global (milissegundos)" Foreground="#E6EDF6" FontSize="12" />
+            <TextBlock Text="COLETA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Intervalo global (milissegundos)" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" />
             <TextBox Classes="settings-input" Text="{Binding UpdateIntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <TextBlock Text="Use um valor entre 100 e 60.000 ms. Um intervalo menor atualiza o painel com mais frequência." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="10">
-            <TextBlock Text="OVERLAY FLUTUANTE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="OVERLAY FLUTUANTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Escolha as categorias mostradas na janela compacta. Salve para aplicar." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel Spacing="5">
-                <TextBlock Text="LARGURA (140–700 PX)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="LARGURA (140–700 PX)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                 <TextBox Text="{Binding OverlayWidthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5" MinWidth="180">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="OPACIDADE" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Grid.Column="1" Text="{Binding OverlayOpacityLabel}" Foreground="#C7D2E0" FontSize="10" />
+                  <TextBlock Text="OPACIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Grid.Column="1" Text="{Binding OverlayOpacityLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
                 </Grid>
                 <Slider Minimum="10" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
                         Value="{Binding OverlayOpacityPercent, Mode=TwoWay}" />
@@ -282,13 +282,13 @@
             <TextBlock Text="A largura e a opacidade são aplicadas à janela aberta ao salvar, sem reiniciar a coleta." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
               <StackPanel Spacing="5" Width="125">
-                <TextBlock Text="FONTE (8–20 PT)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="FONTE (8–20 PT)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                 <TextBox Text="{Binding OverlayFontSizeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="TAMANHO DA FONTE" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Grid.Column="1" Text="{Binding OverlayFontSizeLabel}" Foreground="#C7D2E0" FontSize="10" />
+                  <TextBlock Text="TAMANHO DA FONTE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Grid.Column="1" Text="{Binding OverlayFontSizeLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
                 </Grid>
                 <Slider Minimum="8" Maximum="20" TickFrequency="0.5" IsSnapToTickEnabled="True"
                         Value="{Binding OverlayFontSizeSlider, Mode=TwoWay}" />
@@ -311,7 +311,7 @@
                       IsChecked="{Binding OverlayShowFrametimeGraph, Mode=TwoWay}" />
             <TextBlock Text="O gráfico aparece abaixo da linha JOGO quando há pelo menos duas amostras. A pausa mantém o histórico congelado."
                        Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock Text="SÉRIES POR INSTÂNCIA" Foreground="#748399" FontSize="9" FontWeight="Bold" Margin="0,4,0,0" />
+            <TextBlock Text="SÉRIES POR INSTÂNCIA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" Margin="0,4,0,0" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <ComboBox ItemsSource="{Binding OverlaySeriesOptions}" SelectedItem="{Binding SelectedOverlaySeries, Mode=TwoWay}"
                         PlaceholderText="Escolha uma série detectada" />
@@ -326,7 +326,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                    <TextBlock Text="{Binding Pattern}" Foreground="#C7D2E0" FontSize="11" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Pattern}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Content="Remover" Padding="8,3" Click="OnRemoveOverlaySeriesPatternClick" />
                   </Grid>
                 </DataTemplate>
@@ -336,60 +336,60 @@
               <Button Content="Restaurar padrões" Click="OnRestoreOverlaySeriesDefaultsClick" />
               <TextBlock Text="A lista funciona como whitelist. Padrões aceitam chave exata, *, prefixo* ou *sufixo; os não detectados ficam salvos." Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
             </StackPanel>
-            <TextBlock Text="O overlay é arrastável e recebe cliques. No Wayland, o compositor define sua posição inicial e seu comportamento sobre janelas em tela cheia." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="O overlay é arrastável e recebe cliques. No Wayland, o compositor define sua posição inicial e seu comportamento sobre janelas em tela cheia." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="12">
-            <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <CheckBox Content="Exportar CSV" IsChecked="{Binding LogToCsv, Mode=TwoWay}" />
             <CheckBox Content="Snapshot JSON mais recente" IsChecked="{Binding LogToJson, Mode=TwoWay}" />
             <CheckBox Content="Journal JSON contínuo (JSONL)" IsChecked="{Binding LogToJsonJournal, Mode=TwoWay}" />
             <StackPanel Spacing="4" Margin="0,6,0,0">
-              <TextBlock Text="PASTA DOS ARQUIVOS" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-              <TextBlock Text="{Binding LogDirectoryText}" Foreground="#C7D2E0" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock Text="PASTA DOS ARQUIVOS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding LogDirectoryText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Border>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="12">
-            <TextBlock Text="EXPORTADOR HTTP" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="EXPORTADOR HTTP" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <CheckBox Content="Ativar endpoints de telemetria" IsChecked="{Binding TelemetryExportEnabled, Mode=TwoWay}" />
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
               <StackPanel Spacing="5">
-                <TextBlock Text="PORTA (1024–65535)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="PORTA (1024–65535)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                 <TextBox Text="{Binding TelemetryExportPortText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="7317" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
-                <TextBlock Text="ENDPOINTS" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-                <TextBlock Text="{Binding TelemetryExportEndpointText}" Foreground="#C7D2E0" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <TextBlock Text="ENDPOINTS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding TelemetryExportEndpointText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
               </StackPanel>
             </Grid>
             <CheckBox Content="Escutar em todas as interfaces (LAN)" IsChecked="{Binding TelemetryExportListenAll, Mode=TwoWay}" />
-            <TextBlock Text="A opção LAN permite acesso por outros dispositivos da rede e não usa TLS nem autenticação. Ative somente em uma rede confiável." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="A opção LAN permite acesso por outros dispositivos da rede e não usa TLS nem autenticação. Ative somente em uma rede confiável." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
             <StackPanel Spacing="4">
-              <TextBlock Text="ESTADO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-              <TextBlock Text="{Binding TelemetryExportStatusText}" Foreground="#C7D2E0" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding TelemetryExportStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
             </StackPanel>
             <TextBlock Text="GET /values retorna o último snapshot JSON; GET /health verifica o listener. O servidor funciona enquanto a coleta estiver ativa e mantém o último snapshot durante a pausa." Classes="muted" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="12">
-            <TextBlock Text="ATUALIZAÇÕES (GITHUB RELEASES)" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="ATUALIZAÇÕES (GITHUB RELEASES)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <CheckBox Content="Verificar automaticamente (no arranque e a cada 24h)" IsChecked="{Binding UpdateAutoCheck, Mode=TwoWay}" />
             <CheckBox Content="Canal beta (aceitar pré-releases do GitHub)" IsChecked="{Binding UpdateBetaChannel, Mode=TwoWay}" />
             <StackPanel Spacing="5">
-              <TextBlock Text="REPOSITÓRIO (VAZIO USA O OFICIAL)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="REPOSITÓRIO (VAZIO USA O OFICIAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
               <TextBox Text="{Binding UpdateRepositoryText, Mode=TwoWay}" PlaceholderText="BadTonho/PhantomMonitor" />
             </StackPanel>
             <StackPanel Spacing="4">
-              <TextBlock Text="ESTADO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
-              <TextBlock Text="{Binding UpdateVersionText}" Foreground="#C7D2E0" FontSize="10" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding UpdateStatusText}" Foreground="#C7D2E0" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding UpdateVersionText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding UpdateStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="action" Content="Buscar agora" Click="OnCheckUpdatesClick" />
@@ -412,7 +412,7 @@
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
           <StackPanel Spacing="4">
-            <TextBlock Text="Sensores customizados" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Sensores customizados" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Crie séries derivadas de outras leituras usando fórmulas." Classes="muted" FontSize="11" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -422,18 +422,18 @@
           </StackPanel>
         </Grid>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
           <StackPanel Spacing="8">
-            <TextBlock Text="FÓRMULAS E ÍNDICES" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="FÓRMULAS E ÍNDICES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Use +, -, *, /, parênteses, min(...), max(...), abs(...) e referências como {CpuTemperature} ou {GpuTemperature#1}. Números decimais usam ponto." Classes="muted" FontSize="11" TextWrapping="Wrap" />
-            <TextBlock Text="A ordem define Custom#1, Custom#2… e a sequência de cálculo. Reordenar pode alterar alertas que apontam para Custom#i. Fórmulas podem referenciar sensores customizados anteriores; referências físicas ausentes só deixam a série sem leitura até os dados aparecerem." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="A ordem define Custom#1, Custom#2… e a sequência de cálculo. Reordenar pode alterar alertas que apontam para Custom#i. Fórmulas podem referenciar sensores customizados anteriores; referências físicas ausentes só deixam a série sem leitura até os dados aparecerem." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
             <TextBlock Text="Salvar alterações reinicia a sessão de sensores e zera suas estatísticas. Coleta parada permanece parada; coleta pausada continua pausada." Classes="muted" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="4">
-            <TextBlock Text="SÉRIES DERIVADAS" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="SÉRIES DERIVADAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Até 64 fórmulas. Nomes devem ser únicos." Classes="muted" FontSize="10" />
           </StackPanel>
           <Button Grid.Column="1" Classes="action" Content="Adicionar sensor" Click="OnAddCustomSensorClick" />
@@ -442,26 +442,26 @@
         <ItemsControl ItemsSource="{Binding CustomSensorEditors}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+              <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="10">
                   <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                    <TextBlock Text="{Binding SeriesKey}" Foreground="#93C5FD" FontFamily="monospace" FontSize="11" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SeriesKey}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="11" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Content="↑" IsEnabled="{Binding CanMoveUp}" Click="OnMoveCustomSensorUpClick" />
                     <Button Grid.Column="2" Content="↓" IsEnabled="{Binding CanMoveDown}" Click="OnMoveCustomSensorDownClick" />
                     <Button Grid.Column="3" Content="Remover" Click="OnRemoveCustomSensorClick" />
                   </Grid>
                   <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="NOME" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="NOME" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="DeltaTemp" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5">
-                      <TextBlock Text="UNIDADE (OPCIONAL)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="UNIDADE (OPCIONAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <TextBox Text="{Binding Unit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="°C, %, MB…" />
                     </StackPanel>
                   </Grid>
                   <StackPanel Spacing="5">
-                    <TextBlock Text="FÓRMULA" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Text="FÓRMULA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                     <TextBox Text="{Binding Formula, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Ex.: {GpuTemperature} - {CpuTemperature}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" />
                   </StackPanel>
                 </StackPanel>
@@ -481,7 +481,7 @@
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
           <StackPanel Spacing="4">
-            <TextBlock Text="Ajuste por série" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Ajuste por série" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Configure a cadência de publicação e a suavização das leituras." Classes="muted" FontSize="11" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -491,18 +491,18 @@
           </StackPanel>
         </Grid>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
           <StackPanel Spacing="7">
-            <TextBlock Text="COMO AS REGRAS SE APLICAM" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="COMO AS REGRAS SE APLICAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Intervalo 0 usa cada tick global; valores positivos são limitados a 100–3.600.000 ms e elevados ao intervalo global quando necessário. Suavização 0 ou 1 desliga o filtro; 2–60 usa uma média móvel das amostras frescas." Classes="muted" FontSize="11" TextWrapping="Wrap" />
-            <TextBlock Text="Padrões podem sobrepor várias séries. A última regra correspondente na lista prevalece; use as setas para mudar a ordem. Série ausente fica preservada e será ajustada quando aparecer." Foreground="#FBBF24" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Padrões podem sobrepor várias séries. A última regra correspondente na lista prevalece; use as setas para mudar a ordem. Série ausente fica preservada e será ajustada quando aparecer." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
             <TextBlock Text="Salvar recria a sessão de sensores e zera as estatísticas. Coleta parada permanece parada; coleta pausada continua pausada." Classes="muted" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="4">
-            <TextBlock Text="REGRAS DE AJUSTE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="REGRAS DE AJUSTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Até 64 regras. Selecione uma série detectada/salva ou digite uma série/padrão." Classes="muted" FontSize="10" />
           </StackPanel>
           <Button Grid.Column="1" Classes="action" Content="Adicionar regra" Click="OnAddSensorTuningClick" />
@@ -511,31 +511,31 @@
         <ItemsControl ItemsSource="{Binding SensorTuningEditors}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+              <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="10">
                   <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                    <TextBlock Text="{Binding SeriesLabel}" Foreground="#93C5FD" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SeriesLabel}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Content="↑" IsEnabled="{Binding CanMoveUp}" Click="OnMoveSensorTuningUpClick" />
                     <Button Grid.Column="2" Content="↓" IsEnabled="{Binding CanMoveDown}" Click="OnMoveSensorTuningDownClick" />
                     <Button Grid.Column="3" Content="Remover" Click="OnRemoveSensorTuningClick" />
                   </Grid>
                   <Grid ColumnDefinitions="1.3*,*" ColumnSpacing="10">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="SÉRIE OU PADRÃO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SÉRIE OU PADRÃO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <TextBox Text="{Binding Series, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="GpuTemperature ou Gpu*" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5">
-                      <TextBlock Text="SUGESTÕES DO INVENTÁRIO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SUGESTÕES DO INVENTÁRIO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <ComboBox ItemsSource="{Binding SeriesOptions}" SelectedItem="{Binding SelectedSeriesOption, Mode=TwoWay}" />
                     </StackPanel>
                   </Grid>
                   <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="INTERVALO (MS)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="INTERVALO (MS)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <TextBox Text="{Binding IntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="0 = global" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5">
-                      <TextBlock Text="SUAVIZAÇÃO (AMOSTRAS)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SUAVIZAÇÃO (AMOSTRAS)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <TextBox Text="{Binding SmoothingText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="0 = desativada" />
                     </StackPanel>
                   </Grid>
@@ -556,7 +556,7 @@
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
           <StackPanel Spacing="4">
-            <TextBlock Text="Alertas" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Alertas" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Configure limites e acompanhe os disparos durante a coleta." Classes="muted" FontSize="11" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -566,12 +566,12 @@
           </StackPanel>
         </Grid>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="12">
-            <TextBlock Text="CONFIGURAÇÃO GERAL" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="CONFIGURAÇÃO GERAL" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <CheckBox Content="Ativar avaliação de alertas" IsChecked="{Binding AlertsEnabled, Mode=TwoWay}" />
             <StackPanel Spacing="5">
-              <TextBlock Text="Cooldown global (segundos)" Foreground="#E6EDF6" FontSize="12" />
+              <TextBlock Text="Cooldown global (segundos)" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" />
               <TextBox Classes="settings-input" Text="{Binding AlertsCooldownText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
               <TextBlock Text="Use de 1 a 3.600 segundos. Cooldown 0 em uma regra usa este valor." Classes="muted" FontSize="10" />
             </StackPanel>
@@ -580,7 +580,7 @@
 
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="4">
-            <TextBlock Text="REGRAS" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="REGRAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="A notificação aparece quando a condição é atendida; regras sem notificação continuam no histórico." Classes="muted" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
           <Button Grid.Column="1" Classes="action" Content="Adicionar regra" Click="OnAddAlertRuleClick" />
@@ -589,7 +589,7 @@
         <ItemsControl ItemsSource="{Binding AlertRules}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+              <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="11">
                   <Grid ColumnDefinitions="*,Auto,Auto">
                     <CheckBox Content="Regra ativa" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center" />
@@ -598,30 +598,30 @@
                   </Grid>
                   <Grid ColumnDefinitions="1.4*,*,*,*" ColumnSpacing="10">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="SENSOR" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SENSOR" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <ComboBox ItemsSource="{Binding SensorOptions}" SelectedItem="{Binding SensorKey, Mode=TwoWay}" />
                       <TextBlock Text="{Binding SensorUnit}" Classes="muted" FontSize="9" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5">
-                      <TextBlock Text="COMPARAÇÃO" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="COMPARAÇÃO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <ComboBox ItemsSource="{Binding Comparisons}" SelectedItem="{Binding Comparison, Mode=TwoWay}" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="5">
-                      <TextBlock Text="LIMITE" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="LIMITE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <TextBox Text="{Binding ThresholdText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Grid.Column="3" Spacing="5">
-                      <TextBlock Text="COOLDOWN (S)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="COOLDOWN (S)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <TextBox Text="{Binding CooldownText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                   </Grid>
                   <StackPanel Spacing="5">
-                    <TextBlock Text="MENSAGEM (OPCIONAL)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Text="MENSAGEM (OPCIONAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                     <TextBox Text="{Binding Message, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Sensor {sensor}: {value} (limite: {threshold})" />
                     <TextBlock Text="Placeholders: {sensor}, {value}, {threshold}." Classes="muted" FontSize="10" />
                   </StackPanel>
                   <StackPanel Spacing="5">
-                    <TextBlock Text="SCRIPT (OPCIONAL)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Text="SCRIPT (OPCIONAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                       <TextBox Text="{Binding Script, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="/caminho/para/script.sh" />
                       <Button Grid.Column="1" Content="Escolher arquivo…" Click="OnSelectAlertScriptClick" />
@@ -629,7 +629,7 @@
                     <TextBlock Text="Scripts .sh usam /bin/sh; outros arquivos precisam ser executáveis." Classes="muted" FontSize="10" TextWrapping="Wrap" />
                   </StackPanel>
                   <StackPanel Spacing="5">
-                    <TextBlock Text="ARGUMENTOS DO SCRIPT" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Text="ARGUMENTOS DO SCRIPT" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                     <TextBox Text="{Binding ScriptArguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="--valor {value} --sensor &quot;{sensor}&quot;" />
                     <TextBlock Text="Separe por espaços; use aspas ou barra invertida para agrupar/escapar. Placeholders: {value}, {sensor}. Pipes e redirecionamentos não são interpretados." Classes="muted" FontSize="10" TextWrapping="Wrap" />
                   </StackPanel>
@@ -639,19 +639,19 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
           <StackPanel Spacing="10">
-            <TextBlock Text="HISTÓRICO RECENTE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="HISTÓRICO RECENTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock IsVisible="{Binding !HasAlertHistory}" Text="Nenhum alerta disparado nesta execução." Classes="muted" FontSize="11" />
             <ItemsControl ItemsSource="{Binding AlertHistory}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border BorderBrush="#29374A" BorderThickness="0,1,0,0" Padding="0,8">
+                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
                       <TextBlock Text="{Binding Time}" Classes="muted" FontSize="10" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="1" Text="{Binding Sensor}" Foreground="#93C5FD" FontFamily="monospace" FontSize="10" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="#E6EDF6" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="3" Text="{Binding Value}" Foreground="#FBBF24" FontSize="10" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Sensor}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="10" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Value}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" VerticalAlignment="Center" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -673,22 +673,22 @@
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
           <StackPanel Spacing="4">
-            <TextBlock Text="Diagnóstico" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Diagnóstico" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Erros e fontes de sensores detectadas neste sistema." Classes="muted" FontSize="11" />
           </StackPanel>
           <Button Grid.Column="1" Classes="action" Content="Atualizar" Click="OnRefreshDiagnosticsClick" VerticalAlignment="Center" />
           <Button Grid.Column="2" Classes="action" Content="Abrir arquivo de erros" Click="OnOpenErrorLogClick" VerticalAlignment="Center" />
         </Grid>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
           <StackPanel Spacing="8">
-            <TextBlock Text="FONTES E SENSORES" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="FONTES E SENSORES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Os estados descrevem o que o kernel e os drivers reportaram. Sensor não exposto não significa falha do app." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding DiagnosticSensorLines}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border BorderBrush="#29374A" BorderThickness="0,1,0,0" Padding="0,6">
-                    <TextBlock Text="{Binding}" Foreground="#DCE5F0" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
+                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,6">
+                    <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -696,10 +696,10 @@
           </StackPanel>
         </Border>
 
-        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="ERROS REGISTRADOS" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="ERROS REGISTRADOS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
               <TextBlock Grid.Column="1" Text="{Binding DiagnosticEntriesSummary}" Classes="muted" FontSize="10" />
             </Grid>
             <TextBlock Text="{Binding ErrorLogPathText}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
@@ -707,13 +707,13 @@
             <ItemsControl ItemsSource="{Binding DiagnosticEntries}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border BorderBrush="#29374A" BorderThickness="0,1,0,0" Padding="0,8">
+                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <StackPanel Spacing="3">
                       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                        <TextBlock Text="{Binding TimestampText}" Foreground="#93C5FD" FontSize="10" />
-                        <TextBlock Grid.Column="1" Text="{Binding Context}" Foreground="#FBBF24" FontFamily="monospace" FontSize="10" />
+                        <TextBlock Text="{Binding TimestampText}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="10" />
+                        <TextBlock Grid.Column="1" Text="{Binding Context}" Foreground="{DynamicResource AccentWarningBrush}" FontFamily="monospace" FontSize="10" />
                       </Grid>
-                      <TextBlock Text="{Binding Message}" Foreground="#E6EDF6" FontSize="10" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Message}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>
@@ -725,18 +725,18 @@
       </StackPanel>
     </ScrollViewer>
 
-    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="#243345" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="10" Padding="16">
+    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource AccentLightBrush}" BorderThickness="1" CornerRadius="10" Padding="16">
       <StackPanel Spacing="5">
-        <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="#7DD3FC" FontSize="9" FontWeight="Bold" />
-        <TextBlock Text="{Binding AlertToastMessage}" Foreground="#F3F6FB" FontSize="12" TextWrapping="Wrap" />
+        <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="{DynamicResource AccentSoftBrush}" FontSize="9" FontWeight="Bold" />
+        <TextBlock Text="{Binding AlertToastMessage}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
 
     <!-- Update update: same pattern as the alerts toast, in the top-right corner of the dashboard. -->
-    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding UpdateToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,60,18,0" MaxWidth="440" Background="#1E2B25" BorderBrush="#34D399" BorderThickness="1" CornerRadius="10" Padding="16">
+    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding UpdateToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,60,18,0" MaxWidth="440" Background="{DynamicResource BgToastUpdateBrush}" BorderBrush="{DynamicResource AccentGreenBrush}" BorderThickness="1" CornerRadius="10" Padding="16">
       <StackPanel Spacing="8">
-        <TextBlock Text="PHANTOM MONITOR · ATUALIZAÇÃO" Foreground="#6EE7B7" FontSize="9" FontWeight="Bold" />
-        <TextBlock Text="{Binding UpdateToastText}" Foreground="#F3F6FB" FontSize="11" TextWrapping="Wrap" />
+        <TextBlock Text="PHANTOM MONITOR · ATUALIZAÇÃO" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="9" FontWeight="Bold" />
+        <TextBlock Text="{Binding UpdateToastText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Button Content="Abrir GitHub" Click="OnOpenReleasesPageClick" />
           <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"

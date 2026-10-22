@@ -15,20 +15,20 @@
   <Border Margin="{Binding OverlayOuterMargin}"
           Padding="{Binding OverlayPadding}"
           CornerRadius="10"
-          Background="#E6111824"
-          BorderBrush="#663B82F6"
+          Background="{DynamicResource BgOverlayPanelBrush}"
+          BorderBrush="{DynamicResource OverlayBorderBrush}"
           BorderThickness="1">
     <StackPanel Spacing="{Binding OverlayContentSpacing}">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="{Binding OverlayHeaderSpacing}" PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll">
-          <TextBlock Text="PHANTOM MONITOR" Foreground="#F8FAFC" FontSize="{Binding OverlayHeaderFontSize}" FontWeight="Bold" />
-          <TextBlock Text="HARDWARE OVERLAY" Foreground="#91A0B5" FontSize="{Binding OverlaySecondaryFontSize}" />
+          <TextBlock Text="PHANTOM MONITOR" Foreground="{DynamicResource TextBrightBrush}" FontSize="{Binding OverlayHeaderFontSize}" FontWeight="Bold" />
+          <TextBlock Text="HARDWARE OVERLAY" Foreground="{DynamicResource TextOverlaySecondaryBrush}" FontSize="{Binding OverlaySecondaryFontSize}" />
         </StackPanel>
         <Button Grid.Column="1" Content="×" Padding="{Binding OverlayHideButtonPadding}"
                 MinWidth="{Binding OverlayHideButtonMinSize}" MinHeight="{Binding OverlayHideButtonMinSize}"
-                Background="#263448" Foreground="#E6EDF6" Click="OnHideClick" />
+                Background="{DynamicResource BgOverlayButtonBrush}" Foreground="{DynamicResource TextBodyBrush}" Click="OnHideClick" />
       </Grid>
-      <Border Height="1" Background="#39475A" />
+      <Border Height="1" Background="{DynamicResource BgDividerBrush}" />
       <ItemsControl ItemsSource="{Binding OverlayRows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
@@ -36,22 +36,22 @@
               <Grid ColumnDefinitions="120,*"
                     ColumnSpacing="{Binding $parent[Window].DataContext.OverlayColumnSpacing}"
                     Margin="{Binding $parent[Window].DataContext.OverlayRowMargin}">
-                <TextBlock Text="{Binding Name}" Foreground="#9FB0C5"
+                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                            FontSize="{Binding $parent[Window].DataContext.OverlayMetricNameFontSize}"
                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="#F3F6FB"
+                <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="{Binding $parent[Window].DataContext.OverlayMetricValueFontSize}"
                            FontFamily="monospace" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
               </Grid>
               <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
                                    Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
-                                   Stroke="#FBBF24"
+                                   Stroke="{DynamicResource AccentWarningBrush}"
                                    Height="{Binding $parent[Window].DataContext.OverlayFrametimeGraphHeight}" />
             </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <TextBlock Text="{Binding LastUpdateText}" Foreground="#718096" FontSize="{Binding OverlaySecondaryFontSize}" HorizontalAlignment="Right" />
+      <TextBlock Text="{Binding LastUpdateText}" Foreground="{DynamicResource TextLabelBrush}" FontSize="{Binding OverlaySecondaryFontSize}" HorizontalAlignment="Right" />
     </StackPanel>
   </Border>
 </Window>

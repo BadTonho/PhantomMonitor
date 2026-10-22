@@ -81,6 +81,21 @@ dotnet run --project src/PhantomMonitor
 
 Some hardware readings may require elevated permissions. FPS collection uses PresentMon/ETW and may depend on the Windows version and available permissions.
 
+## Releases and auto-update
+
+Published builds live on the [Releases page](https://github.com/BadTonho/PhantomMonitor/releases). The app checks for newer versions at startup and every 24h and offers "Atualizar e reiniciar" (Update and restart): it downloads the platform package, swaps the files through a one-shot updater (with backup/rollback) and relaunches on its own — config and logs live outside the swapped folder. System-package installs (.deb) and protected folders stay in notify-with-link mode. Each release follows the convention:
+
+| Asset | Platform |
+| --- | --- |
+| `PhantomMonitor-<version>-win-x64.zip` | Windows · WPF (portable; also the installer payload) |
+| `PhantomMonitor-<version>-linux-x64.tar.gz` | Linux · Avalonia (portable) |
+| `PhantomMonitor-<version>-linux-x64.AppImage` | Linux · Avalonia (AppImage) |
+| `PhantomMonitorSetup-<version>.exe` | Windows (per-user installer via Inno Setup) |
+| `phantom-monitor_<version>_amd64.deb` | Linux (.deb package) |
+| `PhantomVulkanLayer-<version>-linux.so` | Vulkan layer (manual install with `install_layer.sh`; not part of the automatic swap) |
+
+Releases are generated locally by maintainers (`scripts/release.ps1`, no CI); see the [updates guide](docs/en/functions/updates.md) and the packagers under `packaging/`. Because the packages are standalone binaries signed by us, Windows may show the **SmartScreen** warning ("unknown publisher") and Linux may ask for confirmation on the first launch.
+
 ## Configuration and data
 
 On first launch, the app creates `config.json` from [`config.example.json`](config.example.json). During development, this file is placed in the repository root. For per-user installations, the usual locations are `%AppData%\PhantomMonitor\config.json` on Windows and `$XDG_CONFIG_HOME/PhantomMonitor/config.json` on Linux.

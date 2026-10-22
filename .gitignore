@@ -51,5 +51,8 @@ ideias.md
 .vscode/
 *.swp
 
+## Releases locais geradas (pacotes do updater; nunca versionadas)
+releases/
+
 ## Temporários de escrita atômica
 *.tmp

@@ -58,6 +58,26 @@ Limites e fallbacks:
 - O config do usuário (`~/.config/PhantomMonitor/config.json`) e os logs ficam fora da pasta trocada, intocados.
 - A camada Vulkan não participa da troca de arquivos do aplicativo: após atualizar, reinstale-a com o `install_layer.sh` da versão nova (ver [suporte-linux.md](suporte-linux.md)).
 
+## Convenção de assets e publicação (mantenedor)
+
+As releases são geradas localmente (sem CI de publicação); o updater procura os nomes exatos abaixo:
+
+| Asset | Uso |
+|---|---|
+| `PhantomMonitor-<versão>-win-x64.zip` | Automático (Applier Windows) + portable |
+| `PhantomMonitor-<versão>-linux-x64.tar.gz` | Automático (Applier Linux portátil) + portable |
+| `PhantomMonitor-<versão>-linux-x64.AppImage` | Automático (Applier do AppImage) |
+| `PhantomMonitorSetup-<versão>.exe` | Instalador per-user (Inno Setup; cada arquivo junto à pasta trocada) |
+| `phantom-monitor_<versão>_amd64.deb` | Instalação .deb (fica em modo notificação) |
+| `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan (instalação manual; atualiza reexecutando o `install_layer.sh` da versão) |
+
+Fluxo de publicação:
+
+1. `scripts/release.ps1 -Version <x.y.z>`: publica os dois frontends self-contained single-file com `-p:Version=<versão>` e gera o zip e o tarball em `releases/<versão>/`. Opções: `-PackWindowsSetup` (instalador com o ISCC quando o Inno Setup 6 está presente), `-LayerSoPath <so>` (anexa a camada Vulkan compilada), `-SkipWindows/-SkipLinux` e `-OutDirectory`.
+2. No Linux, os empacotadores experimentais (NÃO TESTADOS) ficam em `packaging/linux/`: `appimage.sh` (appimagetool) e `deb.sh` (dpkg-deb). O instalador Windows em `packaging/windows/phantom-monitor.iss`.
+3. Revise os pacotes, crie a tag `v<x.y.z>` (`git tag v1.2.3 && git push --tags`) e publique: o script imprime o comando `gh release create v1.2.3 ...` com os assets — ou suba tudo pela página do GitHub.
+4. Rascunho (draft) não conta como atualização disponível; a tag deve ser a versão mesma (ex.: `v1.2.3` ↔ `1.2.3` comparada pelo SemVer além do "v").
+
 ## Canais
 
 - **Estável** (padrão): usa `GET /releases/latest`, que já ignora rascunhos e pré-releases.

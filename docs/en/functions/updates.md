@@ -58,6 +58,26 @@ Limits and fallbacks:
 - The user config (`~/.config/PhantomMonitor/config.json`) and logs live outside the swapped folder and are untouched.
 - The Vulkan layer is not part of the app file swap: after updating, reinstall it with `install_layer.sh` from the new version (see [linux-support.md](linux-support.md)).
 
+## Asset convention and publishing (maintainers)
+
+Releases are generated locally (no publishing CI); the updater looks for these exact names:
+
+| Asset | Used by |
+|---|---|
+| `PhantomMonitor-<version>-win-x64.zip` | Automatic (Windows applier) + portable |
+| `PhantomMonitor-<version>-linux-x64.tar.gz` | Automatic (portable Linux applier) + portable |
+| `PhantomMonitor-<version>-linux-x64.AppImage` | Automatic (AppImage applier) |
+| `PhantomMonitorSetup-<version>.exe` | Per-user installer (Inno Setup; files match the swapped folder) |
+| `phantom-monitor_<version>_amd64.deb` | .deb install (stays in notify mode) |
+| `PhantomVulkanLayer-<version>-linux.so` | Vulkan layer (manual; update by re-running that version's `install_layer.sh`) |
+
+Publishing flow:
+
+1. `scripts/release.ps1 -Version <x.y.z>`: publishes both frontends self-contained single-file with `-p:Version=<version>` and generates the zip and tarball under `releases/<version>/`. Options: `-PackWindowsSetup` (installer when Inno Setup 6 is present), `-LayerSoPath <so>` (attaches the compiled Vulkan layer), `-SkipWindows/-SkipLinux` and `-OutDirectory`.
+2. On Linux, the experimental packagers (NOT TESTED) live in `packaging/linux/`: `appimage.sh` (appimagetool) and `deb.sh` (dpkg-deb). The Windows installer is `packaging/windows/phantom-monitor.iss`.
+3. Review the packages, create the `v<x.y.z>` tag (`git tag v1.2.3 && git push --tags`) and publish: the script prints a `gh release create v1.2.3 ...` command with the assets — or upload everything through the GitHub page.
+4. A draft is not seen as an available update; the tag must match the version itself (e.g. `v1.2.3` ↔ `1.2.3`, "v" tolerated by the SemVer parser).
+
 ## Channels
 
 - **Stable** (default): uses `GET /releases/latest`, which already skips drafts and prereleases.

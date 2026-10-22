@@ -81,6 +81,21 @@ dotnet run --project src/PhantomMonitor
 
 Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.
 
+## Releases e atualização automática
+
+Builds publicados ficam na [página de Releases](https://github.com/BadTonho/PhantomMonitor/releases). O app checa novas versões no arranque e a cada 24h e oferece "Atualizar e reiniciar": baixa o pacote da plataforma, troca os arquivos via atualizador one-shot (com backup/rollback) e reabre sozinho — config e logs ficam fora da pasta trocada. Instalação por pacote de sistema (.deb) e pastas protegidas ficam em modo notificação com link. Cada release segue a convenção:
+
+| Asset | Plataforma |
+| --- | --- |
+| `PhantomMonitor-<versão>-win-x64.zip` | Windows · WPF (portable; também é o payload do instalador) |
+| `PhantomMonitor-<versão>-linux-x64.tar.gz` | Linux · Avalonia (portable) |
+| `PhantomMonitor-<versão>-linux-x64.AppImage` | Linux · Avalonia (AppImage) |
+| `PhantomMonitorSetup-<versão>.exe` | Windows (instalador per-user via Inno Setup) |
+| `phantom-monitor_<versão>_amd64.deb` | Linux (pacote .deb) |
+| `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan (instalação manual com `install_layer.sh`; não entra na troca automática) |
+
+Releases são geradas localmente por mantenedores (`scripts/release.ps1`, sem CI); detalhes na [documentação de atualizações](docs/funções/atualizações.md) e nos empacotadores em `packaging/`. Como os pacotes são binários independentes assinados por nós, o Windows pode exibir o aviso do **SmartScreen** ("editor desconhecido") e o Linux pode pedir confirmação de execução na primeira abertura.
+
 ## Configuração e dados
 
 Na primeira execução, o aplicativo cria `config.json` usando [`config.example.json`](config.example.json) como base. Durante o desenvolvimento, a configuração fica na raiz do repositório. Em instalações por usuário, o caminho usual é `%AppData%\PhantomMonitor\config.json` no Windows e `$XDG_CONFIG_HOME/PhantomMonitor/config.json` no Linux.

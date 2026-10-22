@@ -51,6 +51,10 @@ consome só as colunas numéricas ignora a linha. Na prática é gerado pelo
 **reset de estatísticas** (bandeja/inventário) com o rótulo `reset (<origem>)`.
 Só tem efeito com o CSV já aberto (a partir da primeira linha de valores).
 
+A gravação de CSV/JSON/journal acontece em uma thread dedicada de drain (ordem
+FIFO dos snapshots preservada), então escritas demoradas em disco não travam a
+interface durante o monitoramento.
+
 ## JsonJournalLogger (journal JSON contínuo, JSONL)
 
 Journal **append-only** em `sensors_YYYYMMDD_HHmmss.jsonl` (WPF) ou

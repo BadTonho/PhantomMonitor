@@ -19,6 +19,13 @@ public partial class MainWindow : Window
     private CsvLogger? _csvLogger;
     private JsonLogger? _jsonLogger;
     private JsonJournalLogger? _jsonJournal;
+
+    /// <summary>
+    /// Bomba de fundo: CSV/JSON/journal/SDK/HTTP saem da UI thread e rodam FIFO em
+    /// thread dedicada (ver BackgroundSnapshotWriter). Drenada e zerada antes de
+    /// dispor os loggers no Stop e no fechamento da janela.
+    /// </summary>
+    private BackgroundSnapshotWriter? _snapshotWriter;
     private readonly HotkeyService _hotkeys = new(HotkeyService.DefaultHotkeyId);
 
     /// <summary>2º atalho global (P6.7): pausar/retomar o monitoramento em runtime.</summary>
@@ -331,6 +338,17 @@ public partial class MainWindow : Window
             _telemetryHttp.Start();
         }
 
+        // Loggers/telemetria em thread dedicada (antes: tudo na UI thread, incluindo
+        // serialização JSON indented por tick). Melhor ordem: bombar após os writers
+        // existirem; o sensor service começa por último.
+        _snapshotWriter?.Dispose();
+        _snapshotWriter = new BackgroundSnapshotWriter();
+        if (_csvLogger is not null) _snapshotWriter.AddWriter(_csvLogger.Write);
+        if (_jsonLogger is not null) _snapshotWriter.AddWriter(_jsonLogger.Write);
+        if (_jsonJournal is not null) _snapshotWriter.AddWriter(_jsonJournal.Write);
+        if (_telemetrySdk is not null) _snapshotWriter.AddWriter(_telemetrySdk.Publish);
+        if (_telemetryHttp is not null) _snapshotWriter.AddWriter(_telemetryHttp.Publish);
+
         _startTime = DateTime.UtcNow;
         StartButton.IsEnabled = false;
         StopButton.IsEnabled = true;
@@ -350,6 +368,12 @@ public partial class MainWindow : Window
             _sensorService.Dispose();
         }
         _overlay?.Close();
+
+        // A bomba é drenada primeiro: depois dela, os loggers que ela referencia
+        // podem ser dispostos com segurança.
+        _snapshotWriter?.Dispose();
+        _snapshotWriter = null;
+
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
         _jsonJournal?.Dispose();
@@ -409,6 +433,12 @@ public partial class MainWindow : Window
     private void OnSensorData(SensorData data)
     {
         if (Dispatcher.HasShutdownStarted) return;
+
+        // Loggers/telemetria consomem o snapshot em thread dedicada, fora da UI:
+        // serialização JSON indented, flush CSV e publish SDK/HTTP por tick no
+        // dispatcher eram a maior fonte de jank durante o monitoramento (a ordem
+        // FIFO dos snapshots é preservada pelo canal de leitor único).
+        _snapshotWriter?.Write(data);
 
         // Assíncrono: não bloqueia a thread do timer caso a UI esteja ocupada ou fechando.
         Dispatcher.InvokeAsync(() =>
@@ -489,10 +519,6 @@ public partial class MainWindow : Window
 
             _overlay?.Update(data);
             _alerts?.Evaluate(data);
-            _csvLogger?.Write(data);
-            _jsonLogger?.Write(data);
-            _telemetrySdk?.Publish(data);
-            _telemetryHttp?.Publish(data);
         });
     }
 
@@ -636,6 +662,10 @@ public partial class MainWindow : Window
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
         _jsonJournal?.Dispose();
+
+        // A bomba é drenada antes dos loggers; ver OnStopClick.
+        _snapshotWriter?.Dispose();
+        _snapshotWriter = null;
 
         // SDK e exportador HTTP vivem enquanto o monitoramento estiver ativo;
         // fechar a janela sem Stop deixava o HttpListener e o view de memória

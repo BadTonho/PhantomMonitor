@@ -62,15 +62,20 @@ pill/badge/banner translucent tints `BgTint{Green,Warm,Hot}Brush` +
 
 | Feature | WPF | Avalonia | Action |
 |---|---|---|---|
-| Drag by header | ✅ | ✅ | same |
-| Hide button | (own behavior) | ✅ | keep |
+| Drag by header / Hide button | ✅/(own behavior) | ✅/✅ | same on Linux; **on Windows the panel is click-through (like the WPF): no dragging and the × is not clickable** — control via the dashboard (Hide overlay) and config/profile offsets |
 | Compact mode | ✅ | ✅ | same |
-| Per-instance series whitelist | ✅ | ✅ | same |
-| **Per-app profiles (P3)** + tray pin | ✅ (`RefreshProfileFor`/`ApplyProfile`) | ❌ | port (data already in `config.profiles`) |
-| **Graph rows per series** (Minigraph with guides/min/max) | ✅ | ❌ (frametime only) | port with the unified HistoryChart |
-| True click-through (`WS_EX_TRANSPARENT`) | ✅ | ❌ (receives clicks) | on Windows via P/Invoke; keep Linux as is |
-| Topmost timer / position by focused app | ✅ | partial (fixed Topmost) | port |
-| Per-profile accent color | ✅ | ❌ | port |
+| Per-instance series whitelist | ✅ | ✅ | same (+ per-profile whitelist, profile > global) |
+| **Per-app profiles (P3)** + tray pin | ✅ (`RefreshProfileFor`/`ApplyProfile`) | ✅ F1.3 (`AppMatch` matcher + overrides; no pin) | ✅ ported (`MainWindowViewModel.OverlayProfiles.cs`); tray pin lands with F1.5 |
+| **Graph rows per series** (Minigraph with guides/min/max) | ✅ | ✅ F1.3 (HistoryChart + `MinY`/`MaxY`/`MaxFloor`/`GuideAt`/`GuideBrush`) | ✅ ported on the extended HistoryChart |
+| **OSD templates (P6.6)** | ✅ | ✅ F1.3 (gap missing from the original table) | ✅ ported — parser extracted to Core (`OverlayPlaceholderParser`), shared with the graphs |
+| True click-through (`WS_EX_TRANSPARENT`) | ✅ | ✅ F1.3 (Windows via P/Invoke; Linux keeps drag/click) | ✅ ported (`OverlayWindow.Windows.cs`) |
+| Topmost timer / position by focused app | ✅ | ✅ F1.3 (500 ms timer + 30 ms follow, skip self/explorer, DPI) | ✅ ported |
+| Per-profile accent color | ✅ | ✅ F1.3 (`OverlayAccentBrush` + 0x30 panel tint) | ✅ ported |
+
+Explicit F1.3 leftovers: **tray profile pin** (F1.5, with the
+`TrayIconService`) and **quick positioning/preview** (the WPF
+`OverlayEditorWindow` weighs 596+354 ln; with position-by-focus already
+solved, re-evaluate the editor alongside the system subphase).
 
 ### System services
 
@@ -115,6 +120,14 @@ pill/badge/banner translucent tints `BgTint{Green,Warm,Hot}Brush` +
    partial holds the extras).**
 3. **F1.3 — Complete overlay** (P3 profiles + pin, graph rows, Windows
    click-through) and settings with the missing bits (quick positioning/preview).
+   **✅ Done (full runtime; `91578b4`):** per-app profiles (matcher + overrides
+   on top of the global config; pin already understood via
+   `_pinnedProfileName`), graph rows with fixed axis (extended HistoryChart),
+   P6.6 templates + graphs through the Core `OverlayPlaceholderParser`,
+   Windows click-through/follow/topmost (`OverlayWindow.Windows.cs`),
+   per-profile accent with a new guide token (`OverlayGuideBrush`).
+   **Deferred:** tray pin (F1.5) and quick positioning/preview
+   (re-evaluate alongside the system subphase).
 4. **F1.4 — Complete inventory** (session stats, hardware tree, monitors/EDID,
    reset with CSV/journal marker).
 5. **F1.5 — System** (tray, hotkeys, startup, single instance, admin) and

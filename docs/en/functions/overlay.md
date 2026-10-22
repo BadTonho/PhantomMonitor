@@ -12,9 +12,11 @@ Under **Settings → Floating overlay**, choose categories, width (140–700 px)
 
 The settings page lets you add detected series or enter keys/patterns manually for `overlay.shownSeries`. The list is a whitelist: a series appears when any saved pattern matches. Supported examples include `Gpu*`, `*Total`, and `CpuTemperature#*`. Unmatched patterns remain saved for future hardware. Remove patterns individually or restore the defaults `Gpu*`, `FanSpeed*`, and `Disk*`. An empty list cannot be saved because configuration normalization restores the defaults.
 
-Matching per-instance rows are ordered by family, show the key, hardware label, and formatted value, and are limited to 24. A present zero is displayed as zero. Canonical category rows are not duplicated. On Wayland, the compositor controls the initial position and whether the window appears over fullscreen applications; transparency also depends on compositor support. Click-through is not available in this Avalonia window.
+Matching per-instance rows are ordered by family, show the key, hardware label, and formatted value, and are limited to 24. A present zero is displayed as zero. Canonical category rows are not duplicated. On **Windows**, the Avalonia panel is now a true click-through overlay (`WS_EX_TRANSPARENT` + `WS_EX_LAYERED/NOACTIVATE/TOOLWINDOW`), like the WPF: **it does not receive clicks and cannot be dragged** (the × is display-only); it follows the focused app every 30 ms with a 500 ms Topmost reinforcement and is positioned by `overlayPosition`/profiles — day-to-day control lives in the dashboard **Show/Hide overlay** button. On **Linux**, the overlay stays interactive and draggable by its header with fixed Topmost (the compositor controls the initial position and whether the window appears over fullscreen applications; transparency and stacking also depend on compositor support).
 
-The Linux overlay does not currently include application profiles, custom templates, per-series graphs, or the WPF visual editor.
+The Avalonia overlay now includes the P6.6 templates, the P8.5 per-series graphs, and the per-application profiles below; tray pinning arrives with F1.5 (tray) and the visual editor remains WPF-only — profiles/templates/graphs are edited through `config.json`. On Linux the profile matcher is inactive (there is no focused-window tick), and template/graph changes require an app restart (configuration is read at startup).
+
+Both the WPF and the Avalonia app now offer the advanced OSD described below, including templates, per-instance series, application profiles, graphs, Windows click-through, and the per-profile accent (the visual editor is WPF-only; the Avalonia tray pin lands with F1.5).
 
 ## WPF game OSD
 
@@ -67,7 +69,7 @@ Core `overlay` fields include:
 ]
 ```
 
-`visible: false` hides the OSD while the profile matches. A tray menu can pin a profile for the current session or return to automatic matching. When a profile is active, a small footer indicator names it. The visual editor manages profile fields and series patterns.
+`visible: false` hides the OSD while the profile matches. A tray menu can pin a profile for the current session or return to automatic matching. When a profile is active, a small footer indicator names it. The visual editor manages profile fields and series patterns. The Avalonia app consumes `profiles` from `config.json` the same way (matcher on the focused-process tick on Windows; tray pin arrives with F1.5).
 
 ### Custom text templates (Windows)
 
@@ -80,7 +82,7 @@ Core `overlay` fields include:
 ]
 ```
 
-`{Key}` resolves canonical or instance data; wildcard placeholders select the first match. `{Key:N}` chooses 0–3 decimals (default 1). Literal text supplies units. A row stays hidden until all placeholders resolve. Font follows the OSD at base size minus one point. Color is configured in JSON; the editor changes text while preserving the color for unchanged rows.
+`{Key}` resolves canonical or instance data; wildcard placeholders select the first match. `{Key:N}` chooses 0–3 decimals (default 1). Literal text supplies units. A row stays hidden until all placeholders resolve. Font follows the OSD at base size minus one point. Color is configured in JSON; the editor changes text while preserving the color for unchanged rows. In the Avalonia app the rendering is identical, and edits to `config.json` require a restart.
 
 ### Per-series history graphs (Windows)
 
@@ -94,7 +96,7 @@ Core `overlay` fields include:
 ]
 ```
 
-`series` accepts canonical, instance, wildcard, or custom-sensor name. `height` is 12–120 px (default 36); `window` is 30–1200 samples (default 240); `color` defaults to the OSD accent; `min`/`max` optionally fix the Y axis. Missing series hide the graph while preserving its circular history. Up to 12 graphs are retained. Graphs can consume any published series, including custom formulas and PresentMon metrics. They are configured in JSON; applying the visual editor recreates the overlay so new graphs appear.
+`series` accepts canonical, instance, wildcard, or custom-sensor name. `height` is 12–120 px (default 36); `window` is 30–1200 samples (default 240); `color` defaults to the OSD accent; `min`/`max` optionally fix the Y axis. Missing series hide the graph while preserving its circular history. Up to 12 graphs are retained. Graphs can consume any published series, including custom formulas and PresentMon metrics. They are configured in JSON; applying the WPF visual editor recreates the overlay so new graphs appear. In the Avalonia app each entry builds a persistent sparkline with its own circular buffer (`FrametimeBuffer`; samples only while the series resolves) and an optional fixed axis on the extended `HistoryChart`; config changes require a restart.
 
 The Windows API uses layered, transparent, topmost window styles (`WS_EX_LAYERED`, `WS_EX_TRANSPARENT`, and `HWND_TOPMOST`). This click-through behavior is specific to the WPF implementation.
 

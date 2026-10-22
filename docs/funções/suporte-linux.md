@@ -5,7 +5,7 @@
 O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mantendo rigorosamente a premissa fundamental do projeto: **independência total de softwares ou utilitários de terceiros** (sem depender de MangoHud, GOverlay ou drivers proprietários adicionais).
 
 > [!IMPORTANT]
-> **Escopo atual:** o dashboard Avalonia (`src/PhantomMonitor.App`) é, nesta etapa, o frontend Linux e consome `LinuxSensorService` de `PhantomMonitor.Core`. Ele cobre monitoramento ao vivo, FPS, inventário de séries publicadas, editores de sensores customizados e ajuste por série, gravação CSV/JSON/JSONL, configurações de coleta/logs e do overlay flutuante, exportação HTTP opcional (`/values` e `/health`) e edição de alertas com toasts internos e notificações nativas via D-Bus quando a janela fica em segundo plano. O overlay Linux respeita `showOverlay` e as categorias existentes em `overlay`, é arrastável/interativo e acompanha cada snapshot; transparência pode depender do compositor e janelas em tela cheia são controladas pelo desktop. O exportador é configurado pela página Configurações e escuta somente durante a coleta, mantendo o último snapshot na pausa; por padrão fica desativado e restrito ao loopback. O ajuste por série edita o bloco `sensorTuning`, com alvos exatos ou padrões, intervalo, suavização e ordem de precedência. As regras de alerta são salvas no bloco `alerts`; scripts podem ser iniciados em disparos (`.sh` por `/bin/sh`; outros arquivos precisam ser executáveis), enquanto som e desligamento são preservados, mas não executados no Avalonia. O frontend WPF (`src/PhantomMonitor`) permanece disponível no Windows durante a transição com suas ações de alerta atuais e seu overlay avançado. Desde a F1.1, o app Avalonia no Windows lê os mesmos sensores pela fábrica multiplataforma `SensorServiceFactory` (LibreHardwareMonitor + PresentMon via `Core/Services/Windows/`), e desde a F1.2 seu dashboard tem pílulas de temperatura com cor por faixa, linhas de detalhe de CPU/GPU, o card Placa-mãe & ventoinhas, a lista de processos ativos na GPU (relatados pelo Windows via WMI GPUEngine), o badge de atualização no box ESTADO e o banner de elevação com "Executar como admin" (UAC). A bandeja continua no WPF. O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e não faz parte da solução MSBuild.
+> **Escopo atual:** o dashboard Avalonia (`src/PhantomMonitor.App`) é, nesta etapa, o frontend Linux e consome `LinuxSensorService` de `PhantomMonitor.Core`. Ele cobre monitoramento ao vivo, FPS, inventário de séries publicadas, editores de sensores customizados e ajuste por série, gravação CSV/JSON/JSONL, configurações de coleta/logs e do overlay flutuante, exportação HTTP opcional (`/values` e `/health`) e edição de alertas com toasts internos e notificações nativas via D-Bus quando a janela fica em segundo plano. O overlay Linux respeita `showOverlay` e as categorias existentes em `overlay`, é arrastável/interativo e acompanha cada snapshot; transparência pode depender do compositor e janelas em tela cheia são controladas pelo desktop. O exportador é configurado pela página Configurações e escuta somente durante a coleta, mantendo o último snapshot na pausa; por padrão fica desativado e restrito ao loopback. O ajuste por série edita o bloco `sensorTuning`, com alvos exatos ou padrões, intervalo, suavização e ordem de precedência. As regras de alerta são salvas no bloco `alerts`; scripts podem ser iniciados em disparos (`.sh` por `/bin/sh`; outros arquivos precisam ser executáveis), enquanto som e desligamento são preservados, mas não executados no Avalonia. O frontend WPF (`src/PhantomMonitor`) permanece disponível no Windows durante a transição com suas ações de alerta atuais e seu overlay avançado. Desde a F1.1, o app Avalonia no Windows lê os mesmos sensores pela fábrica multiplataforma `SensorServiceFactory` (LibreHardwareMonitor + PresentMon via `Core/Services/Windows/`), e desde a F1.2 seu dashboard tem pílulas de temperatura com cor por faixa, linhas de detalhe de CPU/GPU, o card Placa-mãe & ventoinhas, a lista de processos ativos na GPU (relatados pelo Windows via WMI GPUEngine), o badge de atualização no box ESTADO e o banner de elevação com "Executar como admin" (UAC), e desde a F1.3 o overlay no Windows ganhou o OSD completo (perfis por aplicativo, gráficos por série, templates de texto e clique-through real com posição pelo app em foco e Topmost reforçado), enquanto no Linux o overlay segue arrastável/interativo com Topmost fixo — sem follow, clique-through ou matcher de perfis por app. A bandeja continua no WPF. O `PhantomVulkanLayer` é construído por CMake/`install_layer.sh` e não faz parte da solução MSBuild.
 
 ### Camada Vulkan: notas técnicas
 
@@ -114,6 +114,21 @@ A camada é **implícita**: todo processo Vulkan a carrega, mas a telemetria só
   ```bash
   ENABLE_PHANTOM_OVERLAY=1 ./executavel_do_jogo
   ```
+
+## 5. Overlay flutuante
+
+O overlay segue `showOverlay` e os campos de `OverlayConfig`. Em Wayland, o
+compositor controla a posição inicial e a pilha sobre tela cheia; a
+transparência também depende do compositor. No **Windows**, o overlay do
+Avalonia (F1.3) é um OSD clique-through real (`WS_EX_TRANSPARENT`) que segue o
+app em foco a cada 30 ms com reforço de Topmost a cada 500 ms — igual ao WPF:
+não recebe cliques e não é arrastável, e o posicionamento fica com
+`overlayPosition`/perfis e o botão do dashboard. No **Linux**, permanece
+interativo e arrastável pelo cabeçalho, com Topmost fixo — clique-through,
+follow e matcher de perfis por app são comportamentos exclusivos do Windows.
+Perfis por aplicativo, templates (P6.6) e gráficos por série (P8.5) são
+consumidos do `config.json` no arranque da app — ver
+[overlay.md](overlay.md).
 
 Os arquivos CSV/JSON/JSONL e o `errors.log` ficam em
 `~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`. A página

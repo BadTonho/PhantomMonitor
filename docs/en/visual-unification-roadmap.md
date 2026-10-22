@@ -108,6 +108,30 @@ First task, before anything else: **map equivalences** between windows/flows.
       the same Core code.
 - [ ] Shared Avalonia controls: selected-state nav, cards, inputs, banners
       (including the update banner), accent gradients.
+- [x] **F1.2 — Complete dashboard on Avalonia**: temperature pills with color
+      by range (green/warm/hot/unknown) and painted usage metrics (<75
+      primary, <90 warm, ≥90 hot — WPF parity); mono detail lines for CPU/GPU
+      via the Core `SensorFormatter`; **Motherboard & fans** card (colored
+      temp + `BuildFanSummary`); **GPU active processes** card (WMI GPUEngine;
+      empty state on Linux); update badge in the sidebar STATUS box (click →
+      Settings); admin elevation banner with "Run as admin" (UAC) on Windows.
+      New tokens in both themes: hot family
+      (`AccentHotBrush`/`AccentHotSoftBrush`/`AccentHotBodyBrush`) and
+      translucent tints (`BgTintGreen/Warm/HotBrush` +
+      `BorderTintGreen/Warm/HotBrush`, reused by badge and banner).
+- [x] **F1.3 — Complete overlay on Avalonia**: per-app profiles (P3 —
+      `AppMatch` matcher of the focused process with pin peeking via
+      `_pinnedProfileName`; override of offsets/width/font/opacity/whitelist/
+      accent/visibility on top of the global config; "◉ profile: X" tag),
+      graph rows per series with fixed axis (HistoryChart extended with
+      `MinY`/`MaxY`/`MaxFloor`/`GuideAt`/`GuideBrush`) and P6.6 templates —
+      parser extracted to Core (`OverlayPlaceholderParser`); true
+      click-through (`WS_EX_TRANSPARENT`), topmost (500 ms) and
+      position-by-focused-app (30 ms) on Windows; OSD accent as config data
+      (`OverlayBrushHelper`) with a new `OverlayGuideBrush` token. On Windows
+      the panel is click-through like the WPF (no drag/no clickable ×); on
+      Linux it stays draggable. **Pending:** tray pin (F1.5) and quick
+      positioning/preview (re-evaluate alongside the system subphase).
 - [ ] Windows-specific features to verify in the port:
       admin elevation, PresentMon (external process — stays as is, via Core),
       global hotkey, tray, Windows startup, DebugWindow (keep or drop).

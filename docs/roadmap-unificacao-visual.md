@@ -107,6 +107,19 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       mesmo código Core.
 - [ ] Controles compartilhados em Avalonia: nav com estado selecionado, cards,
       inputs, banners (incluindo banner de atualização), gradiente/acento.
+- [x] **F1.3 — Overlay completo no Avalonia**: perfis por aplicativo (P3 —
+      matcher `AppMatch` do processo em foco com pin espiando via
+      `_pinnedProfileName`; overrides de offsets/largura/fonte/opacidade/
+      whitelist/acento/visibilidade com base no config; tag "◉ perfil: X"),
+      graph rows por série com eixo fixo (HistoryChart estendido com
+      `MinY`/`MaxY`/`MaxFloor`/`GuideAt`/`GuideBrush`) e templates P6.6 —
+      parser extraído ao Core (`OverlayPlaceholderParser`); clique-through
+      real (`WS_EX_TRANSPARENT`), topmost (500 ms) e posição pelo app em
+      foco (30 ms) no Windows; acento do OSD como dado do config
+      (`OverlayBrushHelper`) com token novo `OverlayGuideBrush`. No Windows
+      o painel é clique-through como no WPF (sem arrasto/× clicável); no
+      Linux continua arrastável. **Pendente:** pin pela bandeja (F1.5) e
+      posicionamento rápido/preview (reavaliar na subfase de sistema).
 - [x] **F1.2 — Dashboard completo no Avalonia**: pílulas de temperatura com cor
       por faixa (verde/morno/quente/desconhecido) e métricas de uso pintadas
       (<75 primário, <90 morno, ≥90 quente — paridade do WPF); linhas de detalhe

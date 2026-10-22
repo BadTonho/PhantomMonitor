@@ -61,15 +61,20 @@ de pílula/badge/banner `BgTint{Green,Warm,Hot}Brush` +
 
 | Recurso | WPF | Avalonia | Ação |
 |---|---|---|---|
-| Arrastar pelo header | ✅ | ✅ | igual |
-| Botão ocultar | (comportamento próprio) | ✅ | manter |
+| Arrastar pelo header / Botão ocultar | ✅/(comportamento próprio) | ✅/✅ | igual no Linux; **no Windows o painel é clique-through (como o WPF): não arrasta e o × não é clicável** — controle pelo dashboard (Ocultar overlay) e offsets do config/perfis |
 | Modo compacto | ✅ | ✅ | igual |
-| Whitelist por série/instância | ✅ | ✅ | igual |
-| **Perfis por aplicativo (P3)** + pin via bandeja | ✅ (`RefreshProfileFor`/`ApplyProfile`) | ❌ | portar (dados já em `config.profiles`) |
-| **Graph rows por série** (Minigraph com guides/min/max) | ✅ | ❌ (só frametime) | portar com HistoryChart unificado |
-| Clique-through real (`WS_EX_TRANSPARENT`) | ✅ | ❌ (recebe cliques) | no Windows via P/Invoke; no Linux manter |
-| Topmost timer / posição pelo app em foco | ✅ | parcial (Topmost fixo) | portar |
-| Cor de acento por perfil | ✅ | ❌ | portar |
+| Whitelist por série/instância | ✅ | ✅ | igual (+ whitelist por perfil, perfil > global) |
+| **Perfis por aplicativo (P3)** + pin via bandeja | ✅ (`RefreshProfileFor`/`ApplyProfile`) | ✅ F1.3 (matcher `AppMatch` + overrides; sem pin) | ✅ portado (`MainWindowViewModel.OverlayProfiles.cs`); pin pela bandeja fica na F1.5 |
+| **Graph rows por série** (Minigraph com guides/min/max) | ✅ | ✅ F1.3 (HistoryChart + `MinY`/`MaxY`/`MaxFloor`/`GuideAt`/`GuideBrush`) | ✅ portado com o HistoryChart estendido |
+| **Templates do OSD (P6.6)** | ✅ | ✅ F1.3 (gap não mapeado na tabela original) | ✅ portado — parser extraído para o Core (`OverlayPlaceholderParser`), mesmo resolver dos gráficos |
+| Clique-through real (`WS_EX_TRANSPARENT`) | ✅ | ✅ F1.3 (Windows via P/Invoke; Linux mantém arrasto/clique) | ✅ portado (`OverlayWindow.Windows.cs`) |
+| Topmost timer / posição pelo app em foco | ✅ | ✅ F1.3 (timer 500 ms + follow 30 ms, skip self/explorer, DPI) | ✅ portado |
+| Cor de acento por perfil | ✅ | ✅ F1.3 (`OverlayAccentBrush` + tint 0x30 do painel) | ✅ portado |
+
+Pendências explícitas da F1.3: **pin do perfil pela bandeja** (F1.5, com o
+`TrayIconService`) e **posicionamento rápido/preview** (o `OverlayEditorWindow`
+do WPF pesa 596+354 ln; sem a posição pelo app em foco já resolvida, o
+editor de oferta é reavaliado junto da subfase de sistema).
 
 ### Serviços de sistema
 
@@ -112,6 +117,13 @@ de pílula/badge/banner `BgTint{Green,Warm,Hot}Brush` +
    concentra os extras).**
 3. **F1.3 — Overlay completo** (perfis P3 + pin, graph rows, clique-through no
    Windows) e configurações com o que falta (posicionamento rápido/preview).
+   **✅ Feito (runtime integral; `91578b4`):** perfis por app (matcher +
+   overrides com base no config; pin espiando via `_pinnedProfileName`),
+   graph rows com eixo fixo (HistoryChart estendido), templates P6.6 +
+   gráficos via `OverlayPlaceholderParser` na Core, clique-through/follow/
+   topmost no Windows (`OverlayWindow.Windows.cs`), acento por perfil com
+   token de guia novo (`OverlayGuideBrush`). **Adiado:** pin pela bandeja
+   (F1.5) e posicionamento rápido/preview (reavaliar na subfase de sistema).
 4. **F1.4 — Inventário completo** (stats de sessão, árvore de hardware,
    monitores/EDID, reset com marker no CSV/journal).
 5. **F1.5 — Sistema** (tray, hotkeys, startup, instância única, admin) e

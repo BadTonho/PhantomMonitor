@@ -8,9 +8,9 @@ O dashboard Avalonia oferece uma janela flutuante independente da janela princip
 
 Na lista **Séries por instância**, selecione uma chave detectada para adicioná-la como alvo exato ou digite uma chave/padrão (`Gpu*`, `*Total`, `CpuTemperature#*`). A lista funciona como whitelist: qualquer padrão correspondente inclui a série. Padrões sem correspondência permanecem salvos para sensores que apareçam depois. Remova entradas individualmente ou use **Restaurar padrões** (`Gpu*`, `FanSpeed*`, `Disk*`). Não é permitido salvar uma lista vazia porque o `AppConfig.Normalize()` a substituiria pelos padrões. As séries são ordenadas por família, incluem chave e rótulo do hardware, exibem zero quando a leitura está presente e são limitadas a 24 linhas; as linhas canônicas das categorias não são repetidas.
 
-O overlay recebe os snapshots do monitor; valores que ainda não existem aparecem como `—`, e pausa da coleta mantém a última leitura. As linhas são estáveis entre snapshots: cada leitura é reconciliada por identidade (`ReconcileOverlayRows` sobre o plano `OverlayMetricsBuilder.Plan`) e somente a string que mudou de fato re-renderiza, em vez de limpar e recriar a lista inteira por tick. A janela é compacta, sem bordas, sempre no topo de janelas comuns e pode ser movida arrastando o cabeçalho. Ela recebe cliques, sem modo click-through. Em Wayland, o compositor controla a posição inicial e a presença sobre aplicativos em tela cheia; a transparência também depende do compositor. A versão Linux não inclui perfis, templates, gráficos ou o editor visual do WPF.
+O overlay recebe os snapshots do monitor; valores que ainda não existem aparecem como `—`, e pausa da coleta mantém a última leitura. As linhas são estáveis entre snapshots: cada leitura é reconciliada por identidade (`ReconcileOverlayRows` sobre o plano `OverlayMetricsBuilder.Plan`) e somente a string que mudou de fato re-renderiza, em vez de limpar e recriar a lista inteira por tick. A janela é compacta, sem bordas, sempre no topo de janelas comuns e pode ser movida arrastando o cabeçalho. No **Windows** o painel é clique-through real (`WS_EX_TRANSPARENT` + `WS_EX_LAYERED/NOACTIVATE/TOOLWINDOW`), como no WPF: **não recebe cliques e não é arrastável** (o × vira display), segue o app em foco a cada 30 ms com reforço de Topmost a cada 500 ms e posiciona-se por `overlayPosition`/perfis — o controle diário fica no botão **Mostrar/Ocultar overlay** do dashboard. No **Linux** o overlay continua recebendo cliques, arrastável pelo cabeçalho e com Topmost fixo (o compositor controla a posição inicial e a presença sobre aplicativos em tela cheia; a transparência e a sobreposição dependem do compositor). O Avalonia inclui os templates P6.6, os gráficos por série P8.5 e os perfis por aplicativo abaixo; o pin pela bandeja chega na F1.5 (tray) e o editor visual permanece do WPF — perfis/templates/gráficos são editados via `config.json`. No Linux o matcher de perfis fica inativo (não há tick de janela em foco), e mudanças em templates/gráficos exigem reiniciar o app (o config é lido no arranque).
 
-O WPF continua oferecendo o OSD avançado descrito abaixo, incluindo templates, séries por instância, perfis por aplicativo, gráficos e editor visual.
+Tanto o WPF quanto o Avalonia oferecem o OSD avançado descrito abaixo, incluindo templates, séries por instância, perfis por aplicativo, gráficos, clique-through no Windows e acento por perfil (o editor visual é do WPF; o pin da bandeja do Avalonia chega na F1.5).
 
 Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual clássico de OSD de jogos. É compacta, clicável (click-through), sem impacto visual excessivo sobre os jogos e sempre visível no topo.
 
@@ -114,18 +114,20 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
   inteira do OSD preservando os deltas por tipo de bloco; `series` troca a
   whitelist de séries por instância (linhas fora dela são escondidas até
   voltarem).
-- **Fixar pela bandeja:** o menu do ícone de bandeja ganhou uma seção automática
+- **Fixar pela bandeja (WPF):** o menu do ícone de bandeja ganhou uma seção automática
   com `Automático (por aplicativo)` + perfis; escolher um fixa o perfil
-  (sobrepõe o matcher; a fixação dura a sessão, não grava no config).
+  (sobrepõe o matcher; a fixação dura a sessão, não grava no config). No Avalonia
+  o matcher já entende o pin (`_pinnedProfileName`), que ativa com o tray na F1.5.
 - **Indicador:** com perfil ativo, o OSD mostra uma linha mínima no rodapé
   (`◉ perfil: CS2`); sem perfil, nada aparece.
-- **Editor Visual:** seção "PERFIS POR APLICATIVO" com cartões editáveis
+- **Editor Visual (WPF):** seção "PERFIS POR APLICATIVO" com cartões editáveis
   (nome, AppMatch com botão "Capturar" do app em foco, offsets, largura, fonte,
   opacidade, séries por instância em vírgula, acento e checkbox
   `OSD visível neste app`), adicionar/remover; seção
   "LINHAS PERSONALIZADAS (TEMPLATES)" com TextBox multilinha (uma linha de
   template por linha — a UI edita só o texto, a cor permanece via config);
-  "Aplicar & Salvar" grava em `config.profiles` e `overlay.templates`.
+  "Aplicar & Salvar" grava em `config.profiles` e `overlay.templates`. No
+  Avalonia (sem editor): perfis consomem o `config.json` no arranque.
 
 ## Linhas personalizadas (templates, P6.6)
 
@@ -179,9 +181,14 @@ OSD" das suítes de referência):
   circular preserva o histórico (não zera o gráfico por um ciclo caído).
 - **Eixo:** auto min/max pela janela atual, com guias tracejadas nos extremos —
   os mesmos guias do frametime; valores fixos dão escala estável (benchmark).
-- **Edição:** via `config.json` (mesma política das templates — o Editor Visual
-  aplica recriando o overlay, então novos gráficos aparecem na hora em que o
-  config é aplicado). Teto de **12 gráficos** (normalização descarta o excesso).
+- **Edição:** via `config.json` (a leitura é feita no arranque — no Avalonia,
+  novas entradas exigem reiniciar o app; no WPF o Editor Visual aplica
+  recriando o overlay, então novos gráficos aparecem na hora). Teto de
+  **12 gráficos** (normalização descarta o excesso).
+- **Porta do Avalonia:** cada entrada vira sparkline persistente com buffer
+  circular próprio (`FrametimeBuffer`; amostra empurrada só quando a série
+  resolve) e eixo fixo opcional (`Min`/`Max`) no `HistoryChart` estendido;
+  o contorno da linha usa `color` ou o acento vigente do OSD.
 - **Fontes de dado:** qualquer série publicada — inclusive `Custom#i` (P8.1) e
   `CPU/Gpu Busy` do PresentMon (P6.5).
 

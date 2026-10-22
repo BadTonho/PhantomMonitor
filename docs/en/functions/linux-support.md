@@ -80,4 +80,4 @@ ENABLE_PHANTOM_OVERLAY=1 ./game-executable
 
 The floating overlay follows `showOverlay` and existing `OverlayConfig` fields. On Wayland, the compositor controls its initial position and fullscreen stacking; transparency can also depend on compositor support. The overlay is interactive and does not support click-through.
 
-Logs are stored under `~/.local/share/PhantomMonitor/logs/`, respecting `XDG_DATA_HOME`. The HTTP exporter is disabled by default and binds to loopback; `listenAll` exposes it on all interfaces without TLS or authentication. See [configuration](configuration.md), [logging](logging.md), [alerts](alerts.md), and the [Telemetry SDK](../telemetry-sdk.md) for details.
+Linux telemetry CSV/JSON/JSONL files are stored under `~/.local/share/PhantomMonitor/logs/`, respecting `XDG_DATA_HOME`. The internal `errors.log` is stored in a `logs/` directory beside the executable. The HTTP exporter is disabled by default and binds to loopback; `listenAll` exposes it on all interfaces without TLS or authentication. See [configuration](configuration.md), [logging](logging.md), [alerts](alerts.md), and the [Telemetry SDK](../telemetry-sdk.md) for details.

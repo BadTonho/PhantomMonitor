@@ -47,7 +47,7 @@
 - [x] Linux no mesmo modelo: per-core (`/proc/stat`), por-disco (`/proc/diskstats`),
       por-NIC (`/proc/net/dev`), multi-card DRM e slots de hwmon.
 
-## P2 — SDK de telemetria via memória compartilhada — ✅ CONCLUÍDO (`c7b42a2`)
+## P2 — SDK de telemetria via memória compartilhada — ✅ CONCLUÍDO (`c7b42a2`, WPF/Windows)
 
 - [x] `MemoryMappedFile` versionada `phantom_monitor_telemetry_v1` (header
       magic `PMTS`/version/seq/count/timestamp) publicada a cada ciclo do monitoramento.
@@ -55,6 +55,7 @@
       `SensorKey` do CSV/JSON; leitor de referência em `tools/TelemetrySdkReader/`.
 - [x] Consistência por **seqlock** (seq ímpar/par); leitor repete leitura quando seq muda.
 - [x] `sensors_latest.json` mantido como fallback legado (deprecando devagar).
+- [x] Exportador HTTP complementar (`/values`, `/health`) disponível no WPF e no Avalonia/Linux; o mapa `MemoryMappedFile` acima é publicado somente pelo WPF/Windows.
 - [x] Documento `docs/telemetry-sdk.md` com layout byte a byte, protocolo C/C# e limites
       — link no README.
 
@@ -100,7 +101,7 @@ Sete sub-etapas, um commit Conventional cada, build 0 erros/0 avisos, docs sincr
 - **P6.2** `profiles[].visible: false` esconde o OSD por aplicativo — `60c72e5`
 - **P6.3** Exportador HTTP do SDK (`GET /values` `/health`, loopback padrão, `listenAll` opt-in; UDP de propósito fora — `1caf566`
 - **P6.4** Família `Battery*` (nível/%, tensão, potência com sinal, desgaste, AC) via WMI no Windows e `/sys/class/power_supply` no Linux; desktop sem bateria não publica nada — `5095a11`
-- **P6.5** Métricas extras do PresentMon (GPU Busy / CPU Busy / CPU Wait / latência de present) + percentis puros P1/P99 de FPS e frametime, parse tolerante a versão — `159a0cf`
+- **P6.5** Métricas extras do PresentMon no Windows (GPU Busy / CPU Busy / CPU Wait / latência de present) + percentis puros P1/P99 de FPS e frametime, parse tolerante a versão — `159a0cf`
 - **P6.6** Templating do OSD: linhas personalizadas com placeholders `{Chave}`/`{Chave:N}`/wildcard, ocultas até resolverem, sempre no fim do painel; cor só via config — `df4b72e`
 - **P6.7** Pausa/retomada do monitoramento (bandeja + 2º atalho global `Ctrl+Alt+P`): ciclos pulados, telemetria congelada no último snapshot, estado não persistente — `5c54f8f`
 
@@ -172,7 +173,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 | Curva de ventoinha, V/F curve, OC scanner | B | P5: fora do escopo read-only (app separado um dia) |
 | Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (padrão dos hooks de captura); OBS no plugin cobre gravação |
 | Screenshot in-frame via hotkey | B | Não há acesso ao backbuffer sem hook; OBS cobre |
-| **Métricas ricas do PresentMon** (GPU Busy, CPU Busy/CPU Wait, click-to-photon, percentis 1st/99th, modo de present) | A | ✅ Fechado pelo **P6.5** (GPU/CPU Busy, CPU Wait, latência de present e percentis P1/P99 de FPS/frametime; modo de present/click-to-photon não expostos pelo executável — não planejado) |
+| **Métricas ricas do PresentMon** (GPU Busy, CPU Busy/CPU Wait, click-to-photon, percentis 1st/99th, modo de present) | A | ✅ Fechado pelo **P6.5 no Windows/PresentMon** (GPU/CPU Busy, CPU Wait, latência de present e percentis P1/P99 de FPS/frametime; o leitor Linux não publica essas séries; modo de present/click-to-photon não expostos pelo executável — não planejado) |
 | **Latency markers NVIDIA Reflex** (`reflexlatency()/timespan()`, marcadores input→gpurender) | B | Implementado com injection/hook no jogo pelas suítes de referência — fora por política |
 | **OverlayEditor / hypertext** — tags (`<B>`, `<FNT>`), gráficos de barra/timeband, fórmulas e filtros (`buf()`, condições), camadas condicionais, macros `%CPU%`, text tables | A | 🟡 Parcial: **P6.6** (templates `{Chave}`/`{Chave:N}` + cor) cobre texto/condição simples; gráficos embutidos e expressões = P7 de UI |
 | Per-app "OSD ocultado" (jogos que não querem ver overlay) | A | ✅ Fechado pelo **P6.2** (`profiles[].visible: false`) |
@@ -186,7 +187,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 |---|---|---|
 | Colunas Min/Máx/Média/Atual por sensor + hotkey de reset | A | ✅ Fechado pelo **P6.1** (SeriesStatsTracker por snapshot + "Resetar estatísticas" na bandeja/colunas Min/Máx/Média no inventário) |
 | Hotkey para **pausar/retomar** o monitoramento | A | ✅ Fechado pelo **P6.7** (tray com check + 2º atalho global; telemetria congelada no último snapshot) |
-| Percentis 1st/99th de FPS e frametime (percentis brutos sobre janela móvel) | A | ✅ Fechado pelo **P6.5** (FpsP1/FpsP99 + FrametimeP1/FrametimeP99 sobre a janela de ~60 s) |
+| Percentis 1st/99th de FPS e frametime (percentis brutos sobre janela móvel) | A | ✅ Fechado pelo **P6.5** no leitor Windows/PresentMon (FpsP1/FpsP99 + FrametimeP1/FrametimeP99 sobre a janela de ~60 s; o leitor Linux ainda não publica essas séries) |
 | Marcadores/hotkeys de benchmark: start/stop de log e segmento com marcador | A | ✅ Fechado pelo **P6.1** + **P8.3** (`#marker,<ts>,<label>` no CSV a cada reset + notas `{"kind":"note"}` no journal JSONL) |
 | Acesso remoto: servidor de sensor remoto (TCP na LAN) para 2ª máquina e dashboards | A | ✅ Fechado pelo **P6.3** (mesma estrutura do P2 exportada por HTTP; LAN opt-in com `listenAll`) |
 | Bateria (laptop: carga %, desgaste, draw, AC) | A | ✅ Fechado pelo **P6.4** (WMI `root\WMI`+`Win32_Battery` no Windows; `/sys/class/power_supply` no Linux; desktop não publica) |
@@ -213,7 +214,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 2. ✅ **P6.2** `profiles[].visible` (esconder OSD por app) — feito (`60c72e5`)
 3. ✅ **P6.3** Exportador HTTP do SDK (loopback/LAN opt-in; UDP deliberadamente fora) — feito (`1caf566`)
 4. ✅ **P6.4** Bateria via WMI/sysfs (Windows + Linux, módulo próprio da família `Battery*`) — feito (`5095a11`)
-5. ✅ **P6.5** Métricas extras do PresentMon (GPU/CPU Busy, CPU Wait, latência de present) + percentis 1st/99th — feito (`159a0cf`)
+5. ✅ **P6.5** Métricas extras do PresentMon no Windows (GPU/CPU Busy, CPU Wait, latência de present) + percentis 1st/99th — feito (`159a0cf`)
 6. ✅ **P6.6** OSD templating (linhas com placeholders, condições por resolução de séries) — feito (`df4b72e`)
 7. ✅ **P6.7** Pausar/retomar monitoramento (tray/atalho global `Ctrl+Alt+P`) — feito (`5c54f8f`)
 
@@ -230,7 +231,7 @@ engine" quando implementável apenas com driver próprio.**
 
 ## Onde o Phantom Monitor já está à frente
 
-- **SDK de memória compartilhada gratuita e estável** (P2): em soluções comerciais
+- **SDK de memória compartilhada gratuita e estável no WPF/Windows** (P2): em soluções comerciais
   de referência, o acesso de terceiros à telemetria bruta via memória compartilhada
   tende a ser recurso licenciado/pago — aqui é aberto, documentado e versionado.
 - **Sem hook/injection**: anti-cheats podem restringir os OSDs que injetam hooks no

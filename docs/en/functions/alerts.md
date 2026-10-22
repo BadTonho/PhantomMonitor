@@ -53,7 +53,7 @@ The global cooldown is 1–3600 seconds; per-rule `0` uses the global value. `se
 
 Message placeholders are `{sensor}`, `{value}` (locale-formatted in WPF), and `{threshold}`. An empty message uses `Sensor {sensor}: {value} (limit: {threshold})`.
 
-For example, a Windows WHEA rule using `sensor: "WheaErrorCount"`, comparison `Above`, and threshold `0` fires on each newly observed hardware-error count (subject to cooldown); zero itself is still a real reading. A custom formula is addressed by `sensor: "Custom"` and its one-based `sensorIndex`. On instance rules, the message's `{sensor}` contains the suffixed key, such as `GpuTemperature#1`.
+For example, a Windows WHEA rule using `sensor: "WheaErrorCount"`, comparison `Above`, and threshold `0` detects that the session counter is nonzero. It fires on the false-to-true transition, then may fire again after its cooldown while the count remains above zero; it does not detect each counter increment as a separate event. Zero itself is still a valid reading. A custom formula is addressed by `sensor: "Custom"` and its one-based `sensorIndex`. On instance rules, the message's `{sensor}` contains the suffixed key, such as `GpuTemperature#1`.
 
 WPF's popup is topmost and does not take focus; a new alert replaces the current one. Its sound action is the system warning beep. Windows scripts can use the default file association for `.exe`, `.bat`, `.cmd`, or `.ps1`. Shutdown schedules `shutdown /s /t 60 /c "<message>"`; cancel it with `shutdown /a`. If `allowShutdown` is false, the action is skipped and the reason is recorded in `logs/errors.log`.
 

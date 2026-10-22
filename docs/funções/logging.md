@@ -82,7 +82,7 @@ do snapshot sensors_latest.json) — indicado para benchmarks longos e replay.
 
 ## ErrorLog (`logs/errors.log`)
 
-Registro de erros internos (substitui os antigos `catch` vazios). Fica em `logs/` ao lado do executável.
+Registro de erros internos (substitui os antigos `catch` vazios). Fica em `logs/` ao lado do executável em ambos os frontends. No Linux, esse caminho é distinto da pasta de dados do usuário usada pelos arquivos CSV/JSON/JSONL de telemetria.
 
 - Formato: `data hora [contexto] mensagem`
 - Mensagens idênticas consecutivas são suprimidas; o arquivo é zerado ao passar de ~1 MB

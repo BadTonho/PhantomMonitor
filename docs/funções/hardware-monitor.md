@@ -18,7 +18,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
 - **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo)
 - **Monitores (P8.4):** identidade dos painéis conectados via EDID/WMI (`WmiMonitorID` + `WmiMonitorBasicDisplayParams`, somente monitores ativos) — fabricante, modelo, serial, diagonal física, ano/semana de fabricação e flag de primário; cache de 60 s, lista ordenada pelo caminho de instância WMI (sem relato do WMI: lista vazia); modelo `MonitorInfo` em [modelos-dados.md](modelos-dados.md)
-- **Erros de hardware WHEA:** série `WheaErrorCount` (Windows apenas) = eventos do provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão; `0` é leitura real (alerta "Above > 0" dispara em qualquer erro novo)
+- **Erros de hardware WHEA:** série `WheaErrorCount` (Windows apenas) = eventos do provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão; `0` é leitura real (alerta `Above > 0` detecta que o contador ficou não zero; como ele é cumulativo, pode repetir após cooldown, mas não sinaliza cada incremento separadamente)
 
 ## Regras de mapeamento de sensores
 
@@ -87,9 +87,11 @@ System (falhas de PCIe/device corrigidas ou fatais, CPU, memória, cache...).
 |---|---|---|
 | `WheaErrorCount` | err | Nº de eventos WHEA **desde o início da sessão de monitoramento** |
 
-- Publicada **sempre** (contador em `0` é leitura real, não série ausente) — por
-  isso alertas funcionam com rule `"sensor": "WheaErrorCount"`, `"comparison":
-  "Above"`, `"threshold": 0`: qualquer erro novo dispara o alerta.
+- Publicada **sempre** (contador em `0` é leitura real, não série ausente). Uma
+  regra `Above` com limite `0` detecta que o contador da sessão ficou acima de
+  zero; dispara na transição para verdadeiro e pode repetir após o cooldown
+  enquanto continuar acima de zero, mas não sinaliza cada incremento
+  separadamente.
 - Consulta ao log de eventos **a cada 10 s**, direção reversa com early-break
   (para no primeiro evento anterior ao início da sessão; teto de 5000 eventos).
 - Sem permissão de leitura ou provedor ausente: contador segue em `0` e o erro é

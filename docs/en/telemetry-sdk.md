@@ -4,12 +4,12 @@
 
 External tools such as OBS, AutoHotkey, dashboards, scripts, and other apps can consume Phantom Monitor telemetry without reading log files:
 
-1. **Shared memory** is always available while monitoring. A structured snapshot is published at the monitor cadence (minimum 100 ms).
-2. **HTTP exporter** is optional through `telemetryExport.enabled`; it exposes the latest snapshot as JSON at `GET /values`.
+1. **Shared memory** is published by the WPF/Windows frontend while monitoring. A structured snapshot is written at the monitor cadence (minimum 100 ms). Avalonia/Linux does not publish this map.
+2. **HTTP exporter** is available in both frontends when `telemetryExport.enabled` is set; it exposes the latest snapshot as JSON at `GET /values`.
 
-The shared-memory map is created when collection starts and removed when it stops. `sensors_latest.json` remains a legacy fallback.
+The WPF shared-memory map is created when collection starts and removed when it stops. On Linux, the HTTP exporter is the external telemetry interface; `sensors_latest.json` remains a file-based fallback.
 
-## Shared-memory identity and layout
+## Shared memory (WPF/Windows): identity and layout
 
 - Map name: `phantom_monitor_telemetry_v1`, scoped to the local user/session. Readers should run in the same session; a global namespace would require broader permissions.
 - Size: 20,544 bytes: 64-byte header plus 256 entries of 80 bytes each.
@@ -59,6 +59,7 @@ In C, read the same sequence around the copied entries. On ARM64, load `seq` wit
 - Responses use `Cache-Control: no-store`, JSON content type, and content length.
 - The listener exists only while monitoring is started. It continues serving the frozen last snapshot while paused. Bind failures are logged and do not stop collection.
 - On Linux, **Settings** edits `enabled`, `port`, and `listenAll`, and shows the endpoint and listener state. Changing the address or port during a pause reopens the listener and republishes the frozen snapshot.
+- On Windows, the WPF frontend uses the same endpoints and configuration block. The shared-memory map described above is a separate Windows-only interface.
 
 HTTP is used instead of UDP for discoverability, keep-alive, standard headers, and easy access from browsers and common clients. Shared memory remains better suited to high-frequency local consumers.
 

@@ -98,7 +98,7 @@ Core `overlay` fields include:
 
 The Windows API uses layered, transparent, topmost window styles (`WS_EX_LAYERED`, `WS_EX_TRANSPARENT`, and `HWND_TOPMOST`). This click-through behavior is specific to the WPF implementation.
 
-Profile `opacity` is an override of the global `overlayOpacity`; an opacity of zero can make a profile invisible while leaving the overlay window present, while `visible: false` hides it entirely. The tray profile pin overrides automatic matching for the current app session and does not write back to configuration. When a profile is active, the OSD shows a small `profile: <name>` footer.
+Profile `opacity` overrides the global `overlayOpacity` and is normalized to 0.1–1. Use `visible: false` to hide the OSD while a profile matches. The tray profile pin overrides automatic matching for the current app session and does not write back to configuration. When a profile is active, the OSD shows a small `profile: <name>` footer.
 
 For templates, a placeholder without an explicit series can use the canonical value or the first available instance. A wildcard placeholder resolves to the first matching `SensorKey`. A template line is placed at the bottom of the panel, after the dynamic instance-series block. Template font size is the base OSD size minus one point.
 

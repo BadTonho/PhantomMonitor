@@ -8,6 +8,12 @@ The sensor enum covers CPU (`CpuTotal`, per-core, temperature, power, clock, vol
 
 The concrete enum names include `CpuTotal`, `CpuPerCore`, `CpuTemperature`, `CpuPower`, `CpuClock`, `CpuVoltage`; `GpuCore`, `GpuMemory`, `GpuMemoryUsed`, `GpuMemoryTotal`, `GpuTemperature`, `GpuHotSpot`, `GpuVramTemperature`, `GpuCoreClock`, `GpuMemoryClock`, `GpuVoltage`, `GpuFan`, `GpuPower`; `RamUsage`, `RamAvailable`, `RamUsed`, `RamTotal`, `RamTemperature`; `DiskUsage`, `DiskRead`, `DiskWrite`, `DiskTemperature`, `DiskHealth`, `DiskTotalRead`, `DiskTotalWritten`; `NetworkUp`, `NetworkDown`, `NetworkUpTotal`, `NetworkDownTotal`; `MotherboardTemp`, `FanSpeed`, `VrmTemperature`, `RailVoltage`; battery fields; `Fps`, `FrametimeMs`, `FpsAvg`, `FpsMin`, `Fps1Low`, `Fps01Low`, `FpsMax`, `FpsP1`, `FpsP99`, `FrametimeP1`, `FrametimeP99`, `GpuBusy`, `CpuBusy`, `CpuWait`, and `PresentLatency`; `Custom`; and `WheaErrorCount`.
 
+This is the shared model catalog, not a promise that every frontend or machine
+publishes every series. `WheaErrorCount` is Windows-only; `FpsP1`, `FpsP99`,
+`FrametimeP1`, `FrametimeP99`, `GpuBusy`, `CpuBusy`, `CpuWait`, and
+`PresentLatency` currently come from the Windows PresentMon reader. Linux FPS
+collection publishes its available rolling metrics through the Vulkan layer.
+
 Categories can also be published as `Category#index` instance series. Index 0 is the canonical/aggregate series. See [hardware monitoring](hardware-monitor.md) for examples.
 
 ## `SensorData`

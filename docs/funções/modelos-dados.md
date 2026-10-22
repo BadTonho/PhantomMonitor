@@ -17,6 +17,12 @@ Enumeração com todos os tipos de sensores suportados:
 - **Custom (P8.1)**: Custom — séries derivadas de fórmulas do usuário, publicadas somente como `Custom#i` (sem canônica); ver [sensores-customizados.md](sensores-customizados.md)
 - **WHEA (P8.2)**: WheaErrorCount — contador de erros de hardware da sessão (Windows apenas)
 
+Esta é a lista do modelo compartilhado, não uma garantia de que cada frontend ou
+máquina publique todas as séries. `FpsP1`, `FpsP99`, `FrametimeP1`,
+`FrametimeP99`, `GpuBusy`, `CpuBusy`, `CpuWait` e `PresentLatency` são fornecidos
+atualmente pelo leitor Windows/PresentMon; o coletor Linux publica as métricas
+de FPS disponíveis a partir da camada Vulkan, sem essas séries.
+
 Toda categoria pode aparecer como instância `Categoria#i` (índice 0 = série canônica/agregada; ver [hardware-monitor.md](hardware-monitor.md)).
 
 ## SensorData

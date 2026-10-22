@@ -50,8 +50,10 @@ O `config.example.json` traz uma regra de exemplo **desabilitada** com todos os 
 ## Exemplos úteis (séries novas)
 
 - **Erro de hardware WHEA** (`WheaErrorCount`, Windows; contador em `0` é leitura
-  real —por isso `"comparison": "Above"` com `"threshold": 0` dispara em
-  **qualquer erro novo** da sessão e respeita o cooldown no log cheio de repetições):
+  real — por isso `"comparison": "Above"` com `"threshold": 0` detecta que já
+  ocorreu ao menos um evento WHEA na sessão. Dispara na transição de falso para
+  verdadeiro e pode disparar novamente após o cooldown enquanto o contador
+  continuar acima de zero; não detecta cada incremento como um evento separado):
   ```json
   { "enabled": true, "sensor": "WheaErrorCount", "comparison": "Above",
     "threshold": 0, "popup": true, "sound": true,

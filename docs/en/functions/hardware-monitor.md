@@ -40,9 +40,9 @@ Windows battery series include `BatteryLevel` (%), `BatteryVoltage` (V), `Batter
 
 Battery voltage uses the reported battery status value, with design voltage as a fallback. Power is derived from discharge/charge rates. Wear is calculated from full-charge versus design capacity. Missing WMI properties are tolerated because battery drivers expose different subsets. `BatteryAcPower` reflects `PowerOnline`; a desktop with no battery publishes no `Battery*` series.
 
-`WheaErrorCount` counts `Microsoft-Windows-WHEA-Logger` events since the monitoring session began. It is queried about every ten seconds, with a bounded reverse scan. Read permission failures are written to `logs/errors.log`.
+`WheaErrorCount` counts `Microsoft-Windows-WHEA-Logger` events since the monitoring session began. It is queried about every ten seconds, with a bounded reverse scan. Read permission failures are written to `logs/errors.log`. A rule with `Above` and threshold `0` detects that the count is nonzero; because the count is cumulative for the session, it can fire again after cooldown while remaining above zero, but it does not signal each new increment separately.
 
-The counter is always present on supported Windows collection, including a legitimate value of zero. A rule with comparison `Above` and threshold `0` therefore detects each new WHEA event. Event-log scanning stops at events older than the session start and is bounded to 5000 entries. If the provider is missing or access is denied, zero is retained and the failure is logged by `Whea.Reader`.
+The counter is always present on supported Windows collection, including a legitimate value of zero. Event-log scanning stops at events older than the session start and is bounded to 5000 entries. If the provider is missing or access is denied, zero is retained and the failure is logged by `Whea.Reader`.
 
 ## Lifecycle and statistics
 

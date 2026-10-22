@@ -106,8 +106,8 @@ em foco casa com `AppMatch` — sem reiniciar nada, avaliado no tick de posiçã
 - `visible`: `false` **esconde o OSD por completo** enquanto o perfil casa
   (útil para jogos/menus que combinam mal com overlays ou para gravar tela
   limpa); volta sozinho quando o app em foco deixa de casar. `true`/ausente =
-  visível (comportamento padrão). Combina com `opacity: 0` se a intenção for
-  manter o painel apenas "invisível" em vez de escondido.
+  visível (comportamento padrão). A opacidade de perfis é limitada ao intervalo
+  0,1–1; use `visible: false` para esconder o OSD.
 - Campos nulos/ausentes = usa o valor global (`overlayPosition`, `overlay.width`,
   `overlay.fontSize`, `overlay.accentColor`, `overlayOpacity`,
   `overlay.shownSeries`). A `fontSize` reescala a árvore

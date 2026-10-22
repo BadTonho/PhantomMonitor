@@ -18,9 +18,9 @@ The layer keeps a monotonic timestamp for each present and writes frame timing t
 
 ## Published values
 
-The monitor exposes current FPS and frametime, rolling average/minimum/maximum, 1% and 0.1% lows, and P1/P99 percentiles. Windows may also publish GPU Busy, CPU Busy, CPU Wait, and present latency when supported columns exist in the PresentMon output. Unsupported or unavailable optional metrics remain unavailable. The frametime history uses a 600-sample circular buffer, also used by the dashboard and overlay graphs.
+Both frontends expose current FPS and frametime, rolling average/minimum/maximum, 1% and 0.1% lows, and a 600-sample frametime history used by the dashboard and overlay graphs. P1/P99 percentiles and the optional GPU Busy, CPU Busy, CPU Wait, and present-latency series are provided by the Windows PresentMon reader only, when the installed PresentMon output contains the required columns. They are not published by the Linux Vulkan reader.
 
-The Windows rolling window holds up to 3600 frame samples (about 60 seconds at 60 FPS). FPS is smoothed with an exponential moving average; percentiles are calculated over the recent window. The Linux monitor calculates the corresponding rolling metrics from Vulkan frame timestamps.
+The Windows rolling window holds up to 3600 frame samples (about 60 seconds at 60 FPS). FPS is smoothed with an exponential moving average; Windows percentiles are calculated over the recent window. The Linux monitor calculates its rolling average, minimum, maximum, 1%/0.1% lows, and frametime history from Vulkan frame timestamps; it does not currently calculate P1/P99 series.
 
 On Windows, optional CSV columns are matched case-insensitively by substring because PresentMon versions use names such as `GpuBusy%`, `GPU Busy %`, `MsUntilDisplayed`, or `PresentLatency`. Busy and wait percentages are accepted only from 0 to 100%; latency is constrained to a plausible range of 0–2000 ms. If the installed PresentMon does not provide a column, its series is unavailable (some older versions publish zero, which consumers treat as unavailable for these optional metrics). `FpsP1` uses the same rolling-window percentile as `Fps1Low`; P99 FPS and frametime expose the other tail of their respective windows.
 

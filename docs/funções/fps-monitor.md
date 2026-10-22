@@ -37,6 +37,11 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 
 ## Métricas extras do PresentMon e percentis puros (P6.5)
 
+Estas séries são exclusivas do leitor Windows baseado em PresentMon. O coletor
+Linux baseado na camada Vulkan publica FPS, frametime, média/mínimo/máximo,
+1%/0,1% Low e histórico de frametime, mas ainda não publica P1/P99, GPU Busy,
+CPU Busy, CPU Wait ou latência de present.
+
 Além do FPS/frametime clássicos, o monitor consome **colunas opcionais** do CSV do
 PresentMon 2.x e publica percentis brutos:
 

@@ -29,11 +29,16 @@ captura e em gravações do Driver-level/GPU capture.
 
 ## 3. Design recomendado: plugin OBS + SDK de telemetria
 
-A infraestrutura do P2 (`docs/telemetry-sdk.md`) já fornece, sem parse:
+A infraestrutura do P2 para WPF/Windows (`docs/telemetry-sdk.md`) já fornece, sem parse:
 
 - memória compartilhada `phantom_monitor_telemetry_v1` com seqlock;
 - chaves estáveis `Categoria` / `Categoria#índice` (`SensorKey`);
 - unidades (`SensorUnits`) e rótulos de origem.
+
+No Avalonia/Linux, esse mapa completo ainda não é publicado. A memória
+compartilhada POSIX da camada Vulkan carrega somente as métricas de frame do
+processo do jogo; para snapshots completos de sensores, o Linux oferece o
+exportador HTTP opt-in.
 
 O plugin (C/C++ via `obs-frontend-api`/`obs-graphics`) faria:
 

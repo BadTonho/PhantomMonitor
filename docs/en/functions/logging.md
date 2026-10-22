@@ -32,7 +32,7 @@ Because the metadata record is created with the first sample, it may follow the 
 
 ## Error log
 
-`logs/errors.log` records internal errors as timestamp, context, and message. Consecutive duplicate messages are suppressed; the file is cleared after it grows beyond roughly 1 MB. Logging failures never throw into the app. Global UI, background-thread, and unobserved-task exception handlers also report errors here.
+`logs/errors.log` records internal errors as timestamp, context, and message. It is stored in a `logs/` directory beside the executable in both frontends; Linux telemetry files use the per-user data directory described above. Consecutive duplicate messages are suppressed; the file is cleared after it grows beyond roughly 1 MB. Logging failures never throw into the app. Global UI, background-thread, and unobserved-task exception handlers also report errors here.
 
 The WPF handlers include dispatcher exceptions (a dialog is shown only for a new error), `AppDomain.UnhandledException` for background threads, and `TaskScheduler.UnobservedTaskException`, which is marked observed after logging.
 
@@ -40,4 +40,4 @@ The WPF handlers include dispatcher exceptions (a dialog is shown only for a new
 
 The `config.json` flags `logToCsv`, `logToJson`, and `logToJsonJournal` control each format independently. On Linux, the Avalonia **Settings** page edits these flags and applies changes when saving successfully. WPF exposes its existing main-window toggles, applied to the next monitoring session. Pausing stops new samples while keeping files open; stopping collection or closing the app closes active files. See [configuration](configuration.md) for paths and settings.
 
-CSV filenames use session timestamps (`sensors_YYYYMMDD_HHmmss.csv` on WPF and a millisecond suffix on Avalonia). JSON always uses the fixed name `sensors_latest.json`. JSONL receives a timestamped filename per session. The WPF error log is beside the executable; Linux's telemetry logs are stored below `~/.local/share/PhantomMonitor/logs/`, or under `$XDG_DATA_HOME` when set.
+CSV filenames use session timestamps (`sensors_YYYYMMDD_HHmmss.csv` on WPF and a millisecond suffix on Avalonia). JSON always uses the fixed name `sensors_latest.json`. JSONL receives a timestamped filename per session. The error log is beside the executable for both frontends. Linux telemetry CSV/JSON/JSONL files are stored below `~/.local/share/PhantomMonitor/logs/`, or under `$XDG_DATA_HOME` when set.

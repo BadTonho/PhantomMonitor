@@ -109,3 +109,9 @@ A camada é **implícita**: todo processo Vulkan a carrega, mas a telemetria só
   ```bash
   ENABLE_PHANTOM_OVERLAY=1 ./executavel_do_jogo
   ```
+
+Os arquivos CSV/JSON/JSONL de telemetria ficam em
+`~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`. O log interno
+`errors.log` fica em uma pasta `logs/` ao lado do executável. O exportador HTTP
+é opcional, desativado por padrão e restrito ao loopback; ativar `listenAll`
+expõe os endpoints na rede sem TLS ou autenticação.

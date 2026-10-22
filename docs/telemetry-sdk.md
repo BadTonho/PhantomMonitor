@@ -5,16 +5,18 @@
 Terceiros (OBS, AutoHotkey, dashboards, scripts, outros apps) consomem a telemetria
 do Phantom Monitor de duas formas, **sem tocar em arquivos de log**:
 
-1. **Memória compartilhada** (sempre ativa): o monitor publica um snapshot
-   estruturado numa memória compartilhada a cada ciclo de monitoramento (mesma
-   cadência do snapshot, mínimo 100 ms) — parse zero no consumidor.
-2. **Exportador HTTP** (opt-in, `telemetryExport.enabled`): o último snapshot vira
-   JSON em `GET /values` para dashboards de navegador e ferramentas externas.
+1. **Memória compartilhada**: o frontend WPF/Windows publica um snapshot
+   estruturado a cada ciclo de monitoramento (mínimo 100 ms) — parse zero no
+   consumidor. Esse mapa não é publicado pelo frontend Avalonia/Linux.
+2. **Exportador HTTP** (opt-in, `telemetryExport.enabled`): WPF e Avalonia/Linux
+   podem servir o último snapshot como JSON em `GET /values` para dashboards de
+   navegador e ferramentas externas.
 
-> O mapa é criado sempre que o monitoramento inicia e destruído quando para.
-> `logs/sensors_latest.json` continua como fallback legado para integrações simples.
+> No WPF, o mapa é criado quando o monitoramento inicia e destruído quando para.
+> No Linux, o exportador HTTP é a interface de telemetria externa disponível;
+> `sensors_latest.json` continua como fallback para integrações simples.
 
-## Identificação
+## Memória compartilhada (WPF/Windows)
 
 - **Nome do mapa:** `phantom_monitor_telemetry_v1` (namespace de sessão local;
   consumidores devem rodar no mesmo usuário/sessão do monitor — `Global\` exigiria

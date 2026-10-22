@@ -19,7 +19,7 @@ The current WPF `OverlayWindow` is a separate layered desktop window. It appears
 
 ## Recommended design: OBS plugin and telemetry SDK
 
-The shared-memory SDK already publishes `phantom_monitor_telemetry_v1`, stable `Category`/`Category#index` keys, units, and hardware labels. A separate C/C++ plugin could read the map on a dedicated thread using the SDK reader's magic/version/seqlock checks, cache the latest snapshot, and render a custom `obs_source` in OBS's scene pipeline. It could reuse `overlay.shownSeries` and family ordering for consistent layout. The plugin would be maintained and distributed separately; the monitor would not need to inject into games.
+The WPF/Windows shared-memory SDK already publishes `phantom_monitor_telemetry_v1`, stable `Category`/`Category#index` keys, units, and hardware labels. Avalonia/Linux does not publish this full sensor map; its POSIX shared-memory channel carries Vulkan frame timings only. A separate C/C++ plugin could read the Windows map on a dedicated thread using the SDK reader's magic/version/seqlock checks, cache the latest snapshot, and render a custom `obs_source` in OBS's scene pipeline. It could reuse `overlay.shownSeries` and family ordering for consistent layout. The plugin would be maintained and distributed separately; the monitor would not need to inject into games.
 
 An initial text-only source was estimated at roughly one week: shared-memory reader, OBS source and text layout, then optional frametime graph support in a later version.
 

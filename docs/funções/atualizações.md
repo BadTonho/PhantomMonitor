@@ -28,6 +28,7 @@ Falhas de rede/limite da API são registradas em `logs/errors.log` e mostradas c
 
 - **Card "ATUALIZAÇÕES (GITHUB RELEASES)"** na página Configurações: toggles de checagem automática e canal beta, campo "Repositório" (vazio usa o oficial), versão instalada, última checagem e os botões "Buscar agora", "Abrir página de releases" e — quando a troca é possível — "Atualizar e reiniciar". As preferências entram no fluxo do botão "Salvar e aplicar" da própria página (validação: `owner/repo` ou URL do GitHub).
 - **Toast "PHANTOM MONITOR · ATUALIZAÇÃO"** no canto direito do dashboard quando existe versão nova ou o download/troca está em curso, com os mesmos botões.
+- **Badge de atualização** no box ESTADO da sidebar (chip verde discreto): mostra "Nova versão: <tag>", "Baixando: N %" ou "Pronto para reiniciar" conforme o estado; clicável e abre a página Configurações (F1.2 da unificação visual, paridade do WPF).
 - Em build de desenvolvimento (`0.0.0-dev`), o card indica que a verificação está desactivada.
 
 ## Aplicar automaticamente (Windows)

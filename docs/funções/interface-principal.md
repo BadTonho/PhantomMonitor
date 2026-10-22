@@ -31,11 +31,15 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
   - Temperatura: Pílulas discretas com tons esmeralda (≤ 65°C), âmbar (≤ 80°C) ou coral (> 80°C).
 - **Tokens de tema (Avalonia):** no frontend Avalonia, as cores e os acentos das
   views moram em dicionários de tema (`src/PhantomMonitor.App/Themes/Tokens.*.axaml`,
-  30 chaves espelhadas à paleta deste guia) e são consumidas via `{DynamicResource}`.
-  O tema ativo é `Neptune` (visual do Avalonia) e `Slate` preserva este visual do
-  WPF como segundo tema de fábrica (troca manual da `Source` em `App.axaml`; o
-  seletor em Configurações chega na Fase 3 do
-  [roadmap de unificação visual](../roadmap-unificacao-visual.md)).
+  39 chaves espelhadas à paleta deste guia) e são consumidas via `{DynamicResource}`
+  (as faixas dinâmicas usam brushes resolvidos por chave no ViewModel — mesmo
+  catálogo). O tema ativo é `Neptune` (visual do Avalonia) e `Slate` preserva este
+  visual do WPF como segundo tema de fábrica (troca manual da `Source` em
+  `App.axaml`; o seletor em Configurações chega na Fase 3 do
+  [roadmap de unificação visual](../roadmap-unificacao-visual.md)). Na F1.2 da
+  unificação, o app Avalonia recebeu esta faixa de temperaturas/usos, as pílulas
+  translúcidas, o card Placa-mãe & ventoinhas, a lista de processos na GPU, o
+  badge de update no ESTADO e o banner de elevação (com "Executar como admin").
 
 ## Elevação de privilégio
 

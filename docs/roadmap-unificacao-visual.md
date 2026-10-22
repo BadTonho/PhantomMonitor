@@ -107,6 +107,17 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       mesmo código Core.
 - [ ] Controles compartilhados em Avalonia: nav com estado selecionado, cards,
       inputs, banners (incluindo banner de atualização), gradiente/acento.
+- [x] **F1.2 — Dashboard completo no Avalonia**: pílulas de temperatura com cor
+      por faixa (verde/morno/quente/desconhecido) e métricas de uso pintadas
+      (<75 primário, <90 morno, ≥90 quente — paridade do WPF); linhas de detalhe
+      mono de CPU/GPU via `SensorFormatter` do Core; card **Placa-mãe &
+      ventoinhas** (temp colorida + `BuildFanSummary`); card **Processos ativos
+      na GPU** (WMI GPUEngine; estado vazio no Linux); badge de update no box
+      ESTADO da sidebar (clique → Configurações); banner de elevação admin com
+      "Executar como admin" (UAC) no Windows. Tokens novos nos dois temas:
+      família quente (`AccentHotBrush`/`AccentHotSoftBrush`/`AccentHotBodyBrush`)
+      e tints translúcidos (`BgTintGreen/Warm/HotBrush` +
+      `BorderTintGreen/Warm/HotBrush`, reutilizados por badge e banner).
 - [ ] Funcionalidades Windows-specific a conferir no port:
       elevação admin, PresentMon (processo externo — já orquestrado pelo Core),
       hotkey global, tray, startup com Windows, DebugWindow (manter ou não).

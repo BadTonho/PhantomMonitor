@@ -33,24 +33,27 @@ Forma alvo = layout Avalonia (cards com gráfico), absorvendo o que falta:
 | Funcionalidade | WPF | Avalonia | Ação na Fase 1 |
 |---|---|---|---|
 | Cards CPU/GPU com gráfico | ❌ (barra+pílulas) | ✅ | manter formato Avalonia |
-| Temperatura com pílulas dinâmicas (cor por faixa) | ✅ | parcial (texto) | portar cores por faixa (AccentWarning etc.) |
-| Linhas de detalhe (CPU: clock/potência/volt; GPU: VRAM/clock/hotspot) | ✅ (`SensorFormatter`) | ❌ | portar (formatador já é Core) |
+| Temperatura com pílulas dinâmicas (cor por faixa) | ✅ | parcial (texto) | ✅ feito (F1.2 — tints translúcidos + família quente) |
+| Linhas de detalhe (CPU: clock/potência/volt; GPU: VRAM/clock/hotspot) | ✅ (`SensorFormatter`) | ❌ | ✅ feito (F1.2 — formatador do Core) |
 | FPS + stats (mín/avg/1%/0.1%) | ✅ | ✅ | igual |
 | Gráfico de frametime no dashboard | ❌ | ✅ | manter Avalonia |
 | Card Disco (R/W) | ✅ | ✅ | igual |
 | Card Rede (↓/↑) | ✅ | ✅ | igual |
 | Card RAM (uso/total/disponível) | ✅ | ✅ | igual |
-| Card Placa-mãe & ventoinhas | ✅ | ❌ | portar |
-| **Lista de processos na GPU** | ✅ (`data.GpuProcesses`) | ❌ | portar |
-| Badge "Nova versão" na sidebar | ✅ | (só toast) | portar badge discreto |
+| Card Placa-mãe & ventoinhas | ✅ | ❌ | ✅ feito (F1.2) |
+| **Lista de processos na GPU** | ✅ (`data.GpuProcesses`) | ❌ | ✅ feito (F1.2) |
+| Badge "Nova versão" na sidebar | ✅ | (só toast) | ✅ feito (F1.2 — chip verde no ESTADO) |
 | Banner de atualização | ✅ | (card de settings + toast) | manter formato Avalonia |
-| Banner de elevação admin + restart como admin | ✅ | ❌ (Linux, por natureza) | usar no app único (Windows) |
+| Banner de elevação admin + restart como admin | ✅ | ❌ (Linux, por natureza) | ✅ feito (F1.2 — app único no Windows; UAC) |
 | Toggles CSV/JSON/JSONL na sidebar | ✅ | em Configurações | manter formato Avalonia |
 | `Minigraph` no dashboard | ❌ (só no overlay) | HistoryChart | Minigraph fica no overlay até unificar |
 
-Tokens novos a criar na Fase 1: família vermelha de uso quente/banner admin
-(WPF usa `#EF4444`/`#FCA5A5`/`#F87171`/`#DC2626`) e verde de update
-(`#059669`/`#A7F3D0`) — o catálogo de 30 tokens não os cobre ainda.
+Tokens novos criados na F1.2 (os dois temas): família quente
+`AccentHotBrush`/`AccentHotSoftBrush`/`AccentHotBodyBrush` (Slate verbatim
+`#EF4444`/`#FCA5A5`/`#F87171` do WPF; Neptune específico) e tints translúcidos
+de pílula/badge/banner `BgTint{Green,Warm,Hot}Brush` +
+`BorderTint{Green,Warm,Hot}Brush`. O verde do badge de update reusa
+`BgToastUpdateBrush` + `AccentGreenSoftBrush` já existentes.
 
 ## 3. Janelas e serviços — o que porta em detalhe
 
@@ -105,6 +108,8 @@ Tokens novos a criar na Fase 1: família vermelha de uso quente/banner admin
    **✅ Feito (ver "Leitura de sensores" acima).**
 2. **F1.2 — Dashboard completo no Avalonia** (linhas de detalhe, processos GPU,
    MB&ventoinhas, badge/banners) com os dois temas renderizando.
+   **✅ Feito (ver tabela acima; a partial `MainWindowViewModel.Overview.cs`
+   concentra os extras).**
 3. **F1.3 — Overlay completo** (perfis P3 + pin, graph rows, clique-through no
    Windows) e configurações com o que falta (posicionamento rápido/preview).
 4. **F1.4 — Inventário completo** (stats de sessão, árvore de hardware,

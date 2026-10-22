@@ -28,6 +28,7 @@ Network/rate-limit failures are logged to `logs/errors.log` and surfaced as a sh
 
 - **"ATUALIZAÇÕES (GITHUB RELEASES)" card** on the Settings page: automatic-check and beta-channel toggles, a "Repository" field (empty uses the official one), installed version, last check and the "Buscar agora" (Check now), "Abrir página de releases" and — when the swap is possible — "Atualizar e reiniciar" buttons. The preferences go through the page's own "Salvar e aplicar" (Save and apply) button (validation: `owner/repo` or a GitHub URL).
 - **"PHANTOM MONITOR · ATUALIZAÇÃO" toast** in the right corner of the dashboard when a newer version exists or a download/swap is in progress, with the same buttons.
+- **Update badge** in the sidebar STATUS box (discrete green chip): shows "Nova versão: <tag>", "Baixando: N %" or "Pronto para reiniciar" depending on the state; it is clickable and opens the Settings page (visual unification F1.2, WPF parity).
 - On a development build (`0.0.0-dev`), the card states that checking is disabled.
 
 ## Applying the update automatically (Windows)

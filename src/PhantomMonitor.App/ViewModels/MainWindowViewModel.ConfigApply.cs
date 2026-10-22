@@ -215,6 +215,9 @@ public sealed partial class MainWindowViewModel
         ConfigureTelemetryExporter();
 
         LoadOverlaySeriesPatterns();
+        // Base do overlay mudou (largura/fonte/opacidade/acento): reaplica o perfil
+        // em vigor sobre ela (perfis P3 — F1.3).
+        OnOverlayBaseConfigChanged();
         UpdateOverlayRows(_latestSensorData);
         OverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);

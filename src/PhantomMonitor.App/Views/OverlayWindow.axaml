@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:charts="using:PhantomMonitor.App.Controls"
+        xmlns:vm="using:PhantomMonitor.App.ViewModels"
         x:Class="PhantomMonitor.App.Views.OverlayWindow"
         Title="Phantom Monitor Overlay"
-        Width="260"
+        Width="{Binding OverlayWidth}"
         SizeToContent="Height"
         CanResize="False"
         WindowDecorations="None"
@@ -15,8 +16,9 @@
   <Border Margin="{Binding OverlayOuterMargin}"
           Padding="{Binding OverlayPadding}"
           CornerRadius="10"
+          IsVisible="{Binding OverlayPanelVisible}"
           Background="{DynamicResource BgOverlayPanelBrush}"
-          BorderBrush="{DynamicResource OverlayBorderBrush}"
+          BorderBrush="{Binding OverlayPanelBorderBrush}"
           BorderThickness="1">
     <StackPanel Spacing="{Binding OverlayContentSpacing}">
       <Grid ColumnDefinitions="*,Auto">
@@ -43,14 +45,38 @@
                            FontSize="{Binding $parent[Window].DataContext.OverlayMetricValueFontSize}"
                            FontFamily="monospace" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
               </Grid>
+              <!-- Frametime no estilo do Minigraph do WPF: eixo 0..33.3 ms com guia de 60 FPS -->
               <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
                                    Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
-                                   Stroke="{DynamicResource AccentWarningBrush}"
+                                   Stroke="{Binding $parent[Window].DataContext.OverlayAccentBrush}"
+                                   GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                   MinY="0" MaxFloor="33.3" GuideAt="16.66"
                                    Height="{Binding $parent[Window].DataContext.OverlayFrametimeGraphHeight}" />
             </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+      <!-- Gráficos por série (P8.5) e templates do usuário (P6.6), do WPF -->
+      <ItemsControl ItemsSource="{Binding OverlayExtraRows}">
+        <ItemsControl.DataTemplates>
+          <DataTemplate DataType="vm:OverlayGraphRowViewModel">
+            <Border CornerRadius="2" BorderThickness="0.5" IsVisible="{Binding IsVisible}"
+                    Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgDividerBrush}"
+                    Margin="{Binding $parent[Window].DataContext.OverlayRowMargin}">
+              <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
+                                   MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
+            </Border>
+          </DataTemplate>
+          <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
+            <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
+                       FontSize="{Binding $parent[Window].DataContext.OverlayMetricValueFontSize}"
+                       FontFamily="monospace" TextTrimming="CharacterEllipsis"
+                       Margin="{Binding $parent[Window].DataContext.OverlayRowMargin}" />
+          </DataTemplate>
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+      <TextBlock Text="{Binding OverlayProfileTagText}" IsVisible="{Binding HasOverlayProfileTag}"
+                 Foreground="{DynamicResource TextOverlaySecondaryBrush}" FontSize="{Binding OverlayProfileTagFontSize}" />
       <TextBlock Text="{Binding LastUpdateText}" Foreground="{DynamicResource TextLabelBrush}" FontSize="{Binding OverlaySecondaryFontSize}" HorizontalAlignment="Right" />
     </StackPanel>
   </Border>

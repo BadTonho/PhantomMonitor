@@ -9,6 +9,14 @@ public sealed partial class OverlayWindow : Window
     public OverlayWindow()
     {
         InitializeComponent();
+        Opened += (_, _) =>
+        {
+            // Windows: clique-through + topmost + follow (perfis). Linux: nada —
+            // janela arrastável/clicável com Topmost fixo, como sempre.
+            if (OperatingSystem.IsWindows())
+                InitializeWindowsServices();
+        };
+        Closed += (_, _) => ShutdownWindowsServices();
     }
 
     private void OnDragHandlePointerPressed(object? sender, PointerPressedEventArgs e)

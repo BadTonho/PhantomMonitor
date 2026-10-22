@@ -61,4 +61,7 @@
 
     <!-- Borda translúcida do painel overlay (40% do acento) -->
     <SolidColorBrush x:Key="OverlayBorderBrush" Color="#663B82F6" />
+
+    <!-- Guia tracejada de valor do overlay (60 FPS no frametime; ~12% branco, como o Minigraph do WPF) -->
+    <SolidColorBrush x:Key="OverlayGuideBrush" Color="#1FFFFFFF" />
 </ResourceDictionary>

@@ -257,14 +257,15 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public string OverlaySeriesPatternInput { get => _overlaySeriesPatternInput; set => Set(ref _overlaySeriesPatternInput, value); }
     public bool OverlayVisible => _config.ShowOverlay;
     public string OverlayButtonText => OverlayVisible ? "Ocultar overlay" : "Mostrar overlay";
-    public double OverlayOpacity => _config.OverlayOpacity;
-    public double OverlayWidth => _config.Overlay.Width;
-    public double OverlayFontSize => _config.Overlay.FontSize;
+    public double OverlayOpacity => _overlayOpacityEffective;
+    public double OverlayWidth => _overlayWidthEffective;
+    public double OverlayFontSize => _overlayFontEffective;
     public bool OverlayCompactMode => _config.Overlay.CompactMode;
-    public double OverlayMetricNameFontSize => Math.Max(7, _config.Overlay.FontSize - 2);
-    public double OverlayMetricValueFontSize => _config.Overlay.FontSize;
-    public double OverlayHeaderFontSize => Math.Max(8, _config.Overlay.FontSize - 1.5);
-    public double OverlaySecondaryFontSize => Math.Max(7, _config.Overlay.FontSize - 3.5);
+    public double OverlayMetricNameFontSize => Math.Max(7, _overlayFontEffective - 2);
+    public double OverlayMetricValueFontSize => _overlayFontEffective;
+    public double OverlayHeaderFontSize => Math.Max(8, _overlayFontEffective - 1.5);
+    public double OverlaySecondaryFontSize => Math.Max(7, _overlayFontEffective - 3.5);
+    public double OverlayProfileTagFontSize => Math.Max(7, _overlayFontEffective - 2.5);
     public Avalonia.Thickness OverlayOuterMargin => _config.Overlay.CompactMode ? new(4) : new(8);
     public Avalonia.Thickness OverlayPadding => _config.Overlay.CompactMode ? new(6, 4) : new(12);
     public double OverlayContentSpacing => _config.Overlay.CompactMode ? 4 : 8;
@@ -297,6 +298,13 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public MainWindowViewModel()
     {
         _config = AppConfig.Load(ConfigPaths.ConfigFile);
+        _overlayFontEffective = _config.Overlay.FontSize;
+        _overlayWidthEffective = _config.Overlay.Width;
+        _overlayOpacityEffective = Math.Clamp(_config.OverlayOpacity <= 0 ? 0.85 : _config.OverlayOpacity, 0.1, 1.0);
+        FollowOffsetX = _config.OverlayPosition.X;
+        FollowOffsetY = _config.OverlayPosition.Y;
+        BuildOverlayExtraRows();
+        ApplyOverlayProfile(null);
         _updateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
         _logToCsv = _config.LogToCsv;
         _logToJson = _config.LogToJson;

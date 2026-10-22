@@ -59,7 +59,10 @@ public sealed partial class MainWindowViewModel
         // Reconciliação de rows persistentes: rows são reutilizadas e só a string que
         // mudou dispara PropertyChanged. Sem isso, OverlayRows era Clear+re-add
         // por snapshot — o ItemsControl re-media/re-renderiza tudo (até 10x/s).
-        ReconcileOverlayRows(OverlayMetricsBuilder.Plan(data, selection, _config.Overlay.ShownSeries));
+        // Whitelist em vigor (perfil > global) e rows extras (graphs P8.5/templates P6.6).
+        ReconcileOverlayRows(OverlayMetricsBuilder.Plan(data, selection, EffectiveOverlayShownSeries()));
+        EnsureOverlayExtrasCurrent();
+        UpdateOverlayExtraRows(data);
     }
 
     private void ReconcileOverlayRows(IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> plan)
@@ -177,6 +180,7 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayMetricValueFontSize));
         Raise(nameof(OverlayHeaderFontSize));
         Raise(nameof(OverlaySecondaryFontSize));
+        Raise(nameof(OverlayProfileTagFontSize));
         Raise(nameof(OverlayOuterMargin));
         Raise(nameof(OverlayPadding));
         Raise(nameof(OverlayContentSpacing));

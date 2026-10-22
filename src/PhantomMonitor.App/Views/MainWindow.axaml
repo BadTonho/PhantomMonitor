@@ -247,7 +247,7 @@
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <StackPanel Spacing="4" Margin="0,0,0,3">
           <TextBlock Text="Configurações" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
-          <TextBlock Text="Ajuste a coleta e os arquivos de telemetria." Classes="muted" FontSize="11" />
+          <TextBlock Text="Ajuste a coleta, o overlay e os arquivos de telemetria." Classes="muted" FontSize="11" />
         </StackPanel>
 
         <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="18">
@@ -279,6 +279,22 @@
               </StackPanel>
             </Grid>
             <TextBlock Text="A largura e a opacidade são aplicadas à janela aberta ao salvar, sem reiniciar a coleta." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <StackPanel Spacing="5" Width="125">
+                <TextBlock Text="FONTE (8–20 PT)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBox Text="{Binding OverlayFontSizeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="5">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="TAMANHO DA FONTE" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Grid.Column="1" Text="{Binding OverlayFontSizeLabel}" Foreground="#C7D2E0" FontSize="10" />
+                </Grid>
+                <Slider Minimum="8" Maximum="20" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                        Value="{Binding OverlayFontSizeSlider, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+            <CheckBox Content="Modo compacto (reduz margens e espaçamento das linhas)"
+                      IsChecked="{Binding OverlayCompactModeSetting, Mode=TwoWay}" />
             <WrapPanel Orientation="Horizontal" ItemWidth="170">
               <CheckBox Content="CPU" IsChecked="{Binding OverlayShowCpu, Mode=TwoWay}" />
               <CheckBox Content="GPU" IsChecked="{Binding OverlayShowGpu, Mode=TwoWay}" />

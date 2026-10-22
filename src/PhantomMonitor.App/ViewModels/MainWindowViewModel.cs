@@ -76,6 +76,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _overlayShowFps;
     private string _overlayWidthText = "220";
     private double _overlayOpacityPercent = 85;
+    private string _overlayFontSizeText = "11.5";
+    private double _overlayFontSizeSlider = 11.5;
+    private bool _overlayCompactModeSetting;
     private readonly ObservableCollection<OverlayMetricViewModel> _overlayRows = new();
     private readonly ObservableCollection<OverlaySeriesPatternViewModel> _overlaySeriesPatterns = new();
     private IReadOnlyList<string> _overlaySeriesOptions = [];
@@ -166,6 +169,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool IsIntervalEdited => _intervalEdited;
     public bool IsLegacyIntervalOutOfRange => !IsIntervalEdited && _config.UpdateIntervalMs > 60_000;
     public string OverlayWidthText { get => _overlayWidthText; set => Set(ref _overlayWidthText, value); }
+    public string OverlayFontSizeText
+    {
+        get => _overlayFontSizeText;
+        set
+        {
+            if (!Set(ref _overlayFontSizeText, value)) return;
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out var parsed)
+                && double.IsFinite(parsed) && parsed is >= 8 and <= 20
+                && Math.Abs(parsed * 2 - Math.Round(parsed * 2)) < 0.000001)
+                OverlayFontSizeSlider = parsed;
+        }
+    }
+    public double OverlayFontSizeSlider
+    {
+        get => _overlayFontSizeSlider;
+        set
+        {
+            if (!Set(ref _overlayFontSizeSlider, value)) return;
+            OverlayFontSizeText = value.ToString("0.#", CultureInfo.CurrentCulture);
+        }
+    }
+    public string OverlayFontSizeLabel => $"{OverlayFontSizeSlider:0.#} pt";
+    public bool OverlayCompactModeSetting { get => _overlayCompactModeSetting; set => Set(ref _overlayCompactModeSetting, value); }
     public double OverlayOpacityPercent
     {
         get => _overlayOpacityPercent;
@@ -210,6 +236,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string OverlayButtonText => OverlayVisible ? "Ocultar overlay" : "Mostrar overlay";
     public double OverlayOpacity => _config.OverlayOpacity;
     public double OverlayWidth => _config.Overlay.Width;
+    public double OverlayFontSize => _config.Overlay.FontSize;
+    public bool OverlayCompactMode => _config.Overlay.CompactMode;
+    public double OverlayMetricNameFontSize => Math.Max(7, _config.Overlay.FontSize - 2);
+    public double OverlayMetricValueFontSize => _config.Overlay.FontSize;
+    public double OverlayHeaderFontSize => Math.Max(8, _config.Overlay.FontSize - 1.5);
+    public double OverlaySecondaryFontSize => Math.Max(7, _config.Overlay.FontSize - 3.5);
+    public Avalonia.Thickness OverlayOuterMargin => _config.Overlay.CompactMode ? new(4) : new(8);
+    public Avalonia.Thickness OverlayPadding => _config.Overlay.CompactMode ? new(6, 4) : new(12);
+    public double OverlayContentSpacing => _config.Overlay.CompactMode ? 4 : 8;
+    public double OverlayHeaderSpacing => _config.Overlay.CompactMode ? 1 : 2;
+    public double OverlayColumnSpacing => _config.Overlay.CompactMode ? 5 : 8;
+    public Avalonia.Thickness OverlayRowMargin => _config.Overlay.CompactMode ? new(0, 0.5) : new(0, 2);
+    public double OverlayHideButtonMinSize => _config.Overlay.CompactMode ? 20 : 24;
+    public Avalonia.Thickness OverlayHideButtonPadding => _config.Overlay.CompactMode ? new(4, 0) : new(6, 0);
     public bool OverlayShowCpu { get => _overlayShowCpu; set => Set(ref _overlayShowCpu, value); }
     public bool OverlayShowGpu { get => _overlayShowGpu; set => Set(ref _overlayShowGpu, value); }
     public bool OverlayShowRam { get => _overlayShowRam; set => Set(ref _overlayShowRam, value); }
@@ -252,6 +292,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _overlayShowFps = _config.Overlay.ShowFps;
         _overlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         _overlayOpacityPercent = _config.OverlayOpacity * 100;
+        _overlayFontSizeText = _config.Overlay.FontSize.ToString("0.#", CultureInfo.CurrentCulture);
+        _overlayFontSizeSlider = _config.Overlay.FontSize;
+        _overlayCompactModeSetting = _config.Overlay.CompactMode;
         LoadOverlaySeriesPatterns();
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
@@ -349,6 +392,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OverlayShowFps);
         foreach (var row in OverlayMetricsBuilder.Build(data, selection, _config.Overlay.ShownSeries))
             OverlayRows.Add(row);
+    }
+
+    private void RaiseOverlayAppearanceProperties()
+    {
+        Raise(nameof(OverlayFontSize));
+        Raise(nameof(OverlayCompactMode));
+        Raise(nameof(OverlayMetricNameFontSize));
+        Raise(nameof(OverlayMetricValueFontSize));
+        Raise(nameof(OverlayHeaderFontSize));
+        Raise(nameof(OverlaySecondaryFontSize));
+        Raise(nameof(OverlayOuterMargin));
+        Raise(nameof(OverlayPadding));
+        Raise(nameof(OverlayContentSpacing));
+        Raise(nameof(OverlayHeaderSpacing));
+        Raise(nameof(OverlayColumnSpacing));
+        Raise(nameof(OverlayRowMargin));
+        Raise(nameof(OverlayHideButtonMinSize));
+        Raise(nameof(OverlayHideButtonPadding));
     }
 
     private void LoadOverlaySeriesPatterns()
@@ -922,6 +983,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void SaveSettings()
     {
+        if (!double.TryParse(OverlayFontSizeText, NumberStyles.Float, CultureInfo.CurrentCulture, out var overlayFontSize)
+            || !double.IsFinite(overlayFontSize)
+            || overlayFontSize is < 8 or > 20
+            || Math.Abs(overlayFontSize * 2 - Math.Round(overlayFontSize * 2)) >= 0.000001)
+        {
+            SettingsMessage = "O tamanho da fonte deve ficar entre 8 e 20 pt, em passos de 0,5 pt.";
+            return;
+        }
+
         if (!int.TryParse(OverlayWidthText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var overlayWidth)
             || overlayWidth is < 140 or > 700)
         {
@@ -964,6 +1034,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var oldOverlayCpu = _config.Overlay.ShowCpu;
         var oldOverlayWidth = _config.Overlay.Width;
         var oldOverlayOpacity = _config.OverlayOpacity;
+        var oldOverlayFontSize = _config.Overlay.FontSize;
+        var oldOverlayCompactMode = _config.Overlay.CompactMode;
         var oldOverlayGpu = _config.Overlay.ShowGpu;
         var oldOverlayRam = _config.Overlay.ShowRam;
         var oldOverlayDisk = _config.Overlay.ShowDisk;
@@ -993,6 +1065,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             || TelemetryExportListenAll != oldTelemetryListenAll;
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
             || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
+        var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
+            || OverlayCompactModeSetting != oldOverlayCompactMode;
         var overlayChanged = OverlayShowCpu != oldOverlayCpu
             || OverlayShowGpu != oldOverlayGpu
             || OverlayShowRam != oldOverlayRam
@@ -1002,7 +1076,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             || OverlayShowMotherboard != oldOverlayMotherboard
             || OverlayShowFps != oldOverlayFps
             || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase)
-            || overlayVisualChanged;
+            || overlayVisualChanged
+            || overlayAppearanceChanged;
 
         if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
         {
@@ -1029,6 +1104,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _config.Overlay.ShownSeries = newOverlayShownSeries;
         _config.Overlay.Width = overlayWidth;
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
+        _config.Overlay.FontSize = overlayFontSize;
+        _config.Overlay.CompactMode = OverlayCompactModeSetting;
 
         if (!_config.Save(ConfigPaths.ConfigFile))
         {
@@ -1050,6 +1127,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _config.Overlay.ShownSeries = oldOverlayShownSeries;
             _config.Overlay.Width = oldOverlayWidth;
             _config.OverlayOpacity = oldOverlayOpacity;
+            _config.Overlay.FontSize = oldOverlayFontSize;
+            _config.Overlay.CompactMode = oldOverlayCompactMode;
             OverlayShowCpu = oldOverlayCpu;
             OverlayShowGpu = oldOverlayGpu;
             OverlayShowRam = oldOverlayRam;
@@ -1080,11 +1159,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         UpdateOverlayRows(_latestSensorData);
         OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
+        OverlayFontSizeSlider = _config.Overlay.FontSize;
+        OverlayCompactModeSetting = _config.Overlay.CompactMode;
         if (overlayVisualChanged)
         {
             Raise(nameof(OverlayWidth));
             Raise(nameof(OverlayOpacity));
         }
+        if (overlayAppearanceChanged)
+            RaiseOverlayAppearanceProperties();
 
         UpdateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
         TelemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using static PhantomMonitor.Services.Win32Interop;
 
 namespace PhantomMonitor.Services;
 
@@ -61,11 +62,7 @@ public sealed class FpsMonitor : IFpsMonitor
     private bool _emaInitialized;
     private const double EmaAlpha = 0.35;
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    // GetForegroundWindow/GetWindowThreadProcessId vivem em Win32Interop (mesma pasta).
 
     public float Fps => _fps;
     public float FrametimeMs => _lastFrametimeMs > 0 ? _lastFrametimeMs : (_fps > 0 ? 1000f / _fps : 0);

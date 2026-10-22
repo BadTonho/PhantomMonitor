@@ -8,6 +8,7 @@ using System.Windows.Shapes;
 using PhantomMonitor.Controls;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
+using static PhantomMonitor.Services.Win32Interop;
 
 namespace PhantomMonitor.Overlay;
 
@@ -276,15 +277,11 @@ public partial class OverlayWindow : Window
     private System.Windows.Threading.DispatcherTimer? _positionTimer;
     private System.Windows.Threading.DispatcherTimer? _topmostTimer;
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
+    // GetForegroundWindow/GetWindowThreadProcessId vivem em Win32Interop (compartilhados).
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT

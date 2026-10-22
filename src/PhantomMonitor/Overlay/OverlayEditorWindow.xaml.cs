@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
+using static PhantomMonitor.Services.Win32Interop;
 
 namespace PhantomMonitor.Overlay;
 
@@ -549,11 +550,7 @@ public partial class OverlayEditorWindow : Window
         }
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+    // GetForegroundWindow/GetWindowThreadProcessId vivem em Win32Interop (compartilhados).
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {

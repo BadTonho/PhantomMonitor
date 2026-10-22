@@ -2,8 +2,8 @@
 
 > **Language:** English · [Português (Brasil)](../roadmap-unificacao-visual.md)
 
-> Plan approved in October 2026 — **not started yet** (none of the commits on
-> this list exist). Origin: comparison between the WPF (Windows) and Avalonia
+> Plan approved in October 2026 — **Phase 0 completed** (`0a6ee28` = plan,
+> `0a00bf6` = Neptune/Slate tokens); Phases 1–3 pending. Origin: comparison between the WPF (Windows) and Avalonia
 > (Linux) frontends. The two looks have drifted since day one and every UI
 > change costs double. Maintainer's decision: adopt the **"single app" path**
 > keeping both current looks as built-in themes, which also front-loads the
@@ -49,7 +49,7 @@ theme) and the UI is never moved twice.
 | `Slate` | Today's WPF look | `src/PhantomMonitor/Resources/Styles.xaml` (dark neutral, blue accent `#2563EB`) |
 | `Neptune` | Today's Avalonia look | `src/PhantomMonitor.App/Views/MainWindow.axaml` (blue-gray) |
 
-> Names are placeholders — finalize on the first Phase 0 commit.
+> Names finalized in Phase 0 (`0a00bf6`): `Slate` = the WPF look; `Neptune` = the Avalonia look.
 
 ## What does NOT survive 1:1 (honest expectations)
 
@@ -64,24 +64,29 @@ theme) and the UI is never moved twice.
 
 ---
 
-## Phase 0 — Tokenize the current Avalonia app (prep — small round)
+## Phase 0 — Tokenize the current Avalonia app — ✅ DONE (`0a6ee28`, `0a00bf6`)
 
-- [ ] Create `src/PhantomMonitor.App/Themes/Tokens.Neptune.axaml` with the
+- [x] Create `src/PhantomMonitor.App/Themes/Tokens.Neptune.axaml` with the
       current Avalonia palette (every inline hex today) + metrics (radii,
       paddings, type scale, font stack).
-- [ ] Replace hardcoded hex in `Views/MainWindow.axaml` and
+- [x] Replace hardcoded hex in `Views/MainWindow.axaml` and
       `Views/OverlayWindow.axaml` with `{DynamicResource …}` (keys mirrored to
       the WPF dictionary).
-- [ ] `App.axaml` loads the active dictionary — merge structure ready for
+- [x] `App.axaml` loads the active dictionary — merge structure ready for
       Phase 3.
-- [ ] Smoke test: manually swap between the two dictionaries by editing
+- [x] Smoke test: manually swap between the two dictionaries by editing
       `App.axaml` — the whole UI changes look without breaking anything.
-- [ ] Docs: token note in `docs/en/functions/main-interface.md`
+- [x] Docs: token note in `docs/en/functions/main-interface.md`
       (+ Portuguese source `docs/funções/interface-principal.md`).
 
-**Acceptance criteria:** no inline hex in `.axaml`; green build (0 warnings /
-0 errors); the two dictionaries can be swapped manually; `refactor:` / `feat:`
-commits per step.
+**Outcome (`0a00bf6`):** 30 tokens per dictionary (`Neptune` = the Avalonia
+look verbatim; `Slate` = the WPF palette from `Styles.xaml`, with same-family
+estimates for tokens with no WPF equivalent). Metrics (radii/paddings/
+typography) land in Phase 1, together with the shared controls. Technical
+detail: `HistoryChart.Stroke` went from `Color` to `IBrush?` (a color-typed
+property cannot consume a theme brush). Validation: Release build 0/0, full
+static coverage (30 tokens used, no orphans) and runtime smoke on both themes
+(app alive for 10 s with a clean kill).
 
 ## Phase 1 — Mapping and porting the WPF screens (the bulk)
 
@@ -174,8 +179,9 @@ the work queue:
 | `src/PhantomMonitor/MainWindow.xaml` (477 lines) | WPF shell |
 | `src/PhantomMonitor/{Debug,Inventory,AlertPopup,OverlayEditor,Overlay}Window.xaml` | WPF windows to map in Phase 1 |
 | `src/PhantomMonitor/Controls/Minigraph.cs` | WPF chart (unify with HistoryChart) |
-| `src/PhantomMonitor.App/Views/MainWindow.axaml` (706 lines) | Avalonia shell + inline hex — **source of truth for the "Neptune" look** |
-| `src/PhantomMonitor.App/Views/OverlayWindow.axaml` | Avalonia overlay (inline hex) |
+| `src/PhantomMonitor.App/Views/MainWindow.axaml` (706 lines) | Avalonia shell (consumes `{DynamicResource}`) — the "Neptune" source of truth now lives in `Themes/Tokens.*.axaml` |
+| `src/PhantomMonitor.App/Views/OverlayWindow.axaml` | Avalonia overlay (consumes `{DynamicResource}`) |
+| `src/PhantomMonitor.App/Themes/Tokens.{Neptune,Slate}.axaml` | Theme dictionaries (30 tokens each) — `0a00bf6` |
 | `src/PhantomMonitor.App/App.axaml` (8 lines) | `FluentTheme` + `RequestedThemeVariant="Dark"` |
 | `src/PhantomMonitor.App/Controls/HistoryChart.cs` | Avalonia chart (unify with Minigraph) |
 | `src/PhantomMonitor.Core/Services/Update/` | Update core — **unchanged** (release detection, banners and apply stay as is) |

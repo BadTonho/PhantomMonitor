@@ -29,6 +29,13 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
   - Uso 75% a 90%: Âmbar suave (`#F59E0B`).
   - Uso ≥ 90%: Coral (`#EF4444`).
   - Temperatura: Pílulas discretas com tons esmeralda (≤ 65°C), âmbar (≤ 80°C) ou coral (> 80°C).
+- **Tokens de tema (Avalonia):** no frontend Avalonia, as cores e os acentos das
+  views moram em dicionários de tema (`src/PhantomMonitor.App/Themes/Tokens.*.axaml`,
+  30 chaves espelhadas à paleta deste guia) e são consumidas via `{DynamicResource}`.
+  O tema ativo é `Neptune` (visual do Avalonia) e `Slate` preserva este visual do
+  WPF como segundo tema de fábrica (troca manual da `Source` em `App.axaml`; o
+  seletor em Configurações chega na Fase 3 do
+  [roadmap de unificação visual](../roadmap-unificacao-visual.md)).
 
 ## Elevação de privilégio
 

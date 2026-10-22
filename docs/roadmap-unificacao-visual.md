@@ -2,7 +2,8 @@
 
 > **Idioma:** Português (Brasil) · [English](en/visual-unification-roadmap.md)
 
-> Plano aprovado em out/2026 — **ainda não iniciado** (nenhum commit desta lista existe).
+> Plano aprovado em out/2026 — **Fase 0 concluída** (`0a6ee28` = plano,
+> `0a00bf6` = tokens Neptune/Slate); Fases 1–3 pendentes.
 > Origem: comparativo entre os frontends WPF (Windows) e Avalonia (Linux). Os visuais
 > divergem desde a criação e cada mudança de interface custa o dobro. Decisão do
 > mantenedor: adotar o **Caminho 2** (app única), preservando os dois visuais atuais
@@ -49,7 +50,7 @@ fábrica) e a UI não é movida duas vezes.
 | `Slate` | Visual do WPF hoje | `src/PhantomMonitor/Resources/Styles.xaml` (dark neutro, accent azul `#2563EB`) |
 | `Neptune` | Visual do Avalonia hoje | `src/PhantomMonitor.App/Views/MainWindow.axaml` (cinza-azulado) |
 
-> Nomes são placeholders — fechar no primeiro commit da Fase 0.
+> Nomes fechados na Fase 0 (`0a00bf6`): `Slate` = visual do WPF; `Neptune` = visual do Avalonia.
 
 ## O que NÃO sobrevive 1:1 (expectativas honestas)
 
@@ -64,33 +65,39 @@ fábrica) e a UI não é movida duas vezes.
 
 ---
 
-## Fase 0 — Tokenização do Avalonia atual (prep — rodada pequena)
+## Fase 0 — Tokenização do Avalonia atual — ✅ CONCLUÍDA (`0a6ee28`, `0a00bf6`)
 
-- [ ] Criar `src/PhantomMonitor.App/Themes/Tokens.Neptune.axaml` com a paleta
+- [x] Criar `src/PhantomMonitor.App/Themes/Tokens.Neptune.axaml` com a paleta
       atual do Avalonia (todos os hex hoje inline) + métricas (raios, paddings,
       escala tipográfica, fonts stack).
-- [ ] Substituir hex hardcoded em `Views/MainWindow.axaml` e `Views/OverlayWindow.axaml`
+- [x] Substituir hex hardcoded em `Views/MainWindow.axaml` e `Views/OverlayWindow.axaml`
       por `{DynamicResource …}` (chaves espelhadas ao dicionário do WPF).
-- [ ] `App.axaml` carrega o dicionário ativo (estrutura de merge pronta para Fase 3).
-- [ ] Smoke: alternar manualmente entre dois dicionários editando `App.axaml` —
-      UI inteira muda de olhar sem quebrar nada.
-- [ ] Docs: nota de tokens em `docs/funções/interface-principal.md`
+- [x] `App.axaml` carrega o dicionário ativo — estrutura de merge pronta para a Fase 3.
+- [x] Smoke: alternar manualmente entre dois dicionários editando `App.axaml` —
+      UI inteira muda de tema sem quebrar nada.
+- [x] Docs: nota de tokens em `docs/funções/interface-principal.md`
       (+ espelho `docs/en/functions/main-interface.md`).
 
-**Critérios de aceite:** nenhum hex inline nos `.axaml`; build 0/0; dois
-dicionários alternáveis manualmente; commits `refactor:` / `feat:` por etapa.
+**Como ficou (`0a00bf6`):** 30 tokens por dicionário (`Neptune` = visual do
+Avalonia verbatim; `Slate` = paleta do WPF do `Styles.xaml`, com estimativas
+na mesma família para os tokens sem equivalente). Métricas (raios/paddings/
+tipografia) ficam para a Fase 1, junto com a unificação dos controles.
+Detalhe técnico: `HistoryChart.Stroke` passou de `Color` para `IBrush?`
+(propriedade de cor não consome brush de tema). Validação: build Release
+0/0, cobertura estática completa (30 tokens usados, nenhum órfão) e smoke
+de runtime nos dois temas (app viva por 10 s com kill limpo).
 
 ## Fase 1 — Mapeamento e porta das telas do WPF (o grosso)
 
-Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas/flows.
+Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os fluxos.
 
-- [ ] Mapa de equivalência WPF → Avalonia (janela visus view da sidebar):
+- [ ] Mapa de equivalência WPF → Avalonia (janela vs. view da sidebar):
       `MainWindow`, `OverlayWindow`, `OverlayEditorWindow`, `AlertPopupWindow`,
       `InventoryWindow`, `DebugWindow` — decidir, janela a janela, o formato final.
 - [ ] Controles compartilhados em Avalonia: nav com estado selecionado, cards,
       inputs, banners (incluindo banner de atualização), gradiente/acento.
 - [ ] Funcionalidades Windows-specific a conferir no port:
-      elevação admin, PresentMon (processo externo — deve já ter pino no Core),
+      elevação admin, PresentMon (processo externo — já orquestrado pelo Core),
       hotkey global, tray, startup com Windows, DebugWindow (manter ou não).
 - [ ] Biblioteca nativa de sensores (`PhantomSensorLib`) via P/Invoke entregando
       igual no binário Avalonia do Windows.
@@ -98,7 +105,7 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas/flow
       (Avalonia) viram **um** controle com cores por token.
 - [ ] Portar o visual do WPF como `Themes/Tokens.Slate.axaml` (2º tema de fábrica).
 - [ ] Build de release no Windows publicando o binário Avalonia — teste manual
-      completo (acesso admin, fps, overlay, tray, update, 分星 docs).
+      completo (acesso admin, fps, overlay, tray, update) e revisão dos docs.
 
 **Critérios de aceite:** paridade funcional 1:1 com o WPF atual no Windows;
 build 0/0; os dois temas builtin renderizam as mesmas views.
@@ -130,10 +137,10 @@ intacto; WPF fora do repo; nenhum usuário órfão de atalhos quebrados.
       (default a definir — discussão no commit).
 - [ ] Seletor em **Configurações** (padrão dos outros settings) aplicando em
       runtime via troca de dicionário (`Application.Styles` dinâmico ou
-      merge/unmerged de `ResourceDictionary`) — a UI reage na hora graças ao
+      merge/unmerge de `ResourceDictionary`) — a UI reage na hora graças ao
       `DynamicResource` da Fase 0.
 - [ ] Persistência e re-load no boot.
-- [ ] (Futuro, fora de escopo agora) temas extras: Light mode,_HDR, custom via
+- [ ] (Futuro, fora de escopo agora) temas extras: Light mode, HDR, custom via
       arquivo externo, import/export.
 
 **Critérios de aceite:** troca de tema sem reiniciar, sem rebuild de views,
@@ -161,7 +168,7 @@ Ordem sugerida da fila de trabalho:
 2. Rodada 5 restante **só nos pontos que não dobram trabalho** (itens Linux
    como P1/P99 das percentis podem ir direto no Avalonia).
 3. **Fases 1 → 2 → 3** desta unificação, absorvendo o restante da Rodada 5
-   (álbum do painel/axis/polish) já dentro da porta.
+   (painel/axis/polish) já dentro da porta.
 
 ## Inventário de referência (o que define cada visual hoje)
 
@@ -171,11 +178,12 @@ Ordem sugerida da fila de trabalho:
 | `src/PhantomMonitor/MainWindow.xaml` (477 ln) | Shell WPF |
 | `src/PhantomMonitor/{Debug,Inventory,AlertPopup,OverlayEditor,Overlay}Window.xaml` | Janelas WPF a mapear na Fase 1 |
 | `src/PhantomMonitor/Controls/Minigraph.cs` | Gráfico WPF (unificar com HistoryChart) |
-| `src/PhantomMonitor.App/Views/MainWindow.axaml` (706 ln) | Shell Avalonia + hex inline — **fonte da verdade do visual "Neptune"** |
-| `src/PhantomMonitor.App/Views/OverlayWindow.axaml` | Overlay Avalonia (hex inline) |
+| `src/PhantomMonitor.App/Views/MainWindow.axaml` (706 ln) | Shell Avalonia (consome `{DynamicResource}`) — fonte do visual "Neptune" agora é `Themes/Tokens.*.axaml` |
+| `src/PhantomMonitor.App/Views/OverlayWindow.axaml` | Overlay Avalonia (consome `{DynamicResource}`) |
+| `src/PhantomMonitor.App/Themes/Tokens.{Neptune,Slate}.axaml` | Dicionários de tema (30 tokens cada) — `0a00bf6` |
 | `src/PhantomMonitor.App/App.axaml` (8 ln) | `FluentTheme` + `RequestedThemeVariant="Dark"` |
 | `src/PhantomMonitor.App/Controls/HistoryChart.cs` | Gráfico Avalonia (unificar com Minigraph) |
-| `src/PhantomMonitor.Core/Services/Update/` | Núcleo de atualização — **não muda** (etapa/carência/atualização atual seguem) |
+| `src/PhantomMonitor.Core/Services/Update/` | Núcleo de atualização — **não muda** (detecção de release, banners e apply seguem como estão) |
 
 ## Obrigações de documentação (por fase)
 

@@ -10,8 +10,11 @@
     #define PHANTOM_API __attribute__((visibility("default")))
 #endif
 
-// Layout deve ser idêntico ao NativeSensorSnapshot em Native/SensorBridge.cs
-// (16 campos double, ordem fixa, sem padding).
+// Contrato de interop: um futuro consumidor C# deve espelhar o
+// NativeSensorSnapshot de forma idêntica (16 doubles = 128 bytes, sem padding;
+// confirme Marshal.SizeOf == 128 antes de ler). A ponte C#
+// (Native/SensorBridge.cs) foi removida por ser código morto — ver
+// docs/funções/sensor-nativo.md.
 struct NativeSensorSnapshot
 {
     double CpuUsage;

@@ -21,7 +21,7 @@
 | `Overlay/OverlayEditorWindow` | Seção "OVERLAY FLUTUANTE" nas Configurações (formato já existe) | Portar perfis; posicionamento rápido/preview são nice-to-have |
 | `Overlay/AlertPopupWindow` | Toast in-app (já existe) + notificação DBus no Linux (já existe) | Conviver por SO (toast no Windows, DBus no Linux) |
 | `DebugWindow` | View Diagnóstico (já existe, ~paridade) | Absorver; extra: dump em texto copiável |
-| `InventoryWindow` | View Inventário (parcial) | Portar stats de sessão, árvore de hardware, monitores (EDID), reset |
+| `InventoryWindow` | View Inventário (parcial) | ✅ portado (F1.4): stats de sessão nas rows, árvore de hardware, monitores (EDID), reset com marker |
 
 Lixo visual constatado no WPF: os `RadioButton` "SENSORES" (CPU/GPU/RAM/Disco/Rede)
 da sidebar **não têm handlers** — não portar.
@@ -126,6 +126,12 @@ editor de oferta é reavaliado junto da subfase de sistema).
    (F1.5) e posicionamento rápido/preview (reavaliar na subfase de sistema).
 4. **F1.4 — Inventário completo** (stats de sessão, árvore de hardware,
    monitores/EDID, reset com marker no CSV/journal).
+   **✅ Feito (`2a479ef`):** colunas Mín/Máx/Média da sessão nas rows dos
+   grupos (mesmo formatador do valor), card de árvore `[HWR]` com
+   assinatura anti-colapso, card de monitores reconciliado por identidade
+   e botão "Resetar estatísticas" com `WriteMarker`/`WriteNote` — a mesma
+   fonte Core (`InventoryBuilder`/`SeriesStats`/`MonitorInfo`) que o WPF
+   consumia, apresentada em cards da página Inventário.
 5. **F1.5 — Sistema** (tray, hotkeys, startup, instância única, admin) e
    alertas (orquestração de ações por SO).
 6. **F1.6 — Visual WPF portado como tema "Slate"** integral + build/release no

@@ -132,6 +132,17 @@ First task, before anything else: **map equivalences** between windows/flows.
       the panel is click-through like the WPF (no drag/no clickable ×); on
       Linux it stays draggable. **Pending:** tray pin (F1.5) and quick
       positioning/preview (re-evaluate alongside the system subphase).
+- [x] **F1.4 — Complete inventory on Avalonia**: session statistics
+      (minimum/maximum/average) on the group rows, fed by `data.SeriesStats`
+      with the same value formatter (per-stat magnitude conversions; NaN =
+      "--"); **Detected hardware** card with the `[HWR]` tree
+      (`InventoryBuilder.BuildHardware`, rebuilt only when the node signature
+      changes — anti-collapse like the WPF); **Monitors (EDID)** card with
+      WMI instance/manufacturer/model/code/serial/diagonal/manufacturing and
+      the PRIMARY flag (collection changes only when the set changes);
+      **Reset statistics** button with `ResetSeriesStats` +
+      `CsvLogger.WriteMarker` + `JsonJournalLogger.WriteNote` and a transient
+      confirmation; summary gains "N nodes · M monitor(s)" when present.
 - [ ] Windows-specific features to verify in the port:
       admin elevation, PresentMon (external process — stays as is, via Core),
       global hotkey, tray, Windows startup, DebugWindow (keep or drop).

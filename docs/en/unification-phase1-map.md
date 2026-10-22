@@ -22,7 +22,7 @@
 | `Overlay/OverlayEditorWindow` | "OVERLAY FLUTUANTE" section in Settings (format already exists) | Port profiles; quick positioning/preview are nice-to-have |
 | `Overlay/AlertPopupWindow` | In-app toast (already exists) + DBus notification on Linux (already exists) | Per-OS coexistence (toast on Windows, DBus on Linux) |
 | `DebugWindow` | Diagnostics view (already exists, near parity) | Absorb; extra: copyable text dump |
-| `InventoryWindow` | Inventory view (partial) | Port session stats, hardware tree, monitors (EDID), reset |
+| `InventoryWindow` | Inventory view (partial) | ✅ ported (F1.4): session stats in rows, hardware tree, monitors (EDID), reset with marker |
 
 Visual junk found in WPF: the "SENSORES" `RadioButton`s in the sidebar
 (CPU/GPU/RAM/Disk/Net) **have no handlers** — do not port them.
@@ -130,6 +130,12 @@ solved, re-evaluate the editor alongside the system subphase).
    (re-evaluate alongside the system subphase).
 4. **F1.4 — Complete inventory** (session stats, hardware tree, monitors/EDID,
    reset with CSV/journal marker).
+   **✅ Done (`2a479ef`):** session min/max/average columns on the group rows
+   (same value formatter), `[HWR]` tree card with anti-collapse signature,
+   monitor card reconciled by identity and a "Reset statistics" button with
+   `WriteMarker`/`WriteNote` — the same Core source
+   (`InventoryBuilder`/`SeriesStats`/`MonitorInfo`) the WPF consumed,
+   presented as cards on the Inventory page.
 5. **F1.5 — System** (tray, hotkeys, startup, single instance, admin) and
    alerts (per-OS action orchestration).
 6. **F1.6 — WPF visual ported entirely as the "Slate" theme** + Windows

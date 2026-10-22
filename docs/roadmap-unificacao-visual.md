@@ -107,6 +107,17 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       mesmo código Core.
 - [ ] Controles compartilhados em Avalonia: nav com estado selecionado, cards,
       inputs, banners (incluindo banner de atualização), gradiente/acento.
+- [x] **F1.2 — Dashboard completo no Avalonia**: pílulas de temperatura com cor
+      por faixa (verde/morno/quente/desconhecido) e métricas de uso pintadas
+      (<75 primário, <90 morno, ≥90 quente — paridade do WPF); linhas de detalhe
+      mono de CPU/GPU via `SensorFormatter` do Core; card **Placa-mãe &
+      ventoinhas** (temp colorida + `BuildFanSummary`); card **Processos ativos
+      na GPU** (WMI GPUEngine; estado vazio no Linux); badge de update no box
+      ESTADO da sidebar (clique → Configurações); banner de elevação admin com
+      "Executar como admin" (UAC) no Windows. Tokens novos nos dois temas:
+      família quente (`AccentHotBrush`/`AccentHotSoftBrush`/`AccentHotBodyBrush`)
+      e tints translúcidos (`BgTintGreen/Warm/HotBrush` +
+      `BorderTintGreen/Warm/HotBrush`, reutilizados por badge e banner).
 - [x] **F1.3 — Overlay completo no Avalonia**: perfis por aplicativo (P3 —
       matcher `AppMatch` do processo em foco com pin espiando via
       `_pinnedProfileName`; overrides de offsets/largura/fonte/opacidade/
@@ -120,17 +131,17 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       o painel é clique-through como no WPF (sem arrasto/× clicável); no
       Linux continua arrastável. **Pendente:** pin pela bandeja (F1.5) e
       posicionamento rápido/preview (reavaliar na subfase de sistema).
-- [x] **F1.2 — Dashboard completo no Avalonia**: pílulas de temperatura com cor
-      por faixa (verde/morno/quente/desconhecido) e métricas de uso pintadas
-      (<75 primário, <90 morno, ≥90 quente — paridade do WPF); linhas de detalhe
-      mono de CPU/GPU via `SensorFormatter` do Core; card **Placa-mãe &
-      ventoinhas** (temp colorida + `BuildFanSummary`); card **Processos ativos
-      na GPU** (WMI GPUEngine; estado vazio no Linux); badge de update no box
-      ESTADO da sidebar (clique → Configurações); banner de elevação admin com
-      "Executar como admin" (UAC) no Windows. Tokens novos nos dois temas:
-      família quente (`AccentHotBrush`/`AccentHotSoftBrush`/`AccentHotBodyBrush`)
-      e tints translúcidos (`BgTintGreen/Warm/HotBrush` +
-      `BorderTintGreen/Warm/HotBrush`, reutilizados por badge e banner).
+- [x] **F1.4 — Inventário completo no Avalonia**: estatísticas de sessão
+      (Mín/Máx/Média) nas rows dos grupos, alimentadas por `data.SeriesStats`
+      com o formatador do valor (conversões de magnitude por estatística;
+      NaN = "--"); card **Hardware detectado** com árvore `[HWR]`
+      (`InventoryBuilder.BuildHardware`, reconstrução só quando a
+      assinatura dos nós muda — anti-colapso como no WPF); card **Monitores
+      (EDID)** com instância WMI/fabricante/modelo/código/serial/diagonal/
+      fabricação e indicador PRIMÁRIO (coleção troca só quando o conjunto
+      muda); botão **Resetar estatísticas** com `ResetSeriesStats` +
+      `CsvLogger.WriteMarker` + `JsonJournalLogger.WriteNote` e confirmação
+      transitória; resumo com "N nós · M monitor(es)" quando existirem.
 - [ ] Funcionalidades Windows-specific a conferir no port:
       elevação admin, PresentMon (processo externo — já orquestrado pelo Core),
       hotkey global, tray, startup com Windows, DebugWindow (manter ou não).

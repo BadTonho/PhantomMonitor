@@ -2,38 +2,65 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/hardware-inventory.md)
 
-## Inventário no dashboard Avalonia (Linux)
+## Inventário no dashboard Avalonia
 
-No frontend Linux, **Inventário** é uma página da janela principal, acessível pela
-barra lateral. Ela acompanha os snapshots do serviço Linux e agrupa as séries em
-CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. Cada linha mostra a
+No dashboard Avalonia, **Inventário** é uma página da janela principal, acessível
+pela barra lateral. Ela acompanha os snapshots do serviço ativo e agrupa as séries
+em CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. Cada linha mostra a
 chave (`CpuPerCore#1`), o rótulo da origem, o valor atual e a unidade. Séries por
 núcleo, dispositivo, interface e demais instâncias são exibidas individualmente.
+Desde a F1.4, cada linha também tem as **estatísticas de sessão** — Mín (sessão),
+Máx (sessão) e Média, com unidade embutida e conversões de magnitude por
+estatística (B/s → MB/s, MHz → GHz); sem amostra aparece `--` (NaN).
 
-Quando o serviço não publica nenhum valor de um tipo Linux esperado, o inventário
-inclui uma linha **Indisponível** para esse tipo. A lista considera somente as
-categorias que o coletor Linux atual expõe; sensores exclusivos do Windows não
-são tratados como ausentes no Linux. Um valor publicado igual a zero continua
-sendo uma leitura disponível. Por exemplo, bateria AC desconectada aparece como
-“Desconectada”, em vez de ser confundida com falta de leitura.
+A página também tem, desde a F1.4, os acréscimos do InventoryWindow do WPF:
+
+- **Botão "Resetar estatísticas"** no cabeçalho: zera min/máx/média de todas as
+  séries (`ISensorService.ResetSeriesStats`) e grava um marcador `#marker` no CSV
+  ativo + nota equivalente no journal JSONL (`reset (inventário)`), com
+  confirmação transitória junto do botão e amostras zeradas na hora.
+- **Card "Hardware detectado"**: árvore dos nós enumerados (placa-mãe →
+  SuperIO/EC, CPU, GPUs com sub-hardware...), decodificada das linhas
+  `[HWR]` via `InventoryBuilder.BuildHardware` (Core); nós expandidos por
+  padrão e reconstrução da árvore **só quando a enumeração muda** (assinatura
+  `Depth:Type:Name`). No Windows sem administrador ou sem detecção, um aviso
+  orienta iniciar como Administrador.
+- **Card "Monitores (EDID)"**: instância WMI (device), fabricante, modelo,
+  código, serial, diagonal e fabricação + indicador PRIMÁRIO (mesma fonte
+  `WmiMonitorID`/`WmiMonitorBasicDisplayParams`); a lista só troca quando o
+  conjunto de monitores muda. Sem monitor reportado (desktops/VMs/RDP), o card
+  fica oculto e o snapshot JSON publica `monitors: []`.
+- O resumo do topo mostra `N nós de hardware · M monitor(es)` quando existirem.
+
+Quando o serviço não publica nenhum valor de um tipo esperado, o inventário
+inclui uma linha **Indisponível** para esse tipo (colunas de sessão em `--`).
+A lista considera somente as categorias que o coletor atual expõe; sensores
+exclusivos do Windows não são tratados como ausentes no Linux. Um valor
+publicado igual a zero continua sendo uma leitura disponível. Por exemplo,
+bateria AC desconectada aparece como "Desconectada", em vez de ser confundida
+com falta de leitura.
 
 O inventário atualiza junto com cada snapshot. Enquanto aguarda a primeira
 leitura, mostra um estado de espera; se a coleta for pausada ou parada, mantém
-os últimos valores recebidos. A página é somente de consulta.
+os últimos valores recebidos e as estatísticas da sessão até o reset. A página
+é somente de consulta.
 
 A renderização é estável entre snapshots: os grupos fixos (CPU, GPU, memória,
 disco, rede, ventoinhas, bateria e FPS) e as linhas continuam sendo as mesmas
 instâncias, e cada leitura é reconciliada por chave — apenas a string que mudou
 re-renderiza. O grupo **Outros**, com séries fora das categorias fixas, entra e
 sai do fim da lista conforme o que o hardware publica. Fonte:
-`ViewModels/SensorInventoryBuilder.cs` (plano declarativo) e
+`ViewModels/SensorInventoryBuilder.cs` (plano declarativo com Min/Max/Avg),
+`ViewModels/MainWindowViewModel.Inventory.cs` (árvore/monitores/reset) e
 `MainWindowViewModel.ReconcileInventoryGroups`.
 
-## Inventário WPF (Windows)
+## Janela de inventário do WPF (Windows)
 
 O restante desta página descreve a janela de inventário do frontend WPF para
-Windows. Seus recursos de estatísticas de sessão, hardware enumerado e monitores
-EDID são específicos desse frontend e não fazem parte do inventário Avalonia Linux.
+Windows, que agora compartilha com o Avalonia a mesma fonte Core
+(`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) — a diferença é a
+apresentação: o Avalonia usa cards na página Inventário; o WPF usa as abas
+abaixo.
 
 Janela que lista **o que o monitor enxerga do hardware** em tempo real. Serve para
 duas tarefas práticas: diagnosticar por que um sensor não aparece (ex.: falta de

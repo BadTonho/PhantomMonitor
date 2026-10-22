@@ -2,17 +2,24 @@
 
 # Hardware inventory
 
-## Avalonia inventory (Linux)
+## Avalonia inventory
 
-**Inventory** is a page in the Avalonia main window, accessible from the sidebar. It follows Linux service snapshots and groups series into CPU, GPU, memory, disk, network, fans, battery, and FPS. Each row shows its key (for example, `CpuPerCore#1`), source label, current value, and unit. Per-core, per-device, per-interface, and other instance series are shown individually.
+**Inventory** is a page in the Avalonia main window, accessible from the sidebar. It follows the active service snapshots and groups series into CPU, GPU, memory, disk, network, fans, battery, and FPS. Each row shows its key (for example, `CpuPerCore#1`), source label, current value, and unit. Per-core, per-device, per-interface, and other instance series are shown individually. Since F1.4, each row also carries the **session statistics** — session minimum/maximum/average with the unit embedded and magnitude conversions per stat (B/s → MB/s, MHz → GHz); without a sample the cell shows `--` (NaN).
 
-When the Linux service publishes no value for an expected Linux sensor type, the page marks it **Unavailable**. Windows-only categories are not treated as missing. A published zero remains a valid reading; for example, a disconnected AC source is shown as disconnected rather than unavailable. The page updates with each snapshot and retains the last values while collection is paused or stopped. It is read-only.
+Since F1.4, the page also carries the WPF `InventoryWindow` additions:
 
-Rendering is stable across snapshots: the fixed groups (CPU, GPU, memory, disk, network, fans, battery, and FPS) and their rows persist as the same instances, and each reading is reconciled by key — only strings that actually changed re-render. The **Other** group, for series outside the fixed categories, is added to and removed from the end of the list depending on what the hardware publishes. Source: `ViewModels/SensorInventoryBuilder.cs` (declarative plan) and `MainWindowViewModel.ReconcileInventoryGroups`.
+- **"Reset statistics" button** in the page header: clears every per-series min/max/average (`ISensorService.ResetSeriesStats`) and writes a `#marker` row to the active CSV plus a matching JSONL note (`reset (inventory)`), with a transient confirmation next to the button and immediately cleared cells.
+- **"Detected hardware" card:** the enumerated hardware tree (motherboard → SuperIO/EC, CPU, GPUs, subhardware), decoded from the `[HWR]` diagnostic lines through the Core `InventoryBuilder.BuildHardware`; nodes are expanded by default and the tree is rebuilt **only when the enumeration changes** (`Depth:Type:Name` signature). On Windows without administrator privileges the empty state points to starting as admin.
+- **"Monitors (EDID)" card:** WMI instance path, manufacturer, model, product code, serial number, physical diagonal, manufacturing year/week, and a PRIMARY flag (same `WmiMonitorID`/`WmiMonitorBasicDisplayParams` source); the list only changes when the set of monitors changes. When no monitor is reported (desktops/VMs/RDP), the card is hidden and the JSON snapshot publishes `monitors: []`.
+- The page summary shows `N hardware nodes · M monitor(s)` when present.
 
-## WPF inventory (Windows)
+When the service publishes no value for an expected sensor type, the page marks it **Unavailable** (session cells `--`). Windows-only categories are not treated as missing on Linux. A published zero remains a valid reading; for example, a disconnected AC source is shown as disconnected rather than unavailable. The page updates with each snapshot and retains the last values (and session statistics, until reset) while collection is paused or stopped. It is read-only.
 
-The remaining features in this section describe the WPF inventory window and are not part of the Avalonia Linux page. Open it from the sidebar. It can help diagnose missing sensors and discover series keys for alerts and OSD configuration. Without an active snapshot it reports that monitoring must be started.
+Rendering is stable across snapshots: the fixed groups (CPU, GPU, memory, disk, network, fans, battery, and FPS) and their rows persist as the same instances, and each reading is reconciled by key — only strings that actually changed re-render. The **Other** group, for series outside the fixed categories, is added to and removed from the end of the list depending on what the hardware publishes. Source: `ViewModels/SensorInventoryBuilder.cs` (declarative plan with Min/Max/Avg), `ViewModels/MainWindowViewModel.Inventory.cs` (tree/monitors/reset) and `MainWindowViewModel.ReconcileInventoryGroups`.
+
+## WPF inventory window (Windows)
+
+The remaining features in this section describe the WPF inventory window, which now shares the same Core foundation with the Avalonia app (`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) — the difference is presentation: Avalonia uses cards in the Inventory page; the WPF uses the tabs below. Open it from the sidebar. It can help diagnose missing sensors and discover series keys for alerts and OSD configuration. Without an active snapshot it reports that monitoring must be started.
 
 ### Published series
 

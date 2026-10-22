@@ -34,6 +34,8 @@ Dedicated GPU is always instance 1. Disk and network indices follow the enumerat
 
 CSV/JSON logging, the OSD allowlist, and alert `sensorIndex` consume these keys. See [inventory](hardware-inventory.md), [alerts](alerts.md), and [logging](logging.md).
 
+The snapshot's series list is computed once per cycle, after the last write to values/series (custom formulas included), and handed to consumers — overlay, inventory, journal, CSV, and statistics share the same ordered list (canonical series first in `SensorType` enum order, then instances sorted). `SensorData.GetSeriesKeys()` returns that list when present and rebuilds the legacy way for snapshots that predate it.
+
 ## Battery and WHEA
 
 Windows battery series include `BatteryLevel` (%), `BatteryVoltage` (V), `BatteryPower` (W; positive while discharging, negative while charging), `BatteryWearLevel` (%), and `BatteryAcPower` (1/0). WMI queries are cached for about ten seconds; unavailable properties use fallbacks where possible.

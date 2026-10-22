@@ -85,7 +85,25 @@ public sealed class SensorData
     /// Todas as séries presentes no snapshot: canônicas primeiro (na ordem do enum,
     /// compatível com o CSV antigo), depois instâncias ordenadas por chave.
     /// </summary>
+    /// <summary>
+    /// Chaves de série pré-computadas no momento da publicação do snapshot. Os
+    /// serviços chamam <see cref="GetSeriesKeys"/> após a última escrita em
+    /// <see cref="Values"/>/<see cref="Series"/> (fórmulas custom criaram as
+    /// <c>Custom#i</c>, tuning resolvido e aplicado); daí em diante o snapshot é
+    /// imutável para esses dicionários e os consumidores compartilham a lista.
+    /// Sem o cache, cada consumidor (overlay, inventário, journal, CSV, estatísticas)
+    /// reconstruía e reordenava a própria lista por tick.
+    /// </summary>
+    [JsonIgnore]
+    public List<SensorKey>? CachedSeriesKeys { get; set; }
+
     public List<SensorKey> GetSeriesKeys()
+    {
+        if (CachedSeriesKeys is { } cached) return cached;
+        return BuildSeriesKeys();
+    }
+
+    private List<SensorKey> BuildSeriesKeys()
     {
         var keys = new List<SensorKey>(Values.Count + Series.Count);
         foreach (var type in AllSensorTypes)

@@ -52,6 +52,13 @@ Consumidores:
 - **OSD:** linhas por série filtradas pela whitelist `overlay.shownSeries` (ver [configuracao.md](configuracao.md)).
 - **Alertas:** `rules[].sensorIndex` mira uma instância (`GpuTemperature` + índice 1, ver [alertas.md](alertas.md)).
 
+A lista de séries do snapshot é pré-computada uma única vez por ciclo, após a
+última escrita em valores/séries (fórmulas custom incluídas) e distribuída aos
+consumidores — overlay, inventário, journal, CSV e estatísticas compartilham a
+mesma lista ordenada (séries canônicas primeiro na ordem do enum, depois
+instâncias ordenadas). `SensorData.GetSeriesKeys()` devolve essa lista quando
+presente e reconstrói do jeito antigo em snapshots legados.
+
 ## Concorrência e ciclo de vida
 
 - `Start/Stop/Update/Dispose` são serializados por um lock; um tick que chega durante outro ciclo é descartado.

@@ -268,6 +268,11 @@ public sealed class HardwareMonitorService : ISensorService
         // entram nas estatísticas (a média da sessão amostra na cadência delas).
         var repeated = _sensorTuning?.Apply(data);
 
+        // Publicação: pré-computa as chaves de série do snapshot. Aqui não há mais
+        // escrita em Values/Series, então os consumidores por tick compartilham a
+        // mesma lista (cada um reconstruía e reordenava a própria antes).
+        data.CachedSeriesKeys = data.GetSeriesKeys();
+
         _seriesStats.Commit(data, repeated);
         data.SeriesStats = _seriesStats.CopySnapshot();
 

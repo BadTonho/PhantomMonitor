@@ -141,6 +141,12 @@ public sealed class LinuxSensorService : ISensorService
             // estatísticas (mesma semântica do serviço Windows).
             var repeated = _sensorTuning?.Apply(data);
 
+            // Publicação: pré-computa as chaves de série do snapshot. Aqui não há mais
+            // escrita em Values/Series (os passos abaixo só anexam estatísticas e
+            // diagnóstico), então todos os consumidores por tick compartilham a mesma
+            // lista (cada um reconstruía e reordenava a própria antes).
+            data.CachedSeriesKeys = data.GetSeriesKeys();
+
             // Estatísticas por série: uma amostra por snapshot publicado.
             _seriesStats.Commit(data, repeated);
             data.SeriesStats = _seriesStats.CopySnapshot();

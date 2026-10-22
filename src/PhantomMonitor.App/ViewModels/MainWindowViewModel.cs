@@ -1690,10 +1690,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private static string Clock(SensorData data, SensorType type)
     {
-        var key = data.GetSeriesKeys().FirstOrDefault(k => k.Type == type);
-        return key.Type == type && (key.IsPrimary || data.Series.ContainsKey(key))
-            ? $"{data.GetValue(key):F0} MHz"
-            : "—";
+        // Primeira chave da categoria (canônicas precedem as por instância em
+        // GetSeriesKeys). Loop explícito em vez de FirstOrDefault: o default do
+        // struct (enum 0) casava com `key.Type == type` quando nenhuma chave existe.
+        var keys = data.GetSeriesKeys();
+        for (var i = 0; i < keys.Count; i++)
+        {
+            if (keys[i].Type != type) continue;
+            var key = keys[i];
+            if (key.IsPrimary || data.Series.ContainsKey(key))
+                return $"{data.GetValue(key):F0} MHz";
+            return "—";
+        }
+        return "—";
     }
 
     private static string MemoryPair(SensorData data, SensorType usedType, SensorType totalType, bool bytesAreGb = false)

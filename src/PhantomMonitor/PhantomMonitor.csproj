@@ -8,6 +8,9 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>PhantomMonitor</RootNamespace>
     <AssemblyName>PhantomMonitor</AssemblyName>
+    <!-- Marcador de build de desenvolvimento: o updater nunca "atualiza" um 0.0.0-dev.
+         A release passa /p:Version=<tag> no publish e a versão compilada passa a casar. -->
+    <Version>0.0.0-dev</Version>
   </PropertyGroup>
 
   <ItemGroup>

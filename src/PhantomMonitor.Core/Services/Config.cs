@@ -37,6 +37,9 @@ public sealed class AppConfig
     /// <summary>Exportador HTTP do SDK de telemetria (opt-in; ver TelemetryExportConfig).</summary>
     public TelemetryExportConfig TelemetryExport { get; set; } = new();
 
+    /// <summary>Verificação de atualizações via GitHub Releases (ver UpdateService, Services.Update).</summary>
+    public UpdateConfig Update { get; set; } = new();
+
     /// <summary>Sensores customizados (fórmulas sobre outras séries; ver CustomSensorEngine).</summary>
     public List<CustomSensorConfig> CustomSensors { get; set; } = [];
 
@@ -124,6 +127,11 @@ public sealed class AppConfig
         // privilégio e confunde com serviços do sistema), loopback por padrão.
         TelemetryExport ??= new();
         TelemetryExport.Port = Math.Clamp(TelemetryExport.Port, 1024, 65535);
+
+        // Atualizações: repositório vazio usa o padrão embutido no UpdateService
+        // (decisão de normalize, não trava a string no config).
+        Update ??= new();
+        Update.Repository = (Update.Repository ?? "").Trim();
 
         // Whitelist de séries por instância: config antigo sem a chave (ou com lista vazia)
         // volta ao padrão, senão o OSD ficaria sem multi-GPU/ventoinhas/discos extras.
@@ -453,6 +461,23 @@ public sealed class TelemetryExportConfig
 
     /// <summary>false = escuta só em 127.0.0.1; true = todas as interfaces (LAN, opt-in).</summary>
     public bool ListenAll { get; set; }
+}
+
+/// <summary>
+/// Verificação de atualizações via GitHub Releases. <c>repository</c> vazio
+/// usa o repositório oficial (BadTonho/PhantomMonitor); <c>checkBeta</c>
+/// aceita releases marcadas como pré-release; <c>autoCheck</c> liga a
+/// checagem automática (no arranque + timer de 24h) da UI.
+/// </summary>
+public sealed class UpdateConfig
+{
+    public bool AutoCheck { get; set; } = true;
+
+    /// <summary>Canal beta: aceita releases marcadas como pré-release no GitHub.</summary>
+    public bool CheckBeta { get; set; }
+
+    /// <summary>Repositório no formato "owner/repo" (vazio = repositório oficial).</summary>
+    public string Repository { get; set; } = "";
 }
 
 public sealed class AlertsConfig

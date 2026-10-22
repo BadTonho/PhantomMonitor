@@ -43,6 +43,7 @@
   "sensorTuning": [],
   "profiles": [],
   "telemetryExport": { "enabled": false, "port": 7317, "listenAll": false },
+  "update": { "autoCheck": true, "checkBeta": false, "repository": "" },
   "alerts": {
     "enabled": true,
     "cooldownSeconds": 60,

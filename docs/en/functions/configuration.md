@@ -16,6 +16,7 @@ Phantom Monitor uses JSON configuration. In a development checkout, `config.json
 | `sensors` | Sensor categories enabled by the model; not all current frontends consume these switches. |
 | `alerts` | Alert rules and actions. Avalonia edits rules, cooldowns, internal notifications, and scripts; Linux preserves but does not execute sound/shutdown actions. See [alerts](alerts.md). |
 | `telemetryExport` | Optional HTTP exporter: `{ "enabled": false, "port": 7317, "listenAll": false }`; provides `/values` and `/health`. See the [Telemetry SDK](../telemetry-sdk.md). |
+| `update` | Update checks via GitHub Releases: `{ "autoCheck": true, "checkBeta": false, "repository": "" }` — automatic check at startup and every 24 h (toggle in Settings) plus a manual button; `checkBeta` accepts prereleases ("beta channel"); an empty `repository` falls back to the official one (`BadTonho/PhantomMonitor`; a GitHub URL is also accepted). Shared implementation in `PhantomMonitor.Services.Update` (Core). |
 | `profiles` | Windows OSD per-application overrides: name, process match, position, width, font, opacity, accent, series, and visibility. See [overlay](overlay.md). |
 | `overlay.templates`, `overlay.graphs` | Custom OSD text lines and per-series history sparklines; Windows feature. |
 | `customSensors` | User formulas in the form `{ name, formula, unit? }`, published as `Custom#i`. Avalonia has an editor. See [custom sensors](custom-sensors.md). |

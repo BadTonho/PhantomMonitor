@@ -64,6 +64,9 @@ public sealed class LinuxAlertScriptRunner
 
     private static bool IsExecutable(string path)
     {
+        if (!OperatingSystem.IsLinux())
+            return false;
+
         var mode = File.GetUnixFileMode(path);
         const UnixFileMode executeBits = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
         return (mode & executeBits) != 0;

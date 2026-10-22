@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using PhantomMonitor.Controls;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 
@@ -13,7 +14,7 @@ namespace PhantomMonitor.Overlay;
 public partial class OverlayWindow : Window
 {
     private readonly List<Action<SensorData>> _updaters = new();
-    private Canvas? _frametimeGraph;
+    private Minigraph? _frametimeGraph;
     private bool _showFps;
     private double _detailMaxWidth = 160;
 
@@ -192,18 +193,23 @@ public partial class OverlayWindow : Window
             var segment = segments.FirstOrDefault(s => !s.IsLiteral);
             if (segment is null) continue;
 
-            var canvas = new Canvas
+            var graphElement = new Minigraph
             {
                 Height = graph.Height,
-                Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
-                ClipToBounds = true
+                ClipToBounds = true,
+                MinY = graph.Min,
+                MaxY = graph.Max,
+                EdgeGuides = true,       // guias tracejadas topo/base, como antes
+                TopShift = 1.0,          // base da polyline a 1 px do fundo, como antes
+                Stroke = TryParseTemplateColor(graph.Color) ?? _accentBrush,
             };
             var border = new Border
             {
                 CornerRadius = new CornerRadius(2),
                 BorderThickness = new Thickness(0.5),
                 BorderBrush = GuideBrush,
-                Child = canvas,
+                Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
+                Child = graphElement,
                 Margin = new Thickness(0, _rowMargin, 0, 0)
             };
 
@@ -211,10 +217,7 @@ public partial class OverlayWindow : Window
                 new FrametimeBuffer(graph.Window),
                 segment,
                 border,
-                canvas,
-                TryParseTemplateColor(graph.Color) ?? _accentBrush,
-                graph.Min,
-                graph.Max));
+                graphElement));
         }
 
         _baseOpacity = Math.Clamp(config.OverlayOpacity <= 0 ? 0.85 : config.OverlayOpacity, 0.1, 1.0);
@@ -236,24 +239,18 @@ public partial class OverlayWindow : Window
     /// <summary>Estado de um gráfico por série compilado no construtor.</summary>
     private sealed class GraphRow
     {
-        public GraphRow(FrametimeBuffer buffer, TemplateSegment segment, Border border, Canvas canvas, Brush stroke, double? min, double? max)
+        public GraphRow(FrametimeBuffer buffer, TemplateSegment segment, Border border, Minigraph graph)
         {
             Buffer = buffer;
             Segment = segment;
             Border = border;
-            Canvas = canvas;
-            Stroke = stroke;
-            MinAxis = min;
-            MaxAxis = max;
+            Graph = graph;
         }
 
         public FrametimeBuffer Buffer { get; }
         public TemplateSegment Segment { get; }
         public Border Border { get; }
-        public Canvas Canvas { get; }
-        public Brush Stroke { get; }
-        public double? MinAxis { get; }    // eixo Y fixo (null = auto)
-        public double? MaxAxis { get; }
+        public Minigraph Graph { get; }
     }
 
     private double _offsetX;
@@ -431,11 +428,17 @@ public partial class OverlayWindow : Window
         else
             _seriesPatterns = [.. _baseSeriesPatterns ?? ["Gpu*", "FanSpeed*", "Disk*"]];
 
+        // Padrões novos podem casar chaves sem linha: reabre a varredura que o
+        // atalho EnsureDynamicRows pulou.
+        _dynamicRowsComplete = false;
+
         // Acento: substitui a escova do gráfico e o contorno do painel.
         if (!string.IsNullOrWhiteSpace(profile?.AccentColor))
         {
             var accent = ParseAccentColor(profile.AccentColor);
             _accentBrush = new SolidColorBrush(accent);
+            if (_frametimeGraph is not null)
+                _frametimeGraph.Stroke = _accentBrush; // Minigraph re-renderiza pelo callback do DP
             MainBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x30, accent.R, accent.G, accent.B));
         }
 
@@ -741,12 +744,16 @@ public partial class OverlayWindow : Window
 
         if (showFrametimeGraph)
         {
-            // Gráfico de Frametime compacto de barras suaves
-            _frametimeGraph = new Canvas
+            // Gráfico de frametime (Minigraph — desenho retido). Antes: Canvas com
+            // Children.Clear + Line + Polyline + PointCollection novos a cada tick.
+            Minigraph.SetGuideBrush(GuideBrush);
+            _frametimeGraph = new Minigraph
             {
                 Height = _graphHeight,
-                Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
-                ClipToBounds = true
+                ClipToBounds = true,
+                MaxFloor = 33.3, // eixo em extensões: 0..max(dados, 33.3 ms)
+                GuideAt = 16.66, // linha guia sutil de 60 FPS
+                Stroke = _accentBrush,
             };
 
             var graphBorder = new Border
@@ -754,6 +761,7 @@ public partial class OverlayWindow : Window
                 CornerRadius = new CornerRadius(2),
                 BorderThickness = new Thickness(0.5),
                 BorderBrush = GuideBrush,
+                Background = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)),
                 Child = _frametimeGraph,
                 Margin = new Thickness(0, 2, 0, 0)
             };
@@ -791,58 +799,11 @@ public partial class OverlayWindow : Window
             UpdateSeriesGraph(row, data);
         }
 
-        // Atualizar o gráfico de frametime
+        // Atualizar o gráfico de frametime (Minigraph: só o dataset muda; eixo,
+        // guia de 60 FPS e polyline saem do próprio OnRender).
         if (_frametimeGraph != null && data.FrametimeHistory.Length > 1)
         {
-            _frametimeGraph.Children.Clear();
-            double w = _frametimeGraph.ActualWidth;
-            double h = _frametimeGraph.ActualHeight;
-            if (w <= 0 || h <= 0) { w = _frametimeGraph.Width; h = _frametimeGraph.Height; }
-            if (w <= 0) w = 184;
-            if (h <= 0) h = _graphHeight;
-
-            var history = data.FrametimeHistory;
-            double maxFt = 33.3; // 30 FPS baseline
-            for (int i = 0; i < history.Length; i++)
-            {
-                if (history[i] > maxFt) maxFt = history[i];
-            }
-            if (maxFt < 16.6) maxFt = 16.6;
-
-            // Linha guia sutil de 60 FPS (16.6ms)
-            double y60 = h - (16.66 / maxFt) * (h - 2);
-            if (y60 >= 0 && y60 <= h)
-            {
-                var guide = new Line
-                {
-                    X1 = 0,
-                    X2 = w,
-                    Y1 = y60,
-                    Y2 = y60,
-                    Stroke = GuideBrush,
-                    StrokeThickness = 0.8,
-                    StrokeDashArray = new DoubleCollection { 2, 2 }
-                };
-                _frametimeGraph.Children.Add(guide);
-            }
-
-            var pts = new PointCollection();
-            int count = history.Length;
-            for (int i = 0; i < count; i++)
-            {
-                double x = w - (count - i) * (w / Math.Max(count, 120));
-                double y = h - (history[i] / maxFt) * (h - 2);
-                pts.Add(new Point(x, Math.Clamp(y, 0, h)));
-            }
-
-            var poly = new Polyline
-            {
-                Points = pts,
-                Stroke = _accentBrush,
-                StrokeThickness = 1.2,
-                StrokeLineJoin = PenLineJoin.Round
-            };
-            _frametimeGraph.Children.Add(poly);
+            _frametimeGraph.Values = data.FrametimeHistory;
         }
     }
 
@@ -857,6 +818,12 @@ public partial class OverlayWindow : Window
     {
         // Padrões do config conferidos por série; ordenação por família evita que um
         // hardware abundante (núcleos de CPU) capture o teto de linhas primeiro.
+        // Atalho: se todas as linhas já existem (teto ou conjunto completo), a
+        // varredura com matching por padrão pode ser pulada — o estado _dynamicRows
+        // só cresce, nunca encolhe.
+        if (_dynamicRows.Count >= MaxAdvancedRows || _dynamicRowsComplete)
+            return;
+
         var keys = data.Series.Keys
             .Where(k => _seriesPatterns.Any(p => k.MatchesPattern(p)))
             .ToList();
@@ -871,13 +838,21 @@ public partial class OverlayWindow : Window
             if (_dynamicRows.Count >= MaxAdvancedRows) break;
             if (_dynamicRows.ContainsKey(key)) continue;
             AddAdvancedRow(key, data);
-
-            // Containers do fim (gráficos P8.5 + templates P6.6) permanecem os
-            // últimos filhos do painel: séries que aparecem depois não "passam
-            // por baixo" desses blocos.
-            MovePanelsToEnd();
         }
+
+        // Containers do fim (gráficos P8.5 + templates P6.6) permanecem os últimos
+        // filhos do painel: séries que aparecem depois não "passam por baixo" desses
+        // blocos. Uma única reordenação por tick basta — estava dentro do loop.
+        MovePanelsToEnd();
+
+        // Conjunto esgotado (todas as chaves casando já possuem linha): nada mais a
+        // criar; a varredura volta a ser necesária somente se as séries mudarem.
+        // O hash de contagem abaixo reabre a varredura quando o conjunto mudar.
+        if (_dynamicRows.Count == keys.Count)
+            _dynamicRowsComplete = true;
     }
+
+    private bool _dynamicRowsComplete;
 
     /// <summary>
     /// Mantém os containers de fim do painel (gráficos por série, templates) sempre
@@ -1034,74 +1009,13 @@ public partial class OverlayWindow : Window
     }
 
     /// <summary>
-    /// Desenho da sparkline (espelha o gráfico de frametime): polyline com espaçamento
-    /// uniforme, eixo Y fixo quando configurado (min/max) senão auto pela janela (com
-    /// piso de ε para séries "planas"), guias tracejadas nos extremos do eixo.
+    /// Desenho da sparkline (Minigraph — desenho retido): só o dataset muda por
+    /// tick; eixo fixo/auto, guias e polyline saem do OnRender do control.
     /// </summary>
     private void DrawSeriesGraph(GraphRow row)
     {
-        var canvas = row.Canvas;
-        canvas.Children.Clear();
-
-        double w = canvas.ActualWidth;
-        double h = canvas.ActualHeight;
-        if (w <= 0 || h <= 0) { w = canvas.Width; h = canvas.Height; }
-        if (w <= 0) w = _baseWidth - 24;
-        if (h <= 0) h = 36;
-
-        var history = row.Buffer.ToArray();
-        if (history.Length < 2) return;
-
-        // Eixo: fixo quando configurado; senão auto (mín/máx da janela). Séries
-        // "planas" (todos os valores iguais) ganham piso simétrico de ±0.5.
-        double lo = row.MinAxis ?? double.MaxValue;
-        double hi = row.MaxAxis ?? double.MinValue;
-        if (row.MinAxis is null || row.MaxAxis is null)
-        {
-            foreach (var v in history)
-            {
-                if (row.MinAxis is null && v < lo) lo = v;
-                if (row.MaxAxis is null && v > hi) hi = v;
-            }
-            if (hi - lo < 0.001)
-            {
-                lo -= 0.5;
-                hi += 0.5;
-            }
-        }
-        if (hi - lo <= 0) hi = lo + 1; // guarda final contra divisão por zero
-        var span = hi - lo;
-
-        // Guias tracejadas no topo e na base do eixo (mesmo estilo do frametime).
-        foreach (var y in new[] { 0.5, h - 1.5 })
-        {
-            canvas.Children.Add(new Line
-            {
-                X1 = 0,
-                X2 = w,
-                Y1 = y,
-                Y2 = y,
-                Stroke = GuideBrush,
-                StrokeThickness = 0.6,
-                StrokeDashArray = new DoubleCollection { 2, 2 }
-            });
-        }
-
-        var pts = new PointCollection(history.Length);
-        for (int i = 0; i < history.Length; i++)
-        {
-            double x = w - (history.Length - i) * (w / Math.Max(history.Length, 120));
-            var y = h - ((history[i] - lo) / span) * (h - 2) - 1;
-            pts.Add(new Point(x, Math.Clamp(y, 0, h)));
-        }
-
-        canvas.Children.Add(new Polyline
-        {
-            Points = pts,
-            Stroke = row.Stroke,
-            StrokeThickness = 1.2,
-            StrokeLineJoin = PenLineJoin.Round
-        });
+        // ToArray: o buffer é circular mutável sob lock; o array é o snapshot estável.
+        row.Graph.Values = row.Buffer.ToArray();
     }
 
     // ---------- Templates do usuário (P6.6) ----------
@@ -1402,7 +1316,7 @@ public partial class OverlayWindow : Window
         // (foreground check a cada 30 ms + SetWindowPos a cada 500 ms) para sempre.
         _positionTimer?.Stop();
         _topmostTimer?.Stop();
-        _frametimeGraph?.Children.Clear();
+        _frametimeGraph = null; // visuais morrem com a janela; sem referência para isolar
         _updaters.Clear();
         base.OnClosed(e);
     }

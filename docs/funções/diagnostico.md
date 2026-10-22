@@ -7,7 +7,7 @@ O centro de diagnóstico reúne erros registrados e o estado das fontes de senso
 ## Acesso
 
 - **Avalonia/Linux:** abra **Diagnóstico** na navegação lateral. Novos registros de erro aparecem em tempo real; a lista **Sensores e fontes** é preenchida ao abrir a aba e ao usar **Atualizar** (que também relê o arquivo local). Use **Abrir arquivo de erros** para abri-lo no aplicativo padrão do sistema.
-- **WPF/Windows:** na janela principal, clique em **Diagnóstico: sensores e erros do aplicativo**. A aba **Sensores e fontes** acompanha as leituras; a aba **Erros do aplicativo** mostra os registros recentes e permite atualizar ou abrir o arquivo.
+- **WPF/Windows:** na janela principal, clique em **Diagnóstico: sensores e erros do aplicativo**. A aba **Sensores e fontes** acompanha as leituras enquanto a janela estiver visível (com a janela oculta ou minimizada, a atualização fica suspensa até reexibi-la); a aba **Erros do aplicativo** mostra os registros recentes e permite atualizar ou abrir o arquivo.
 
 As telas exibem até 500 registros recentes, em ordem cronológica, com horário, contexto e mensagem. Exceções incluem seus detalhes técnicos. O log permanece local; o aplicativo não envia relatórios.
 

@@ -513,7 +513,7 @@ public partial class MainWindow : Window
             if (data.CpuTemp <= 0)
                 SensorCountText.Text += " | CPU temp: N/A";
 
-            _debugWindow?.Update(data);
+            _debugWindow?.Update(data); // a própria janela pula ticks quando escondida/minimizada
 
             LastUpdateText.Text = $"Atualizado às {data.Timestamp:HH:mm:ss}";
 

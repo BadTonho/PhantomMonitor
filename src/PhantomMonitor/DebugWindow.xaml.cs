@@ -33,6 +33,10 @@ public partial class DebugWindow : Window
 
     public void Update(SensorData data)
     {
+        // Escondida ou minimizada: pular agrupamento + render do TextBox por tick.
+        // Mesmo "aberta" atrás de outra janela não precisa de atualização contínua.
+        if (!IsVisible || WindowState == WindowState.Minimized) return;
+
         Dispatcher.Invoke(() =>
         {
             var sv = FindScrollViewer(DebugTextBox);

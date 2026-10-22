@@ -7,7 +7,7 @@ The diagnostics center combines recorded errors with the current health of senso
 ## Access
 
 - **Avalonia/Linux:** open **Diagnostics** in the sidebar. New error entries appear live; the **Sensors and sources** list is filled when the tab is opened and via **Refresh** (which also rereads the local file). Use **Open error log** to open it with the system's default application.
-- **WPF/Windows:** click **Diagnostics: sensors and application errors** in the main window. The **Sensors and sources** tab follows current readings; **Application errors** shows recent entries and offers refresh and open-file actions.
+- **WPF/Windows:** click **Diagnostics: sensors and application errors** in the main window. The **Sensors and sources** tab follows current readings while the window is visible (when hidden or minimized, updates pause until the window is shown again); **Application errors** shows recent entries and offers refresh and open-file actions.
 
 Both views show up to 500 recent entries in chronological order, with timestamp, context, and message. Exception entries include technical details. The log stays on the local computer; the app does not upload reports.
 

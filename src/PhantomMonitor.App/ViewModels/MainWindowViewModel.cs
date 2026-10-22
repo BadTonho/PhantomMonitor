@@ -74,6 +74,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _overlayShowFans;
     private bool _overlayShowMotherboard;
     private bool _overlayShowFps;
+    private bool _overlayShowFrametimeGraph;
     private string _overlayWidthText = "220";
     private double _overlayOpacityPercent = 85;
     private string _overlayFontSizeText = "11.5";
@@ -250,6 +251,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public Avalonia.Thickness OverlayRowMargin => _config.Overlay.CompactMode ? new(0, 0.5) : new(0, 2);
     public double OverlayHideButtonMinSize => _config.Overlay.CompactMode ? 20 : 24;
     public Avalonia.Thickness OverlayHideButtonPadding => _config.Overlay.CompactMode ? new(4, 0) : new(6, 0);
+    public double OverlayFrametimeGraphHeight => _config.Overlay.CompactMode ? 18 : 24;
     public bool OverlayShowCpu { get => _overlayShowCpu; set => Set(ref _overlayShowCpu, value); }
     public bool OverlayShowGpu { get => _overlayShowGpu; set => Set(ref _overlayShowGpu, value); }
     public bool OverlayShowRam { get => _overlayShowRam; set => Set(ref _overlayShowRam, value); }
@@ -258,6 +260,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool OverlayShowFans { get => _overlayShowFans; set => Set(ref _overlayShowFans, value); }
     public bool OverlayShowMotherboard { get => _overlayShowMotherboard; set => Set(ref _overlayShowMotherboard, value); }
     public bool OverlayShowFps { get => _overlayShowFps; set => Set(ref _overlayShowFps, value); }
+    public bool OverlayShowFrametimeGraph { get => _overlayShowFrametimeGraph; set => Set(ref _overlayShowFrametimeGraph, value); }
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
     public IReadOnlyList<double> GpuSamples { get => _gpuSamples; private set => Set(ref _gpuSamples, value); }
     public IReadOnlyList<double> RamSamples { get => _ramSamples; private set => Set(ref _ramSamples, value); }
@@ -290,6 +293,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _overlayShowFans = _config.Overlay.ShowFans;
         _overlayShowMotherboard = _config.Overlay.ShowMotherboard;
         _overlayShowFps = _config.Overlay.ShowFps;
+        _overlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         _overlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         _overlayOpacityPercent = _config.OverlayOpacity * 100;
         _overlayFontSizeText = _config.Overlay.FontSize.ToString("0.#", CultureInfo.CurrentCulture);
@@ -389,7 +393,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OverlayShowNetwork,
             OverlayShowFans,
             OverlayShowMotherboard,
-            OverlayShowFps);
+            OverlayShowFps,
+            _config.Overlay.ShowFrametimeGraph);
         foreach (var row in OverlayMetricsBuilder.Build(data, selection, _config.Overlay.ShownSeries))
             OverlayRows.Add(row);
     }
@@ -410,6 +415,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         Raise(nameof(OverlayRowMargin));
         Raise(nameof(OverlayHideButtonMinSize));
         Raise(nameof(OverlayHideButtonPadding));
+        Raise(nameof(OverlayFrametimeGraphHeight));
     }
 
     private void LoadOverlaySeriesPatterns()
@@ -1043,6 +1049,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var oldOverlayFans = _config.Overlay.ShowFans;
         var oldOverlayMotherboard = _config.Overlay.ShowMotherboard;
         var oldOverlayFps = _config.Overlay.ShowFps;
+        var oldOverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         var oldOverlayShownSeries = _config.Overlay.ShownSeries?.ToList() ?? ["Gpu*", "FanSpeed*", "Disk*"];
         var newOverlayShownSeries = _overlaySeriesPatterns.Select(item => item.Pattern).ToList();
         if (newOverlayShownSeries.Count == 0)
@@ -1075,6 +1082,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             || OverlayShowFans != oldOverlayFans
             || OverlayShowMotherboard != oldOverlayMotherboard
             || OverlayShowFps != oldOverlayFps
+            || OverlayShowFrametimeGraph != oldOverlayShowFrametimeGraph
             || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase)
             || overlayVisualChanged
             || overlayAppearanceChanged;
@@ -1101,6 +1109,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _config.Overlay.ShowFans = OverlayShowFans;
         _config.Overlay.ShowMotherboard = OverlayShowMotherboard;
         _config.Overlay.ShowFps = OverlayShowFps;
+        _config.Overlay.ShowFrametimeGraph = OverlayShowFrametimeGraph;
         _config.Overlay.ShownSeries = newOverlayShownSeries;
         _config.Overlay.Width = overlayWidth;
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
@@ -1124,6 +1133,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _config.Overlay.ShowFans = oldOverlayFans;
             _config.Overlay.ShowMotherboard = oldOverlayMotherboard;
             _config.Overlay.ShowFps = oldOverlayFps;
+            _config.Overlay.ShowFrametimeGraph = oldOverlayShowFrametimeGraph;
             _config.Overlay.ShownSeries = oldOverlayShownSeries;
             _config.Overlay.Width = oldOverlayWidth;
             _config.OverlayOpacity = oldOverlayOpacity;
@@ -1137,6 +1147,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OverlayShowFans = oldOverlayFans;
             OverlayShowMotherboard = oldOverlayMotherboard;
             OverlayShowFps = oldOverlayFps;
+            OverlayShowFrametimeGraph = oldOverlayShowFrametimeGraph;
             UpdateOverlayRows(_latestSensorData);
             LoadOverlaySeriesPatterns();
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
@@ -1157,6 +1168,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         LoadOverlaySeriesPatterns();
         UpdateOverlayRows(_latestSensorData);
+        OverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
         OverlayFontSizeSlider = _config.Overlay.FontSize;

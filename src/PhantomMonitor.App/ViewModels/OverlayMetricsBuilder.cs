@@ -98,7 +98,10 @@ internal static class OverlayMetricsBuilder
         {
             var fps = TryValue(data, SensorType.Fps, out var fpsValue) ? $"{fpsValue:F0} FPS" : "— FPS";
             var frametime = TryValue(data, SensorType.FrametimeMs, out var frameValue) ? $"{frameValue:F2} ms" : "— ms";
-            rows.Add(new OverlayMetricViewModel("JOGO", $"{fps} · {frametime}"));
+            rows.Add(new OverlayMetricViewModel(
+                "JOGO",
+                $"{fps} · {frametime}",
+                selection.ShowFrametimeGraph && data is not null && data.FrametimeHistory.Length > 1));
         }
 
         if (data is not null && shownSeries is { Count: > 0 })
@@ -170,4 +173,5 @@ internal readonly record struct OverlayConfigSelection(
     bool ShowNetwork,
     bool ShowFans,
     bool ShowMotherboard,
-    bool ShowFps);
+    bool ShowFps,
+    bool ShowFrametimeGraph);

@@ -305,6 +305,11 @@
               <CheckBox Content="Placa-mãe" IsChecked="{Binding OverlayShowMotherboard, Mode=TwoWay}" />
               <CheckBox Content="FPS e frametime" IsChecked="{Binding OverlayShowFps, Mode=TwoWay}" />
             </WrapPanel>
+            <CheckBox Content="Gráfico de frametime no overlay (requer FPS/frametime)"
+                      IsEnabled="{Binding OverlayShowFps}"
+                      IsChecked="{Binding OverlayShowFrametimeGraph, Mode=TwoWay}" />
+            <TextBlock Text="O gráfico aparece abaixo da linha JOGO quando há pelo menos duas amostras. A pausa mantém o histórico congelado."
+                       Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <TextBlock Text="SÉRIES POR INSTÂNCIA" Foreground="#748399" FontSize="9" FontWeight="Bold" Margin="0,4,0,0" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <ComboBox ItemsSource="{Binding OverlaySeriesOptions}" SelectedItem="{Binding SelectedOverlaySeries, Mode=TwoWay}"

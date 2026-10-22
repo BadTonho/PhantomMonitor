@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:charts="using:PhantomMonitor.App.Controls"
         x:Class="PhantomMonitor.App.Views.OverlayWindow"
         Title="Phantom Monitor Overlay"
         Width="260"
@@ -31,16 +32,22 @@
       <ItemsControl ItemsSource="{Binding OverlayRows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Grid ColumnDefinitions="120,*"
-                  ColumnSpacing="{Binding $parent[Window].DataContext.OverlayColumnSpacing}"
-                  Margin="{Binding $parent[Window].DataContext.OverlayRowMargin}">
-              <TextBlock Text="{Binding Name}" Foreground="#9FB0C5"
-                         FontSize="{Binding $parent[Window].DataContext.OverlayMetricNameFontSize}"
-                         FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-              <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="#F3F6FB"
-                         FontSize="{Binding $parent[Window].DataContext.OverlayMetricValueFontSize}"
-                         FontFamily="monospace" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
-            </Grid>
+            <StackPanel Spacing="2">
+              <Grid ColumnDefinitions="120,*"
+                    ColumnSpacing="{Binding $parent[Window].DataContext.OverlayColumnSpacing}"
+                    Margin="{Binding $parent[Window].DataContext.OverlayRowMargin}">
+                <TextBlock Text="{Binding Name}" Foreground="#9FB0C5"
+                           FontSize="{Binding $parent[Window].DataContext.OverlayMetricNameFontSize}"
+                           FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="#F3F6FB"
+                           FontSize="{Binding $parent[Window].DataContext.OverlayMetricValueFontSize}"
+                           FontFamily="monospace" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
+              </Grid>
+              <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
+                                   Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
+                                   Stroke="#FBBF24"
+                                   Height="{Binding $parent[Window].DataContext.OverlayFrametimeGraphHeight}" />
+            </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

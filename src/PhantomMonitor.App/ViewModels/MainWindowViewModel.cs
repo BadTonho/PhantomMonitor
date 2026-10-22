@@ -543,6 +543,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _latestSensorData = data;
         RefreshOverlaySeriesOptions();
         ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data));
+        UpdateInventorySession(data);
         UpdateOverlayRows(data);
         RefreshSensorTuningSeriesOptions();
         RefreshAlertEditor();
@@ -550,7 +551,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         Raise(nameof(IsWaitingForInventorySnapshot));
         var availableCount = InventoryGroups.Sum(group => group.Rows.Count(row => row.IsAvailable));
         var unavailableCount = InventoryGroups.Sum(group => group.Rows.Count(row => !row.IsAvailable));
-        InventorySummaryText = $"{availableCount} séries disponíveis · {unavailableCount} tipos comuns indisponíveis";
+        InventorySummaryText = _inventoryHardwareNodeCount > 0 || _inventoryMonitorCount > 0
+            ? $"{_inventoryHardwareNodeCount} nós de hardware · {_inventoryMonitorCount} monitor(es) · {availableCount} séries disponíveis · {unavailableCount} tipos comuns indisponíveis"
+            : $"{availableCount} séries disponíveis · {unavailableCount} tipos comuns indisponíveis";
         InventoryUpdatedText = $"Atualizado às {data.Timestamp.ToLocalTime():HH:mm:ss}";
 
         CpuUsageText = Percent(data, SensorType.CpuTotal);

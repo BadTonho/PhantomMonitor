@@ -255,11 +255,14 @@
             <TextBlock Text="Inventário de sensores" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="{Binding InventorySummaryText}" Classes="muted" FontSize="11" />
             <TextBlock Text="{Binding InventoryUpdatedText}" Classes="muted" FontSize="10" />
+            <TextBlock IsVisible="{Binding HasInventoryActionStatus}" Text="{Binding InventoryActionStatusText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
             <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
             <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+            <Button Classes="action" Content="Resetar estatísticas" Click="OnResetStatsClick"
+                    ToolTip.Tip="Zera as colunas Mín/Máx/Média da sessão e grava um marcador no CSV/journal ativo (#marker), como no WPF." />
           </StackPanel>
         </Grid>
 
@@ -273,31 +276,87 @@
               <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14">
                 <StackPanel Spacing="10">
                   <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
-                  <Grid ColumnDefinitions="1.1*,1.5*,*,Auto" Margin="0,0,0,2">
+                  <Grid ColumnDefinitions="1.05*,1.35*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="14" Margin="0,0,0,2">
                     <TextBlock Text="SÉRIE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                     <TextBlock Grid.Column="1" Text="ORIGEM" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                     <TextBlock Grid.Column="2" Text="VALOR" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                    <TextBlock Grid.Column="3" Text="UNIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Column="3" Text="MÍN (SESSÃO)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Grid.Column="4" Text="MÁX (SESSÃO)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Grid.Column="5" Text="MÉDIA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Grid.Column="6" Text="UNIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Right" />
                   </Grid>
                   <ItemsControl ItemsSource="{Binding Rows}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
                         <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
-                          <Grid ColumnDefinitions="1.1*,1.5*,*,Auto">
+                          <Grid ColumnDefinitions="1.05*,1.35*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="14">
                             <TextBlock Text="{Binding Key}" Foreground="{DynamicResource TextMonoBrush}" FontFamily="monospace" FontSize="11" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Text="{Binding Source}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="2" Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="3" Text="{Binding Unit}" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Text="{Binding Min}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="4" Text="{Binding Max}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="5" Text="{Binding Avg}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="6" Text="{Binding Unit}" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center" />
                           </Grid>
                         </Border>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
+                  <TextBlock Text="Estatísticas de sessão: acumuladas desde o último “Resetar estatísticas”; NaN (sem amostra) aparece como “--”." Classes="muted" FontSize="10" />
                 </StackPanel>
               </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasInventorySnapshot}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Hardware detectado" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
+            <TreeView ItemsSource="{Binding InventoryHardwareNodes}" IsVisible="{Binding HasInventoryHardware}" Background="Transparent" BorderThickness="0">
+              <TreeView.Styles>
+                <Style Selector="TreeViewItem">
+                  <Setter Property="IsExpanded" Value="True" />
+                </Style>
+              </TreeView.Styles>
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}">
+                  <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" />
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+            <TextBlock IsVisible="{Binding !HasInventoryHardware}"
+                       Text="Nenhum hardware enumerado — no Windows, inicie o monitoramento como Administrador para ver a árvore."
+                       Classes="muted" FontSize="11" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasMonitors}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Monitores (EDID)" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding Monitors}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
+                    <StackPanel Spacing="3">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding InstanceName}" Foreground="{DynamicResource TextMonoBrush}" FontFamily="monospace" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="PRIMÁRIO" IsVisible="{Binding Primary}" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" />
+                      </Grid>
+                      <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="{Binding Manufacturer}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" MinWidth="48" />
+                        <TextBlock Text="{Binding Model}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" MinWidth="120" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding ProductCode}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" MinWidth="64" />
+                        <TextBlock Text="{Binding Serial}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" MinWidth="96" />
+                        <TextBlock Text="{Binding DiagonalText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" MinWidth="56" />
+                        <TextBlock Text="{Binding MadeText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
 
         <TextBlock Text="Os sensores indisponíveis dependem do hardware, dos drivers e dos dados expostos pelo kernel." Classes="muted" FontSize="10" TextWrapping="Wrap" Margin="2,0,0,0" />
       </StackPanel>

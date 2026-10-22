@@ -4,8 +4,10 @@ using PhantomMonitor.Models;
 
 namespace PhantomMonitor.App.ViewModels;
 
-/// <summary>Plano declarativo de uma row do inventário: strings já formatadas, sem ViewModel.</summary>
-internal sealed record InventoryRowPlan(string Key, string Source, string Value, string Unit, bool Available);
+/// <summary>Plano declarativo de uma row do inventário: strings já formatadas, sem ViewModel.
+/// Min/Max/Avg são as estatísticas da sessão ("--" enquanto não há amostra; NaN).</summary>
+internal sealed record InventoryRowPlan(string Key, string Source, string Value, string Unit, bool Available,
+    string Min = "--", string Max = "--", string Avg = "--");
 
 /// <summary>Plano declarativo de um grupo do inventário (os 8 fixos + "Outros" quando houver séries fora dos tipos fixos).</summary>
 internal sealed record InventoryGroupPlan(string Title, IReadOnlyList<InventoryRowPlan> Rows);
@@ -95,12 +97,29 @@ internal static class SensorInventoryBuilder
     {
         var value = data.GetValue(key);
         var (valueText, unit) = Format(key.Type, value);
+        data.SeriesStats.TryGetValue(key, out var stats);
+
         return new InventoryRowPlan(
             key.ToString(),
             data.GetLabel(key),
             valueText,
             unit,
-            true);
+            true,
+            Stat(stats?.Min, key),
+            Stat(stats?.Max, key),
+            Stat(stats?.Average, key));
+    }
+
+    /// <summary>Estatística da sessão formatada com a unidade (mesmo formatador do valor da linha);
+    /// sem amostra = "--". Reuso do formato do valor: conversões de magnitude (B/s → MB/s,
+    /// MHz → GHz) também acontecem nas estatísticas, porque min e max podem cair em faixas
+    /// diferentes.</summary>
+    private static string Stat(double? stat, SensorKey key)
+    {
+        if (key.Type == SensorType.BatteryAcPower) return "--"; // texto discreto, sem min/max/média
+        if (stat is not { } value || !double.IsFinite(value)) return "--";
+        var (text, unit) = Format(key.Type, value);
+        return unit.Length > 0 ? $"{text} {unit}" : text;
     }
 
     private static (string Value, string Unit) Format(SensorType type, double value)

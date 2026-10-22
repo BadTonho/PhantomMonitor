@@ -94,6 +94,7 @@ public sealed partial class MainWindow : Window
 
     private void OnStartClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Start();
     private void OnPauseClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.TogglePause();
+    private void OnResetStatsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ResetSessionStats();
     private void OnStopClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Stop();
     private void OnToggleOverlayClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ToggleOverlay();
     private void OnOverviewClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowOverview();

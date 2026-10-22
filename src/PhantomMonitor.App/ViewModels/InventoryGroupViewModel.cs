@@ -27,6 +27,9 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
     private string _value;
     private string _unit;
     private bool _isAvailable;
+    private string _min;
+    private string _max;
+    private string _avg;
 
     public InventoryRowViewModel(string key)
     {
@@ -35,6 +38,9 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
         _value = "—";
         _unit = "";
         _isAvailable = false;
+        _min = "--";
+        _max = "--";
+        _avg = "--";
     }
 
     public string Key { get; }
@@ -83,17 +89,56 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Mínimo da sessão com unidade ("--" sem amostra).</summary>
+    public string Min
+    {
+        get => _min;
+        private set
+        {
+            if (_min == value) return;
+            _min = value;
+            Raise();
+        }
+    }
+
+    /// <summary>Máximo da sessão com unidade ("--" sem amostra).</summary>
+    public string Max
+    {
+        get => _max;
+        private set
+        {
+            if (_max == value) return;
+            _max = value;
+            Raise();
+        }
+    }
+
+    /// <summary>Média da sessão com unidade ("--" sem amostra).</summary>
+    public string Avg
+    {
+        get => _avg;
+        private set
+        {
+            if (_avg == value) return;
+            _avg = value;
+            Raise();
+        }
+    }
+
     private void Raise([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>Aplica um plano do builder sem disparar PropertyChanged afirmativamente.</summary>
-    public void Apply(string source, string value, string unit, bool available)
+    public void Apply(string source, string value, string unit, bool available, string min, string max, string avg)
     {
         Source = source;
         Value = value;
         Unit = unit;
         IsAvailable = available;
+        Min = min;
+        Max = max;
+        Avg = avg;
     }
 }

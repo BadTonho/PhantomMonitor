@@ -162,7 +162,7 @@ public sealed partial class MainWindowViewModel
                 }
             }
 
-            row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available);
+            row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available, entry.Min, entry.Max, entry.Avg);
             position++;
         }
 

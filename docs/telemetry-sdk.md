@@ -103,7 +103,10 @@ Complemento de rede para o mapa de memória — mesma cadência, payload maior:
   sem stale), `Content-Type: application/json`, `Content-Length` para keep-alive.
 - **Ciclo de vida:** ligado somente com o monitoramento ativo (criado no início,
   descartado no stop); falha ao abrir a porta é registrada em
-  `logs/errors.log` e **não** impede o monitoramento.
+  `errors.log` e **não** impede o monitoramento. No Avalonia/Linux, o arquivo fica
+  em `$XDG_DATA_HOME/PhantomMonitor/logs/` (normalmente `~/.local/share/PhantomMonitor/logs/`);
+  no WPF, fica em `logs/` ao lado do executável. Consulte [diagnóstico](funções/diagnostico.md)
+  para ver os registros no aplicativo.
 - **Ativo quando pausado (P6.7):** segue servindo o último snapshot válido
   durante a pausa — dashboards não "somem", congelando no valor de pausa.
 - **Avalonia/Linux:** os campos `enabled`, `port` e `listenAll` podem ser editados

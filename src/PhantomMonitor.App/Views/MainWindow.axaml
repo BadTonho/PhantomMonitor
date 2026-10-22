@@ -50,6 +50,7 @@
           <Button Classes="nav" Content="ƒ   Sensores customizados" Click="OnCustomSensorsClick" />
           <Button Classes="nav" Content="↻   Ajuste por série" Click="OnSensorTuningClick" />
           <Button Classes="nav" Content="♧   Alertas" Click="OnAlertsClick" />
+          <Button Classes="nav" Content="ⓘ   Diagnóstico" Click="OnDiagnosticsClick" />
           <Button Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
           <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="#66758A" FontSize="9" Margin="8,13,0,0" />
         </StackPanel>
@@ -641,6 +642,62 @@
         </Grid>
 
         <TextBlock Text="No Avalonia, scripts configurados são executados quando a regra dispara. Som e desligamento são preservados no arquivo, mas não executados." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsDiagnostics}">
+      <StackPanel Margin="28,23,28,28" Spacing="16">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Diagnóstico" Foreground="#F3F6FB" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Erros e fontes de sensores detectadas neste sistema." Classes="muted" FontSize="11" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="action" Content="Atualizar" Click="OnRefreshDiagnosticsClick" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="action" Content="Abrir arquivo de erros" Click="OnOpenErrorLogClick" VerticalAlignment="Center" />
+        </Grid>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+          <StackPanel Spacing="8">
+            <TextBlock Text="FONTES E SENSORES" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Os estados descrevem o que o kernel e os drivers reportaram. Sensor não exposto não significa falha do app." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding DiagnosticSensorLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#29374A" BorderThickness="0,1,0,0" Padding="0,6">
+                    <TextBlock Text="{Binding}" Foreground="#DCE5F0" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Background="#1B2634" BorderBrush="#29374A" BorderThickness="1" CornerRadius="12" Padding="16">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="ERROS REGISTRADOS" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
+              <TextBlock Grid.Column="1" Text="{Binding DiagnosticEntriesSummary}" Classes="muted" FontSize="10" />
+            </Grid>
+            <TextBlock Text="{Binding ErrorLogPathText}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding !HasDiagnosticEntries}" Text="Nenhuma falha registrada. A lista é atualizada automaticamente quando o app registra uma nova ocorrência." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding DiagnosticEntries}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#29374A" BorderThickness="0,1,0,0" Padding="0,8">
+                    <StackPanel Spacing="3">
+                      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <TextBlock Text="{Binding TimestampText}" Foreground="#93C5FD" FontSize="10" />
+                        <TextBlock Grid.Column="1" Text="{Binding Context}" Foreground="#FBBF24" FontFamily="monospace" FontSize="10" />
+                      </Grid>
+                      <TextBlock Text="{Binding Message}" Foreground="#E6EDF6" FontSize="10" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding DiagnosticsMessage}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
       </StackPanel>
     </ScrollViewer>
 

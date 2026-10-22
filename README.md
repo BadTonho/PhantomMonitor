@@ -37,6 +37,7 @@ The project has two frontends: **WPF on Windows** and **Avalonia on Linux**. The
 | Overlay | Advanced OSD, click-through, profiles, and visual editor | Configurable floating window; the compositor controls position and fullscreen behavior |
 | Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |
 | Alerts | Notifications, sound, scripts, and configurable shutdown action | In-app toast, desktop notifications, and scripts |
+| Diagnostics | Live sensor/source details and application error log | Sensor-source status, recent errors, and NVIDIA driver/NVML/hwmon details |
 | Formulas and per-series tuning | Compatible with the existing configuration format | Visual editors for custom sensors and sampling/smoothing rules |
 | Telemetry | CSV, JSON, JSONL, and optional HTTP exporter | CSV, JSON, JSONL, and optional HTTP exporter |
 
@@ -84,7 +85,7 @@ Some hardware readings may require elevated permissions. FPS collection uses Pre
 
 On first launch, the app creates `config.json` from [`config.example.json`](config.example.json). During development, this file is placed in the repository root. For per-user installations, the usual locations are `%AppData%\PhantomMonitor\config.json` on Windows and `$XDG_CONFIG_HOME/PhantomMonitor/config.json` on Linux.
 
-On Linux, telemetry logs are stored in `~/.local/share/PhantomMonitor/logs/` (or under `$XDG_DATA_HOME` when set). The Avalonia **Settings** page can change the sampling interval, logging formats, and overlay options. The HTTP exporter is disabled by default and listens on loopback; enabling other network interfaces exposes its endpoints without TLS or authentication.
+On Linux, telemetry and error logs are stored in `~/.local/share/PhantomMonitor/logs/` (or under `$XDG_DATA_HOME` when set). Open **Diagnostics** in Avalonia to inspect recent errors and the detected sensor sources. The **Settings** page can change the sampling interval, logging formats, and overlay options. The HTTP exporter is disabled by default and listens on loopback; enabling other network interfaces exposes its endpoints without TLS or authentication.
 
 ## Architecture
 

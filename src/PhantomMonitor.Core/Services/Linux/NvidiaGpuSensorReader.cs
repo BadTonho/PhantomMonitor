@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Globalization;
 using PhantomMonitor.Models;
+using PhantomMonitor.Services;
 
 namespace PhantomMonitor.Services.Linux;
 
@@ -23,13 +25,29 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
     private DeviceGetUtilizationRates? _getUtilizationRates;
     private DeviceGetMemoryInfo? _getMemoryInfo;
     private DeviceGetTemperature? _getTemperature;
+    private string _status = "NVML ainda não inicializada.";
+
+    public string Status => _status;
+    public bool LastUtilizationAvailable { get; private set; }
+    public bool LastMemoryAvailable { get; private set; }
+    public bool LastTemperatureAvailable { get; private set; }
+
+    public void BeginSample()
+    {
+        LastUtilizationAvailable = false;
+        LastMemoryAvailable = false;
+        LastTemperatureAvailable = false;
+    }
 
     public NvidiaGpuSensorReader()
     {
         try
         {
             if (!NativeLibrary.TryLoad("libnvidia-ml.so.1", out _library))
+            {
+                _status = "libnvidia-ml.so.1 não encontrada; métricas NVML indisponíveis.";
                 return;
+            }
 
             var initialize = Load<NvmlInitialize>("nvmlInit_v2", "nvmlInit");
             _shutdown = Load<NvmlShutdown>("nvmlShutdown");
@@ -47,17 +65,26 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
                 _getName is null || _getUtilizationRates is null ||
                 _getMemoryInfo is null || _getTemperature is null)
             {
+                _status = "A biblioteca NVML foi carregada, mas faltam funções necessárias.";
                 Dispose();
                 return;
             }
 
             if (initialize() == NvmlSuccess)
+            {
                 _initialized = true;
+                _status = "NVML inicializada.";
+            }
             else
+            {
+                _status = "A biblioteca NVML foi encontrada, mas não conseguiu inicializar.";
                 Dispose();
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            _status = $"Falha ao inicializar NVML: {ex.GetType().Name}: {ex.Message}";
+            ErrorLog.Write("NvidiaGpuSensorReader.Initialize", ex);
             Dispose();
         }
     }
@@ -90,7 +117,10 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
                 found = true;
 
             if (!found || device == IntPtr.Zero)
+            {
+                _status = $"NVML ativa, mas não encontrou a GPU PCI {pciBusId ?? fallbackIndex.ToString(CultureInfo.InvariantCulture)}.";
                 return false;
+            }
 
             var label = $"NVIDIA GPU #{fallbackIndex + 1}";
             var nameBuffer = new byte[128];
@@ -109,6 +139,7 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
                 utilizationInfo.Gpu <= 100)
             {
                 utilization = utilizationInfo.Gpu;
+                LastUtilizationAvailable = true;
             }
 
             double? memoryUsedMb = null;
@@ -117,6 +148,7 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
             {
                 memoryUsedMb = memory.Used / BytesPerMegabyte;
                 memoryTotalMb = memory.Total / BytesPerMegabyte;
+                LastMemoryAvailable = true;
             }
 
             double? temperatureCelsius = null;
@@ -124,14 +156,19 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
                 _getTemperature(device, GpuTemperatureSensor, out var temperature) == NvmlSuccess)
             {
                 temperatureCelsius = temperature;
+                LastTemperatureAvailable = true;
             }
 
             reading = new NvidiaGpuReading(label, utilization, memoryUsedMb, memoryTotalMb, temperatureCelsius);
+            _status = $"NVML ativa; {label}: utilização {(utilization.HasValue ? "ok" : "não reportada")}, " +
+                      $"VRAM {(memoryUsedMb.HasValue && memoryTotalMb.HasValue ? "ok" : "não reportada")}, " +
+                      $"temperatura {(temperatureCelsius.HasValue ? "ok" : "não reportada")}.";
             return true;
         }
-        catch
+        catch (Exception ex)
         {
-            // Uma falha transitória de NVML não deve interromper os demais sensores.
+            _status = $"Falha ao consultar NVML: {ex.GetType().Name}: {ex.Message}";
+            ErrorLog.Write("NvidiaGpuSensorReader.Read", ex);
             return false;
         }
     }

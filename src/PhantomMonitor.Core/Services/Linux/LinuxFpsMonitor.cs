@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using PhantomMonitor.Services;
 
 namespace PhantomMonitor.Services.Linux;
 
@@ -221,9 +222,10 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Proteção contra leitura concorrente transitória
+            _debugInfo = $"Falha inesperada ao consultar a camada Vulkan: {ex.Message}";
+            ErrorLog.Write("LinuxFpsMonitor.PollTelemetry", ex);
         }
     }
 

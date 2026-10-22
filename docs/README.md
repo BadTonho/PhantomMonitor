@@ -29,6 +29,7 @@ Esta é a documentação em português do Phantom Monitor. Os guias em inglês f
 
 - [Alertas](funções/alertas.md)
 - [Logging](funções/logging.md)
+- [Diagnóstico do aplicativo](funções/diagnostico.md)
 - [SDK de telemetria](telemetry-sdk.md)
 
 ### Arquitetura e planejamento

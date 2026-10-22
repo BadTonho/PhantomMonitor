@@ -29,6 +29,7 @@ English-language documentation for Phantom Monitor. Portuguese originals are ava
 
 - [Alerts](functions/alerts.md)
 - [Logging](functions/logging.md)
+- [Application diagnostics](functions/diagnostics.md)
 - [Telemetry SDK](telemetry-sdk.md)
 
 ### Architecture and planning

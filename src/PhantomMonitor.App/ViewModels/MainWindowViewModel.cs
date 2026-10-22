@@ -56,6 +56,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isAlerts;
     private bool _isCustomSensors;
     private bool _isSensorTuning;
+    private bool _isDiagnostics;
+    private readonly ObservableCollection<ErrorLogEntry> _diagnosticEntries = new();
+    private IReadOnlyList<string> _diagnosticSensorLines = ["Aguardando a primeira leitura dos sensores."];
+    private string _diagnosticsMessage = "Os diagnósticos ficam somente neste computador.";
     private string _updateIntervalText;
     private bool _intervalEdited;
     private bool _logToCsv;
@@ -136,11 +140,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool HasInventorySnapshot { get => _hasInventorySnapshot; private set => Set(ref _hasInventorySnapshot, value); }
     public bool IsWaitingForInventorySnapshot => !HasInventorySnapshot;
     public bool IsOverview { get => _isOverview; private set => Set(ref _isOverview, value); }
-    public bool IsInventory => !IsOverview && !IsSettings && !IsAlerts && !IsCustomSensors && !IsSensorTuning;
+    public bool IsInventory => !IsOverview && !IsSettings && !IsAlerts && !IsCustomSensors && !IsSensorTuning && !IsDiagnostics;
     public bool IsSettings { get => _isSettings; private set => Set(ref _isSettings, value); }
     public bool IsAlerts { get => _isAlerts; private set => Set(ref _isAlerts, value); }
     public bool IsCustomSensors { get => _isCustomSensors; private set => Set(ref _isCustomSensors, value); }
     public bool IsSensorTuning { get => _isSensorTuning; private set => Set(ref _isSensorTuning, value); }
+    public bool IsDiagnostics { get => _isDiagnostics; private set => Set(ref _isDiagnostics, value); }
+    public ObservableCollection<ErrorLogEntry> DiagnosticEntries => _diagnosticEntries;
+    public IReadOnlyList<string> DiagnosticSensorLines { get => _diagnosticSensorLines; private set => Set(ref _diagnosticSensorLines, value); }
+    public string DiagnosticsMessage { get => _diagnosticsMessage; private set => Set(ref _diagnosticsMessage, value); }
+    public string ErrorLogPathText => ErrorLog.LogFilePath;
+    public bool HasDiagnosticEntries => DiagnosticEntries.Count > 0;
+    public string DiagnosticEntriesSummary => HasDiagnosticEntries
+        ? $"Exibindo {DiagnosticEntries.Count} registros recentes."
+        : "Nenhum erro registrado nesta execução ou no arquivo local.";
     public ObservableCollection<AlertRuleEditorViewModel> AlertRules => _alertRules;
     public ObservableCollection<AlertHistoryEntryViewModel> AlertHistory => _alertHistory;
     public ObservableCollection<CustomSensorEditorViewModel> CustomSensorEditors => _customSensorEditors;
@@ -308,6 +321,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _sensorService = LinuxSensorServiceFactory.Create(_config);
         AttachSensorService(_sensorService);
         UpdateOverlayRows(null);
+        LoadDiagnosticEntries();
+        ErrorLog.EntryWritten += OnDiagnosticEntryWritten;
     }
 
     public void Start()
@@ -502,6 +517,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsAlerts = false;
         IsCustomSensors = false;
         IsSensorTuning = false;
+        IsDiagnostics = false;
         Raise(nameof(IsInventory));
     }
 
@@ -512,6 +528,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsAlerts = false;
         IsCustomSensors = false;
         IsSensorTuning = false;
+        IsDiagnostics = false;
         Raise(nameof(IsInventory));
     }
 
@@ -522,6 +539,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsAlerts = false;
         IsCustomSensors = false;
         IsSensorTuning = false;
+        IsDiagnostics = false;
         Raise(nameof(IsInventory));
     }
 
@@ -532,6 +550,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsAlerts = true;
         IsCustomSensors = false;
         IsSensorTuning = false;
+        IsDiagnostics = false;
         Raise(nameof(IsInventory));
     }
 
@@ -542,6 +561,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsAlerts = false;
         IsCustomSensors = true;
         IsSensorTuning = false;
+        IsDiagnostics = false;
         Raise(nameof(IsInventory));
     }
 
@@ -552,7 +572,53 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsAlerts = false;
         IsCustomSensors = false;
         IsSensorTuning = true;
+        IsDiagnostics = false;
         Raise(nameof(IsInventory));
+    }
+
+    public void ShowDiagnostics()
+    {
+        IsOverview = false;
+        IsSettings = false;
+        IsAlerts = false;
+        IsCustomSensors = false;
+        IsSensorTuning = false;
+        IsDiagnostics = true;
+        LoadDiagnosticEntries();
+        Raise(nameof(IsInventory));
+    }
+
+    public void RefreshDiagnostics()
+    {
+        LoadDiagnosticEntries();
+        if (_latestSensorData is not null)
+            DiagnosticSensorLines = _latestSensorData.SensorDebugInfo.ToArray();
+        DiagnosticsMessage = "Diagnóstico atualizado.";
+    }
+
+    public void SetDiagnosticsMessage(string message) => DiagnosticsMessage = message;
+
+    private void LoadDiagnosticEntries()
+    {
+        DiagnosticEntries.Clear();
+        foreach (var entry in ErrorLog.ReadRecentEntries())
+            DiagnosticEntries.Add(entry);
+        Raise(nameof(HasDiagnosticEntries));
+        Raise(nameof(DiagnosticEntriesSummary));
+    }
+
+    private void OnDiagnosticEntryWritten(ErrorLogEntry entry)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+            if (DiagnosticEntries.Contains(entry)) return;
+            DiagnosticEntries.Add(entry);
+            while (DiagnosticEntries.Count > 500)
+                DiagnosticEntries.RemoveAt(0);
+            Raise(nameof(HasDiagnosticEntries));
+            Raise(nameof(DiagnosticEntriesSummary));
+        });
     }
 
     public void AddCustomSensor()
@@ -1350,6 +1416,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed || !_started) return;
 
         _latestSensorData = data;
+        DiagnosticSensorLines = data.SensorDebugInfo.ToArray();
         RefreshOverlaySeriesOptions();
         _telemetryHttpExporter?.Publish(data);
         InventoryGroups = SensorInventoryBuilder.Build(data);
@@ -1491,6 +1558,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        ErrorLog.EntryWritten -= OnDiagnosticEntryWritten;
         DetachSensorService(_sensorService);
         if (IsRunning)
         {

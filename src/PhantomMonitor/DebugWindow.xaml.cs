@@ -1,19 +1,28 @@
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PhantomMonitor.Models;
+using PhantomMonitor.Services;
 
 namespace PhantomMonitor;
 
 public partial class DebugWindow : Window
 {
     private bool _autoScroll = true;
+    private readonly ObservableCollection<ErrorLogEntry> _errorEntries = new();
 
     public DebugWindow()
     {
         InitializeComponent();
+        ErrorEntriesList.ItemsSource = _errorEntries;
+        ErrorLogPathText.Text = ErrorLog.LogFilePath;
+        RefreshErrors();
+        ErrorLog.EntryWritten += OnErrorLogEntryWritten;
+        Closed += (_, _) => ErrorLog.EntryWritten -= OnErrorLogEntryWritten;
     }
 
     private void OnDebugScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -46,6 +55,8 @@ public partial class DebugWindow : Window
                 sb.AppendLine();
             }
 
+            AppendAvailabilityDiagnostics(sb, data);
+
             DebugTextBox.Text = sb.ToString().TrimEnd();
 
             if (wasAtBottom)
@@ -68,6 +79,82 @@ public partial class DebugWindow : Window
 
             LastUpdateText.Text = $"Atualizado: {data.Timestamp:HH:mm:ss}  |  Total: {data.SensorDebugInfo.Count} sensores  |  Ctrl+A copiar";
         });
+    }
+
+    private static void AppendAvailabilityDiagnostics(StringBuilder output, SensorData data)
+    {
+        output.AppendLine("╔═══ DISPONIBILIDADE DE SÉRIES");
+        var groups = new (string Name, SensorType[] Types)[]
+        {
+            ("CPU", [SensorType.CpuTotal, SensorType.CpuPerCore, SensorType.CpuTemperature, SensorType.CpuClock]),
+            ("GPU", [SensorType.GpuCore, SensorType.GpuMemoryUsed, SensorType.GpuMemoryTotal,
+                SensorType.GpuTemperature, SensorType.GpuHotSpot, SensorType.GpuVramTemperature]),
+            ("MEMÓRIA", [SensorType.RamUsage, SensorType.RamUsed, SensorType.RamTotal, SensorType.RamAvailable]),
+            ("DISCO", [SensorType.DiskRead, SensorType.DiskWrite, SensorType.DiskUsage]),
+            ("REDE", [SensorType.NetworkDown, SensorType.NetworkUp]),
+            ("VENTOINHAS", [SensorType.FanSpeed, SensorType.GpuFan]),
+            ("BATERIA", [SensorType.BatteryLevel, SensorType.BatteryVoltage, SensorType.BatteryPower]),
+            ("FPS", [SensorType.Fps, SensorType.FrametimeMs])
+        };
+
+        foreach (var (group, types) in groups)
+        foreach (var type in types)
+        {
+            var present = data.Values.ContainsKey(type) || data.Series.Keys.Any(key => key.Type == type);
+            output.AppendLine($"║ [{group}] {type}: {(present ? "disponível" : "sem leitura do provedor atual; consulte os detalhes da fonte acima")}");
+        }
+
+        output.AppendLine();
+    }
+
+    private void OnErrorLogEntryWritten(ErrorLogEntry entry)
+    {
+        if (!IsVisible) return;
+        try
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            {
+                if (!IsVisible) return;
+                if (_errorEntries.Contains(entry)) return;
+                _errorEntries.Add(entry);
+                while (_errorEntries.Count > 500)
+                    _errorEntries.RemoveAt(0);
+                UpdateErrorLogStatus();
+            }));
+        }
+        catch (InvalidOperationException)
+        {
+            // A janela está fechando.
+        }
+    }
+
+    private void OnRefreshErrors(object sender, RoutedEventArgs e) => RefreshErrors();
+
+    private void RefreshErrors()
+    {
+        _errorEntries.Clear();
+        foreach (var entry in ErrorLog.ReadRecentEntries())
+            _errorEntries.Add(entry);
+        UpdateErrorLogStatus();
+    }
+
+    private void UpdateErrorLogStatus() => ErrorLogStatusText.Text = _errorEntries.Count == 0
+        ? "Nenhum erro registrado no arquivo local. As novas ocorrências aparecem automaticamente."
+        : $"Exibindo {_errorEntries.Count} registros recentes; novas ocorrências aparecem automaticamente.";
+
+    private void OnOpenErrorLog(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ErrorLog.EnsureLogFileExists();
+            Process.Start(new ProcessStartInfo(ErrorLog.LogFilePath) { UseShellExecute = true });
+            ErrorLogStatusText.Text = "Arquivo aberto no aplicativo padrão.";
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Diagnostics.OpenErrorLog", ex);
+            ErrorLogStatusText.Text = $"Não foi possível abrir o arquivo: {ex.Message}";
+        }
     }
 
     private static ScrollViewer? FindScrollViewer(DependencyObject? obj)

@@ -80,18 +80,17 @@ do snapshot sensors_latest.json) — indicado para benchmarks longos e replay.
 - Consumo típico: `Get-Content -Wait logs\sensors_*.jsonl -Tail 1` (tail
   client) ou `jq -s` sobre o arquivo fechado no fim da sessão.
 
-## ErrorLog (`logs/errors.log`)
+## ErrorLog (`errors.log`)
 
-Registro de erros internos (substitui os antigos `catch` vazios). Fica em `logs/` ao lado do executável em ambos os frontends. No Linux, esse caminho é distinto da pasta de dados do usuário usada pelos arquivos CSV/JSON/JSONL de telemetria.
+Registro local de falhas e eventos de diagnóstico. No WPF, fica em `logs/` ao lado do executável. No Avalonia/Linux, fica na pasta de dados do usuário (`~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`), junto aos logs de telemetria.
 
 - Formato: `data hora [contexto] mensagem`
 - Mensagens idênticas consecutivas são suprimidas; o arquivo é zerado ao passar de ~1 MB
 - Nunca lança exceção (falha de log não derruba o app)
+- O centro **Diagnóstico** exibe até 500 registros recentes, atualiza quando novas mensagens chegam e oferece abrir o arquivo no aplicativo padrão do sistema
+- Em caso de falha ao escrever o arquivo, a ocorrência pode permanecer visível na lista em memória durante a execução atual
 
-Também é o destino de todos os tratadores globais de exceção do app:
-- `Dispatcher.UnhandledException` — falhas na UI thread (modal só é aberto para erros diferentes do anterior; repetidos ficam apenas no log)
-- `AppDomain.UnhandledException` — encaminha erros de threads de fundo
-- `TaskScheduler.UnobservedTaskException` — exceções não observadas em tasks (marcadas como observadas)
+WPF e Avalonia registram exceções não tratadas da UI, do domínio da aplicação e de tarefas não observadas. Falhas inesperadas dos leitores Linux também são registradas com contexto; arquivos opcionais ausentes continuam sendo tratados como informação de disponibilidade.
 
 ## Ativação
 

@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using System.Diagnostics;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
 
@@ -87,6 +88,22 @@ public sealed partial class MainWindow : Window
     private void OnAddOverlaySeriesPatternClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddManualOverlaySeriesPattern();
     private void OnRestoreOverlaySeriesDefaultsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestoreDefaultOverlaySeriesPatterns();
     private void OnAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowAlerts();
+    private void OnDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowDiagnostics();
+    private void OnRefreshDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RefreshDiagnostics();
+    private void OnOpenErrorLogClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        try
+        {
+            ErrorLog.EnsureLogFileExists();
+            Process.Start(new ProcessStartInfo(ErrorLog.LogFilePath) { UseShellExecute = true });
+            ViewModel.SetDiagnosticsMessage("Arquivo de erros aberto no aplicativo padrão.");
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Diagnostics.OpenErrorLog", ex);
+            ViewModel.SetDiagnosticsMessage($"Não foi possível abrir o arquivo: {ex.Message}");
+        }
+    }
     private void OnAddAlertRuleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddAlertRule();
     private void OnSaveAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveAlerts();
     private void OnAddCustomSensorClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddCustomSensor();

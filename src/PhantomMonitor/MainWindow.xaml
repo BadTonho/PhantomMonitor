@@ -437,7 +437,7 @@
                 </Border>
 
                 <!-- Footer Action -->
-                <Button Content="Visualizar Sensores Detectados em Tempo Real"
+                <Button Content="Diagnóstico: sensores e erros do aplicativo"
                         Style="{StaticResource SecondaryButton}"
                         Click="OnOpenDebugWindow"
                         HorizontalAlignment="Stretch"

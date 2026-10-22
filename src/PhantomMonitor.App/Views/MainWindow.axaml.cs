@@ -50,6 +50,10 @@ public sealed partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainWindowViewModel.OverlayVisible))
             SyncOverlayVisibility();
+        else if (e.PropertyName == nameof(MainWindowViewModel.OverlayWidth) && _overlayWindow is not null)
+            _overlayWindow.Width = ViewModel.OverlayWidth;
+        else if (e.PropertyName == nameof(MainWindowViewModel.OverlayOpacity) && _overlayWindow is not null)
+            _overlayWindow.Opacity = ViewModel.OverlayOpacity;
     }
 
     private void SyncOverlayVisibility()

@@ -74,6 +74,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _overlayShowFans;
     private bool _overlayShowMotherboard;
     private bool _overlayShowFps;
+    private string _overlayWidthText = "220";
+    private double _overlayOpacityPercent = 85;
     private readonly ObservableCollection<OverlayMetricViewModel> _overlayRows = new();
     private readonly ObservableCollection<OverlaySeriesPatternViewModel> _overlaySeriesPatterns = new();
     private IReadOnlyList<string> _overlaySeriesOptions = [];
@@ -163,6 +165,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
     public bool IsIntervalEdited => _intervalEdited;
     public bool IsLegacyIntervalOutOfRange => !IsIntervalEdited && _config.UpdateIntervalMs > 60_000;
+    public string OverlayWidthText { get => _overlayWidthText; set => Set(ref _overlayWidthText, value); }
+    public double OverlayOpacityPercent
+    {
+        get => _overlayOpacityPercent;
+        set
+        {
+            if (Set(ref _overlayOpacityPercent, value)) Raise(nameof(OverlayOpacityLabel));
+        }
+    }
+    public string OverlayOpacityLabel => $"{OverlayOpacityPercent:0}%";
     public bool LogToCsv { get => _logToCsv; set => Set(ref _logToCsv, value); }
     public bool LogToJson { get => _logToJson; set => Set(ref _logToJson, value); }
     public bool LogToJsonJournal { get => _logToJsonJournal; set => Set(ref _logToJsonJournal, value); }
@@ -238,6 +250,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _overlayShowFans = _config.Overlay.ShowFans;
         _overlayShowMotherboard = _config.Overlay.ShowMotherboard;
         _overlayShowFps = _config.Overlay.ShowFps;
+        _overlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
+        _overlayOpacityPercent = _config.OverlayOpacity * 100;
         LoadOverlaySeriesPatterns();
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
@@ -908,6 +922,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void SaveSettings()
     {
+        if (!int.TryParse(OverlayWidthText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var overlayWidth)
+            || overlayWidth is < 140 or > 700)
+        {
+            SettingsMessage = "A largura do overlay deve ficar entre 140 e 700 pixels.";
+            return;
+        }
+
+        if (!double.IsFinite(OverlayOpacityPercent) || OverlayOpacityPercent is < 10 or > 100)
+        {
+            SettingsMessage = "A opacidade do overlay deve ficar entre 10% e 100%.";
+            return;
+        }
+
         int? newInterval = null;
         if (IsIntervalEdited)
         {
@@ -935,6 +962,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var oldTelemetryPort = _config.TelemetryExport.Port;
         var oldTelemetryListenAll = _config.TelemetryExport.ListenAll;
         var oldOverlayCpu = _config.Overlay.ShowCpu;
+        var oldOverlayWidth = _config.Overlay.Width;
+        var oldOverlayOpacity = _config.OverlayOpacity;
         var oldOverlayGpu = _config.Overlay.ShowGpu;
         var oldOverlayRam = _config.Overlay.ShowRam;
         var oldOverlayDisk = _config.Overlay.ShowDisk;
@@ -962,6 +991,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var telemetryChanged = TelemetryExportEnabled != oldTelemetryEnabled
             || telemetryPort != oldTelemetryPort
             || TelemetryExportListenAll != oldTelemetryListenAll;
+        var overlayVisualChanged = overlayWidth != oldOverlayWidth
+            || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
         var overlayChanged = OverlayShowCpu != oldOverlayCpu
             || OverlayShowGpu != oldOverlayGpu
             || OverlayShowRam != oldOverlayRam
@@ -970,7 +1001,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             || OverlayShowFans != oldOverlayFans
             || OverlayShowMotherboard != oldOverlayMotherboard
             || OverlayShowFps != oldOverlayFps
-            || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase);
+            || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase)
+            || overlayVisualChanged;
 
         if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
         {
@@ -995,6 +1027,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _config.Overlay.ShowMotherboard = OverlayShowMotherboard;
         _config.Overlay.ShowFps = OverlayShowFps;
         _config.Overlay.ShownSeries = newOverlayShownSeries;
+        _config.Overlay.Width = overlayWidth;
+        _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
 
         if (!_config.Save(ConfigPaths.ConfigFile))
         {
@@ -1014,6 +1048,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _config.Overlay.ShowMotherboard = oldOverlayMotherboard;
             _config.Overlay.ShowFps = oldOverlayFps;
             _config.Overlay.ShownSeries = oldOverlayShownSeries;
+            _config.Overlay.Width = oldOverlayWidth;
+            _config.OverlayOpacity = oldOverlayOpacity;
             OverlayShowCpu = oldOverlayCpu;
             OverlayShowGpu = oldOverlayGpu;
             OverlayShowRam = oldOverlayRam;
@@ -1042,6 +1078,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         LoadOverlaySeriesPatterns();
         UpdateOverlayRows(_latestSensorData);
+        OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
+        OverlayOpacityPercent = _config.OverlayOpacity * 100;
+        if (overlayVisualChanged)
+        {
+            Raise(nameof(OverlayWidth));
+            Raise(nameof(OverlayOpacity));
+        }
 
         UpdateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
         TelemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);

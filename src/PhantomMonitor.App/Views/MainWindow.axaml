@@ -264,6 +264,21 @@
           <StackPanel Spacing="10">
             <TextBlock Text="OVERLAY FLUTUANTE" Foreground="#AAB7C8" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Escolha as categorias mostradas na janela compacta. Salve para aplicar." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="5">
+                <TextBlock Text="LARGURA (140–700 PX)" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                <TextBox Text="{Binding OverlayWidthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="5" MinWidth="180">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="OPACIDADE" Foreground="#748399" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Grid.Column="1" Text="{Binding OverlayOpacityLabel}" Foreground="#C7D2E0" FontSize="10" />
+                </Grid>
+                <Slider Minimum="10" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                        Value="{Binding OverlayOpacityPercent, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+            <TextBlock Text="A largura e a opacidade são aplicadas à janela aberta ao salvar, sem reiniciar a coleta." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <WrapPanel Orientation="Horizontal" ItemWidth="170">
               <CheckBox Content="CPU" IsChecked="{Binding OverlayShowCpu, Mode=TwoWay}" />
               <CheckBox Content="GPU" IsChecked="{Binding OverlayShowGpu, Mode=TwoWay}" />

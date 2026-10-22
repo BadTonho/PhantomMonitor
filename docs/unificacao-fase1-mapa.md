@@ -1,0 +1,127 @@
+# Fase 1 — Mapa de equivalência WPF → Avalonia
+
+> **Idioma:** Português (Brasil) · [English](en/unification-phase1-map.md)
+
+> Auditoria fechada em out/2026 sobre a leitura efetiva dos dois frontends.
+> Fontes: `src/PhantomMonitor` (WPF: `MainWindow.xaml`/`.cs`, `Overlay/*`,
+> `DebugWindow`, `InventoryWindow`, `Services/`) e `src/PhantomMonitor.App`
+> (Avalonia: views, `ViewModels/*`, `Services/*`), além de `PhantomMonitor.Core`.
+> Regra de decisão: **a UI que já existe no Avalonia é o formato alvo** (views na
+> sidebar); o que o WPF tem a mais é portado; o que o Avalonia tem a mais fica.
+> Tudo renderiza os dois temas builtin da Fase 0 (`Neptune`/`Slate`).
+
+---
+
+## 1. Decisões de formato (janela a janela)
+
+| WPF | Formato alvo (Avalonia) | Estado hoje |
+|---|---|---|
+| `MainWindow` (shell) | `Views/MainWindow.axaml` (7 views na sidebar) | Paridade estrutural; ver §2 |
+| `Overlay/OverlayWindow` | Janela própria (já existe) | Portar perfis P3, graph rows, clique-through (Windows) |
+| `Overlay/OverlayEditorWindow` | Seção "OVERLAY FLUTUANTE" nas Configurações (formato já existe) | Portar perfis; posicionamento rápido/preview são nice-to-have |
+| `Overlay/AlertPopupWindow` | Toast in-app (já existe) + notificação DBus no Linux (já existe) | Conviver por SO (toast no Windows, DBus no Linux) |
+| `DebugWindow` | View Diagnóstico (já existe, ~paridade) | Absorver; extra: dump em texto copiável |
+| `InventoryWindow` | View Inventário (parcial) | Portar stats de sessão, árvore de hardware, monitores (EDID), reset |
+
+Lixo visual constatado no WPF: os `RadioButton` "SENSORES" (CPU/GPU/RAM/Disco/Rede)
+da sidebar **não têm handlers** — não portar.
+
+## 2. Dashboard (view Visão geral)
+
+Forma alvo = layout Avalonia (cards com gráfico), absorvendo o que falta:
+
+| Funcionalidade | WPF | Avalonia | Ação na Fase 1 |
+|---|---|---|---|
+| Cards CPU/GPU com gráfico | ❌ (barra+pílulas) | ✅ | manter formato Avalonia |
+| Temperatura com pílulas dinâmicas (cor por faixa) | ✅ | parcial (texto) | portar cores por faixa (AccentWarning etc.) |
+| Linhas de detalhe (CPU: clock/potência/volt; GPU: VRAM/clock/hotspot) | ✅ (`SensorFormatter`) | ❌ | portar (formatador já é Core) |
+| FPS + stats (mín/avg/1%/0.1%) | ✅ | ✅ | igual |
+| Gráfico de frametime no dashboard | ❌ | ✅ | manter Avalonia |
+| Card Disco (R/W) | ✅ | ✅ | igual |
+| Card Rede (↓/↑) | ✅ | ✅ | igual |
+| Card RAM (uso/total/disponível) | ✅ | ✅ | igual |
+| Card Placa-mãe & ventoinhas | ✅ | ❌ | portar |
+| **Lista de processos na GPU** | ✅ (`data.GpuProcesses`) | ❌ | portar |
+| Badge "Nova versão" na sidebar | ✅ | (só toast) | portar badge discreto |
+| Banner de atualização | ✅ | (card de settings + toast) | manter formato Avalonia |
+| Banner de elevação admin + restart como admin | ✅ | ❌ (Linux, por natureza) | usar no app único (Windows) |
+| Toggles CSV/JSON/JSONL na sidebar | ✅ | em Configurações | manter formato Avalonia |
+| `Minigraph` no dashboard | ❌ (só no overlay) | HistoryChart | Minigraph fica no overlay até unificar |
+
+Tokens novos a criar na Fase 1: família vermelha de uso quente/banner admin
+(WPF usa `#EF4444`/`#FCA5A5`/`#F87171`/`#DC2626`) e verde de update
+(`#059669`/`#A7F3D0`) — o catálogo de 30 tokens não os cobre ainda.
+
+## 3. Janelas e serviços — o que porta em detalhe
+
+### Overlay (`Overlay/OverlayWindow`, 1227 ln de code-behind no WPF)
+
+| Recurso | WPF | Avalonia | Ação |
+|---|---|---|---|
+| Arrastar pelo header | ✅ | ✅ | igual |
+| Botão ocultar | (comportamento próprio) | ✅ | manter |
+| Modo compacto | ✅ | ✅ | igual |
+| Whitelist por série/instância | ✅ | ✅ | igual |
+| **Perfis por aplicativo (P3)** + pin via bandeja | ✅ (`RefreshProfileFor`/`ApplyProfile`) | ❌ | portar (dados já em `config.profiles`) |
+| **Graph rows por série** (Minigraph com guides/min/max) | ✅ | ❌ (só frametime) | portar com HistoryChart unificado |
+| Clique-through real (`WS_EX_TRANSPARENT`) | ✅ | ❌ (recebe cliques) | no Windows via P/Invoke; no Linux manter |
+| Topmost timer / posição pelo app em foco | ✅ | parcial (Topmost fixo) | portar |
+| Cor de acento por perfil | ✅ | ❌ | portar |
+
+### Serviços de sistema
+
+| Serviço | WPF (onde) | Avalonia | Ação |
+|---|---|---|---|
+| Bandeja + menu (overlay/startup/reset/pausa/pin de perfil) | `TrayIconService` (369 ln) | ❌ | portar (Avalonia TrayIcons; APIs por SO) |
+| Hotkeys globais (overlay + pausa, P6.7) | `HotkeyService` (96 ln) + `HotkeyParser` (Core) | ❌ | portar (X11/XWayland; Wayland puro: documentar a limitação) |
+| Iniciar com o Windows (registro `Run`) | `StartupManager` (56 ln) | ❌ | portar (registro no Windows; desktop entry no Linux) |
+| Instância única | `App.xaml.cs` (mutex) | conferir | conferir/portar |
+| Elevação admin | inline (`IsRunningAsAdmin`/`runas`) | ❌ | reaproveitar no app único |
+| Alertas: avaliador | `AlertRuleEvaluator` **Core** ✅ | ✅ | igual |
+| Alertas: ações | popup + `MessageBeep` + script + shutdown (com guard `allowShutdown`) | script + DBus (som/shutdown não executados) | extrair a orquestração para o Core com ações por SO |
+| UI de regras de alerta | ❌ (config.json) | ✅ | manter Avalonia |
+| Atualizações | ✅ (Core + Windows applier) | ✅ (Core + Linux applier) | sem gap |
+| UI de custom sensors / ajuste por série / exportador HTTP | ❌ | ✅ | manter Avalonia |
+
+### Leitura de sensores — o achado crítico
+
+- **Hoje:** o WPF lê sensores via `Services/HardwareMonitorService` (1124 ln —
+  LibreHardwareMonitor) + `FpsMonitor` (495 ln — PresentMon) + `InventoryBuilder`
+  (92 ln); a fábrica do WPF (`SensorServiceFactory`) já escolhe o provedor por OS.
+  O Avalonia, por sua vez, sobe **somente** `LinuxSensorServiceFactory` —
+  hoje o binário Avalonia não leria nenhum sensor no Windows.
+- **Ação obrigatória da Fase 1:** migrar esses serviços para o Core
+  (`Core/Services/Windows/`), trocar a fábrica do Avalonia pela multiplataforma
+  (o padrão do `SensorServiceFactory` do WPF é o modelo a adotar) — só então o
+  app único monitora no Windows.
+- `PhantomSensorLib` não é consumida por .NET (zero `DllImport` no repo) — é
+  usada pela camada Vulkan (C++). Não afeta a porta.
+
+## 4. Ordem sugerida (subfases da Fase 1)
+
+1. **F1.1 — Serviços Windows → Core** (+ fábrica multiplataforma; o Avalonia
+   passa a monitorar no Windows). Código puro, sem UI — mata o risco crítico cedo.
+2. **F1.2 — Dashboard completo no Avalonia** (linhas de detalhe, processos GPU,
+   MB&ventoinhas, badge/banners) com os dois temas renderizando.
+3. **F1.3 — Overlay completo** (perfis P3 + pin, graph rows, clique-through no
+   Windows) e configurações com o que falta (posicionamento rápido/preview).
+4. **F1.4 — Inventário completo** (stats de sessão, árvore de hardware,
+   monitores/EDID, reset com marker no CSV/journal).
+5. **F1.5 — Sistema** (tray, hotkeys, startup, instância única, admin) e
+   alertas (orquestração de ações por SO).
+6. **F1.6 — Visual WPF portado como tema "Slate"** integral + build/release no
+   Windows do binário Avalonia (critérios de aceite da Fase 1 no roadmap).
+
+## 5. Tamanho da porta (referência)
+
+| Arquivo WPF | Linhas | Destino |
+|---|---|---|
+| `Overlay/OverlayWindow.xaml.cs` | 1227 | Overlay Avalonia (perfis/graf/clique-through) |
+| `Services/HardwareMonitorService.cs` | 1124 | Core/Services/Windows |
+| `Overlay/OverlayEditorWindow.xaml.cs` | 596 | apply de config (view Configurações) |
+| `Services/FpsMonitor.cs` (PresentMon) | 495 | Core/Services/Windows |
+| `Services/TrayIconService.cs` | 369 | tray do Avalonia (multi-SO) |
+| `Overlay/OverlayEditorWindow.xaml` | 354 | referência visual da view Configurações |
+| `MainWindow.xaml.cs` | 739 | ViewModel do Avalonia (lógica já parcialmente lá) |
+| `DebugWindow`/`InventoryWindow`/`AlertPopup` | ~470 | views Diagnóstico/Inventário/toast |
+| `Services/HotkeyService.cs` | 96 | hotkeys do Avalonia |

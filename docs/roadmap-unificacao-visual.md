@@ -91,9 +91,11 @@ de runtime nos dois temas (app viva por 10 s com kill limpo).
 
 Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os fluxos.
 
-- [ ] Mapa de equivalência WPF → Avalonia (janela vs. view da sidebar):
+- [x] Mapa de equivalência WPF → Avalonia (janela vs. view da sidebar):
       `MainWindow`, `OverlayWindow`, `OverlayEditorWindow`, `AlertPopupWindow`,
       `InventoryWindow`, `DebugWindow` — decidir, janela a janela, o formato final.
+      **✅ Feito — ver [unificacao-fase1-mapa.md](unificacao-fase1-mapa.md)
+      (decisões por janela, gaps, serviços Windows → Core e subfases F1.1–F1.6).**
 - [ ] Controles compartilhados em Avalonia: nav com estado selecionado, cards,
       inputs, banners (incluindo banner de atualização), gradiente/acento.
 - [ ] Funcionalidades Windows-specific a conferir no port:

@@ -92,10 +92,11 @@ static coverage (30 tokens used, no orphans) and runtime smoke on both themes
 
 First task, before anything else: **map equivalences** between windows/flows.
 
-- [ ] WPF → Avalonia equivalence map (window vs sidebar view):
+- [x] WPF → Avalonia equivalence map (window vs sidebar view):
       `MainWindow`, `OverlayWindow`, `OverlayEditorWindow`, `AlertPopupWindow`,
       `InventoryWindow`, `DebugWindow` — decide the final format window by
-      window.
+      window. **✅ Done — see [unification-phase1-map.md](unification-phase1-map.md)
+      (per-window decisions, gaps, Windows services → Core and sub-phases F1.1–F1.6).**
 - [ ] Shared Avalonia controls: selected-state nav, cards, inputs, banners
       (including the update banner), accent gradients.
 - [ ] Windows-specific features to verify in the port:

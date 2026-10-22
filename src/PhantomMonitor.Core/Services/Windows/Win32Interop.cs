@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace PhantomMonitor.Services;
 
@@ -7,11 +8,12 @@ namespace PhantomMonitor.Services;
 /// antes os mesmos DllImport eram declarados três vezes, uma vez por classe.
 /// Assinaturas preservadas idênticas às declaradas nos chamadores.
 /// </summary>
-internal static class Win32Interop
+[SupportedOSPlatform("windows")]
+public static class Win32Interop
 {
     [DllImport("user32.dll")]
-    internal static extern IntPtr GetForegroundWindow();
+    public static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
-    internal static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }

@@ -22,6 +22,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- PresentMon acompanha o binário Windows: coleta de FPS passa a existir no app único.
+         No Linux o arquivo não existe e a condição evita erro de glob. -->
+    <None Include="..\..\tools\PresentMon.exe" Condition="Exists('..\..\tools\PresentMon.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <AdditionalFiles Include="DBus\org.freedesktop.Notifications.xml"
                      Namespace="PhantomMonitor.App.Linux.DBus"
                      DBusGeneratorMode="Proxy" />

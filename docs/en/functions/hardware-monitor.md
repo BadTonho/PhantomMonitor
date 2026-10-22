@@ -2,7 +2,7 @@
 
 # Hardware monitoring service
 
-`HardwareMonitorService` reads Windows sensors through LibreHardwareMonitor, with WMI fallbacks where needed. The WPF frontend uses this service; the Avalonia dashboard uses `LinuxSensorService` directly through its Linux factory.
+`HardwareMonitorService` reads Windows sensors through LibreHardwareMonitor, with WMI fallbacks where needed. The source lives in `PhantomMonitor.Core/Services/Windows/` (Phase 1 unification) and is selected by the cross-platform `SensorServiceFactory` in Core, shared by both frontends (WPF and Avalonia); the Linux counterpart lives in `Core/Services/Linux/`. The class is annotated `[SupportedOSPlatform("windows")]` — Windows-only APIs (WMI/ETW/PerformanceCounter) only get instantiated on the Windows side (OS guard inside the factory).
 
 ## Windows readings
 

@@ -9,11 +9,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using LibreHardwareMonitor.Hardware;
 using PhantomMonitor.Models;
+using System.Runtime.Versioning;
 using LhmSensorType = LibreHardwareMonitor.Hardware.SensorType;
 using SType = PhantomMonitor.Models.SensorType;
 
 namespace PhantomMonitor.Services;
 
+[SupportedOSPlatform("windows")]
 public sealed class HardwareMonitorService : ISensorService
 {
     private static readonly TimeSpan WmiTempInterval = TimeSpan.FromSeconds(10);

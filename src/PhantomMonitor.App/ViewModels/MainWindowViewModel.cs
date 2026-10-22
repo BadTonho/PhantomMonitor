@@ -7,7 +7,6 @@ using Avalonia.Threading;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
-using PhantomMonitor.Services.Linux;
 using PhantomMonitor.Services.Telemetry;
 
 namespace PhantomMonitor.App.ViewModels;
@@ -328,7 +327,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         LoadCustomSensorEditors();
         LoadSensorTuningEditors();
         RefreshAlertEditor();
-        _sensorService = LinuxSensorServiceFactory.Create(_config);
+        _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs, _config);
         AttachSensorService(_sensorService);
         UpdateOverlayRows(null);
         LoadDiagnosticEntries();

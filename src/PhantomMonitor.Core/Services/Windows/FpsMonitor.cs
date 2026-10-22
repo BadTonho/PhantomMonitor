@@ -2,11 +2,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text;
 using static PhantomMonitor.Services.Win32Interop;
 
 namespace PhantomMonitor.Services;
 
+[SupportedOSPlatform("windows")]
 public sealed class FpsMonitor : IFpsMonitor
 {
     private const int MaxGraphSamples = 600;   // janela do mini-gráfico de frametime

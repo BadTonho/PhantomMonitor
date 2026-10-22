@@ -97,6 +97,15 @@ First task, before anything else: **map equivalences** between windows/flows.
       `InventoryWindow`, `DebugWindow` — decide the final format window by
       window. **✅ Done — see [unification-phase1-map.md](unification-phase1-map.md)
       (per-window decisions, gaps, Windows services → Core and sub-phases F1.1–F1.6).**
+- [x] **F1.1 — Windows sensor services → Core**: `HardwareMonitorService`,
+      `FpsMonitor` (PresentMon) and `Win32Interop` into `Core/Services/Windows/`;
+      `InventoryBuilder` (multi-platform) directly into `Core/Services/`; single
+      cross-platform `SensorServiceFactory` in Core (Avalonia stops booting
+      `LinuxSensorServiceFactory` directly); Windows packages in Core
+      (LibreHardwareMonitor, System.Management, PerformanceCounter, EventLog)
+      under `[SupportedOSPlatform("windows")]`; PresentMon now ships with the
+      App binary. Smoke: Avalonia and WPF collecting Windows sensors through
+      the same Core code.
 - [ ] Shared Avalonia controls: selected-state nav, cards, inputs, banners
       (including the update banner), accent gradients.
 - [ ] Windows-specific features to verify in the port:

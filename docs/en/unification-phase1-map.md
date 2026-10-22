@@ -84,18 +84,20 @@ New tokens needed in Phase 1: the red family for hot usage/admin banner
 | Updates | ✅ (Core + Windows applier) | ✅ (Core + Linux applier) | no gap |
 | Custom sensors / series tuning / HTTP exporter UIs | ❌ | ✅ | keep Avalonia |
 
-### Sensor reading — the critical finding
+### Sensor reading — the critical finding (F1.1 ✅ done)
 
-- **Today:** the WPF reads sensors via `Services/HardwareMonitorService`
-  (1124 ln — LibreHardwareMonitor) + `FpsMonitor` (495 ln — PresentMon)
-  + `InventoryBuilder` (92 ln); the WPF factory (`SensorServiceFactory`) already
-  picks the provider per OS. Avalonia, in turn, boots **only**
-  `LinuxSensorServiceFactory` — today the Avalonia binary would read no sensors
-  on Windows.
-- **Mandatory Phase 1 action:** migrate those services into Core
-  (`Core/Services/Windows/`), swap the Avalonia factory for the cross-platform
-  one (the WPF `SensorServiceFactory` pattern is the model), and only then will
-  the single app monitor on Windows.
+- **F1.1 shipped:** `HardwareMonitorService` (1124 ln), `FpsMonitor`
+  (495 ln — PresentMon) and `Win32Interop` moved into
+  `Core/Services/Windows/`; `InventoryBuilder` (92 ln, multi-platform) into
+  `Core/Services/`. The cross-platform `SensorServiceFactory` now lives in
+  Core and replaced `LinuxSensorServiceFactory` — both frontends boot the
+  right provider per OS (`SensorServiceFactory.Create(updateIntervalMs, config)`),
+  with the `OperatingSystem.IsWindows()` guard +
+  `[SupportedOSPlatform("windows")]` and the Windows packages
+  (LibreHardwareMonitor, System.Management, PerformanceCounter, EventLog) in
+  Core. `PresentMon.exe` now ships with the App binary; the smoke test
+  validated Avalonia and WPF reading Windows sensors through the same Core
+  code.
 - `PhantomSensorLib` is not consumed by .NET (zero `DllImport` in the repo) —
   it is used by the Vulkan layer (C++). It does not affect the port.
 
@@ -103,6 +105,7 @@ New tokens needed in Phase 1: the red family for hot usage/admin banner
 
 1. **F1.1 — Windows services → Core** (+ cross-platform factory; Avalonia
    monitoring on Windows). Pure code, no UI — kills the critical risk early.
+   **✅ Done (see "Sensor reading" above).**
 2. **F1.2 — Complete dashboard on Avalonia** (detail lines, GPU processes,
    MB&fans, badge/banners) with both themes rendering.
 3. **F1.3 — Complete overlay** (P3 profiles + pin, graph rows, Windows

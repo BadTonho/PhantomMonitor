@@ -96,6 +96,15 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       `InventoryWindow`, `DebugWindow` — decidir, janela a janela, o formato final.
       **✅ Feito — ver [unificacao-fase1-mapa.md](unificacao-fase1-mapa.md)
       (decisões por janela, gaps, serviços Windows → Core e subfases F1.1–F1.6).**
+- [x] **F1.1 — Serviços de leitura Windows → Core**: `HardwareMonitorService`,
+      `FpsMonitor` (PresentMon) e `Win32Interop` em `Core/Services/Windows/`;
+      `InventoryBuilder` (multiplataforma) direto em `Core/Services/`; fábrica
+      multiplataforma única `SensorServiceFactory` no Core (o Avalonia deixa de
+      subir `LinuxSensorServiceFactory` direto); pacotes Windows no Core
+      (LibreHardwareMonitor, System.Management, PerformanceCounter, EventLog)
+      sob `[SupportedOSPlatform("windows")]`; PresentMon agora acompanha o
+      binário do App. Smoke: Avalonia e WPF coletando sensores Windows pelo
+      mesmo código Core.
 - [ ] Controles compartilhados em Avalonia: nav com estado selecionado, cards,
       inputs, banners (incluindo banner de atualização), gradiente/acento.
 - [ ] Funcionalidades Windows-specific a conferir no port:

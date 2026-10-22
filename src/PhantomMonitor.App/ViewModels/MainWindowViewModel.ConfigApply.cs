@@ -7,7 +7,6 @@ using Avalonia.Threading;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
-using PhantomMonitor.Services.Linux;
 using PhantomMonitor.Services.Telemetry;
 using PhantomMonitor.Services.Update;
 
@@ -274,7 +273,7 @@ public sealed partial class MainWindowViewModel
         DisposeLoggers();
         oldService.Dispose();
 
-        _sensorService = LinuxSensorServiceFactory.Create(_config);
+        _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs, _config);
         AttachSensorService(_sensorService);
         ResetDisplayedSession();
 

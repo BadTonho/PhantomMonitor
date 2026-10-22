@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/hardware-monitor.md)
  
-Serviço de leitura de sensores de hardware para ambiente Windows, implementando a interface `ISensorService`. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário. O frontend WPF seleciona `LinuxSensorService` pelo `SensorServiceFactory` fora do Windows; o dashboard Avalonia usa `LinuxSensorServiceFactory` diretamente.
+Serviço de leitura de sensores de hardware para ambiente Windows, implementando a interface `ISensorService`. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário. Para ambiente Windows: a fonte vive em `PhantomMonitor.Core/Services/Windows/` e é escolhida pela fábrica multiplataforma [`SensorServiceFactory`](../../../src/PhantomMonitor.Core/Services/SensorServiceFactory.cs) compartilhada por ambos os frontends (WPF e Avalonia); no Linux o mesmo Core entrega provedores nativos em `Core/Services/Linux/`. Anotado com `[SupportedOSPlatform("windows")]` — APIs Windows-only (WMI/ETW/PerformanceCounter) instanciam apenas no lado Windows (guard de OS na fábrica).
 
 ## Funcionalidades
 

@@ -636,6 +636,15 @@ public partial class MainWindow : Window
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
         _jsonJournal?.Dispose();
+
+        // SDK e exportador HTTP vivem enquanto o monitoramento estiver ativo;
+        // fechar a janela sem Stop deixava o HttpListener e o view de memória
+        // compartilhada presos até o processo sair (mesma liberação do Stop).
+        _telemetrySdk?.Dispose();
+        _telemetrySdk = null;
+        _telemetryHttp?.Dispose();
+        _telemetryHttp = null;
+
         _overlay?.Close();
         base.OnClosed(e);
     }

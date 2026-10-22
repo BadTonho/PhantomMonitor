@@ -65,7 +65,11 @@ public partial class App : Application
         base.OnExit(e);
         if (_ownsMutex)
         {
-            try { _singleInstanceMutex?.ReleaseMutex(); }
+            try
+            {
+                _singleInstanceMutex?.ReleaseMutex();
+                _singleInstanceMutex?.Dispose();
+            }
             catch (Exception ex) { ErrorLog.Write("App.OnExit", ex); }
         }
     }

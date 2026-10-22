@@ -1,58 +1,60 @@
+<p align="right">English | <a href="README.pt-BR.md">Português (Brasil)</a></p>
+
 <p align="center">
-  <img src="fantasma.png" alt="Ícone provisório do Phantom Monitor" width="170" />
+  <img src="fantasma.png" alt="Temporary Phantom Monitor project icon" width="170" />
 </p>
 
 <h1 align="center">Phantom Monitor</h1>
 
 <p align="center">
-  <strong>Hardware, FPS e frametime em um só lugar.</strong><br />
-  Monitoramento local para Windows e Linux, com dashboard e overlay configurável.
+  <strong>Hardware, FPS, and frametime in one place.</strong><br />
+  Local monitoring for Windows and Linux, with a desktop dashboard and configurable overlay.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white" alt=".NET 10" />
-  <img src="https://img.shields.io/badge/Windows-WPF-0078D4?logo=windows&logoColor=white" alt="Windows com WPF" />
-  <img src="https://img.shields.io/badge/Linux-Avalonia-FCC624?logo=linux&logoColor=111111" alt="Linux com Avalonia" />
+  <img src="https://img.shields.io/badge/Windows-WPF-0078D4?logo=windows&logoColor=white" alt="Windows with WPF" />
+  <img src="https://img.shields.io/badge/Linux-Avalonia-FCC624?logo=linux&logoColor=111111" alt="Linux with Avalonia" />
 </p>
 
 <p align="center">
-  <a href="#recursos">Recursos</a> ·
-  <a href="#comece-a-usar">Comece a usar</a> ·
-  <a href="#arquitetura">Arquitetura</a> ·
-  <a href="#documentacao">Documentação</a>
+  <a href="#features">Features</a> ·
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#documentation">Documentation</a>
 </p>
 
-O **Phantom Monitor** acompanha sensores do computador e apresenta as leituras em tempo real. Ele reúne uso, temperaturas, clocks, memória, armazenamento, rede, ventoinhas e telemetria de jogos em uma interface desktop.
+**Phantom Monitor** reads hardware sensors and displays live telemetry for your computer and games. It brings utilization, temperatures, clocks, memory, storage, network, fans, FPS, and frametime into one desktop app.
 
-O projeto tem dois frontends: **WPF no Windows** e **Avalonia no Linux**. Cada plataforma oferece recursos próprios; a tabela abaixo resume as diferenças atuais.
+The project has two frontends: **WPF on Windows** and **Avalonia on Linux**. Their feature sets differ today; the table below summarizes the current platform support.
 
-## Recursos
+## Features
 
-| Recurso | Windows · WPF | Linux · Avalonia |
+| Feature | Windows · WPF | Linux · Avalonia |
 | --- | --- | --- |
-| Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe | Sensores publicados por `sysfs`, `procfs`, `hwmon` e DRM |
-| FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
-| Overlay | OSD avançado, click-through, perfis e editor visual | Janela flutuante configurável; o compositor controla a posição e o fullscreen |
-| Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |
-| Alertas | Notificação, som, scripts e desligamento configurável | Toast interno, notificações do desktop e execução de scripts |
-| Fórmulas e ajuste por série | Compatibilidade com as configurações existentes | Editores visuais de sensores customizados e ajuste de cadência/suavização |
-| Telemetria | CSV, JSON, JSONL e exportador HTTP opcional | CSV, JSON, JSONL e exportador HTTP opcional |
+| Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors | Sensors published through `sysfs`, `procfs`, `hwmon`, and DRM |
+| FPS and frametime | PresentMon through ETW | Phantom Vulkan layer for Vulkan games |
+| Overlay | Advanced OSD, click-through, profiles, and visual editor | Configurable floating window; the compositor controls position and fullscreen behavior |
+| Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |
+| Alerts | Notifications, sound, scripts, and configurable shutdown action | In-app toast, desktop notifications, and scripts |
+| Formulas and per-series tuning | Compatible with the existing configuration format | Visual editors for custom sensors and sampling/smoothing rules |
+| Telemetry | CSV, JSON, JSONL, and optional HTTP exporter | CSV, JSON, JSONL, and optional HTTP exporter |
 
-Os recursos que dependem do hardware ou do compositor podem variar entre máquinas. No Linux, o FPS requer um jogo Vulkan e a camada Phantom ativada. No Windows, a coleta de FPS usa ETW; o monitor não injeta DLLs nos jogos.
+Hardware and compositor support varies between systems. On Linux, FPS requires a Vulkan game and the Phantom layer enabled. On Windows, FPS collection uses ETW; the monitor does not inject DLLs into games.
 
-## Comece a usar
+## Getting started
 
-É necessário ter o **SDK .NET 10** instalado. Consulte os requisitos detalhados em [Suporte a Linux](docs/funções/suporte-linux.md) e [Configuração](docs/funções/configuracao.md).
+Install the **.NET 10 SDK**. For platform-specific requirements, see the [Linux support guide (Portuguese)](docs/funções/suporte-linux.md) and [configuration guide (Portuguese)](docs/funções/configuracao.md).
 
 ### Linux
 
-Inicie o dashboard Avalonia:
+Run the Avalonia dashboard:
 
 ```bash
 dotnet run --project src/PhantomMonitor.App
 ```
 
-Para coletar FPS em jogos Vulkan, compile e instale a camada Phantom:
+To collect FPS from Vulkan games, build and install the Phantom layer:
 
 ```bash
 cd src/PhantomVulkanLayer
@@ -60,51 +62,53 @@ chmod +x install_layer.sh
 ./install_layer.sh
 ```
 
-Depois, nas opções de inicialização do jogo — por exemplo, na Steam — use:
+Then add this to the game's launch options, for example in Steam:
 
 ```bash
 ENABLE_PHANTOM_OVERLAY=1 %command%
 ```
 
-O dashboard e o overlay Linux funcionam sem a camada quando você não precisa de FPS. Em Wayland, o compositor decide a posição inicial do overlay e sua presença sobre aplicativos em fullscreen.
+The dashboard and Linux overlay work without the layer when FPS is not needed. On Wayland, the compositor controls the overlay's initial position and whether it appears above fullscreen applications.
 
 ### Windows
 
-Inicie o frontend WPF:
+Run the WPF frontend:
 
 ```powershell
 dotnet run --project src/PhantomMonitor
 ```
 
-Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.
+Some hardware readings may require elevated permissions. FPS collection uses PresentMon/ETW and may depend on the Windows version and available permissions.
 
-## Configuração e dados
+## Configuration and data
 
-Na primeira execução, o aplicativo cria `config.json` usando [`config.example.json`](config.example.json) como base. Durante o desenvolvimento, a configuração fica na raiz do repositório. Em instalações por usuário, o caminho usual é `%AppData%\PhantomMonitor\config.json` no Windows e `$XDG_CONFIG_HOME/PhantomMonitor/config.json` no Linux.
+On first launch, the app creates `config.json` from [`config.example.json`](config.example.json). During development, this file is placed in the repository root. For per-user installations, the usual locations are `%AppData%\PhantomMonitor\config.json` on Windows and `$XDG_CONFIG_HOME/PhantomMonitor/config.json` on Linux.
 
-No Linux, os logs de telemetria ficam em `~/.local/share/PhantomMonitor/logs/` (ou em `$XDG_DATA_HOME` quando definido). A página **Configurações** do Avalonia permite ajustar o intervalo, os formatos de log e opções do overlay. O exportador HTTP vem desativado e restrito a loopback; habilitar acesso a outras interfaces expõe os endpoints sem TLS ou autenticação.
+On Linux, telemetry logs are stored in `~/.local/share/PhantomMonitor/logs/` (or under `$XDG_DATA_HOME` when set). The Avalonia **Settings** page can change the sampling interval, logging formats, and overlay options. The HTTP exporter is disabled by default and listens on loopback; enabling other network interfaces exposes its endpoints without TLS or authentication.
 
-## Arquitetura
+## Architecture
 
 ```text
 src/
-├── PhantomMonitor.App/   # Frontend Avalonia para Linux
-├── PhantomMonitor.Core/  # Modelos e serviços compartilhados em .NET
-├── PhantomMonitor/       # Frontend WPF para Windows
-├── PhantomVulkanLayer/   # Camada Vulkan nativa para FPS no Linux
-└── PhantomSensorLib/     # Biblioteca nativa C++ prevista para extensão futura
+├── PhantomMonitor.App/   # Avalonia frontend for Linux
+├── PhantomMonitor.Core/  # Shared .NET models and services
+├── PhantomMonitor/       # WPF frontend for Windows
+├── PhantomVulkanLayer/   # Native Vulkan layer for Linux FPS telemetry
+└── PhantomSensorLib/     # Native C++ library reserved for future work
 ```
 
-O Core compartilha modelos, configuração, avaliação de alertas e serviços de telemetria. Os frontends mantêm as integrações específicas de cada sistema operacional. A camada Vulkan é compilada separadamente com CMake e `install_layer.sh`; ela não faz parte do build da solução .NET.
+The Core shares models, configuration, alert evaluation, and telemetry services. Each frontend keeps its operating-system integrations. The Vulkan layer is built separately with CMake and `install_layer.sh`; it is not part of the .NET solution build.
 
-## Documentação
+## Documentation
 
-- **Plataformas:** [Suporte a Linux e camada Vulkan](docs/funções/suporte-linux.md), [FPS e frametime](docs/funções/fps-monitor.md)
-- **Interface:** [Overlay](docs/funções/overlay.md), [Inventário de hardware](docs/funções/inventário-hardware.md)
-- **Sensores:** [Sensores customizados](docs/funções/sensores-customizados.md), [Ajuste por série](docs/funções/ajuste-de-series.md)
-- **Automação e saída:** [Alertas](docs/funções/alertas.md), [Logging](docs/funções/logging.md), [SDK de telemetria](docs/telemetry-sdk.md)
-- **Projeto:** [Roadmap de paridade funcional](docs/roadmap-paridade.md), [Arquitetura e módulos](docs/funções/)
+The technical guides are currently maintained in Portuguese:
 
-## Estado do projeto
+- **Platforms:** [Linux support and Vulkan layer](docs/funções/suporte-linux.md), [FPS and frametime](docs/funções/fps-monitor.md)
+- **Interface:** [Overlay](docs/funções/overlay.md), [Hardware inventory](docs/funções/inventário-hardware.md)
+- **Sensors:** [Custom sensors](docs/funções/sensores-customizados.md), [Per-series tuning](docs/funções/ajuste-de-series.md)
+- **Automation and output:** [Alerts](docs/funções/alertas.md), [Logging](docs/funções/logging.md), [Telemetry SDK](docs/telemetry-sdk.md)
+- **Project:** [Feature parity roadmap](docs/roadmap-paridade.md), [All function guides](docs/funções/)
 
-O frontend Avalonia é a interface Linux atual. No Windows, o frontend WPF continua sendo a aplicação principal; os recursos de interface e as ações disponíveis podem variar entre plataformas. Consulte o [roadmap](docs/roadmap-paridade.md) para acompanhar a migração.
+## Project status
+
+Avalonia is the current Linux frontend. On Windows, WPF remains the primary app; available interface features and actions vary by platform. See the [roadmap](docs/roadmap-paridade.md) for the ongoing migration.

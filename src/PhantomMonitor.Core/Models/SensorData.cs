@@ -77,6 +77,10 @@ public sealed class SensorData
         return key.ToString();
     }
 
+    /// <summary>Ordem canônica do enum, cacheada: <c>Enum.GetValues&lt;T&gt;()</c> é
+    /// chamado por todo hot-path do sistema e cada chamada alocava um array novo.</summary>
+    private static readonly SensorType[] AllSensorTypes = Enum.GetValues<SensorType>();
+
     /// <summary>
     /// Todas as séries presentes no snapshot: canônicas primeiro (na ordem do enum,
     /// compatível com o CSV antigo), depois instâncias ordenadas por chave.
@@ -84,13 +88,13 @@ public sealed class SensorData
     public List<SensorKey> GetSeriesKeys()
     {
         var keys = new List<SensorKey>(Values.Count + Series.Count);
-        foreach (var type in Enum.GetValues<SensorType>())
+        foreach (var type in AllSensorTypes)
         {
             if (Values.ContainsKey(type)) keys.Add(new SensorKey(type, 0));
         }
 
         var extras = Series.Keys.ToList();
-        extras.Sort();
+        if (extras.Count > 1) extras.Sort();
         keys.AddRange(extras);
         return keys;
     }

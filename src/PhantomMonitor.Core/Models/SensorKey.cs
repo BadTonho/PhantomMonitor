@@ -37,9 +37,32 @@ public readonly struct SensorKey : IEquatable<SensorKey>, IComparable<SensorKey>
     public override bool Equals(object? obj) => obj is SensorKey other && Equals(other);
     public override int GetHashCode() => HashCode.Combine((int)Type, Index);
 
+    /// <summary>
+    /// Rank numérico pré-computado a partir da ordem ordinal dos nomes do enum.
+    /// Permite ordenar chaves sem alocar strings por comparação (antes, cada
+    /// <see cref="CompareTo"/> fazia <c>Type.ToString()</c> dos dois lados e
+    /// <c>GetSeriesKeys</c> era chamado várias vezes por tick, tornando o sort
+    /// um multiplicador oculto de alocações). A ordem resultante é idêntica à
+    /// anterior: ordinal por nome e, em caso de empate, por índice.
+    /// </summary>
+    private static readonly int[] NameOrderRank = BuildNameOrderRank();
+
+    private static int[] BuildNameOrderRank()
+    {
+        var types = Enum.GetValues<SensorType>();
+        var ranks = new int[types.Length];
+        var ordered = types
+            .Select(type => (type, name: type.ToString()))
+            .OrderBy(pair => pair.name, StringComparer.Ordinal)
+            .ToArray();
+        for (var rank = 0; rank < ordered.Length; rank++)
+            ranks[(int)ordered[rank].type] = rank;
+        return ranks;
+    }
+
     public int CompareTo(SensorKey other)
     {
-        var byType = string.CompareOrdinal(Type.ToString(), other.Type.ToString());
+        var byType = NameOrderRank[(int)Type].CompareTo(NameOrderRank[(int)other.Type]);
         return byType != 0 ? byType : Index.CompareTo(other.Index);
     }
 

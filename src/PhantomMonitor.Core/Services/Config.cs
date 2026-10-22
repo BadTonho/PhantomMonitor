@@ -85,8 +85,7 @@ public sealed class AppConfig
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var cfg = JsonSerializer.Deserialize<AppConfig>(json, options) ?? new AppConfig();
+                var cfg = JsonSerializer.Deserialize<AppConfig>(json, LoadOptions) ?? new AppConfig();
                 cfg.Normalize();
                 return cfg;
             }
@@ -102,6 +101,15 @@ public sealed class AppConfig
 
     private static readonly System.Text.RegularExpressions.Regex HexColorRegex =
         new("^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    // Options cacheados: recriar por chamada invalide o cache interno de metadados
+    // de reflexão do System.Text.Json e era chamado a cada Save (UI thread).
+    private static readonly JsonSerializerOptions LoadOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions SaveOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
 
     /// <summary>Corrige valores inválidos vindos de um config editado à mão.</summary>
     public void Normalize()
@@ -266,8 +274,7 @@ public sealed class AppConfig
     {
         try
         {
-            var options = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-            var json = JsonSerializer.Serialize(this, options);
+            var json = JsonSerializer.Serialize(this, SaveOptions);
 
             var dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);

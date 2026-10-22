@@ -585,15 +585,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsSensorTuning = false;
         IsDiagnostics = true;
         LoadDiagnosticEntries();
+        RefreshDiagnosticSensorLines();
         Raise(nameof(IsInventory));
     }
 
     public void RefreshDiagnostics()
     {
         LoadDiagnosticEntries();
+        RefreshDiagnosticSensorLines();
+        DiagnosticsMessage = "Diagnóstico atualizado.";
+    }
+
+    /// <summary>
+    /// Alimenta a lista de linhas de diagnóstico apenas sob demanda (aba aberta ou
+    /// botão de atualizar). O array de debug chega a cada snapshot, mas reatribuí-lo
+    /// por tick re-renderizava o ItemsControl mesmo com a aba invisível.
+    /// </summary>
+    private void RefreshDiagnosticSensorLines()
+    {
         if (_latestSensorData is not null)
             DiagnosticSensorLines = _latestSensorData.SensorDebugInfo.ToArray();
-        DiagnosticsMessage = "Diagnóstico atualizado.";
     }
 
     public void SetDiagnosticsMessage(string message) => DiagnosticsMessage = message;
@@ -976,9 +987,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             foreach (var row in group.Rows.Where(row => row.IsAvailable))
                 keys.Add(row.Key);
 
-        AlertSensorOptions = keys.OrderBy(key => key, StringComparer.Ordinal).ToArray();
-        foreach (var rule in AlertRules)
-            rule.SensorOptions = AlertSensorOptions;
+        // Reatribuir ItemsSource a cada snapshot (até 10x/s) re-renderizava cada
+        // ComboBox de regra; só troca quando o conjunto de chaves mudar — mesmo
+        // guard usado por RefreshOverlaySeriesOptions/RefreshSensorTuningSeriesOptions.
+        var options = keys.OrderBy(key => key, StringComparer.Ordinal).ToArray();
+        if (AlertSensorOptions is null || !AlertSensorOptions.SequenceEqual(options, StringComparer.Ordinal))
+        {
+            AlertSensorOptions = options;
+            foreach (var rule in AlertRules)
+                rule.SensorOptions = options;
+        }
 
         if (!_alertEditorInitialized)
         {
@@ -1416,7 +1434,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed || !_started) return;
 
         _latestSensorData = data;
-        DiagnosticSensorLines = data.SensorDebugInfo.ToArray();
         RefreshOverlaySeriesOptions();
         _telemetryHttpExporter?.Publish(data);
         InventoryGroups = SensorInventoryBuilder.Build(data);

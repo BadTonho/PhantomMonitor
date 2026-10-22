@@ -19,6 +19,10 @@ out/
 *.pdb
 *.ilk
 *.idb
+*.o
+*.a
+*.so
+*.dylib
 
 ## Logs & Telemetry
 [Ll]ogs/
@@ -43,6 +47,7 @@ ideias.md
 
 ## IDE & Editors
 .idea/
+.vscode/
 *.swp
 
 ## Temporários de escrita atômica

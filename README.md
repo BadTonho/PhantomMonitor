@@ -109,3 +109,7 @@ The documentation is available in both English and Brazilian Portuguese. English
 ## Project status
 
 Avalonia is the current Linux frontend. On Windows, WPF remains the primary app; available interface features and actions vary by platform. See the [roadmap](docs/en/feature-parity-roadmap.md) for the ongoing migration.
+
+## License
+
+Phantom Monitor's original code is licensed under the GNU Lesser General Public License v3.0 only (`LGPL-3.0-only`). See [LICENSE](LICENSE). Third-party components keep their own licenses; notices for the bundled PresentMon executable are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

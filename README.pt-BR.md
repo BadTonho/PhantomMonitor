@@ -112,3 +112,7 @@ A documentação também está disponível em [English](docs/en/README.md); os o
 ## Estado do projeto
 
 O frontend Avalonia é a interface Linux atual. No Windows, o frontend WPF continua sendo a aplicação principal; os recursos de interface e as ações disponíveis podem variar entre plataformas. Consulte o [roadmap](docs/roadmap-paridade.md) para acompanhar a migração.
+
+## Licença
+
+O código original do Phantom Monitor está licenciado sob a GNU Lesser General Public License v3.0 somente (`LGPL-3.0-only`). Consulte [LICENSE](LICENSE). Componentes de terceiros mantêm suas próprias licenças; os avisos do executável PresentMon distribuído com o projeto estão em [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

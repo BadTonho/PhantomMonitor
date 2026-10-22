@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Collections.ObjectModel;
+using System.Threading;
 using Avalonia.Threading;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
@@ -1056,11 +1057,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void AttachSensorService(ISensorService service)
     {
-        _sensorUpdatedHandler = data => Dispatcher.UIThread.Post(() =>
-        {
-            if (ReferenceEquals(service, _sensorService))
-                UpdateSnapshot(data);
-        });
+        _sensorUpdatedHandler = OnSensorData;
         service.SensorUpdated += _sensorUpdatedHandler;
     }
 
@@ -1069,6 +1066,41 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_sensorUpdatedHandler is null) return;
         service.SensorUpdated -= _sensorUpdatedHandler;
         _sensorUpdatedHandler = null;
+    }
+
+    /// <summary>Snapshot aguardando drain na UI; sempre mantém o mais recente.</summary>
+    private volatile SensorData? _pendingUiSnapshot;
+
+    /// <summary>1 = existe um post do dispatcher em voo (ou a prestes a executar).</summary>
+    private int _uiPostActive;
+
+    /// <summary>
+    /// Chegada de snapshot da thread do timer do serviço:
+    /// 1) exportador HTTP (atribuição de referência, barato),
+    /// 2) loggers/CSV/JSON/journal na thread dedicada (FIFO completo),
+    /// 3) coalescência de UI.
+    /// </summary>
+    private void OnSensorData(SensorData data)
+    {
+        _telemetryHttpExporter?.Publish(data);
+        _snapshotWriter?.Write(data);
+
+        // Coalescência (antes: um Post por snapshot, sem limite). Enquanto um post
+        // está na fila do dispatcher, snapshots novos apenas substituem o payload
+        // pendente. Se a UI engasgar (jogo rodando), N snapshots acumulados viravam
+        // N reconstruções completas de inventário/overlay para dados velhos; aqui
+        // o drain sempre processa o mais recente (um único post re-disparado).
+        _pendingUiSnapshot = data;
+        if (Interlocked.CompareExchange(ref _uiPostActive, 1, 0) == 0)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _uiPostActive = 0;
+                var latest = _pendingUiSnapshot;
+                if (_disposed || latest is null) return;
+                UpdateSnapshot(latest);
+            });
+        }
     }
 
     public void SaveSettings()
@@ -1435,7 +1467,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _latestSensorData = data;
         RefreshOverlaySeriesOptions();
-        _telemetryHttpExporter?.Publish(data);
         InventoryGroups = SensorInventoryBuilder.Build(data);
         UpdateOverlayRows(data);
         RefreshSensorTuningSeriesOptions();
@@ -1480,9 +1511,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         FrametimeSamples = data.FrametimeHistory.Select(x => (double)x).ToArray();
         LastUpdateText = $"Atualizado às {data.Timestamp.ToLocalTime():HH:mm:ss}";
 
-        _csvLogger?.Write(data);
-        _jsonLogger?.Write(data);
-        _jsonJournalLogger?.Write(data);
+        // Loggers/HTTP saíram daqui: rodam na thread dedicada a partir de
+        // OnSensorData (a UI não grava arquivo serializado por tick).
 
         foreach (var alert in _alertEvaluator.Evaluate(data))
         {
@@ -1507,10 +1537,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _jsonJournalLogger = new JsonJournalLogger(Path.Combine(logDirectory, $"sensors_{sessionStamp}.jsonl"));
             _jsonJournalLogger.WriteNote("início da sessão");
         }
+
+        // Loggers em thread dedicada (antes: CSV + JSON + journal serializados na
+        // UI thread a cada snapshot, em até 10 Hz). Mesma bomba do frontend WPF;
+        // Drain no DisposeLoggers garante drenagem antes de dispor os escritores.
+        _snapshotWriter?.Dispose();
+        _snapshotWriter = new BackgroundSnapshotWriter();
+        if (_csvLogger is not null) _snapshotWriter.AddWriter(_csvLogger.Write);
+        if (_jsonLogger is not null) _snapshotWriter.AddWriter(_jsonLogger.Write);
+        if (_jsonJournalLogger is not null) _snapshotWriter.AddWriter(_jsonJournalLogger.Write);
     }
+
+    /// <summary>Bomba de fundo para loggers; vida útil = sessão de loggers.
+    /// Ver BackgroundSnapshotWriter (drenagem antes de dispor os escritores).</summary>
+    private BackgroundSnapshotWriter? _snapshotWriter;
 
     private void DisposeLoggers()
     {
+        _snapshotWriter?.Dispose();
+        _snapshotWriter = null;
         _csvLogger?.Dispose();
         _jsonLogger?.Dispose();
         _jsonJournalLogger?.Dispose();

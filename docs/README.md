@@ -37,5 +37,6 @@ Esta é a documentação em português do Phantom Monitor. Os guias em inglês f
 
 - [Estudo de OSD in-frame](osd-in-frame-estudo.md)
 - [Roadmap de paridade funcional](roadmap-paridade.md)
+- [Roadmap de unificação visual (frontend único + temas)](roadmap-unificacao-visual.md)
 
 <p align="right"><a href="en/README.md">English</a> | Português (Brasil)</p>

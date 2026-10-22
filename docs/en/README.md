@@ -37,5 +37,6 @@ English-language documentation for Phantom Monitor. Portuguese originals are ava
 
 - [Windows in-frame OSD study](osd-in-frame-study.md)
 - [Feature parity roadmap](feature-parity-roadmap.md)
+- [Visual unification roadmap (single frontend + theming)](visual-unification-roadmap.md)
 
 <p align="right">English | <a href="../README.md">Português (Brasil)</a></p>

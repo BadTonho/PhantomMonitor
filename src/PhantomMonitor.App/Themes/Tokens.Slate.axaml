@@ -44,6 +44,19 @@
     <SolidColorBrush x:Key="AccentGreenSoftBrush" Color="#34D399" />
     <SolidColorBrush x:Key="AccentWarningBrush" Color="#F59E0B" />
 
+    <!-- Uso/temp quente (verbatim do WPF: GetTempColor/UsageHot/banner admin em MainWindow.xaml.cs). -->
+    <SolidColorBrush x:Key="AccentHotBrush" Color="#EF4444" />
+    <SolidColorBrush x:Key="AccentHotSoftBrush" Color="#FCA5A5" />
+    <SolidColorBrush x:Key="AccentHotBodyBrush" Color="#F87171" />
+
+    <!-- Tints translúcidos verbatim (pílula normal compartilhados com o badge de update do WPF). -->
+    <SolidColorBrush x:Key="BgTintGreenBrush" Color="#1810B981" />
+    <SolidColorBrush x:Key="BorderTintGreenBrush" Color="#3510B981" />
+    <SolidColorBrush x:Key="BgTintWarmBrush" Color="#18F59E0B" />
+    <SolidColorBrush x:Key="BorderTintWarmBrush" Color="#35F59E0B" />
+    <SolidColorBrush x:Key="BgTintHotBrush" Color="#18EF4444" />
+    <SolidColorBrush x:Key="BorderTintHotBrush" Color="#35EF4444" />
+
     <!-- Borda translúcida do painel overlay (40% do acento #2563EB do WPF) -->
     <SolidColorBrush x:Key="OverlayBorderBrush" Color="#662563EB" />
 </ResourceDictionary>

@@ -576,6 +576,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         GpuSamples = _gpuHistory.ToArray();
         RamSamples = _ramHistory.ToArray();
         FrametimeSamples = data.FrametimeHistory.Select(x => (double)x).ToArray();
+        UpdateDashboardExtras(data); // detalhes/cores por faixa/placa-mãe/processos (Overview partial)
         LastUpdateText = $"Atualizado às {data.Timestamp.ToLocalTime():HH:mm:ss}";
 
         // Loggers/HTTP saíram daqui: rodam na thread dedicada a partir de

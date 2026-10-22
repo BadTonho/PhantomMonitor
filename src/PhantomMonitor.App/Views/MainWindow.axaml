@@ -28,6 +28,15 @@
       <Setter Property="Background" Value="{DynamicResource BgSurfaceBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextBodyBrush}" />
     </Style>
+    <!-- Badge de update (porta do chip verde do WPF na sidebar) -->
+    <Style Selector="Button.update-badge">
+      <Setter Property="Background" Value="{DynamicResource BgToastUpdateBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderTintGreenBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
     <Style Selector="TextBox.settings-input">
       <Setter Property="Width" Value="190" />
       <Setter Property="HorizontalAlignment" Value="Left" />
@@ -59,6 +68,9 @@
           <StackPanel Spacing="5">
             <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
             <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextStatusBrush}" FontSize="12" />
+            <Button Classes="update-badge" IsVisible="{Binding UpdateBadgeVisible}" Click="OnUpdateBadgeClick">
+              <TextBlock Text="{Binding UpdateBadgeText}" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="10" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Left" />
+            </Button>
           </StackPanel>
         </Border>
       </Grid>
@@ -79,9 +91,20 @@
           </StackPanel>
         </Grid>
 
+        <!-- Banner de elevação (porta do AdminWarning do WPF; tints quentes da pílula) -->
+        <Border IsVisible="{Binding IsAdminBannerVisible}" Background="{DynamicResource BgTintHotBrush}" BorderBrush="{DynamicResource BorderTintHotBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="Privilégios administrativos necessários" Foreground="{DynamicResource AccentHotSoftBrush}" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Text="Leituras completas de temperatura de CPU e FPS via PresentMon necessitam de elevação." Foreground="{DynamicResource AccentHotBodyBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="action" Content="Executar como admin" Click="OnRestartAsAdminClick" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+
         <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
           <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
-            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="PROCESSADOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
                 <Border Grid.Column="1" Background="{DynamicResource BgChipBrush}" CornerRadius="8" Padding="8,3">
@@ -90,20 +113,23 @@
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
                 <StackPanel>
-                  <TextBlock Text="{Binding CpuUsageText}" Classes="metric" />
+                  <TextBlock Text="{Binding CpuUsageText}" Classes="metric" Foreground="{Binding CpuUsageBrush}" />
                   <TextBlock Text="Utilização total" Classes="muted" FontSize="10" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
-                  <TextBlock Text="{Binding CpuTempText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" HorizontalAlignment="Right" />
+                  <Border Background="{Binding CpuTempPillBrush}" BorderBrush="{Binding CpuTempPillBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,3" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding CpuTempText}" Foreground="{Binding CpuTempBrush}" FontSize="12" FontWeight="SemiBold" />
+                  </Border>
                   <TextBlock Text="{Binding CpuClockText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
                 </StackPanel>
               </Grid>
               <charts:HistoryChart Grid.Row="2" Values="{Binding CpuSamples}" Stroke="{DynamicResource AccentLightBrush}" Height="42" />
+              <TextBlock Grid.Row="3" Text="{Binding CpuDetailText}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Border>
 
           <Border Grid.Column="1" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
-            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="PLACA DE VÍDEO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
                 <Border Grid.Column="1" Background="{DynamicResource BgChipBrush}" CornerRadius="8" Padding="8,3">
@@ -112,20 +138,23 @@
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
                 <StackPanel>
-                  <TextBlock Text="{Binding GpuUsageText}" Classes="metric" />
+                  <TextBlock Text="{Binding GpuUsageText}" Classes="metric" Foreground="{Binding GpuUsageBrush}" />
                   <TextBlock Text="Utilização do núcleo" Classes="muted" FontSize="10" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
-                  <TextBlock Text="{Binding GpuTempText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" HorizontalAlignment="Right" />
+                  <Border Background="{Binding GpuTempPillBrush}" BorderBrush="{Binding GpuTempPillBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,3" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding GpuTempText}" Foreground="{Binding GpuTempBrush}" FontSize="12" FontWeight="SemiBold" />
+                  </Border>
                   <TextBlock Text="{Binding GpuMemoryText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
                 </StackPanel>
               </Grid>
               <charts:HistoryChart Grid.Row="2" Values="{Binding GpuSamples}" Stroke="{DynamicResource AccentPurpleSoftBrush}" Height="42" />
+              <TextBlock Grid.Row="3" Text="{Binding GpuDetailText}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Border>
         </Grid>
 
-        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="14">
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="14">
           <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
             <StackPanel Spacing="11">
               <TextBlock Text="MEMÓRIA RAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
@@ -160,6 +189,13 @@
               </StackPanel>
             </StackPanel>
           </Border>
+          <Border Grid.Column="3" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
+            <StackPanel Spacing="11">
+              <TextBlock Text="PLACA-MÃE &amp; VENTOINHAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="{Binding MotherboardTempText}" Foreground="{Binding MbTempBrush}" FontSize="22" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding FanSummaryText}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
         </Grid>
 
         <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
@@ -183,6 +219,29 @@
             <charts:HistoryChart Grid.Row="1" Values="{Binding FrametimeSamples}" Stroke="{DynamicResource AccentWarningBrush}" Height="56" />
             <TextBlock Grid.Row="2" Text="{Binding FpsStatsText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" />
           </Grid>
+        </Border>
+
+        <!-- Porta do card de processos na GPU do WPF (nome + uso % à direita) -->
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="PROCESSOS ATIVOS NA GPU" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Grid.Column="1" Text="Relatado pelo Windows via WMI (GPUEngine)" Classes="muted" FontSize="9" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding GpuProcessRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,0,0,1" Padding="0,5">
+                    <Grid ColumnDefinitions="*,80">
+                      <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Usage, StringFormat={}{0:F1}%}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock IsVisible="{Binding !HasGpuProcesses}" Text="Sem atividade de GPU relevante agora." Classes="muted" FontSize="11" />
+          </StackPanel>
         </Border>
 
         <TextBlock Text="Os valores de temperatura, clock e utilização dependem dos sensores expostos pelo kernel e pelo driver." Classes="muted" FontSize="10" TextWrapping="Wrap" Margin="2,0,0,0" />

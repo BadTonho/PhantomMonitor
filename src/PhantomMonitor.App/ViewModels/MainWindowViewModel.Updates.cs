@@ -39,6 +39,14 @@ public sealed partial class MainWindowViewModel
     public bool CanApplyUpdate { get => _updateApplyVisible; private set => Set(ref _updateApplyVisible, value); }
     public bool CanApplyUpdateEnabled { get => _updateApplyEnabled; private set => Set(ref _updateApplyEnabled, value); }
 
+    // Badge compacto no ESTADO (sidebar, porta do WPF — F1.2): resumo em uma linha,
+    // clique leva ao card completo de atualizações nas Configurações.
+    public string UpdateBadgeText { get => _updateBadgeText; private set => Set(ref _updateBadgeText, value); }
+    private string _updateBadgeText = "";
+
+    public bool UpdateBadgeVisible { get => _updateBadgeVisible; private set => Set(ref _updateBadgeVisible, value); }
+    private bool _updateBadgeVisible;
+
     /// <summary>Liga o serviço do Core: cria o updater, faz a checagem inicial e o timer 24h.</summary>
     internal void InitUpdateService()
     {
@@ -125,6 +133,20 @@ public sealed partial class MainWindowViewModel
         var showNotice = state.Status is UpdateStatus.Available
             or UpdateStatus.Downloading or UpdateStatus.ReadyToApply or UpdateStatus.Applying;
         UpdateToastVisible = showNotice;
+
+        // Badge da sidebar (F1.2): linha única, some quando nada está acontecendo.
+        UpdateBadgeVisible = showNotice;
+        UpdateBadgeText = state.Status switch
+        {
+            UpdateStatus.Downloading => state.DownloadProgressPercent is { } badgePercent
+                ? $"Baixando: {badgePercent:F0} %"
+                : "Baixando...",
+            UpdateStatus.ReadyToApply => "Pronto para reiniciar",
+            UpdateStatus.Applying => "Trocando versão...",
+            UpdateStatus.Available when state.AvailableVersion is { } badgeVersion =>
+                $"Nova versão: {badgeVersion}",
+            _ => "",
+        };
         UpdateToastText = state.Status switch
         {
             UpdateStatus.Downloading => state.DownloadProgressPercent is { } percent

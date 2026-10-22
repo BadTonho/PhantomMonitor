@@ -28,6 +28,7 @@ out/
 [Ll]ogs/
 *.log
 *.csv
+*.jsonl
 sensors_latest.json
 
 ## Config with secrets / local settings

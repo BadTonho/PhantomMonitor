@@ -49,6 +49,39 @@ public static class GitHubReleaseSource
         return null;
     }
 
+    /// <summary>
+    /// Baixa um anexo da release direto para o arquivo de destino, reportando
+    /// progresso 0..100 quando o Content-Length é conhecido. Falha com
+    /// IOException quando o arquivo chega truncado (download interrompido).
+    /// </summary>
+    public static async Task DownloadFileAsync(
+        GitHubReleaseAsset asset, string destinationPath, Action<double>? progress = null, CancellationToken cancellation = default)
+    {
+        using var response = await SharedClient
+            .GetAsync(asset.Url, HttpCompletionOption.ResponseHeadersRead, cancellation)
+            .ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        await using var source = await response.Content.ReadAsStreamAsync(cancellation).ConfigureAwait(false);
+        var total = response.Content.Headers.ContentLength ?? (asset.Size > 0 ? asset.Size : 0);
+        await using var destination = File.Create(destinationPath);
+
+        var buffer = new byte[64 * 1024];
+        long written = 0;
+        int read;
+
+        while ((read = await source.ReadAsync(buffer, cancellation).ConfigureAwait(false)) > 0)
+        {
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellation).ConfigureAwait(false);
+            written += read;
+            if (progress is not null && total > 0)
+                progress(Math.Clamp(written * 100.0 / total, 0, 100));
+        }
+
+        if (total > 0 && written != total)
+            throw new IOException($"Download truncado: {written} de {total} bytes recebidos.");
+    }
+
     private static HttpClient CreateSharedClient()
     {
         var handler = new SocketsHttpHandler

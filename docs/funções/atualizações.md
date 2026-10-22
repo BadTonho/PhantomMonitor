@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/updates.md)
 
-O Phantom Monitor verifica novas versões publicadas no GitHub Releases e avisa na interface. A checagem é compartilhada pelos dois frontends (implementada em `PhantomMonitor.Services.Update`, no Core); a aplicação automática da atualização (download + troca de arquivos) é específica por plataforma.
+O Phantom Monitor verifica novas versões publicadas no GitHub Releases, avisa na interface e, no Windows, chega a baixar, trocar os arquivos e reabrir sozinho no botão "Atualizar e reiniciar". A checagem é compartilhada pelos dois frontends (implementada em `PhantomMonitor.Services.Update`, no Core); a aplicação da atualização é específica por plataforma (appliers).
 
 ## Como funciona
 
@@ -21,8 +21,23 @@ Falhas de rede/limite da API são registradas em `logs/errors.log` e mostradas c
 ## Interface (Windows, WPF)
 
 - **Card "Atualizações"** (fim da página): versão instalada, última checagem, botão "Buscar agora", botão que abre a página de releases no navegador e os toggles de checagem automática e canal beta.
-- **Banner "Nova versão disponível"** no conteúdo principal quando existe versão mais nova, com botão "Ver no GitHub".
+- **Banner "Nova versão disponível"** no conteúdo principal quando existe versão mais nova, com botões "Ver no GitHub" e, quando a troca é possível, **"Atualizar e reiniciar"** (mostra "Baixando: N %" durante o download e "Reiniciando..." na troca).
 - **Badge "Nova versão"** no sidebar, ao lado do estado do monitor, clicável (abre a página de releases).
+
+## Aplicar automaticamente (Windows)
+
+O botão "Atualizar e reiniciar" executa o ciclo completo:
+
+1. Baixa o asset da convenção `PhantomMonitor-<versão>-win-x64.zip` (portable zip — é o mesmo payload usado por quem instalou via setup: em ambos os casos os arquivos juntos se trocam pela pasta).
+2. Descompacta em `%LOCALAPPDATA%\PhantomMonitor\UpdateStaging\<versão>\` (cleanup de stagings antigos antes de cada preparação).
+3. Lança o updater one-shot (`apply_update.cmd` gerado no staging): espera o processo do app encerrar (até 30 s), troca os arquivos com **backup** (`*.bak`), reabre o executável e apaga os backups. Em falha de cópia o `.bak` é restaurado na hora — nunca há relançamento com arquivos pela metade.
+4. O app é encerrado e reaberto com a versão nova. O config do usuário (`%APPDATA%\PhantomMonitor\config.json`) e os logs ficam fora da pasta trocada, intocados.
+
+Limites honestos:
+
+- Antes da troca o app grava um probe na própria pasta de instalação; se ela for protegida (portable extraído em `Program Files`, por exemplo), a troca não é oferecida e só fica o modo notificação com link.
+- Se a release não tiver o asset do formato esperado, o botão não aparece e o card explica o fator ("esta release não tem o arquivo esperado; baixe manualmente").
+- O executável é fechado durante a troca: o overlay e o monitoramento param e voltam quando o app reabre.
 
 ## Canais
 

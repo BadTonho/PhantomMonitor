@@ -445,7 +445,8 @@ public partial class MainWindow : Window
         _updates = new UpdateService(
             _config.Update.Repository,
             autoCheck: () => _config.Update.AutoCheck,
-            includePreRelease: () => _config.Update.CheckBeta);
+            includePreRelease: () => _config.Update.CheckBeta,
+            applier: WindowsUpdateApplier.Shared);
         _updates.StateChanged += state => Dispatcher.InvokeAsync(() => OnUpdateStateChanged(state));
 
         AutoCheckToggle.IsChecked = _config.Update.AutoCheck;
@@ -480,26 +481,75 @@ public partial class MainWindow : Window
             versionLine += $" · Última checagem: {lastCheck:dd/MM/yyyy HH:mm}";
         UpdateVersionText.Text = versionLine;
 
-        var available = state.Status == UpdateStatus.Available;
-        UpdateBanner.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
-        UpdateBadge.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        var showNotice = state.Status is UpdateStatus.Available
+            or UpdateStatus.Downloading or UpdateStatus.ReadyToApply or UpdateStatus.Applying;
+        UpdateBanner.Visibility = showNotice ? Visibility.Visible : Visibility.Collapsed;
+        UpdateBadge.Visibility = state.Status == UpdateStatus.Available ? Visibility.Visible : Visibility.Collapsed;
 
-        UpdateBannerText.Text = available && state.AvailableVersion is { } version
-            ? $"Phantom Monitor {version}"
-              + (state.IsPreRelease ? " (pré-release, canal beta)" : "")
-              + " — confira as novidades no GitHub."
-            : "";
-        UpdateBadgeText.Text = available ? $"Nova versão: {state.AvailableVersion}" : "Nova versão";
+        UpdateBannerText.Text = state.Status switch
+        {
+            UpdateStatus.Downloading => state.DownloadProgressPercent is { } percent
+                ? $"Baixando atualização: {percent:F0} %"
+                : "Baixando atualização...",
+            UpdateStatus.ReadyToApply => "Atualização pronta; reiniciando com a nova versão...",
+            UpdateStatus.Applying => "Trocando arquivos e reiniciando...",
+            UpdateStatus.Available when state.AvailableVersion is { } version =>
+                $"Phantom Monitor {version}"
+                + (state.IsPreRelease ? " (pré-release, canal beta)" : "")
+                + " — confira as novidades no GitHub.",
+            _ => "",
+        };
+        UpdateBadgeText.Text = $"Nova versão: {state.AvailableVersion}";
 
         UpdateStatusText.Text = state.Status switch
         {
             UpdateStatus.Checking => "Verificando atualizações...",
-            UpdateStatus.UpToDate => "Nenhuma atualização disponível.",
+            UpdateStatus.Downloading => state.DownloadProgressPercent is { } percent
+                ? $"Baixando atualização: {percent:F0} %"
+                : "Baixando atualização...",
+            UpdateStatus.ReadyToApply => "Atualização pronta; aplicando...",
+            UpdateStatus.Applying => "Trocando arquivos e reiniciando...",
             UpdateStatus.Available => state.AvailableVersion is { } avail
                 ? $"Nova versão {avail} disponível." : "",
             _ => "",
         };
         if (state.Message is { } message) UpdateStatusText.Text = message;
+
+        // Botão "Atualizar e reiniciar": existe quando a instalação suporta a
+        // troca; vira progresso desabilitado durante download/aplicação.
+        var canApply = showNotice;
+        if (state.Status == UpdateStatus.Available && _updates is { } updates)
+            canApply = updates.CanUpdateInApp;
+
+        UpdateBannerApplyButton.Visibility = canApply ? Visibility.Visible : Visibility.Collapsed;
+        UpdateApplyButton.Visibility = canApply ? Visibility.Visible : Visibility.Collapsed;
+        var busy = state.Status is UpdateStatus.Downloading or UpdateStatus.Applying;
+        var label = state.Status switch
+        {
+            UpdateStatus.Downloading => state.DownloadProgressPercent is { } percent
+                ? $"Baixando: {percent:F0} %"
+                : "Baixando...",
+            UpdateStatus.ReadyToApply => "Aplicando atualização...",
+            UpdateStatus.Applying => "Reiniciando...",
+            _ => "Atualizar e reiniciar",
+        };
+        UpdateBannerApplyButton.Content = label;
+        UpdateApplyButton.Content = label;
+        UpdateBannerApplyButton.IsEnabled = !busy;
+        UpdateApplyButton.IsEnabled = !busy;
+
+        // O updater one-shot assume o resto da troca: encerra o app AGORA
+        // (os serviços de monitoramento saem pelo OnClosed normal da janela).
+        if (state.Status == UpdateStatus.Applying)
+        {
+            Application.Current.Shutdown();
+        }
+    }
+
+    private async void OnUpdateAndRestartClick(object sender, RoutedEventArgs e)
+    {
+        if (_updates is not { } updates) return;
+        await updates.UpdateAndRestartAsync();
     }
 
     private void OnCheckUpdatesClick(object sender, RoutedEventArgs e)

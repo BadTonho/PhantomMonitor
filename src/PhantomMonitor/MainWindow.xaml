@@ -172,11 +172,16 @@
                             <TextBlock x:Name="UpdateBannerText" Text="" FontSize="11"
                                        Foreground="#A7F3D0" Margin="0,2,0,0"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Content="Ver no GitHub"
-                                Style="{StaticResource SecondaryButton}"
-                                FontSize="11" FontWeight="SemiBold" Padding="12,6"
-                                Cursor="Hand" Click="OnOpenReleasesPage"
-                                VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Ver no GitHub"
+                                    Style="{StaticResource SecondaryButton}"
+                                    FontSize="11" FontWeight="SemiBold" Padding="12,6"
+                                    Cursor="Hand" Click="OnOpenReleasesPage"/>
+                            <Button x:Name="UpdateBannerApplyButton" Content="Atualizar e reiniciar"
+                                    Background="#059669" Foreground="White" BorderThickness="0"
+                                    FontSize="11" FontWeight="SemiBold" Padding="12,6" Margin="8,0,0,0"
+                                    Cursor="Hand" Click="OnUpdateAndRestartClick" Visibility="Collapsed"/>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -489,6 +494,10 @@
                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
                                   Margin="0,6,0,0"
                                   Checked="OnUpdateBetaToggled" Unchecked="OnUpdateBetaToggled"/>
+                        <Button x:Name="UpdateApplyButton" Content="Atualizar e reiniciar"
+                                Style="{StaticResource SecondaryButton}"
+                                FontSize="11" Padding="10,5" Margin="0,10,0,0"
+                                Click="OnUpdateAndRestartClick" Visibility="Collapsed"/>
                     </StackPanel>
                 </Border>
 

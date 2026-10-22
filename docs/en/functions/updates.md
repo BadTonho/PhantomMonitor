@@ -2,7 +2,7 @@
 
 > **Language:** English · [Português (Brasil)](../../funções/atualizações.md)
 
-Phantom Monitor checks for newer versions published on GitHub Releases and notifies the UI. The check is shared by both frontends (implemented in `PhantomMonitor.Services.Update`, in Core); applying the update automatically (download + file swap) is platform-specific.
+Phantom Monitor checks for newer versions published on GitHub Releases, notifies the UI and, on Windows, goes further: the "Atualizar e reiniciar" (Update and restart) button downloads, swaps the files and relaunches on its own. The check is shared by both frontends (implemented in `PhantomMonitor.Services.Update`, in Core); applying the update is platform-specific (appliers).
 
 ## How it works
 
@@ -21,8 +21,23 @@ Network/rate-limit failures are logged to `logs/errors.log` and surfaced as a sh
 ## Interface (Windows, WPF)
 
 - **"Atualizações" card** (bottom of the page): installed version, last check, "Buscar agora" (Check now), a button that opens the releases page in the browser, and the automatic-check/beta-channel toggles.
-- **"Nova versão disponível" banner** in the main content when a newer version exists, with a "Ver no GitHub" button.
+- **"Nova versão disponível" banner** in the main content when a newer version exists, with "Ver no GitHub" and — when the swap is possible — the **"Atualizar e reiniciar"** button (shows "Baixando: N %" while downloading and "Reiniciando..." during the swap).
 - **"Nova versão" badge** in the sidebar, next to the monitor state; clicking it opens the releases page.
+
+## Applying the update automatically (Windows)
+
+The "Atualizar e reiniciar" button runs the full cycle:
+
+1. Downloads the convention asset `PhantomMonitor-<version>-win-x64.zip` (the portable zip — the same payload used by the per-user installer; in both cases the updater swaps the folder contents).
+2. Extracts to `%LOCALAPPDATA%\PhantomMonitor\UpdateStaging\<version>\` (older stagings are cleaned before each preparation).
+3. Launches the one-shot updater (`apply_update.cmd` generated into staging): waits for the app process to exit (up to 30 s), swaps files with **backups** (`*.bak`), relaunches the executable and deletes the backups. On a failed copy, the `.bak` is restored immediately — the app never relaunches with half-swapped files.
+4. The app closes and reopens on the new version. The user config (`%APPDATA%\PhantomMonitor\config.json`) and logs live outside the swapped folder and are untouched.
+
+Honest limits:
+
+- Before swapping, the app probes its own install folder; if it is protected (a portable extracted into `Program Files`, for example), the swap is not offered and only the notify-with-link mode remains.
+- If the release has no asset in the expected format, the button does not appear and the card explains why ("this release does not have the expected file; download manually").
+- The executable closes during the swap: the overlay and monitoring stop and resume when the app reopens.
 
 ## Channels
 

@@ -1,0 +1,355 @@
+using System.ComponentModel;
+using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Collections.ObjectModel;
+using System.Threading;
+using Avalonia.Threading;
+using PhantomMonitor.App.Services;
+using PhantomMonitor.Models;
+using PhantomMonitor.Services;
+using PhantomMonitor.Services.Linux;
+using PhantomMonitor.Services.Telemetry;
+
+namespace PhantomMonitor.App.ViewModels;
+
+// Aplicação de configurações: SaveSettings, troca do serviço de sensores e exportador HTTP.
+public sealed partial class MainWindowViewModel
+{
+    public void SaveSettings()
+    {
+        if (!double.TryParse(OverlayFontSizeText, NumberStyles.Float, CultureInfo.CurrentCulture, out var overlayFontSize)
+            || !double.IsFinite(overlayFontSize)
+            || overlayFontSize is < 8 or > 20
+            || Math.Abs(overlayFontSize * 2 - Math.Round(overlayFontSize * 2)) >= 0.000001)
+        {
+            SettingsMessage = "O tamanho da fonte deve ficar entre 8 e 20 pt, em passos de 0,5 pt.";
+            return;
+        }
+
+        if (!int.TryParse(OverlayWidthText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var overlayWidth)
+            || overlayWidth is < 140 or > 700)
+        {
+            SettingsMessage = "A largura do overlay deve ficar entre 140 e 700 pixels.";
+            return;
+        }
+
+        if (!double.IsFinite(OverlayOpacityPercent) || OverlayOpacityPercent is < 10 or > 100)
+        {
+            SettingsMessage = "A opacidade do overlay deve ficar entre 10% e 100%.";
+            return;
+        }
+
+        int? newInterval = null;
+        if (IsIntervalEdited)
+        {
+            if (!int.TryParse(UpdateIntervalText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var parsed)
+                || parsed is < 100 or > 60_000)
+            {
+                SettingsMessage = "Informe um intervalo entre 100 e 60.000 ms.";
+                return;
+            }
+            newInterval = parsed;
+        }
+
+        if (!int.TryParse(TelemetryExportPortText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var telemetryPort)
+            || telemetryPort is < 1024 or > 65_535)
+        {
+            SettingsMessage = "A porta do exportador HTTP deve ficar entre 1024 e 65.535.";
+            return;
+        }
+
+        var oldInterval = _config.UpdateIntervalMs;
+        var oldCsv = _config.LogToCsv;
+        var oldJson = _config.LogToJson;
+        var oldJournal = _config.LogToJsonJournal;
+        var oldTelemetryEnabled = _config.TelemetryExport.Enabled;
+        var oldTelemetryPort = _config.TelemetryExport.Port;
+        var oldTelemetryListenAll = _config.TelemetryExport.ListenAll;
+        var oldOverlayCpu = _config.Overlay.ShowCpu;
+        var oldOverlayWidth = _config.Overlay.Width;
+        var oldOverlayOpacity = _config.OverlayOpacity;
+        var oldOverlayFontSize = _config.Overlay.FontSize;
+        var oldOverlayCompactMode = _config.Overlay.CompactMode;
+        var oldOverlayGpu = _config.Overlay.ShowGpu;
+        var oldOverlayRam = _config.Overlay.ShowRam;
+        var oldOverlayDisk = _config.Overlay.ShowDisk;
+        var oldOverlayNetwork = _config.Overlay.ShowNetwork;
+        var oldOverlayFans = _config.Overlay.ShowFans;
+        var oldOverlayMotherboard = _config.Overlay.ShowMotherboard;
+        var oldOverlayFps = _config.Overlay.ShowFps;
+        var oldOverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
+        var oldOverlayShownSeries = _config.Overlay.ShownSeries?.ToList() ?? ["Gpu*", "FanSpeed*", "Disk*"];
+        var newOverlayShownSeries = _overlaySeriesPatterns.Select(item => item.Pattern).ToList();
+        if (newOverlayShownSeries.Count == 0)
+        {
+            SettingsMessage = "Adicione ao menos um padrão de série ou restaure os padrões antes de salvar.";
+            return;
+        }
+        var invalidPattern = newOverlayShownSeries.FirstOrDefault(pattern => !IsValidOverlaySeriesPattern(pattern));
+        if (invalidPattern is not null)
+        {
+            SettingsMessage = $"O padrão '{invalidPattern}' é inválido.";
+            return;
+        }
+        var collectionWasRunning = IsRunning;
+        var collectionWasPaused = IsPaused;
+        var intervalChanged = newInterval.HasValue && newInterval.Value != oldInterval;
+        var loggingChanged = LogToCsv != oldCsv || LogToJson != oldJson || LogToJsonJournal != oldJournal;
+        var telemetryChanged = TelemetryExportEnabled != oldTelemetryEnabled
+            || telemetryPort != oldTelemetryPort
+            || TelemetryExportListenAll != oldTelemetryListenAll;
+        var overlayVisualChanged = overlayWidth != oldOverlayWidth
+            || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
+        var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
+            || OverlayCompactModeSetting != oldOverlayCompactMode;
+        var overlayChanged = OverlayShowCpu != oldOverlayCpu
+            || OverlayShowGpu != oldOverlayGpu
+            || OverlayShowRam != oldOverlayRam
+            || OverlayShowDisk != oldOverlayDisk
+            || OverlayShowNetwork != oldOverlayNetwork
+            || OverlayShowFans != oldOverlayFans
+            || OverlayShowMotherboard != oldOverlayMotherboard
+            || OverlayShowFps != oldOverlayFps
+            || OverlayShowFrametimeGraph != oldOverlayShowFrametimeGraph
+            || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase)
+            || overlayVisualChanged
+            || overlayAppearanceChanged;
+
+        if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
+        {
+            ConfigureTelemetryExporter();
+            SettingsMessage = "Nenhuma alteração para salvar.";
+            return;
+        }
+
+        if (newInterval.HasValue) _config.UpdateIntervalMs = newInterval.Value;
+        _config.LogToCsv = LogToCsv;
+        _config.LogToJson = LogToJson;
+        _config.LogToJsonJournal = LogToJsonJournal;
+        _config.TelemetryExport.Enabled = TelemetryExportEnabled;
+        _config.TelemetryExport.Port = telemetryPort;
+        _config.TelemetryExport.ListenAll = TelemetryExportListenAll;
+        _config.Overlay.ShowCpu = OverlayShowCpu;
+        _config.Overlay.ShowGpu = OverlayShowGpu;
+        _config.Overlay.ShowRam = OverlayShowRam;
+        _config.Overlay.ShowDisk = OverlayShowDisk;
+        _config.Overlay.ShowNetwork = OverlayShowNetwork;
+        _config.Overlay.ShowFans = OverlayShowFans;
+        _config.Overlay.ShowMotherboard = OverlayShowMotherboard;
+        _config.Overlay.ShowFps = OverlayShowFps;
+        _config.Overlay.ShowFrametimeGraph = OverlayShowFrametimeGraph;
+        _config.Overlay.ShownSeries = newOverlayShownSeries;
+        _config.Overlay.Width = overlayWidth;
+        _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
+        _config.Overlay.FontSize = overlayFontSize;
+        _config.Overlay.CompactMode = OverlayCompactModeSetting;
+
+        if (!_config.Save(ConfigPaths.ConfigFile))
+        {
+            _config.UpdateIntervalMs = oldInterval;
+            _config.LogToCsv = oldCsv;
+            _config.LogToJson = oldJson;
+            _config.LogToJsonJournal = oldJournal;
+            _config.TelemetryExport.Enabled = oldTelemetryEnabled;
+            _config.TelemetryExport.Port = oldTelemetryPort;
+            _config.TelemetryExport.ListenAll = oldTelemetryListenAll;
+            _config.Overlay.ShowCpu = oldOverlayCpu;
+            _config.Overlay.ShowGpu = oldOverlayGpu;
+            _config.Overlay.ShowRam = oldOverlayRam;
+            _config.Overlay.ShowDisk = oldOverlayDisk;
+            _config.Overlay.ShowNetwork = oldOverlayNetwork;
+            _config.Overlay.ShowFans = oldOverlayFans;
+            _config.Overlay.ShowMotherboard = oldOverlayMotherboard;
+            _config.Overlay.ShowFps = oldOverlayFps;
+            _config.Overlay.ShowFrametimeGraph = oldOverlayShowFrametimeGraph;
+            _config.Overlay.ShownSeries = oldOverlayShownSeries;
+            _config.Overlay.Width = oldOverlayWidth;
+            _config.OverlayOpacity = oldOverlayOpacity;
+            _config.Overlay.FontSize = oldOverlayFontSize;
+            _config.Overlay.CompactMode = oldOverlayCompactMode;
+            OverlayShowCpu = oldOverlayCpu;
+            OverlayShowGpu = oldOverlayGpu;
+            OverlayShowRam = oldOverlayRam;
+            OverlayShowDisk = oldOverlayDisk;
+            OverlayShowNetwork = oldOverlayNetwork;
+            OverlayShowFans = oldOverlayFans;
+            OverlayShowMotherboard = oldOverlayMotherboard;
+            OverlayShowFps = oldOverlayFps;
+            OverlayShowFrametimeGraph = oldOverlayShowFrametimeGraph;
+            UpdateOverlayRows(_latestSensorData);
+            LoadOverlaySeriesPatterns();
+            SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
+            return;
+        }
+
+        if (intervalChanged)
+        {
+            ReplaceSensorService();
+        }
+        else if (loggingChanged)
+        {
+            DisposeLoggers();
+            if (IsRunning) StartLoggers();
+        }
+
+        ConfigureTelemetryExporter();
+
+        LoadOverlaySeriesPatterns();
+        UpdateOverlayRows(_latestSensorData);
+        OverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
+        OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
+        OverlayOpacityPercent = _config.OverlayOpacity * 100;
+        OverlayFontSizeSlider = _config.Overlay.FontSize;
+        OverlayCompactModeSetting = _config.Overlay.CompactMode;
+        if (overlayVisualChanged)
+        {
+            Raise(nameof(OverlayWidth));
+            Raise(nameof(OverlayOpacity));
+        }
+        if (overlayAppearanceChanged)
+            RaiseOverlayAppearanceProperties();
+
+        UpdateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
+        TelemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);
+        SettingsMessage = intervalChanged
+            ? collectionWasRunning
+                ? collectionWasPaused
+                    ? "Coleta reiniciada pausada; as estatísticas da sessão foram zeradas."
+                    : "Coleta reiniciada; as estatísticas da sessão foram zeradas."
+                : "Intervalo salvo. Será usado quando a coleta for iniciada."
+            : overlayChanged && !loggingChanged && !telemetryChanged
+                ? "Opções do overlay salvas e aplicadas."
+            : loggingChanged && telemetryChanged
+                ? collectionWasRunning
+                    ? "Logs e exportador HTTP atualizados sem reiniciar a coleta."
+                    : "Opções de logs e exportador salvas para a próxima coleta."
+                : telemetryChanged
+                    ? collectionWasRunning
+                        ? "Exportador HTTP atualizado sem reiniciar a coleta."
+                        : "Opções do exportador salvas para a próxima coleta."
+                    : collectionWasRunning
+                        ? "Logs atualizados sem reiniciar a coleta."
+                        : "Opções de log salvas para a próxima coleta.";
+    }
+
+    private void ReplaceSensorService()
+    {
+        var wasRunning = IsRunning;
+        var wasPaused = IsPaused;
+        var oldService = _sensorService;
+
+        if (oldService.IsRunning)
+        {
+            oldService.SetPaused(false);
+            oldService.Stop();
+        }
+        _started = false;
+        DetachSensorService(oldService);
+        DisposeLoggers();
+        oldService.Dispose();
+
+        _sensorService = LinuxSensorServiceFactory.Create(_config);
+        AttachSensorService(_sensorService);
+        ResetDisplayedSession();
+
+        if (wasRunning)
+        {
+            if (wasPaused) _sensorService.SetPaused(true);
+            Start();
+            if (wasPaused)
+            {
+                StatusText = "Pausado";
+                Raise(nameof(IsPaused));
+                Raise(nameof(PauseButtonText));
+            }
+        }
+        else
+        {
+            StatusText = "Parado";
+            RaiseRunState();
+            UpdateTelemetryExportStatus();
+        }
+    }
+
+    private void ConfigureTelemetryExporter()
+    {
+        var options = _config.TelemetryExport;
+        if (!options.Enabled)
+        {
+            DisposeTelemetryExporter();
+            UpdateTelemetryExportStatus();
+            return;
+        }
+
+        if (!IsRunning)
+        {
+            DisposeTelemetryExporter();
+            UpdateTelemetryExportStatus();
+            return;
+        }
+
+        if (_telemetryHttpExporter is not null
+            && _activeTelemetryPort == options.Port
+            && _activeTelemetryListenAll == options.ListenAll
+            && _telemetryHttpExporter.IsListening)
+        {
+            UpdateTelemetryExportStatus();
+            return;
+        }
+
+        DisposeTelemetryExporter();
+        var exporter = new TelemetryHttpExporter(options.Port, options.ListenAll);
+        _telemetryHttpExporter = exporter;
+        _activeTelemetryPort = options.Port;
+        _activeTelemetryListenAll = options.ListenAll;
+        exporter.StateChanged += OnTelemetryExporterStateChanged;
+        if (_latestSensorData is not null)
+            exporter.Publish(_latestSensorData);
+
+        exporter.Start();
+        UpdateTelemetryExportStatus();
+    }
+
+    private void OnTelemetryExporterStateChanged(TelemetryHttpExporter exporter) => Dispatcher.UIThread.Post(() =>
+    {
+        if (_disposed || !ReferenceEquals(exporter, _telemetryHttpExporter)) return;
+        UpdateTelemetryExportStatus();
+    });
+
+    private void UpdateTelemetryExportStatus()
+    {
+        if (!_config.TelemetryExport.Enabled)
+        {
+            TelemetryExportStatusText = "Desativado";
+            return;
+        }
+
+        if (!IsRunning)
+        {
+            TelemetryExportStatusText = "Aguardando coleta";
+            return;
+        }
+
+        if (_telemetryHttpExporter is null)
+        {
+            TelemetryExportStatusText = "Aguardando inicialização";
+            return;
+        }
+
+        TelemetryExportStatusText = _telemetryHttpExporter.IsListening
+            ? $"Escutando em {_telemetryHttpExporter.Endpoint}"
+            : $"Falha ao abrir o listener: {_telemetryHttpExporter.LastError ?? "erro desconhecido"}";
+    }
+
+    private void DisposeTelemetryExporter()
+    {
+        var exporter = _telemetryHttpExporter;
+        _telemetryHttpExporter = null;
+        _activeTelemetryPort = null;
+        _activeTelemetryListenAll = null;
+        if (exporter is null) return;
+        exporter.StateChanged -= OnTelemetryExporterStateChanged;
+        exporter.Dispose();
+    }
+
+}

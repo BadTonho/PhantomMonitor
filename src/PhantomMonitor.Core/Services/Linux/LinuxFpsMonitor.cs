@@ -131,6 +131,15 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                 if (TryReadHeader(path, out var header) &&
                     (header.Pid == _lastPid || ProcessPidAlive(header.Pid)))
                 {
+                    // Anti-rasgado: um par que não fecha a relação do escritor
+                    // (instant_fps = 1000 / frametime_delta) veio de uma leitura
+                    // concorrente com a escrita do presents. Uma releitura no
+                    // mesmo objeto resolve; persistindo, o ciclo é descartado em
+                    // vez de inserir um ponto falso nas estatísticas (o próximo
+                    // quadro maduro substitui).
+                    if (!TryReadConsistent(path, ref header))
+                        break;
+
                     telemetry = header;
                     break;
                 }
@@ -302,5 +311,28 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
             // Leitura concorrente transitória (a layer reescreve a cada frame): tenta no próximo ciclo
             return false;
         }
+    }
+
+    /// <summary>
+    /// Lê o objeto tentando um par consistente (anti "leitura rasgada"). O escritor
+    /// (PhantomVulkanLayer) publica os dois valores a partir do MESMO delta, então
+    /// <c>instant_fps × frametime_ms ≈ 1000</c> sempre; um outro produto é sinal de
+    /// campos misturados de frames diferentes. Uma releitura no mesmo objeto resolve
+    /// (a escrita inteira dura nanossegundos); devolve false quando nem a releitura
+    /// fecha — descartar a amostra evita mínimo/percentil falso.
+    /// </summary>
+    private static bool TryReadConsistent(string path, ref PhantomVulkanTelemetryHeader header)
+    {
+        if (IsConsistentPair(header)) return true;
+        if (!TryReadHeader(path, out var retry) || !IsConsistentPair(retry)) return false;
+        header = retry;
+        return true;
+    }
+
+    /// <summary>Relação exata publicada pelo escritor: fps = 1000 / frametime (0 quando o delta é sub-microssegundo).</summary>
+    private static bool IsConsistentPair(in PhantomVulkanTelemetryHeader header)
+    {
+        if (header.FrametimeMs <= 0.001f) return header.InstantFps == 0f;
+        return header.InstantFps > 0f && MathF.Abs(header.FrametimeMs * header.InstantFps - 1000f) <= 50f;
     }
 }

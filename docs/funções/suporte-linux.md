@@ -13,6 +13,7 @@ O **Phantom Monitor** oferece suporte arquitetural e operacional para Linux mant
 - O cabeçalho usa `#pragma pack(1)` e o `LinuxFpsMonitor` usa `StructLayout(Pack = 1)`: os layouts precisam permanecer idênticos (campos `uint64` ficam desalinhados, o que é aceito em x86-64/ARM64).
 - O estado global é atômico (`g_last_present_ns`, `g_telemetry_shm`) e o ciclo `init/cleanup` da memória compartilhada é protegido por mutex; as escritas de `present` e o `munmap` do cleanup são sincronizados por `std::shared_mutex` (lock compartilhado para escrever, exclusivo para desmapear) — um present em voo não pode escrever depois do `munmap`.
 - O repasse de funções de physical device (`Phantom_vkGetPhysicalDeviceProcAddr`, interface v2 do negotiate) encaminha cada chamada pelo GIPA da própria instância (tabela `g_instance_dispatch`), não pelo fallback global; com dois jogos simultâneos, nenhuma instância recebe funções resolvidas pela cadeia da outra.
+- O leitor C# (`LinuxFpsMonitor`) se defende de leituras rasgadas: o escritor publica `instant_fps × frametime_ms ≈ 1000` (os dois vêm do mesmo delta do quadro); um par que não feche a relação indica leitura concorrente com a escrita do presents. Uma releitura no mesmo objeto resolve e, persistindo a inconsistência, o ciclo é descartado em vez de inserir um mínimo ou percentil falso nas estatísticas.
 
 ---
 

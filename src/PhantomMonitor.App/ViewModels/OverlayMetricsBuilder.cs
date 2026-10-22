@@ -64,15 +64,15 @@ internal static class OverlayMetricsBuilder
 
         if (selection.ShowDisk)
         {
-            var read = TryValue(data, keys, SensorType.DiskRead, out var readValue) ? RateValue(readValue) : "—";
-            var write = TryValue(data, keys, SensorType.DiskWrite, out var writeValue) ? RateValue(writeValue) : "—";
+            var read = TryValue(data, keys, SensorType.DiskRead, out var readValue) ? RateText(readValue) : "—";
+            var write = TryValue(data, keys, SensorType.DiskWrite, out var writeValue) ? RateText(writeValue) : "—";
             rows.Add(new OverlayRowPlan("DISCO", "DISCO", $"↓ {read} · ↑ {write}", false));
         }
 
         if (selection.ShowNetwork)
         {
-            var down = TryValue(data, keys, SensorType.NetworkDown, out var downValue) ? RateValue(downValue) : "—";
-            var up = TryValue(data, keys, SensorType.NetworkUp, out var upValue) ? RateValue(upValue) : "—";
+            var down = TryValue(data, keys, SensorType.NetworkDown, out var downValue) ? RateText(downValue) : "—";
+            var up = TryValue(data, keys, SensorType.NetworkUp, out var upValue) ? RateText(upValue) : "—";
             rows.Add(new OverlayRowPlan("REDE", "REDE", $"↓ {down} · ↑ {up}", false));
         }
 
@@ -183,11 +183,12 @@ internal static class OverlayMetricsBuilder
         return false;
     }
 
-    private static string RateValue(double bytesPerSecond) => bytesPerSecond >= 1024 * 1024
+    /// <summary>Formatação de taxa (MB/s, KB/s) compartilhada: as linhas do overlay e
+    /// os cards do painel usavam duas cópias idênticas desta função.</summary>
+    internal static string RateText(double bytesPerSecond) => bytesPerSecond >= 1024 * 1024
         ? $"{bytesPerSecond / (1024 * 1024):F1} MB/s"
         : $"{bytesPerSecond / 1024:F0} KB/s";
 }
-
 internal readonly record struct OverlayConfigSelection(
     bool ShowCpu,
     bool ShowGpu,

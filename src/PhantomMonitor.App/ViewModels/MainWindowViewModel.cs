@@ -1717,10 +1717,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static string Rate(SensorData data, SensorType type)
     {
         if (!Has(data, type)) return "—";
-        var bytesPerSecond = data.GetValue(type);
-        return bytesPerSecond >= 1024 * 1024
-            ? $"{bytesPerSecond / (1024 * 1024):F1} MB/s"
-            : $"{bytesPerSecond / 1024:F0} KB/s";
+        return OverlayMetricsBuilder.RateText(data.GetValue(type));
     }
 
     private static void AddHistory(Queue<double> history, double value, bool hasValue)

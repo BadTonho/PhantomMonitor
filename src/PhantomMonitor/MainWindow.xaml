@@ -53,6 +53,13 @@
                                    Foreground="{StaticResource TextMutedBrush}"/>
                         <TextBlock x:Name="SensorCountText" Text="" FontSize="11"
                                    Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0"/>
+                        <Border x:Name="UpdateBadge" CornerRadius="4" Padding="7,3" Margin="0,8,0,0"
+                                Background="#1810B981" BorderBrush="#3510B981" BorderThickness="1"
+                                Visibility="Collapsed" Cursor="Hand"
+                                MouseLeftButtonUp="OnOpenReleasesPage">
+                            <TextBlock x:Name="UpdateBadgeText" Text="Nova versão" FontSize="10"
+                                       FontWeight="SemiBold" Foreground="#6EE7B7"/>
+                        </Border>
                     </StackPanel>
                 </Border>
 
@@ -147,6 +154,29 @@
                                 </Style>
                             </Button.Resources>
                         </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Update Banner -->
+                <Border x:Name="UpdateBanner" Background="#1810B981" BorderBrush="#3510B981"
+                        BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,0,0,14"
+                        Visibility="Collapsed">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Nova versão disponível" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="#6EE7B7"/>
+                            <TextBlock x:Name="UpdateBannerText" Text="" FontSize="11"
+                                       Foreground="#A7F3D0" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Ver no GitHub"
+                                Style="{StaticResource SecondaryButton}"
+                                FontSize="11" FontWeight="SemiBold" Padding="12,6"
+                                Cursor="Hand" Click="OnOpenReleasesPage"
+                                VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
 
@@ -433,6 +463,32 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Update Card -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <TextBlock Text="ATUALIZAÇÕES" FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                            <Button Content="Buscar agora" Style="{StaticResource SecondaryButton}"
+                                    FontSize="11" Padding="10,4"
+                                    HorizontalAlignment="Right" Click="OnCheckUpdatesClick"/>
+                        </Grid>
+                        <TextBlock x:Name="UpdateVersionText" Text="" FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="UpdateStatusText" Text="" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"
+                                   TextWrapping="Wrap"/>
+                        <CheckBox x:Name="AutoCheckToggle" Content="Verificar automaticamente (no arranque e a cada 24h)"
+                                  FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                  Margin="0,10,0,0"
+                                  Checked="OnUpdateAutoCheckToggled" Unchecked="OnUpdateAutoCheckToggled"/>
+                        <CheckBox x:Name="BetaChannelToggle" Content="Canal beta (aceitar pré-releases do GitHub)"
+                                  FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                  Margin="0,6,0,0"
+                                  Checked="OnUpdateBetaToggled" Unchecked="OnUpdateBetaToggled"/>
                     </StackPanel>
                 </Border>
 

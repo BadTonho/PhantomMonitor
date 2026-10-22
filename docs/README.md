@@ -13,6 +13,7 @@ Esta é a documentação em português do Phantom Monitor. Os guias em inglês f
 - [Inventário de hardware](funções/inventário-hardware.md)
 - [Bandeja do sistema e inicialização do Windows](funções/tray.md)
 - [Atalhos globais](funções/hotkey.md)
+- [Atualizações (GitHub Releases)](funções/atualizações.md)
 
 ### Sensores e configuração
 

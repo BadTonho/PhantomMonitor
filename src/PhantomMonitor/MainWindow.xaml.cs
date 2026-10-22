@@ -9,6 +9,7 @@ using PhantomMonitor.Models;
 using PhantomMonitor.Overlay;
 using PhantomMonitor.Services;
 using PhantomMonitor.Services.Telemetry;
+using PhantomMonitor.Services.Update;
 
 namespace PhantomMonitor;
 
@@ -35,6 +36,8 @@ public partial class MainWindow : Window
     private DateTime _startTime;
     private string _logDir = "";
     private AppConfig _config = new();
+    private UpdateService? _updates;
+    private System.Windows.Threading.DispatcherTimer? _updateTimer;
 
     public MainWindow()
     {
@@ -64,6 +67,7 @@ public partial class MainWindow : Window
         ApplyHotkey();
         ApplyAlertsConfig();
         InitTrayIcon();
+        InitUpdateService();
 
         StartupToggle.IsChecked = StartupManager.IsEnabled();
     }
@@ -430,6 +434,120 @@ public partial class MainWindow : Window
 
     private void SaveConfig() => _config.Save(ConfigPaths.ConfigFile);
 
+    /// <summary>
+    /// Liga o serviço de atualização do Core ao config e à UI: checagem no
+    /// arranque + timer de 24h (build de desenvolvimento é no-op silencioso).
+    /// Badge do sidebar, banner e card "Atualizações" refletem o estado via
+    /// evento, sempre no dispatcher da UI (o evento chega no thread do caller).
+    /// </summary>
+    private void InitUpdateService()
+    {
+        _updates = new UpdateService(
+            _config.Update.Repository,
+            autoCheck: () => _config.Update.AutoCheck,
+            includePreRelease: () => _config.Update.CheckBeta);
+        _updates.StateChanged += state => Dispatcher.InvokeAsync(() => OnUpdateStateChanged(state));
+
+        AutoCheckToggle.IsChecked = _config.Update.AutoCheck;
+        BetaChannelToggle.IsChecked = _config.Update.CheckBeta;
+        UpdateVersionText.Text = $"Versão instalada: v{UpdateVersion.Current}";
+
+        if (UpdateVersion.IsDevelopmentBuild)
+        {
+            UpdateStatusText.Text = "Build de desenvolvimento: verificação de atualização desativada.";
+        }
+        else if (_updates.ShouldAutoCheck)
+        {
+            _ = _updates.CheckAsync();
+        }
+
+        _updateTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(24) };
+        _updateTimer.Tick += (_, _) =>
+        {
+            if (_updates is { } updates && updates.ShouldAutoCheck) _ = updates.CheckAsync();
+        };
+        _updateTimer.Start();
+    }
+
+    private string GetRepositoryPath() =>
+        UpdateService.NormalizeRepository(_config.Update.Repository) ?? UpdateService.DefaultRepository;
+
+    /// <summary>Estado do updater -> UI (badge, banner e card); roda no dispatcher.</summary>
+    private void OnUpdateStateChanged(UpdateState state)
+    {
+        var versionLine = $"Versão instalada: v{state.CurrentVersion}";
+        if (state.LastChecked is { } lastCheck)
+            versionLine += $" · Última checagem: {lastCheck:dd/MM/yyyy HH:mm}";
+        UpdateVersionText.Text = versionLine;
+
+        var available = state.Status == UpdateStatus.Available;
+        UpdateBanner.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        UpdateBadge.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+
+        UpdateBannerText.Text = available && state.AvailableVersion is { } version
+            ? $"Phantom Monitor {version}"
+              + (state.IsPreRelease ? " (pré-release, canal beta)" : "")
+              + " — confira as novidades no GitHub."
+            : "";
+        UpdateBadgeText.Text = available ? $"Nova versão: {state.AvailableVersion}" : "Nova versão";
+
+        UpdateStatusText.Text = state.Status switch
+        {
+            UpdateStatus.Checking => "Verificando atualizações...",
+            UpdateStatus.UpToDate => "Nenhuma atualização disponível.",
+            UpdateStatus.Available => state.AvailableVersion is { } avail
+                ? $"Nova versão {avail} disponível." : "",
+            _ => "",
+        };
+        if (state.Message is { } message) UpdateStatusText.Text = message;
+    }
+
+    private void OnCheckUpdatesClick(object sender, RoutedEventArgs e)
+    {
+        // Botão manual: checa mesmo com toggle desligado (e em dev é no-op guardado).
+        if (_updates is { } updates) _ = updates.CheckAsync();
+    }
+
+    private void OnOpenReleasesPage(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = $"https://github.com/{GetRepositoryPath()}/releases/latest",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Update.OpenReleases", ex);
+        }
+    }
+
+    private void OnUpdateAutoCheckToggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return; // ignora o ajuste inicial do checkbox
+
+        _config.Update.AutoCheck = AutoCheckToggle.IsChecked == true;
+        SaveConfig();
+
+        // Ligar o toggle com Idle/Failure: responde na hora em vez de esperar
+        // a próxima checagem agendada.
+        if (_config.Update.AutoCheck && _updates is { } updates &&
+            updates.State.Status is UpdateStatus.Idle or UpdateStatus.Failure)
+        {
+            _ = updates.CheckAsync();
+        }
+    }
+
+    private void OnUpdateBetaToggled(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return; // ignora o ajuste inicial do checkbox
+
+        _config.Update.CheckBeta = BetaChannelToggle.IsChecked == true;
+        SaveConfig();
+    }
+
     private void OnSensorData(SensorData data)
     {
         if (Dispatcher.HasShutdownStarted) return;
@@ -650,6 +768,9 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _updateTimer?.Stop();
+        _updateTimer = null;
+        _updates = null;
         _hotkeys.Dispose();
         _pauseHotkeys.Dispose();
         _tray?.Dispose();

@@ -13,6 +13,7 @@ English-language documentation for Phantom Monitor. Portuguese originals are ava
 - [Hardware inventory](functions/hardware-inventory.md)
 - [System tray and Windows startup](functions/system-tray.md)
 - [Global hotkeys](functions/global-hotkey.md)
+- [Updates (GitHub Releases)](functions/updates.md)
 
 ### Sensors and configuration
 

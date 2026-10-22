@@ -14,6 +14,7 @@ public sealed class LinuxSensorService : ISensorService
     private readonly Timer _timer;
     private readonly int _updateIntervalMs;
     private readonly LinuxFpsMonitor _fpsMonitor = new();
+    private readonly NvidiaGpuSensorReader _nvidiaGpuSensorReader = new();
     private readonly object _updateLock = new();
     private SensorData _current = new();
 
@@ -701,6 +702,7 @@ public sealed class LinuxSensorService : ISensorService
                 .ToArray();
 
             var cardIndex = 0;
+            var nvidiaIndex = 0u;
             foreach (var cardName in cards)
             {
                 cardIndex++;
@@ -708,13 +710,23 @@ public sealed class LinuxSensorService : ISensorService
 
                 var isPrimary = cardIndex == 1;
 
+                // O driver amdgpu publica utilização/VRAM no sysfs DRM. O driver
+                // NVIDIA publica essas leituras pela NVML, carregada opcionalmente.
+                if (TryReadSysfsFile(Path.Combine(deviceDir, "vendor"), out var vendorRaw) &&
+                    vendorRaw.Equals("0x10de", StringComparison.OrdinalIgnoreCase))
+                {
+                    var nvmlIndex = nvidiaIndex++;
+                    if (_nvidiaGpuSensorReader.TryRead(ReadPciBusId(deviceDir), nvmlIndex, out var nvidia))
+                        PublishNvidiaGpuReading(data, cardIndex, nvidia);
+                }
+
                 // AMD GPU Busy Percent
                 var busyPath = Path.Combine(deviceDir, "gpu_busy_percent");
                 if (File.Exists(busyPath) &&
                     double.TryParse(File.ReadAllText(busyPath).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var busy))
                 {
                     data.SetValue(new SensorKey(SensorType.GpuCore, cardIndex), Math.Clamp(busy, 0.0, 100.0), cardName);
-                    if (isPrimary)
+                    if (isPrimary || !data.Values.ContainsKey(SensorType.GpuCore))
                         data.SetValue(SensorType.GpuCore, Math.Clamp(busy, 0.0, 100.0), "GPU Core");
                 }
 
@@ -724,7 +736,7 @@ public sealed class LinuxSensorService : ISensorService
                     long.TryParse(File.ReadAllText(vramUsedPath).Trim(), out var bytes))
                 {
                     data.SetValue(new SensorKey(SensorType.GpuMemoryUsed, cardIndex), bytes / (1024.0 * 1024.0), cardName); // MB
-                    if (isPrimary)
+                    if (isPrimary || !data.Values.ContainsKey(SensorType.GpuMemoryUsed))
                         data.SetValue(SensorType.GpuMemoryUsed, bytes / (1024.0 * 1024.0), "VRAM Usada"); // MB
                 }
 
@@ -733,7 +745,7 @@ public sealed class LinuxSensorService : ISensorService
                     long.TryParse(File.ReadAllText(vramTotalPath).Trim(), out var totalBytes))
                 {
                     data.SetValue(new SensorKey(SensorType.GpuMemoryTotal, cardIndex), totalBytes / (1024.0 * 1024.0), cardName); // MB
-                    if (isPrimary)
+                    if (isPrimary || !data.Values.ContainsKey(SensorType.GpuMemoryTotal))
                         data.SetValue(SensorType.GpuMemoryTotal, totalBytes / (1024.0 * 1024.0), "VRAM Total"); // MB
                 }
             }
@@ -744,10 +756,69 @@ public sealed class LinuxSensorService : ISensorService
         }
     }
 
+    private static string? ReadPciBusId(string deviceDir)
+    {
+        if (TryReadSysfsFile(Path.Combine(deviceDir, "uevent"), out var uevent))
+        {
+            var slot = uevent.Split('\n')
+                .FirstOrDefault(line => line.StartsWith("PCI_SLOT_NAME=", StringComparison.Ordinal));
+            if (slot is not null)
+                return slot["PCI_SLOT_NAME=".Length..].Trim();
+        }
+
+        try
+        {
+            var target = new DirectoryInfo(deviceDir).ResolveLinkTarget(returnFinalTarget: true);
+            return target is null ? null : Path.GetFileName(target.FullName);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void PublishNvidiaGpuReading(SensorData data, int cardIndex, NvidiaGpuReading reading)
+    {
+        if (reading.UtilizationPercent is double utilization)
+        {
+            data.SetValue(new SensorKey(SensorType.GpuCore, cardIndex), utilization, reading.Label);
+            if (!data.Values.ContainsKey(SensorType.GpuCore))
+                data.SetValue(SensorType.GpuCore, utilization, reading.Label);
+        }
+
+        if (reading.MemoryUsedMb is double memoryUsed)
+        {
+            data.SetValue(new SensorKey(SensorType.GpuMemoryUsed, cardIndex), memoryUsed, reading.Label);
+            if (!data.Values.ContainsKey(SensorType.GpuMemoryUsed))
+                data.SetValue(SensorType.GpuMemoryUsed, memoryUsed, reading.Label);
+        }
+
+        if (reading.MemoryTotalMb is double memoryTotal)
+        {
+            data.SetValue(new SensorKey(SensorType.GpuMemoryTotal, cardIndex), memoryTotal, reading.Label);
+            if (!data.Values.ContainsKey(SensorType.GpuMemoryTotal))
+                data.SetValue(SensorType.GpuMemoryTotal, memoryTotal, reading.Label);
+        }
+
+        if (reading.TemperatureCelsius is double temperature)
+        {
+            data.SetValue(new SensorKey(SensorType.GpuTemperature, cardIndex), temperature, reading.Label);
+            if (!data.Values.TryGetValue(SensorType.GpuTemperature, out var currentTemperature) ||
+                temperature > currentTemperature)
+            {
+                data.SetValue(SensorType.GpuTemperature, temperature, reading.Label);
+            }
+        }
+    }
+
     public void Dispose()
     {
         Stop();
+        using var callbacksFinished = new ManualResetEvent(false);
+        if (_timer.Dispose(callbacksFinished))
+            callbacksFinished.WaitOne();
+
         _fpsMonitor.Dispose();
-        _timer.Dispose();
+        _nvidiaGpuSensorReader.Dispose();
     }
 }

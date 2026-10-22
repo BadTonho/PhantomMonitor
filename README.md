@@ -32,7 +32,7 @@ The project has two frontends: **WPF on Windows** and **Avalonia on Linux**. The
 
 | Feature | Windows · WPF | Linux · Avalonia |
 | --- | --- | --- |
-| Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors | Sensors published through `sysfs`, `procfs`, `hwmon`, and DRM |
+| Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors | Sensors from `sysfs`, `procfs`, `hwmon`, DRM, and NVIDIA NVML when its driver library is installed |
 | FPS and frametime | PresentMon through ETW | Phantom Vulkan layer for Vulkan games |
 | Overlay | Advanced OSD, click-through, profiles, and visual editor | Configurable floating window; the compositor controls position and fullscreen behavior |
 | Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |

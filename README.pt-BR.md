@@ -32,7 +32,7 @@ O projeto tem dois frontends: **WPF no Windows** e **Avalonia no Linux**. Cada p
 
 | Recurso | Windows · WPF | Linux · Avalonia |
 | --- | --- | --- |
-| Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe | Sensores publicados por `sysfs`, `procfs`, `hwmon` e DRM |
+| Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe | Sensores de `sysfs`, `procfs`, `hwmon`, DRM e NVML da NVIDIA quando a biblioteca do driver está instalada |
 | FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
 | Overlay | OSD avançado, click-through, perfis e editor visual | Janela flutuante configurável; o compositor controla a posição e o fullscreen |
 | Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |

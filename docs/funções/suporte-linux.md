@@ -57,8 +57,11 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
 * **Rede (`/proc/net/dev`):**
   * ↑/↓ somados nas séries canônicas; `NetworkUp#i`/`NetworkDown#i` por interface (slot estável por nome, `lo` ignorado);
   * Totais da sessão: `NetworkUpTotal`/`NetworkDownTotal` (integrando a velocidade observada entre amostras).
-* **GPU (Utilização e VRAM):**
-  * Monitoramento DRM em `/sys/class/drm/card*/device/gpu_busy_percent` e `mem_info_vram_*` — multi-GPU real: canônica do primeiro card + `GpuCore#i`, `GpuMemoryUsed#i`, `GpuMemoryTotal#i` para cada card.
+* **GPU (Utilização, VRAM e temperatura):**
+  * AMD: leitura DRM em `/sys/class/drm/card*/device/gpu_busy_percent` e `mem_info_vram_*`.
+  * NVIDIA: leitura opcional pela NVML (`libnvidia-ml.so.1`), fornecida pelo driver NVIDIA instalado; coleta utilização, VRAM usada/total e temperatura principal sem executar `nvidia-smi`.
+  * Multi-GPU: cada card publica séries `GpuCore#i`, `GpuMemoryUsed#i`, `GpuMemoryTotal#i` e `GpuTemperature#i` quando o driver fornece a métrica; a série canônica usa a primeira leitura disponível.
+  * Hot Spot e temperatura da VRAM aparecem somente quando o driver também publica esses canais em `hwmon` com rótulos reconhecidos. O app não distribui a NVML.
 * **Bateria/Fonte AC (P6.4):**
   * `/sys/class/power_supply/BAT*` (classe `type` = `Battery`): nível (`capacity`), tensão (`voltage_now`, µV → V), potência (`power_now` µW; respatilha `current_now` × tensão) e desgaste ((1 − `energy_full`/`energy_full_design`) × 100; respatilha `charge_full(_design)`).
   * Sinal normalizado pelo arquivo `status`: **positivo consumindo**, negativo carregando (drivers divergem no sinal de `current_now`).

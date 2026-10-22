@@ -34,7 +34,7 @@ The service reads standard kernel interfaces without injecting code into other p
 - **Temperatures and fans:** `/sys/class/hwmon/hwmon*`. CPU temperature comes from drivers such as `coretemp`, `k10temp`, and `zenpower`. GPU temperature labels distinguish edge, junction/hotspot, and memory/VRAM temperatures when the driver supplies labels. Motherboard/EC temperatures and fan slots are published when available.
 - **Disk:** `/proc/diskstats` provides aggregate throughput and per-device `DiskRead#i`/`DiskWrite#i` series.
 - **Network:** `/proc/net/dev` publishes aggregate and per-interface throughput; loopback is excluded. Session totals integrate observed throughput.
-- **GPU:** DRM device files under `/sys/class/drm/card*/device` publish GPU busy percentage and VRAM use/capacity where supported. Multiple cards receive per-instance series.
+- **GPU utilization, VRAM, and temperature:** AMD metrics come from DRM files under `/sys/class/drm/card*/device`. NVIDIA metrics are read optionally through NVML (`libnvidia-ml.so.1`), supplied by the installed NVIDIA driver; this provides utilization, used/total VRAM, and core temperature without spawning `nvidia-smi`. Multiple cards receive per-instance series, and the canonical series uses the first available reading. Hot Spot and VRAM temperature appear only when the driver also exposes recognized `hwmon` labels. NVML is not bundled with the app.
 - **Battery and AC power:** `/sys/class/power_supply/BAT*` and mains/UPS entries provide charge, voltage, power, wear, and AC-connected state. Power is positive while discharging and negative while charging. Systems without a power-supply device publish no battery series.
 
 Unavailable values display as `—` in the dashboard; a reported zero remains a valid value.

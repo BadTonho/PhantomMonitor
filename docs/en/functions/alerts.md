@@ -14,7 +14,7 @@ Sensor alert rules are evaluated for each snapshot. The shared Core evaluator ha
 ## Evaluation semantics
 
 - **Edge trigger:** an action fires when a condition changes from false to true.
-- **Cooldown:** while the condition remains true, it can fire again after `cooldownSeconds`. State is tied to rule content (sensor/index, comparison, threshold, message, and cooldown), not its list position.
+- **Cooldown:** while the condition remains true, it can fire again after `cooldownSeconds`. State is tied to the rule's watched identity (sensor/index, comparison, threshold), not its list position; editing presentation fields (message, cooldown) does not reset cooldowns either.
 - **Rearm:** when the condition becomes false, the rule is rearmed and fires on the next transition to true.
 - **Missing sensor:** a sensor is missing only if it is absent from the snapshot. A present value of `0` is valid; for example, `Below` can alert on a fan at 0 RPM.
 

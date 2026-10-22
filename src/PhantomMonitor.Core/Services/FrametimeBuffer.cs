@@ -66,6 +66,22 @@ public sealed class FrametimeBuffer
         }
     }
 
+    /// <summary>
+    /// Média da janela sem materializar cópia: o <see cref="SensorTuningEngine"/>
+    /// chama por amostra fresca de toda série suavizada e o valor anterior gastava
+    /// um float[] + LINQ por chamada.
+    /// </summary>
+    public double GetAverage()
+    {
+        lock (_lock)
+        {
+            if (_count == 0) return 0;
+            double sum = 0;
+            for (var i = 0; i < _count; i++) sum += _buffer[i];
+            return sum / _count;
+        }
+    }
+
     public (float min, float max, float avg) GetStats()
     {
         lock (_lock)

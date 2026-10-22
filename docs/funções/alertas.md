@@ -14,7 +14,7 @@ Regras de alerta sobre sensores avaliadas a cada snapshot (mesma cadência do mo
 ## Como funciona
 
 - **Disparo por borda:** a ação dispara quando a condição passa de falsa para verdadeira.
-- **Cooldown:** enquanto a condição permanece verdadeira, a regra re-dispara a cada `cooldownSeconds` (evita spam de popups). O estado é atrelado ao **conteúdo** da regra (sensor+índice, comparador, limite, mensagem e cooldown), não ao índice na lista — reordenar regras no runtime não desloca cooldowns.
+- **Cooldown:** enquanto a condição permanece verdadeira, a regra re-dispara a cada `cooldownSeconds` (evita spam de popups). O estado é atrelado à **identidade de vigilância** da regra (sensor+índice, comparador, limite), não ao índice na lista — reordenar regras em runtime não desloca cooldowns, e editar campos de apresentação (mensagem, cooldown) também não reinicia o estado.
 - **Rearme:** quando a condição volta a ser falsa, a regra é rearmada e dispara imediatamente na próxima vez que for verdadeira.
 - **Sensor ausente:** é ausente apenas quando o sensor **não aparece no snapshot** (leitura nunca ocorreu) — nesse caso a regra não dispara nem mantém o estado ativo. Um valor **0 presente** é leitura real e válido: regras `Below` disparam normalmente (ex.: ventoinha parada em 0 RPM).
 

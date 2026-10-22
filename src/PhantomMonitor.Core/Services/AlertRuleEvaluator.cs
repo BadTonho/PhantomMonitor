@@ -6,6 +6,7 @@ namespace PhantomMonitor.Services;
 public sealed class AlertRuleEvaluator
 {
     private readonly AlertsConfig _config;
+    private readonly object _lock = new();
     private readonly Dictionary<int, DateTime> _lastTriggered = new();
     private readonly HashSet<int> _active = new();
 
@@ -13,8 +14,16 @@ public sealed class AlertRuleEvaluator
 
     public IReadOnlyList<AlertTrigger> Evaluate(SensorData data)
     {
+        lock (_lock)
+        {
+            return EvaluateCore(data);
+        }
+    }
+
+    private IReadOnlyList<AlertTrigger> EvaluateCore(SensorData data)
+    {
+        if (!_config.Enabled || _config.Rules.Count == 0) return SafeEmpty;
         var triggered = new List<AlertTrigger>();
-        if (!_config.Enabled || _config.Rules.Count == 0) return triggered;
 
         foreach (var rule in _config.Rules)
         {
@@ -65,8 +74,15 @@ public sealed class AlertRuleEvaluator
         return triggered;
     }
 
+    /// <summary>Lista compartilhada para o caminho desativado/sem regras: alocações
+    /// por tick eram desperdício puro (o avaliador roda a cada snapshot).</summary>
+    private static readonly IReadOnlyList<AlertTrigger> SafeEmpty = [];
+
     private static int ActiveKey(AlertRule rule) =>
-        HashCode.Combine(rule.Sensor, rule.SensorIndex, rule.Comparison, rule.Threshold, rule.Message, rule.CooldownSeconds);
+        // Identidade estável: sensor + comparação + limiar. Mensagem e cooldown são
+        // campos de apresentação/ajuste; incluí-los mudava o hash ao editar a regra
+        // em runtime e órfãava o estado de cooldown/ativo (retrigger antecipado).
+        HashCode.Combine(rule.Sensor, rule.SensorIndex, rule.Comparison, rule.Threshold);
 
     private int EffectiveCooldown(AlertRule rule) =>
         rule.CooldownSeconds > 0 ? rule.CooldownSeconds : Math.Max(1, _config.CooldownSeconds);

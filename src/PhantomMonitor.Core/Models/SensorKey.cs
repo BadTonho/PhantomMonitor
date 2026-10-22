@@ -31,7 +31,25 @@ public readonly struct SensorKey : IEquatable<SensorKey>, IComparable<SensorKey>
 
     public bool IsPrimary => Index == 0;
 
-    public override string ToString() => Index == 0 ? Type.ToString() : $"{Type}#{Index}";
+    /// <summary>
+    /// Nome de cada <see cref="SensorType"/>, indexado pelo valor do enum (contíguo,
+    /// sem lacunas: 0..N-1). Cache para ToString sem alocação — chaves canônicas eram
+    /// recaixadas (boxing) e formatadas por tick em todos os consumidores
+    /// (rótulos, padrões do OSD, journal, engines).
+    /// </summary>
+    private static readonly string[] TypeNames =
+        [.. Enum.GetValues<SensorType>().Select(type => type.ToString())];
+
+    /// <summary>Memoização das formas com instância ("GpuCore#1"): conjunto fechado
+    /// (categorias × índices publicados); string imutável garante reuso seguro entre
+    /// threads (GetOrAdd sem bloquear consumidores por tick).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(SensorType Type, int Index), string> InstanceNames = new();
+
+    public override string ToString()
+    {
+        if (Index == 0) return TypeNames[(int)Type];
+        return InstanceNames.GetOrAdd((Type, Index), static key => $"{TypeNames[(int)key.Type]}#{key.Index}");
+    }
 
     public bool Equals(SensorKey other) => Type == other.Type && Index == other.Index;
     public override bool Equals(object? obj) => obj is SensorKey other && Equals(other);

@@ -124,7 +124,7 @@ public sealed class SensorTuningEngine
                     if (!rule.Window.TryGetValue(key, out var window))
                         rule.Window[key] = window = new FrametimeBuffer(rule.Smoothing);
                     window.Add((float)raw);
-                    published = window.ToArray().Average();
+                    published = window.GetAverage(); // sem cópia + LINQ por amostra
                 }
 
                 WriteValue(data, key, published);

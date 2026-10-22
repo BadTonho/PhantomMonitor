@@ -31,6 +31,10 @@ public sealed class LinuxSensorService : ISensorService
     private readonly Dictionary<string, int> _diskSlots = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (long Read, long Write)> _prevPerDisk = new(StringComparer.Ordinal);
 
+    /// <summary>Contagem de núcleos com cpufreq, detectada na primeira leitura
+    /// (layout estável na sessão; ver ReadCpuStats).</summary>
+    private int? _cpuCoreCount;
+
     // Network state (↑/↓ por interface + totais da sessão)
     private readonly Dictionary<string, int> _nicSlots = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (long Rx, long Tx)> _prevPerNic = new(StringComparer.Ordinal);
@@ -41,6 +45,14 @@ public sealed class LinuxSensorService : ISensorService
 
     // Slot estável por caminho de hwmon (hwmon com o mesmo "name", como duas amdgpu).
     private readonly Dictionary<string, int> _hwmonSlots = new(StringComparer.Ordinal);
+
+    // Diagnóstico de fontes: reconstruído no máximo 1x/s (re-enumera sysfs/DRM por
+    // chamada; a cada tick multiplicava I/O em polling rápido). Lista reusada entre
+    // snapshots até a próxima reconstrução — a reconstrução gera lista nova antes
+    // de publicar, consumidor nunca vê lista parcial.
+    private static readonly TimeSpan DiagnosticsRefreshInterval = TimeSpan.FromSeconds(1);
+    private DateTime _lastDiagnosticsBuild = DateTime.MinValue;
+    private List<string> _cachedDiagnostics = [];
 
     // Estatísticas por série da sessão (min/max/avg; zeradas pelo usuário).
     private readonly SeriesStatsTracker _seriesStats = new();
@@ -132,7 +144,18 @@ public sealed class LinuxSensorService : ISensorService
             // Estatísticas por série: uma amostra por snapshot publicado.
             _seriesStats.Commit(data, repeated);
             data.SeriesStats = _seriesStats.CopySnapshot();
-            data.SensorDebugInfo = BuildSensorDiagnostics(data);
+
+            // Diagnóstico de fontes (Sistema/DISCO/GPU...) re-enumera sysfs/DRM:
+            // no máximo 1x/s. As listas mudam devagar; a cada tick isso custava
+            // dezenas de I/O e alocações no ritmo mínimo de 10 Hz. Consumidores
+            // recebem a lista estável (a reconstrução usa uma lista nova antes
+            // de publicar) — ver docs diagnostico.
+            if ((data.Timestamp - _lastDiagnosticsBuild) >= DiagnosticsRefreshInterval)
+            {
+                _lastDiagnosticsBuild = data.Timestamp;
+                _cachedDiagnostics = BuildSensorDiagnostics(data);
+            }
+            data.SensorDebugInfo = _cachedDiagnostics;
 
             _current = data;
             if (IsRunning)
@@ -157,9 +180,21 @@ public sealed class LinuxSensorService : ISensorService
         {
             if (!File.Exists("/proc/stat")) return;
 
-            var lines = File.ReadLines("/proc/stat");
-            var cpuLine = lines.FirstOrDefault(l => l.StartsWith("cpu "));
-            if (cpuLine == null) return;
+            // Uma única passada: a leitura duplicada de /proc/stat achava o
+            // agregado e depois relia o arquivo todo para os núcleos.
+            string? cpuLine = null;
+            var perCoreLines = new List<string>(16);
+            foreach (var line in File.ReadLines("/proc/stat"))
+            {
+                if (cpuLine is null && line.StartsWith("cpu ", StringComparison.Ordinal))
+                {
+                    cpuLine = line;
+                    continue;
+                }
+                if (line.StartsWith("cpu", StringComparison.Ordinal) && line.Length > 3)
+                    perCoreLines.Add(line);
+            }
+            if (cpuLine is null) return;
 
             var parts = cpuLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 5)
@@ -190,11 +225,9 @@ public sealed class LinuxSensorService : ISensorService
                 _prevCpuIdle = idleTotal;
             }
 
-            // Uso por núcleo: linhas "cpuN" do /proc/stat com estado por núcleo.
-            foreach (var line in File.ReadLines("/proc/stat"))
+            // Uso por núcleo: linhas "cpuN" coletadas acima, com estado por núcleo.
+            foreach (var line in perCoreLines)
             {
-                if (!line.StartsWith("cpu", StringComparison.Ordinal) || line.Length <= 3) continue;
-
                 var coreToken = line["cpu".Length..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (coreToken.Length == 0 || !int.TryParse(coreToken[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var core))
                     continue;
@@ -228,11 +261,21 @@ public sealed class LinuxSensorService : ISensorService
                 _prevPerCore[core] = (cTotal, cIdleTotal);
             }
 
-            // Frequência por núcleo (scaling_cur_freq em kHz; pára no primeiro core sem cpufreq)
-            for (var core = 0; core < 512; core++)
+            // Frequência por núcleo (scaling_cur_freq em kHz). O layout de núcleos
+            // com cpufreq é estável na sessão: a contagem é detectada uma única vez
+            // (antes: até 512 File.Exists/ReadAllText por tick = O(núcleos) syscalls
+            // a cada snapshot). Semântica original mantida: pára no primeiro core
+            // sem cpufreq.
+            if (_cpuCoreCount is null)
+            {
+                var count = 0;
+                while (count < 512 && File.Exists($"/sys/devices/system/cpu/cpu{count}/cpufreq/scaling_cur_freq"))
+                    count++;
+                _cpuCoreCount = count;
+            }
+            for (var core = 0; core < _cpuCoreCount.Value; core++)
             {
                 var freqPath = $"/sys/devices/system/cpu/cpu{core}/cpufreq/scaling_cur_freq";
-                if (!File.Exists(freqPath)) break;
                 if (!long.TryParse(File.ReadAllText(freqPath).Trim(), out var coreKhz)) continue;
                 data.SetValue(new SensorKey(SensorType.CpuClock, core + 1), coreKhz / 1000.0, $"CPU Core #{core}");
             }
@@ -761,36 +804,43 @@ public sealed class LinuxSensorService : ISensorService
 
     private List<string> BuildSensorDiagnostics(SensorData data)
     {
+        // Disponibilidade por categoria resolve em UMA passada sobre as séries:
+        // antes, cada AddAvailability varria data.Series inteira (O(tipos × séries)
+        // por reconstrução).
+        var availableTypes = new HashSet<SensorType>(data.Values.Keys);
+        foreach (var seriesKey in data.Series.Keys)
+            availableTypes.Add(seriesKey.Type);
+
         var lines = new List<string>
         {
             "[SISTEMA] Fontes Linux consultadas pelo Phantom Monitor; ausência de série pode indicar que a fonte não a publica."
         };
 
-        AddAvailability(lines, data, "CPU", SensorType.CpuTotal, "/proc/stat", "arquivo ausente ou sem amostras válidas");
-        AddAvailability(lines, data, "CPU", SensorType.CpuPerCore, "/proc/stat", "o kernel não publicou linhas por núcleo");
-        AddAvailability(lines, data, "CPU", SensorType.CpuTemperature, "/sys/class/hwmon (coretemp/k10temp/zenpower)", "nenhum canal de temperatura da CPU foi exposto");
-        AddAvailability(lines, data, "CPU", SensorType.CpuClock, "sysfs cpufreq", "frequência atual não publicada pelo driver de CPU");
+        AddAvailability(lines, availableTypes, "CPU", SensorType.CpuTotal, "/proc/stat", "arquivo ausente ou sem amostras válidas");
+        AddAvailability(lines, availableTypes, "CPU", SensorType.CpuPerCore, "/proc/stat", "o kernel não publicou linhas por núcleo");
+        AddAvailability(lines, availableTypes, "CPU", SensorType.CpuTemperature, "/sys/class/hwmon (coretemp/k10temp/zenpower)", "nenhum canal de temperatura da CPU foi exposto");
+        AddAvailability(lines, availableTypes, "CPU", SensorType.CpuClock, "sysfs cpufreq", "frequência atual não publicada pelo driver de CPU");
 
         foreach (var type in new[] { SensorType.RamUsage, SensorType.RamUsed, SensorType.RamTotal, SensorType.RamAvailable })
-            AddAvailability(lines, data, "MEMÓRIA", type, "/proc/meminfo", "campo necessário ausente ou inválido");
+            AddAvailability(lines, availableTypes, "MEMÓRIA", type, "/proc/meminfo", "campo necessário ausente ou inválido");
 
         foreach (var type in new[] { SensorType.DiskRead, SensorType.DiskWrite, SensorType.DiskUsage })
-            AddAvailability(lines, data, "DISCO", type, "/proc/diskstats", "nenhum disco elegível publicou contadores");
-        AddAvailability(lines, data, "DISCO", SensorType.DiskTemperature, "/sys/class/hwmon", "o dispositivo não expôs temperatura");
+            AddAvailability(lines, availableTypes, "DISCO", type, "/proc/diskstats", "nenhum disco elegível publicou contadores");
+        AddAvailability(lines, availableTypes, "DISCO", SensorType.DiskTemperature, "/sys/class/hwmon", "o dispositivo não expôs temperatura");
 
         foreach (var type in new[] { SensorType.NetworkDown, SensorType.NetworkUp })
-            AddAvailability(lines, data, "REDE", type, "/proc/net/dev", "nenhuma interface publicou contadores");
+            AddAvailability(lines, availableTypes, "REDE", type, "/proc/net/dev", "nenhuma interface publicou contadores");
 
-        AddAvailability(lines, data, "VENTOINHAS", SensorType.FanSpeed, "/sys/class/hwmon", "nenhum fan*_input foi exposto");
-        AddAvailability(lines, data, "GPU", SensorType.GpuFan, "hwmon da GPU", "nenhum fan*_input da GPU foi exposto");
+        AddAvailability(lines, availableTypes, "VENTOINHAS", SensorType.FanSpeed, "/sys/class/hwmon", "nenhum fan*_input foi exposto");
+        AddAvailability(lines, availableTypes, "GPU", SensorType.GpuFan, "hwmon da GPU", "nenhum fan*_input da GPU foi exposto");
 
         foreach (var type in new[] { SensorType.BatteryLevel, SensorType.BatteryVoltage, SensorType.BatteryPower,
                      SensorType.BatteryWearLevel, SensorType.BatteryAcPower })
-            AddAvailability(lines, data, "BATERIA", type, "/sys/class/power_supply", "nenhuma bateria compatível detectada (normal em desktops)");
+            AddAvailability(lines, availableTypes, "BATERIA", type, "/sys/class/power_supply", "nenhuma bateria compatível detectada (normal em desktops)");
 
         foreach (var type in new[] { SensorType.Fps, SensorType.FrametimeMs, SensorType.FpsAvg, SensorType.FpsMin,
                      SensorType.Fps1Low, SensorType.Fps01Low, SensorType.FpsMax })
-            AddAvailability(lines, data, "FPS", type, "memória compartilhada da PhantomVulkanLayer", _fpsMonitor.DebugInfo);
+            AddAvailability(lines, availableTypes, "FPS", type, "memória compartilhada da PhantomVulkanLayer", _fpsMonitor.DebugInfo);
         lines.Add($"[FPS] Camada: {_fpsMonitor.DebugInfo}");
 
         AppendGpuSourceDiagnostics(lines, data);
@@ -799,13 +849,13 @@ public sealed class LinuxSensorService : ISensorService
 
     private static void AddAvailability(
         ICollection<string> lines,
-        SensorData data,
+        HashSet<SensorType> availableTypes,
         string group,
         SensorType type,
         string source,
         string missingReason)
     {
-        var available = data.Values.ContainsKey(type) || data.Series.Keys.Any(key => key.Type == type);
+        var available = availableTypes.Contains(type);
         lines.Add($"[{group}] {type}: {(available ? $"disponível via {source}" : $"indisponível — {missingReason}")}");
     }
 

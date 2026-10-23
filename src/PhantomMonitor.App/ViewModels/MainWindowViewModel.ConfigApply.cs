@@ -91,6 +91,10 @@ public sealed partial class MainWindowViewModel
         var oldOverlayFps = _config.Overlay.ShowFps;
         var oldOverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         var oldOverlayShownSeries = _config.Overlay.ShownSeries?.ToList() ?? ["Gpu*", "FanSpeed*", "Disk*"];
+        var oldOverlayLayout = _config.Overlay.Layout.ToDictionary(
+            pair => pair.Key,
+            pair => new OverlayBlockPosition { X = pair.Value.X, Y = pair.Value.Y },
+            StringComparer.OrdinalIgnoreCase);
         var newOverlayShownSeries = _overlaySeriesPatterns.Select(item => item.Pattern).ToList();
         if (newOverlayShownSeries.Count == 0)
         {
@@ -128,6 +132,7 @@ public sealed partial class MainWindowViewModel
             || OverlayShowFps != oldOverlayFps
             || OverlayShowFrametimeGraph != oldOverlayShowFrametimeGraph
             || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase)
+            || OverlayLayoutHasChanges()
             || overlayVisualChanged
             || overlayAppearanceChanged;
 
@@ -164,6 +169,7 @@ public sealed partial class MainWindowViewModel
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
         _config.Overlay.FontSize = overlayFontSize;
         _config.Overlay.CompactMode = OverlayCompactModeSetting;
+        CopyOverlayLayoutToConfig();
 
         if (!_config.Save(ConfigPaths.ConfigFile))
         {
@@ -192,6 +198,7 @@ public sealed partial class MainWindowViewModel
             _config.OverlayOpacity = oldOverlayOpacity;
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
+            _config.Overlay.Layout = oldOverlayLayout;
             OverlayShowCpu = oldOverlayCpu;
             OverlayShowGpu = oldOverlayGpu;
             OverlayShowRam = oldOverlayRam;
@@ -203,6 +210,7 @@ public sealed partial class MainWindowViewModel
             OverlayShowFrametimeGraph = oldOverlayShowFrametimeGraph;
             UpdateOverlayRows(_latestSensorData);
             LoadOverlaySeriesPatterns();
+            ReloadOverlayLayoutDraft();
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
             return;
         }

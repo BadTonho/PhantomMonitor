@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:charts="using:PhantomMonitor.App.Controls"
+        xmlns:vm="using:PhantomMonitor.App.ViewModels"
+        x:Class="PhantomMonitor.App.Views.OverlayBlockWindow"
+        Title="Phantom Monitor Overlay"
+        Width="{Binding Owner.OverlayWidth}" SizeToContent="Height"
+        CanResize="False" WindowDecorations="None" WindowStartupLocation="Manual"
+        ShowInTaskbar="False" Topmost="True"
+        TransparencyLevelHint="Transparent" Background="Transparent">
+  <Border Margin="{Binding Owner.OverlayOuterMargin}"
+          Padding="{Binding Owner.OverlayPadding}"
+          CornerRadius="6" Background="{DynamicResource BgOverlayPanelBrush}"
+          BorderBrush="{Binding Owner.OverlayPanelBorderBrush}" BorderThickness="1">
+    <StackPanel Spacing="{Binding Owner.OverlayContentSpacing}">
+      <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                 FontSize="{Binding Owner.OverlayMetricNameFontSize}" FontWeight="SemiBold"
+                 PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll" />
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.Owner.OverlayRowMargin}">
+              <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                         FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricNameFontSize}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontSize}"
+                         FontFamily="monospace" TextWrapping="WrapWithOverflow" />
+              <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
+                                   Values="{Binding $parent[Window].DataContext.Owner.FrametimeSamples}"
+                                   Stroke="{Binding $parent[Window].DataContext.Owner.OverlayAccentBrush}"
+                                   GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                   MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                   Height="{Binding $parent[Window].DataContext.Owner.OverlayFrametimeGraphHeight}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <ItemsControl ItemsSource="{Binding Extras}">
+        <ItemsControl.DataTemplates>
+          <DataTemplate DataType="vm:OverlayGraphRowViewModel">
+            <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
+                                 MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
+          </DataTemplate>
+          <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
+            <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
+                       FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontSize}"
+                       FontFamily="monospace" TextTrimming="CharacterEllipsis"
+                       Margin="{Binding $parent[Window].DataContext.Owner.OverlayRowMargin}" />
+          </DataTemplate>
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</Window>

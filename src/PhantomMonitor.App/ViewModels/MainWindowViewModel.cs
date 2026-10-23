@@ -96,6 +96,10 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private double _overlayFontSizeSlider = 11.5;
     private bool _overlayCompactModeSetting;
     private readonly ObservableCollection<OverlayMetricViewModel> _overlayRows = new();
+    private readonly ObservableCollection<OverlayCanvasBlockViewModel> _overlayBlocks = new();
+    private readonly Dictionary<string, OverlayBlockPosition> _overlayLayoutDraft = new(StringComparer.OrdinalIgnoreCase);
+    private double _overlayCanvasWidth = 960;
+    private double _overlayCanvasHeight = 620;
     private readonly ObservableCollection<OverlaySeriesPatternViewModel> _overlaySeriesPatterns = new();
     private IReadOnlyList<string> _overlaySeriesOptions = [];
     private string? _selectedOverlaySeries;
@@ -320,6 +324,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public string LogDirectoryText => UserDataPaths.LogDirectory;
     public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
     public ObservableCollection<OverlayMetricViewModel> OverlayRows => _overlayRows;
+    public ObservableCollection<OverlayCanvasBlockViewModel> OverlayBlocks => _overlayBlocks;
+    public double OverlayCanvasWidth { get => _overlayCanvasWidth; private set => Set(ref _overlayCanvasWidth, value); }
+    public double OverlayCanvasHeight { get => _overlayCanvasHeight; private set => Set(ref _overlayCanvasHeight, value); }
     public ObservableCollection<OverlaySeriesPatternViewModel> OverlaySeriesPatterns => _overlaySeriesPatterns;
     public IReadOnlyList<string> OverlaySeriesOptions { get => _overlaySeriesOptions; private set => Set(ref _overlaySeriesOptions, value); }
     public string? SelectedOverlaySeries { get => _selectedOverlaySeries; set => Set(ref _selectedOverlaySeries, value); }
@@ -366,6 +373,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public Avalonia.Thickness OverlayPreviewPadding => OverlayPreviewCompact ? new(6, 4) : new(12);
     public Avalonia.Thickness OverlayPreviewBlockPadding => OverlayPreviewCompact ? new(4, 2.5) : new(7, 4.5);
     public double OverlayPreviewFrametimeGraphHeight => OverlayPreviewCompact ? 18 : 24;
+    public double OverlayEditorCanvasWidth => 960;
+    public double OverlayEditorCanvasHeight => 760;
 
     private void RaiseOverlayPreviewProperties()
     {
@@ -381,6 +390,10 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         Raise(nameof(OverlayPreviewPadding));
         Raise(nameof(OverlayPreviewBlockPadding));
         Raise(nameof(OverlayPreviewFrametimeGraphHeight));
+        Raise(nameof(OverlayEditorCanvasWidth));
+        Raise(nameof(OverlayEditorCanvasHeight));
+        foreach (var block in _overlayBlocks)
+            block.RefreshCanvasPosition();
     }
 
     public bool OverlayShowCpu { get => _overlayShowCpu; set { if (Set(ref _overlayShowCpu, value)) UpdateOverlayRows(_latestSensorData); } }
@@ -411,6 +424,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _overlayOpacityEffective = Math.Clamp(_config.OverlayOpacity <= 0 ? 0.85 : _config.OverlayOpacity, 0.1, 1.0);
         FollowOffsetX = _config.OverlayPosition.X;
         FollowOffsetY = _config.OverlayPosition.Y;
+        foreach (var (key, position) in _config.Overlay.Layout)
+            _overlayLayoutDraft[key] = new OverlayBlockPosition { X = position.X, Y = position.Y };
+        InitializeOverlayBlocks();
         BuildOverlayExtraRows();
         ApplyOverlayProfile(null);
         _updateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);

@@ -18,7 +18,7 @@
 |---|---|---|
 | `MainWindow` (shell) | `Views/MainWindow.axaml` (7 views na sidebar) | Paridade estrutural; ver §2 |
 | `Overlay/OverlayWindow` | Janela própria (já existe) | Portar perfis P3, graph rows, clique-through (Windows) |
-| `Overlay/OverlayEditorWindow` | Seção "OVERLAY FLUTUANTE" nas Configurações (formato já existe) | Portar perfis; posicionamento rápido/preview são nice-to-have |
+| `Overlay/OverlayEditorWindow` | Editor visual Avalonia aberto por Configurações → Overlay flutuante | Canvas com grade, prévia ao vivo e layout reposicionável implementados depois da Fase 3; perfis avançados seguem no config |
 | `Overlay/AlertPopupWindow` | Toast in-app (já existe) + notificação DBus no Linux (já existe) | Conviver por SO (toast no Windows, DBus no Linux) |
 | `DebugWindow` | View Diagnóstico (já existe, ~paridade) | Absorver; extra: dump em texto copiável |
 | `InventoryWindow` | View Inventário (parcial) | ✅ portado (F1.4): stats de sessão nas rows, árvore de hardware, monitores (EDID), reset com marker |

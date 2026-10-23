@@ -51,18 +51,13 @@ public sealed partial class MainWindow : Window
     {
         if (_overlayWindow is not null) return;
 
-        var overlay = new OverlayWindow
-        {
-            DataContext = DataContext,
-            Width = ViewModel.OverlayWidth,
-            Opacity = ViewModel.OverlayOpacity
-        };
+        var overlay = new OverlayWindow(ViewModel) { Opacity = ViewModel.OverlayOpacity };
 
         // Overlay fechada pelo usuário (Alt+F4): mantê-la na referência deixaria o
         // próximo Show() em janela morta. Descarta a referência e sincroniza o
         // estado do config (a janela foi fechada de verdade); SyncOverlayVisibility
         // recria a janela na próxima ativação.
-        overlay.Closed += (_, _) =>
+        overlay.UserClosed += () =>
         {
             _overlayWindow = null;
             if (ViewModel.OverlayVisible)
@@ -122,8 +117,6 @@ public sealed partial class MainWindow : Window
 
         if (e.PropertyName == nameof(MainWindowViewModel.OverlayVisible))
             SyncOverlayVisibility();
-        else if (e.PropertyName == nameof(MainWindowViewModel.OverlayWidth) && _overlayWindow is not null)
-            _overlayWindow.Width = ViewModel.OverlayWidth;
         else if (e.PropertyName == nameof(MainWindowViewModel.OverlayOpacity) && _overlayWindow is not null)
             _overlayWindow.Opacity = ViewModel.OverlayOpacity;
     }

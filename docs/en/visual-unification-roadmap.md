@@ -268,6 +268,17 @@ with an overridden theme, so the mechanics were exercised; the UI-driven swap
 confirmation. Configuration docs updated (`configuration` +
 INTERFACE notes in `main-interface`).
 
+## Later enhancement — visual overlay editor
+
+- [x] Rebuild the editor in Avalonia with a gridded live canvas on the left,
+      customization controls on the right, and draggable blocks.
+- [x] Store normalized positions in `overlay.layout`, relative to the monitored
+      window on Windows and the primary screen on Linux; existing configs start
+      with a vertical layout.
+- [x] Render each block in its own window to preserve Windows click-through and
+      avoid a full-screen transparent window capturing Linux input.
+- [x] Update the Portuguese and English overlay/configuration documentation.
+
 ---
 
 ## Risks and care

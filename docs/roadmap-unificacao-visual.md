@@ -266,6 +266,18 @@ manual do seletor fica como confirmação pendente. Docs de configuração
 atualizadas (`configuracao` / `configuration` + INTERFACE em
 `interface-principal` / `main-interface`).
 
+## Aprimoramento posterior — editor visual do overlay
+
+- [x] Recriar o editor visual na app Avalonia: prévia em canvas com grade à
+      esquerda, opções de personalização à direita e blocos arrastáveis.
+- [x] Persistir posições normalizadas em `overlay.layout`, relativas à janela
+      monitorada no Windows e à tela principal no Linux; configs antigas usam
+      uma coluna vertical inicial.
+- [x] Renderizar cada bloco em janela própria para manter o clique-through no
+      Windows e evitar que uma janela transparente de tela inteira capture
+      eventos no Linux.
+- [x] Atualizar `overlay` / `configuration` em português e inglês.
+
 ---
 
 ## Riscos e cuidados

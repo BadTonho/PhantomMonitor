@@ -27,6 +27,8 @@ public sealed class OverlayMetricViewModel : INotifyPropertyChanged
     /// a chave da série ("GpuCore#1") para as por instância.</summary>
     public string Identity { get; }
 
+    public bool ShowName => Identity.ToUpperInvariant() is not ("CPU" or "GPU" or "RAM" or "DISCO" or "REDE" or "PLACA" or "JOGO" or "VENTOINHA");
+
     public string Name
     {
         get => _name;

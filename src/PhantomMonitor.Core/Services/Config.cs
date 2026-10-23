@@ -154,6 +154,15 @@ public sealed class AppConfig
         OverlayOpacity = Math.Clamp(OverlayOpacity, 0.1, 1.0);
         OverlayPosition ??= new();
         Overlay ??= new();
+        var normalizedOverlayLayout = new Dictionary<string, OverlayBlockPosition>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, position) in Overlay.Layout ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(key) || position is null) continue;
+            position.X = double.IsFinite(position.X) ? Math.Clamp(position.X, 0, 1) : 0;
+            position.Y = double.IsFinite(position.Y) ? Math.Clamp(position.Y, 0, 1) : 0;
+            normalizedOverlayLayout[key.Trim().ToLowerInvariant()] = position;
+        }
+        Overlay.Layout = normalizedOverlayLayout;
         Sensors ??= new();
 
         // Exportador HTTP: porta em faixa de usuário (abaixo de 1024 costuma exigir
@@ -357,6 +366,12 @@ public sealed class OverlayConfig
     public double FontSize { get; set; } = 11.5;
 
     /// <summary>
+    /// Posições normalizadas dos blocos do OSD (0–1) em relação à área da janela
+    /// acompanhada no Windows ou à área disponível no Linux.
+    /// </summary>
+    public Dictionary<string, OverlayBlockPosition> Layout { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Linhas de template do usuário (P6.6): texto livre com placeholders
     /// {Chave} / {Chave:N} resolvidos no fim do painel; ver OverlayTemplate.
     /// </summary>
@@ -377,6 +392,12 @@ public sealed class OverlayConfig
     /// (por interface + totais da sessão). "*" libera tudo. Ver <see cref="SensorKey.MatchesPattern"/>.
     /// </summary>
     public List<string>? ShownSeries { get; set; } = ["Gpu*", "FanSpeed*", "Disk*"];
+}
+
+public sealed class OverlayBlockPosition
+{
+    public double X { get; set; }
+    public double Y { get; set; }
 }
 
 /// <summary>

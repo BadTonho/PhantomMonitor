@@ -63,6 +63,7 @@ public sealed partial class MainWindowViewModel
         ReconcileOverlayRows(OverlayMetricsBuilder.Plan(data, selection, EffectiveOverlayShownSeries()));
         EnsureOverlayExtrasCurrent();
         UpdateOverlayExtraRows(data);
+        ReconcileOverlayBlocks();
     }
 
     private void ReconcileOverlayRows(IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> plan)

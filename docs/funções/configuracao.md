@@ -40,6 +40,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
   `"Network*"` (por interface + totais da sessão). `"*"` libera tudo. Padrão:
   `["Gpu*", "FanSpeed*", "Disk*"]`. Lista vazia/ausente no config volta ao padrão.
   Os padrões são conferidos por `SensorKey.MatchesPattern` (sem distinção de maiúsculas).
+- `layout` - Posições normalizadas dos blocos (`cpu`, `gpu`, `ram`, `disk`, `network`, `fans`, `motherboard`, `fps`, `extras`), cada uma com `x` e `y` entre 0 e 1.
 
 ### SensorConfig
 - `Cpu/Gpu/Ram/Disk/Network/Motherboard` - Sensores habilitados
@@ -69,7 +70,7 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - No app único, a mesma página edita `telemetryExport.enabled`, `port` (1024–65.535) e `listenAll`; o estado e os endpoints ativos são exibidos. O listener funciona durante a coleta, permanece ativo na pausa e fecha ao parar. Acesso por `listenAll` não tem TLS nem autenticação.
 - No app único, a página **Sensores customizados** edita nome, fórmula, unidade e ordem das entradas `customSensors`; salvar recria o serviço de sensores e reinicia as estatísticas da sessão, preservando coleta parada ou pausada.
 - No app único, a página **Ajuste por série** edita `sensorTuning`: alvos exatos ou padrões, `intervalMs` e `smoothing`, com reordenação para controlar precedência (a última regra correspondente vence). Salvar aplica a lista ao recriar o serviço de coleta; coleta parada ou pausada preserva seu estado. Ver [ajuste-de-series.md](ajuste-de-series.md).
-- No app único, a página **Configurações → Overlay flutuante** abre a janela **Editor do overlay flutuante**, que edita as categorias CPU, GPU, RAM, disco, rede, ventoinhas, placa-mãe e FPS/frametime nos campos existentes de `overlay`, com prévia ao vivo. O botão da visão geral alterna `showOverlay` e persiste a mudança imediatamente. Ver [overlay.md](overlay.md) para as limitações de posicionamento e fullscreen em Wayland.
+- No app único, **Configurações → Overlay flutuante** abre o editor visual: canvas com grade e prévia ao vivo à esquerda, controles roláveis à direita e blocos arrastáveis. `overlay.layout` guarda posições `x`/`y` normalizadas em relação à janela monitorada no Windows ou à tela principal no Linux. Configs antigas sem layout usam a coluna vertical padrão. O botão da visão geral alterna `showOverlay` e persiste a mudança imediatamente. Ver [overlay.md](overlay.md) para as limitações de posicionamento e fullscreen em Wayland.
 - Na janela do editor, `overlay.width` (140–700 px) e `overlayOpacity` (10–100%) são ajustados com prévia em tempo real. Os controles começam com os valores salvos; ao salvar, a janela Avalonia aberta recebe as novas dimensões e opacidade sem reiniciar a coleta.
 - A seção também edita `overlay.fontSize` (8–20 pt, campo e slider em passos de 0,5) e `overlay.compactMode`. Salvar aplica fonte e espaçamento à janela aberta sem reiniciar a coleta; falha de gravação mantém a aparência ativa.
 - A mesma seção controla `overlay.showFrametimeGraph` por checkbox. O gráfico dourado aparece abaixo da linha FPS/frametime quando a categoria FPS/frametime está ativa e há pelo menos duas amostras; sua altura é 24 px no modo normal e 18 px no compacto. A opção é aplicada ao salvar, sem reiniciar a coleta.

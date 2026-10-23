@@ -83,4 +83,5 @@
 
     <!-- Guia tracejada de valor do overlay (60 FPS no frametime; ~12% branco, como o Minigraph do WPF) -->
     <SolidColorBrush x:Key="OverlayGuideBrush" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="OverlayGridBrush" Color="#263A3F4B" />
 </ResourceDictionary>

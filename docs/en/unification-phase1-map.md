@@ -19,7 +19,7 @@
 |---|---|---|
 | `MainWindow` (shell) | `Views/MainWindow.axaml` (7 sidebar views) | Structural parity; see §2 |
 | `Overlay/OverlayWindow` | Its own window (already exists) | Port P3 profiles, graph rows, click-through (Windows) |
-| `Overlay/OverlayEditorWindow` | "OVERLAY FLUTUANTE" section in Settings (format already exists) | Port profiles; quick positioning/preview are nice-to-have |
+| `Overlay/OverlayEditorWindow` | Avalonia visual editor opened from Settings → Floating overlay | Gridded canvas, live preview, and repositionable layout were added after Phase 3; advanced profiles remain in config |
 | `Overlay/AlertPopupWindow` | In-app toast (already exists) + DBus notification on Linux (already exists) | Per-OS coexistence (toast on Windows, DBus on Linux) |
 | `DebugWindow` | Diagnostics view (already exists, near parity) | Absorb; extra: copyable text dump |
 | `InventoryWindow` | Inventory view (partial) | ✅ ported (F1.4): session stats in rows, hardware tree, monitors (EDID), reset with marker |

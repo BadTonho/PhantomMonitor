@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia;
 using PhantomMonitor.App.ViewModels;
 
 namespace PhantomMonitor.App.Views;
@@ -14,6 +16,8 @@ namespace PhantomMonitor.App.Views;
 public partial class OverlayEditorWindow : Window
 {
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
+    private OverlayCanvasBlockViewModel? _dragBlock;
+    private Point _dragOffset;
 
     public OverlayEditorWindow()
     {
@@ -32,5 +36,39 @@ public partial class OverlayEditorWindow : Window
     {
         if (sender is Control { DataContext: ViewModels.OverlaySeriesPatternViewModel pattern })
             ViewModel.RemoveOverlaySeriesPattern(pattern);
+    }
+
+    private void OnBlockPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed
+            || sender is not Control { DataContext: OverlayCanvasBlockViewModel block } control)
+            return;
+
+        _dragBlock = block;
+        var point = e.GetPosition(EditorBlockCanvas);
+        _dragOffset = new Point(point.X - block.CanvasX, point.Y - block.CanvasY);
+        e.Pointer.Capture(control);
+        e.Handled = true;
+    }
+
+    private void OnBlockPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_dragBlock is null || !ReferenceEquals(e.Pointer.Captured, sender)) return;
+        var point = e.GetPosition(EditorBlockCanvas);
+        var maxX = Math.Max(1, EditorBlockCanvas.Width - ViewModel.OverlayPreviewWidth);
+        var maxY = Math.Max(1, EditorBlockCanvas.Height - 90);
+        ViewModel.ApplyOverlayBlockPosition(
+            _dragBlock.Key,
+            (point.X - _dragOffset.X) / maxX,
+            (point.Y - _dragOffset.Y) / maxY);
+        e.Handled = true;
+    }
+
+    private void OnBlockPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_dragBlock is null) return;
+        e.Pointer.Capture(null);
+        _dragBlock = null;
+        e.Handled = true;
     }
 }

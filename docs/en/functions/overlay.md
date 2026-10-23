@@ -20,11 +20,11 @@ Blocks can contain any combination of categories, series, graphs, and templates.
 
 Matching per-instance rows are ordered by family, show the key, hardware label, and formatted value, and are limited to 24. A present zero is displayed as zero. Canonical category rows are not duplicated. On **Windows**, each block is click-through (`WS_EX_TRANSPARENT`) and follows the focused app every 30 ms; `overlayPosition` and profiles offset the group. On **Linux**, each block is an individual Topmost window; the compositor controls its initial position and whether it appears over fullscreen applications.
 
-The unified app includes templates, per-series graphs, and per-application profiles. Blocks, series, graphs, and templates can be composed in the visual editor; per-application profiles remain in `config.json`. On Linux the profile matcher is inactive.
-
-The unified app offers the advanced OSD described below, including templates, per-instance series, application profiles, graphs, Windows click-through, and the per-profile accent (the visual editor was WPF-only, retired in Phase 2; the tray pin landed with F1.5).
+The unified app offers templates, per-instance series, application profiles, graphs, Windows click-through, and per-profile accents. Blocks, series, graphs, and templates can be composed in the current visual editor; per-application profiles remain in `config.json`.
 
 Internally, positioning dispatch is separate from the Windows and Linux implementations (`OverlayWindow.Positioning.cs`, `OverlayWindow.Windows.cs`, and `OverlayWindow.Linux.cs`). This keeps Windows focus tracking and click-through rules separate from compositor-limited Linux placement.
+
+The content selector is a dedicated AXAML window with state and editing operations in `OverlayBlockContentDialogViewModel`; its View forwards control actions. Graphs, templates, and multi-selection remain a draft until the user applies the dialog and then saves the layout.
 
 ## Game OSD layout (inherited from the WPF)
 

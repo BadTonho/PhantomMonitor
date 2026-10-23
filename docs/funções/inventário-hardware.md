@@ -133,5 +133,5 @@ ID dos monitores conectados, decodificado de `root\wmi` (cache de **60 s**):
   SDK via snapshot; o CSV e a tabela da SDK não mudam (são séries numéricas).
 - Desktops/VMs/RDP sem monitor reportado: aba vazia (nenhuma falha é gerada).
 
-Fonte: `PhantomMonitor.Core/Services/InventoryBuilder.cs` (`BuildSeries`/`BuildHardware`),
-`HardwareMonitorService.GetMonitors` e `Models/MonitorInfo.cs`.
+Fonte: `PhantomMonitor.Core/Services/Inventory/InventoryBuilder.cs` (`BuildSeries`/`BuildHardware`),
+`HardwareMonitorService.GetMonitors` e `Models/Inventory/MonitorInfo.cs`.

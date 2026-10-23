@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/hardware-monitor.md)
  
-Serviço de leitura de sensores de hardware para ambiente Windows, implementando a interface `ISensorService`. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário. A fonte vive em `PhantomMonitor.Core/Services/Windows/` e é escolhida pela fábrica multiplataforma [`SensorServiceFactory`](../../../src/PhantomMonitor.Core/Services/SensorServiceFactory.cs) do app único; no Linux o mesmo Core entrega provedores nativos em `Core/Services/Linux/`. Anotado com `[SupportedOSPlatform("windows")]` — APIs Windows-only (WMI/ETW/PerformanceCounter) instanciam apenas no lado Windows (guard de OS na fábrica).
+Serviço de leitura de sensores de hardware para ambiente Windows, implementando a interface `ISensorService`. Utiliza a biblioteca LibreHardwareMonitor para acessar sensores de CPU, GPU, memória, disco, placa-mãe e rede, com fallbacks via WMI (Windows Management Instrumentation) quando necessário. A fonte vive em `PhantomMonitor.Core/Services/Sensors/Windows/` e é escolhida pela fábrica multiplataforma [`SensorServiceFactory`](../../../src/PhantomMonitor.Core/Services/Sensors/SensorServiceFactory.cs) do app único; no Linux o mesmo Core entrega provedores nativos em `Core/Services/Sensors/Linux/`. Anotado com `[SupportedOSPlatform("windows")]` — APIs Windows-only (WMI/ETW/PerformanceCounter) instanciam apenas no lado Windows (guard de OS na fábrica).
 
 ## Funcionalidades
 

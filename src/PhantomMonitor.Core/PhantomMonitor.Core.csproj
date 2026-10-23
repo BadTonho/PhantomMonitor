@@ -7,7 +7,7 @@
     <AssemblyName>PhantomMonitor.Core</AssemblyName>
   </PropertyGroup>
 
-  <!-- Pacotes Windows-only usados por Services/Windows (HardwareMonitorService/FpsMonitor).
+  <!-- Pacotes Windows-only usados por Services/Sensors/Windows (HardwareMonitorService/FpsMonitor).
        Gerenciamos e instanciamos apenas no lado Windows (guard de OS na SensorServiceFactory);
        assemblies ficam inertes no Linux e não exigem nenhum driver nativo. -->
   <ItemGroup>

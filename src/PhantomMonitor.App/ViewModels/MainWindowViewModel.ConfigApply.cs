@@ -1,18 +1,10 @@
-using System.ComponentModel;
 using System.Globalization;
-using System.Runtime.CompilerServices;
-using System.Collections.ObjectModel;
-using System.Threading;
-using Avalonia.Threading;
-using PhantomMonitor.App.Services;
-using PhantomMonitor.Models;
 using PhantomMonitor.Services;
-using PhantomMonitor.Services.Telemetry;
 using PhantomMonitor.Services.Update;
 
 namespace PhantomMonitor.App.ViewModels;
 
-// Aplicação de configurações: SaveSettings, troca do serviço de sensores e exportador HTTP.
+// Orquestra validação, persistência e aplicação das configurações da interface.
 public sealed partial class MainWindowViewModel
 {
     public void SaveSettings()
@@ -226,139 +218,6 @@ public sealed partial class MainWindowViewModel
         {
             SettingsMessage = "Preferências de atualização salvas.";
         }
-    }
-
-    private void ReplaceSensorService()
-    {
-        var wasRunning = IsRunning;
-        var wasPaused = IsPaused;
-        var oldService = _sensorService;
-
-        if (oldService.IsRunning)
-        {
-            oldService.SetPaused(false);
-            oldService.Stop();
-        }
-        _started = false;
-        DetachSensorService(oldService);
-        DisposeLoggers();
-        oldService.Dispose();
-
-        _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs, _config);
-        AttachSensorService(_sensorService);
-        ResetDisplayedSession();
-
-        if (wasRunning)
-        {
-            if (wasPaused) _sensorService.SetPaused(true);
-            Start();
-            if (wasPaused)
-            {
-                StatusText = "Pausado";
-                Raise(nameof(IsPaused));
-                Raise(nameof(PauseButtonText));
-            }
-        }
-        else
-        {
-            StatusText = "Parado";
-            RaiseRunState();
-            UpdateTelemetryExportStatus();
-        }
-    }
-
-    private void ConfigureTelemetryExporter()
-    {
-        var options = _config.TelemetryExport;
-        if (!options.Enabled)
-        {
-            DisposeTelemetryExporter();
-            UpdateTelemetryExportStatus();
-            return;
-        }
-
-        if (!IsRunning)
-        {
-            DisposeTelemetryExporter();
-            UpdateTelemetryExportStatus();
-            return;
-        }
-
-        if (_telemetryHttpExporter is not null
-            && _activeTelemetryPort == options.Port
-            && _activeTelemetryListenAll == options.ListenAll
-            && _telemetryHttpExporter.IsListening)
-        {
-            UpdateTelemetryExportStatus();
-            return;
-        }
-
-        DisposeTelemetryExporter();
-        var exporter = new TelemetryHttpExporter(options.Port, options.ListenAll);
-        _telemetryHttpExporter = exporter;
-        _activeTelemetryPort = options.Port;
-        _activeTelemetryListenAll = options.ListenAll;
-        exporter.StateChanged += OnTelemetryExporterStateChanged;
-        if (_latestSensorData is not null)
-            exporter.Publish(_latestSensorData);
-
-        exporter.Start();
-        UpdateTelemetryExportStatus();
-    }
-
-    private void OnTelemetryExporterStateChanged(TelemetryHttpExporter exporter) => Dispatcher.UIThread.Post(() =>
-    {
-        if (_disposed || !ReferenceEquals(exporter, _telemetryHttpExporter)) return;
-        UpdateTelemetryExportStatus();
-    });
-
-    private void UpdateTelemetryExportStatus()
-    {
-        if (!_config.TelemetryExport.Enabled)
-        {
-            TelemetryExportStatusText = "Desativado";
-            return;
-        }
-
-        if (!IsRunning)
-        {
-            TelemetryExportStatusText = "Aguardando coleta";
-            return;
-        }
-
-        if (_telemetryHttpExporter is null)
-        {
-            TelemetryExportStatusText = "Aguardando inicialização";
-            return;
-        }
-
-        TelemetryExportStatusText = _telemetryHttpExporter.IsListening
-            ? $"Escutando em {_telemetryHttpExporter.Endpoint}"
-            : $"Falha ao abrir o listener: {_telemetryHttpExporter.LastError ?? "erro desconhecido"}";
-    }
-
-    private void DisposeTelemetryExporter()
-    {
-        var exporter = _telemetryHttpExporter;
-        _telemetryHttpExporter = null;
-        _activeTelemetryPort = null;
-        _activeTelemetryListenAll = null;
-        if (exporter is null) return;
-        exporter.StateChanged -= OnTelemetryExporterStateChanged;
-        exporter.Dispose();
-    }
-
-    // Fase 3 — disparado por App.ApplyTheme DEPOIS da troca do dicionário.
-    // Invalida o cache de pincéis da VM e repinta o que está visível na hora,
-    // sem depender do próximo tick (importante com a coleta parada/pausada).
-    private void OnThemeChanged()
-    {
-        if (_disposed) return;
-        DashboardBrushCache.Clear();
-        if (_latestSensorData is not null)
-            UpdateDashboardExtras(_latestSensorData);
-        ApplyOverlayProfile(_activeProfile);
-        UpdateOverlayRows(_latestSensorData);
     }
 
 }

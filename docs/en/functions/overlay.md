@@ -24,6 +24,8 @@ The unified app includes templates, per-series graphs, and per-application profi
 
 The unified app offers the advanced OSD described below, including templates, per-instance series, application profiles, graphs, Windows click-through, and the per-profile accent (the visual editor was WPF-only, retired in Phase 2; the tray pin landed with F1.5).
 
+Internally, positioning dispatch is separate from the Windows and Linux implementations (`OverlayWindow.Positioning.cs`, `OverlayWindow.Windows.cs`, and `OverlayWindow.Linux.cs`). This keeps Windows focus tracking and click-through rules separate from compositor-limited Linux placement.
+
 ## Game OSD layout (inherited from the WPF)
 
 The Windows OSD is a transparent, click-through, topmost window designed to stay compact over games. It uses one aligned row per device, monospaced text, device-specific accents, and automatic color changes for high temperature or utilization.

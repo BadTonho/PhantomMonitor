@@ -455,7 +455,6 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
 
     public void ShowInventory()
     {
-        CollapseInventoryDetails();
         IsOverview = false;
         IsSettings = false;
         IsAlerts = false;
@@ -463,19 +462,6 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         IsSensorTuning = false;
         IsDiagnostics = false;
         Raise(nameof(IsInventory));
-    }
-
-    private void CollapseInventoryDetails()
-    {
-        foreach (var group in _inventoryGroups)
-        foreach (var row in group.Rows)
-            Collapse(row);
-
-        static void Collapse(InventoryRowViewModel row)
-        {
-            row.IsExpanded = false;
-            foreach (var child in row.Children) Collapse(child);
-        }
     }
 
     public void ShowSettings()

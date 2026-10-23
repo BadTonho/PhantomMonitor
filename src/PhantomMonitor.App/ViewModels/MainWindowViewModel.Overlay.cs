@@ -167,7 +167,6 @@ public sealed partial class MainWindowViewModel
             row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available, entry.Min, entry.Max, entry.Avg);
             var children = entry.Children ?? [];
             ReconcileInventoryRows(row.Children, children);
-            row.SetExpandable(children.Count > 0);
             position++;
         }
 

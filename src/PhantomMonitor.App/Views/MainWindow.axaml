@@ -356,13 +356,7 @@
                               <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="10,2" HorizontalAlignment="Stretch">
                                 <StackPanel Spacing="0" HorizontalAlignment="Stretch">
                                   <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch">
-                                    <TextBlock IsVisible="{Binding !IsExpandable}" Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                    <Expander Grid.Column="0" IsVisible="{Binding IsExpandable}" IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0">
-                                      <Expander.Header>
-                                        <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                      </Expander.Header>
-                                    </Expander>
+                                    <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
                                     <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   </Border>
@@ -370,7 +364,7 @@
                                   <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   </Grid>
-                                  <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding IsExpanded}" HorizontalAlignment="Stretch">
+                                  <ItemsControl ItemsSource="{Binding Children}" HorizontalAlignment="Stretch">
                                     <ItemsControl.ItemTemplate>
                                       <DataTemplate>
                                         <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch" Margin="0,1,0,0">

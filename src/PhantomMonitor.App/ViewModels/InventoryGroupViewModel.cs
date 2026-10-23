@@ -46,8 +46,6 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
     private string _min;
     private string _max;
     private string _avg;
-    private bool _isExpandable;
-    private bool _isExpanded;
 
     public InventoryRowViewModel(string key)
     {
@@ -63,29 +61,6 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
 
     public string Key { get; }
     public ObservableCollection<InventoryRowViewModel> Children { get; } = new();
-
-    public bool IsExpandable
-    {
-        get => _isExpandable;
-        private set
-        {
-            if (_isExpandable == value) return;
-            _isExpandable = value;
-            Raise();
-        }
-    }
-
-    /// <summary>Detalhes começam recolhidos e a instância persistente mantém a escolha nos snapshots.</summary>
-    public bool IsExpanded
-    {
-        get => _isExpanded;
-        set
-        {
-            if (_isExpanded == value) return;
-            _isExpanded = value;
-            Raise();
-        }
-    }
 
     /// <summary>Nome legível da origem; para séries indisponíveis, usa a chave da categoria.</summary>
     public string SensorName => IsAvailable && !string.IsNullOrWhiteSpace(Source) && Source != "—" ? Source : Key;
@@ -201,6 +176,4 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
         Max = max;
         Avg = avg;
     }
-
-    public void SetExpandable(bool expandable) => IsExpandable = expandable;
 }

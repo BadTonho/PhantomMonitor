@@ -15,7 +15,7 @@ public sealed class LinuxSensorService : ISensorService
     private readonly Timer _timer;
     private readonly int _updateIntervalMs;
     private readonly LinuxFpsMonitor _fpsMonitor = new();
-    private readonly NvidiaGpuSensorReader _nvidiaGpuSensorReader = new();
+    private readonly LinuxGpuSensorReader _gpuSensorReader = new();
     private readonly object _updateLock = new();
     private SensorData _current = new();
 
@@ -113,12 +113,13 @@ public sealed class LinuxSensorService : ISensorService
                 Timestamp = DateTime.UtcNow
             };
 
+            _gpuSensorReader.BeginSample(data.Timestamp);
             ReadCpuStats(data);
             ReadMemInfo(data);
             ReadNetworkStats(data);
             ReadHwmonSensors(data);
             ReadDiskStats(data);
-            ReadGpuSysfs(data);
+            _gpuSensorReader.ReadDeviceMetrics(data);
             ReadPowerSupply(data);
 
             if (_fpsMonitor.HasData)
@@ -379,7 +380,7 @@ public sealed class LinuxSensorService : ISensorService
                         hwmonSlot = _hwmonSlots[dir] = _hwmonSlots.Count + 1;
 
                     bool isCpuHwmon = name.Contains("coretemp") || name.Contains("k10temp") || name.Contains("zenpower");
-                    bool isGpuHwmon = name.Contains("amdgpu") || name.Contains("nouveau") || name.Contains("nvidia");
+                    bool isGpuHwmon = _gpuSensorReader.IsGpuHwmonDirectory(dir, out var gpuCardIndex, out var gpuLabel);
                     bool isFanController = !isCpuHwmon && !isGpuHwmon;
                     var hwLabel = name;
 
@@ -402,32 +403,8 @@ public sealed class LinuxSensorService : ISensorService
                         }
                         else if (isGpuHwmon)
                         {
-                            // Rótulo do hwmon distingue os diodos (amdgpu/nouveau): "edge" =
-                            // diodo principal, "junction"/"hotspot" = hot spot, "mem"/"vram" =
-                            // junction da VRAM. Sem rótulo (NVIDIA legado), tudo vira a
-                            // temperatura canônica da GPU.
-                            TryReadSysfsFile(Path.Combine(dir, $"temp{fileSlot}_label"), out var labelRaw);
-                            var tempLabel = labelRaw.ToLowerInvariant();
-                            if (tempLabel.Contains("junction") || tempLabel.Contains("hotspot"))
-                            {
-                                data.SetValue(new SensorKey(SensorType.GpuHotSpot, hwmonSlot), deg, hwLabel);
-                                var hotSpot = data.GetValue(SensorType.GpuHotSpot);
-                                if (hotSpot <= 0 || deg > hotSpot)
-                                    data.SetValue(SensorType.GpuHotSpot, deg, "Hot Spot");
-                            }
-                            else if (tempLabel.Contains("mem") || tempLabel.Contains("vram"))
-                            {
-                                data.SetValue(new SensorKey(SensorType.GpuVramTemperature, hwmonSlot), deg, hwLabel);
-                                var vramTemp = data.GetValue(SensorType.GpuVramTemperature);
-                                if (vramTemp <= 0 || deg > vramTemp)
-                                    data.SetValue(SensorType.GpuVramTemperature, deg, "Temp VRAM");
-                            }
-                            else
-                            {
-                                data.SetValue(new SensorKey(SensorType.GpuTemperature, hwmonSlot), deg, hwLabel);
-                                if (data.GpuTemp <= 0 || deg > data.GpuTemp)
-                                    data.SetValue(SensorType.GpuTemperature, deg, "GPU Temp");
-                            }
+                            _gpuSensorReader.ReadHwmonTemperature(data, dir, gpuCardIndex, name, gpuLabel,
+                                tempFile, fileSlot);
                         }
                         else if (isFanController)
                         {
@@ -453,7 +430,8 @@ public sealed class LinuxSensorService : ISensorService
                         data.SetValue(new SensorKey(SensorType.FanSpeed, hwmonSlot * 100 + fanSlot), rpm, hwLabel);
                         data.SetValue(SensorType.FanSpeed, Math.Max(rpm, data.GetValue(SensorType.FanSpeed)), "Fan (sistema)");
                         if (isGpuHwmon)
-                            data.SetValue(SensorType.GpuFan, rpm);
+                            _gpuSensorReader.PublishGpuFan(data, gpuCardIndex, rpm, gpuLabel,
+                                $"hwmon({name})/{Path.GetFileName(fanFile)}");
                     }
                 }
                 catch (Exception ex)
@@ -735,79 +713,6 @@ public sealed class LinuxSensorService : ISensorService
         }
     }
 
-    /// <summary>
-    /// Lê a utilização de GPU via subsistema DRM (/sys/class/drm) — com séries por card
-    /// (multi-GPU: GpuCore#1 = card com menor índice).
-    /// </summary>
-    private void ReadGpuSysfs(SensorData data)
-    {
-        try
-        {
-            _nvidiaGpuSensorReader.BeginSample();
-            if (!Directory.Exists("/sys/class/drm")) return;
-
-            var cards = Directory.GetDirectories("/sys/class/drm")
-                .Select(d => Path.GetFileName(d))
-                .Where(n => n.StartsWith("card", StringComparison.Ordinal) &&
-                            n[4..].All(char.IsAsciiDigit))
-                .OrderBy(n => int.Parse(n[4..], CultureInfo.InvariantCulture))
-                .ToArray();
-
-            var cardIndex = 0;
-            var nvidiaIndex = 0u;
-            foreach (var cardName in cards)
-            {
-                cardIndex++;
-                var deviceDir = Path.Combine("/sys/class/drm", cardName, "device");
-
-                var isPrimary = cardIndex == 1;
-
-                // O driver amdgpu publica utilização/VRAM no sysfs DRM. O driver
-                // NVIDIA publica essas leituras pela NVML, carregada opcionalmente.
-                if (TryReadSysfsFile(Path.Combine(deviceDir, "vendor"), out var vendorRaw) &&
-                    vendorRaw.Equals("0x10de", StringComparison.OrdinalIgnoreCase))
-                {
-                    var nvmlIndex = nvidiaIndex++;
-                    if (_nvidiaGpuSensorReader.TryRead(ReadPciBusId(deviceDir), nvmlIndex, out var nvidia))
-                        PublishNvidiaGpuReading(data, cardIndex, nvidia);
-                }
-
-                // AMD GPU Busy Percent
-                var busyPath = Path.Combine(deviceDir, "gpu_busy_percent");
-                if (File.Exists(busyPath) &&
-                    double.TryParse(File.ReadAllText(busyPath).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var busy))
-                {
-                    data.SetValue(new SensorKey(SensorType.GpuCore, cardIndex), Math.Clamp(busy, 0.0, 100.0), cardName);
-                    if (isPrimary || !data.Values.ContainsKey(SensorType.GpuCore))
-                        data.SetValue(SensorType.GpuCore, Math.Clamp(busy, 0.0, 100.0), "GPU Core");
-                }
-
-                // AMD VRAM usada/total (MB)
-                var vramUsedPath = Path.Combine(deviceDir, "mem_info_vram_used");
-                if (File.Exists(vramUsedPath) &&
-                    long.TryParse(File.ReadAllText(vramUsedPath).Trim(), out var bytes))
-                {
-                    data.SetValue(new SensorKey(SensorType.GpuMemoryUsed, cardIndex), bytes / (1024.0 * 1024.0), cardName); // MB
-                    if (isPrimary || !data.Values.ContainsKey(SensorType.GpuMemoryUsed))
-                        data.SetValue(SensorType.GpuMemoryUsed, bytes / (1024.0 * 1024.0), "VRAM Usada"); // MB
-                }
-
-                var vramTotalPath = Path.Combine(deviceDir, "mem_info_vram_total");
-                if (File.Exists(vramTotalPath) &&
-                    long.TryParse(File.ReadAllText(vramTotalPath).Trim(), out var totalBytes))
-                {
-                    data.SetValue(new SensorKey(SensorType.GpuMemoryTotal, cardIndex), totalBytes / (1024.0 * 1024.0), cardName); // MB
-                    if (isPrimary || !data.Values.ContainsKey(SensorType.GpuMemoryTotal))
-                        data.SetValue(SensorType.GpuMemoryTotal, totalBytes / (1024.0 * 1024.0), "VRAM Total"); // MB
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ErrorLog.Write("LinuxSensorService.Gpu", ex);
-        }
-    }
-
     private List<string> BuildSensorDiagnostics(SensorData data)
     {
         // Disponibilidade por categoria resolve em UMA passada sobre as séries:
@@ -838,7 +743,6 @@ public sealed class LinuxSensorService : ISensorService
             AddAvailability(lines, availableTypes, "REDE", type, "/proc/net/dev", "nenhuma interface publicou contadores");
 
         AddAvailability(lines, availableTypes, "VENTOINHAS", SensorType.FanSpeed, "/sys/class/hwmon", "nenhum fan*_input foi exposto");
-        AddAvailability(lines, availableTypes, "GPU", SensorType.GpuFan, "hwmon da GPU", "nenhum fan*_input da GPU foi exposto");
 
         foreach (var type in new[] { SensorType.BatteryLevel, SensorType.BatteryVoltage, SensorType.BatteryPower,
                      SensorType.BatteryWearLevel, SensorType.BatteryAcPower })
@@ -849,7 +753,7 @@ public sealed class LinuxSensorService : ISensorService
             AddAvailability(lines, availableTypes, "FPS", type, "memória compartilhada da PhantomVulkanLayer", _fpsMonitor.DebugInfo);
         lines.Add($"[FPS] Camada: {_fpsMonitor.DebugInfo}");
 
-        AppendGpuSourceDiagnostics(lines, data);
+        _gpuSensorReader.AppendDiagnostics(lines, data);
         return lines;
     }
 
@@ -865,222 +769,6 @@ public sealed class LinuxSensorService : ISensorService
         lines.Add($"[{group}] {type}: {(available ? $"disponível via {source}" : $"indisponível — {missingReason}")}");
     }
 
-    private void AppendGpuSourceDiagnostics(ICollection<string> lines, SensorData data)
-    {
-        var gpuCards = new List<(string Card, string Vendor, string Driver)>();
-        var metricSources = new Dictionary<SensorType, HashSet<string>>();
-
-        void AddMetricSource(SensorType type, string source)
-        {
-            if (!metricSources.TryGetValue(type, out var sources))
-                metricSources[type] = sources = new HashSet<string>(StringComparer.Ordinal);
-            sources.Add(source);
-        }
-
-        bool HasMetric(SensorType type) =>
-            data.Values.ContainsKey(type) || data.Series.Keys.Any(key => key.Type == type);
-
-        try
-        {
-            if (Directory.Exists("/sys/class/drm"))
-            {
-                foreach (var path in Directory.GetDirectories("/sys/class/drm")
-                             .Where(path => Path.GetFileName(path).StartsWith("card", StringComparison.Ordinal) &&
-                                           Path.GetFileName(path)[4..].All(char.IsAsciiDigit)))
-                {
-                    var card = Path.GetFileName(path);
-                    var device = Path.Combine(path, "device");
-                    _ = TryReadSysfsFile(Path.Combine(device, "vendor"), out var vendor);
-                    var driver = "não identificado";
-                    try
-                    {
-                        var target = new DirectoryInfo(Path.Combine(device, "driver")).ResolveLinkTarget(returnFinalTarget: true);
-                        if (target is not null) driver = target.Name;
-                    }
-                    catch (IOException) { }
-                    catch (UnauthorizedAccessException) { }
-                    gpuCards.Add((card, vendor, driver));
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ErrorLog.Write("LinuxSensorService.GpuDiagnostics", ex);
-            lines.Add($"[GPU] Não foi possível enumerar dispositivos DRM: {ex.Message}");
-        }
-
-        if (gpuCards.Count == 0)
-            lines.Add("[GPU] Nenhuma placa gráfica foi detectada em /sys/class/drm.");
-        foreach (var (card, vendor, driver) in gpuCards)
-            lines.Add($"[GPU] DRM {card}: vendor={vendor}; driver={driver}.");
-
-        var nvidiaPresent = gpuCards.Any(card => card.Vendor.Equals("0x10de", StringComparison.OrdinalIgnoreCase));
-        if (nvidiaPresent)
-        {
-            lines.Add($"[GPU] NVML: {_nvidiaGpuSensorReader.Status}");
-            if (HasMetric(SensorType.GpuCore) && _nvidiaGpuSensorReader.LastUtilizationAvailable)
-                AddMetricSource(SensorType.GpuCore, "NVML");
-            if (HasMetric(SensorType.GpuMemoryUsed) && _nvidiaGpuSensorReader.LastMemoryAvailable)
-                AddMetricSource(SensorType.GpuMemoryUsed, "NVML");
-            if (HasMetric(SensorType.GpuMemoryTotal) && _nvidiaGpuSensorReader.LastMemoryAvailable)
-                AddMetricSource(SensorType.GpuMemoryTotal, "NVML");
-            if (HasMetric(SensorType.GpuTemperature) && _nvidiaGpuSensorReader.LastTemperatureAvailable)
-                AddMetricSource(SensorType.GpuTemperature, "NVML");
-        }
-
-        foreach (var (card, vendor, _) in gpuCards)
-        {
-            var device = Path.Combine("/sys/class/drm", card, "device");
-            var drmSource = $"DRM {card}";
-            if (HasMetric(SensorType.GpuCore) && File.Exists(Path.Combine(device, "gpu_busy_percent")))
-                AddMetricSource(SensorType.GpuCore, $"{drmSource}/gpu_busy_percent");
-            if (HasMetric(SensorType.GpuMemoryUsed) && File.Exists(Path.Combine(device, "mem_info_vram_used")))
-                AddMetricSource(SensorType.GpuMemoryUsed, $"{drmSource}/mem_info_vram_used");
-            if (HasMetric(SensorType.GpuMemoryTotal) && File.Exists(Path.Combine(device, "mem_info_vram_total")))
-                AddMetricSource(SensorType.GpuMemoryTotal, $"{drmSource}/mem_info_vram_total");
-        }
-
-        var gpuHwmonNames = new List<string>();
-        try
-        {
-            if (Directory.Exists("/sys/class/hwmon"))
-            {
-                foreach (var dir in Directory.GetDirectories("/sys/class/hwmon"))
-                {
-                    if (!TryReadSysfsFile(Path.Combine(dir, "name"), out var name)) continue;
-                    var normalized = name.ToLowerInvariant();
-                    if (!normalized.Contains("amdgpu") && !normalized.Contains("nouveau") && !normalized.Contains("nvidia"))
-                        continue;
-
-                    var channels = new List<string>();
-                    foreach (var tempFile in Directory.GetFiles(dir, "temp*_input"))
-                    {
-                        if (!TryReadSysfsDouble(tempFile, out _)) continue;
-                        var fileSlot = ParseSysfsIndex(tempFile, "temp");
-                        _ = TryReadSysfsFile(Path.Combine(dir, $"temp{fileSlot}_label"), out var label);
-                        var normalizedLabel = label.ToLowerInvariant();
-                        var source = $"hwmon({name})/{Path.GetFileName(tempFile)}";
-                        if (normalizedLabel.Contains("junction") || normalizedLabel.Contains("hotspot"))
-                        {
-                            channels.Add($"{Path.GetFileName(tempFile)} ({label}; hotspot)");
-                            if (HasMetric(SensorType.GpuHotSpot)) AddMetricSource(SensorType.GpuHotSpot, source);
-                        }
-                        else if (normalizedLabel.Contains("mem") || normalizedLabel.Contains("vram"))
-                        {
-                            channels.Add($"{Path.GetFileName(tempFile)} ({label}; VRAM)");
-                            if (HasMetric(SensorType.GpuVramTemperature)) AddMetricSource(SensorType.GpuVramTemperature, source);
-                        }
-                        else
-                        {
-                            channels.Add($"{Path.GetFileName(tempFile)} ({(string.IsNullOrWhiteSpace(label) ? "GPU" : label)})");
-                            if (HasMetric(SensorType.GpuTemperature)) AddMetricSource(SensorType.GpuTemperature, source);
-                        }
-                    }
-
-                    foreach (var fanFile in Directory.GetFiles(dir, "fan*_input"))
-                    {
-                        if (!TryReadSysfsDouble(fanFile, out _)) continue;
-                        channels.Add(Path.GetFileName(fanFile));
-                        if (HasMetric(SensorType.GpuFan))
-                            AddMetricSource(SensorType.GpuFan, $"hwmon({name})/{Path.GetFileName(fanFile)}");
-                    }
-
-                    gpuHwmonNames.Add(channels.Count == 0 ? name : $"{name} [{string.Join(", ", channels)}]");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ErrorLog.Write("LinuxSensorService.GpuHwmonDiagnostics", ex);
-        }
-
-        lines.Add(gpuHwmonNames.Count == 0
-            ? "[GPU] hwmon: nenhum sensor de GPU (amdgpu/nouveau/nvidia) foi publicado."
-            : $"[GPU] hwmon detectado: {string.Join(", ", gpuHwmonNames)}.");
-
-        var nvidiaDriver = gpuCards.FirstOrDefault(card => card.Vendor.Equals("0x10de", StringComparison.OrdinalIgnoreCase)).Driver;
-        var sourceMissing = nvidiaPresent
-            ? $"NVML: {_nvidiaGpuSensorReader.Status}; driver NVIDIA {nvidiaDriver} não publicou alternativa DRM/hwmon compatível"
-            : "nenhuma fonte GPU compatível publicou esta métrica";
-
-        AddGpuMetricStatus(lines, data, metricSources, SensorType.GpuCore, sourceMissing);
-        AddGpuMetricStatus(lines, data, metricSources, SensorType.GpuMemoryUsed, sourceMissing);
-        AddGpuMetricStatus(lines, data, metricSources, SensorType.GpuMemoryTotal, sourceMissing);
-        AddGpuMetricStatus(lines, data, metricSources, SensorType.GpuTemperature, "NVML/hwmon não publicou temperatura principal");
-        AddGpuMetricStatus(lines, data, metricSources, SensorType.GpuHotSpot, "hwmon não publicou canal com rótulo hotspot/junction");
-        AddGpuMetricStatus(lines, data, metricSources, SensorType.GpuVramTemperature, "hwmon não publicou canal com rótulo mem/vram");
-        AddGpuMetricStatus(lines, data, metricSources, SensorType.GpuFan, "hwmon não publicou fan*_input para a GPU");
-    }
-
-    private static void AddGpuMetricStatus(
-        ICollection<string> lines,
-        SensorData data,
-        IReadOnlyDictionary<SensorType, HashSet<string>> metricSources,
-        SensorType type,
-        string missingReason)
-    {
-        var available = data.Values.ContainsKey(type) || data.Series.Keys.Any(key => key.Type == type);
-        var sources = metricSources.TryGetValue(type, out var reportedBy)
-            ? string.Join(", ", reportedBy.OrderBy(source => source, StringComparer.Ordinal))
-            : "origem não identificada";
-        lines.Add($"[GPU] {type}: {(available ? $"disponível nesta amostra; fonte(s): {sources}" : $"indisponível — {missingReason}")}");
-    }
-
-    private static string? ReadPciBusId(string deviceDir)
-    {
-        if (TryReadSysfsFile(Path.Combine(deviceDir, "uevent"), out var uevent))
-        {
-            var slot = uevent.Split('\n')
-                .FirstOrDefault(line => line.StartsWith("PCI_SLOT_NAME=", StringComparison.Ordinal));
-            if (slot is not null)
-                return slot["PCI_SLOT_NAME=".Length..].Trim();
-        }
-
-        try
-        {
-            var target = new DirectoryInfo(deviceDir).ResolveLinkTarget(returnFinalTarget: true);
-            return target is null ? null : Path.GetFileName(target.FullName);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static void PublishNvidiaGpuReading(SensorData data, int cardIndex, NvidiaGpuReading reading)
-    {
-        if (reading.UtilizationPercent is double utilization)
-        {
-            data.SetValue(new SensorKey(SensorType.GpuCore, cardIndex), utilization, reading.Label);
-            if (!data.Values.ContainsKey(SensorType.GpuCore))
-                data.SetValue(SensorType.GpuCore, utilization, reading.Label);
-        }
-
-        if (reading.MemoryUsedMb is double memoryUsed)
-        {
-            data.SetValue(new SensorKey(SensorType.GpuMemoryUsed, cardIndex), memoryUsed, reading.Label);
-            if (!data.Values.ContainsKey(SensorType.GpuMemoryUsed))
-                data.SetValue(SensorType.GpuMemoryUsed, memoryUsed, reading.Label);
-        }
-
-        if (reading.MemoryTotalMb is double memoryTotal)
-        {
-            data.SetValue(new SensorKey(SensorType.GpuMemoryTotal, cardIndex), memoryTotal, reading.Label);
-            if (!data.Values.ContainsKey(SensorType.GpuMemoryTotal))
-                data.SetValue(SensorType.GpuMemoryTotal, memoryTotal, reading.Label);
-        }
-
-        if (reading.TemperatureCelsius is double temperature)
-        {
-            data.SetValue(new SensorKey(SensorType.GpuTemperature, cardIndex), temperature, reading.Label);
-            if (!data.Values.TryGetValue(SensorType.GpuTemperature, out var currentTemperature) ||
-                temperature > currentTemperature)
-            {
-                data.SetValue(SensorType.GpuTemperature, temperature, reading.Label);
-            }
-        }
-    }
-
     public void Dispose()
     {
         Stop();
@@ -1089,6 +777,6 @@ public sealed class LinuxSensorService : ISensorService
             callbacksFinished.WaitOne();
 
         _fpsMonitor.Dispose();
-        _nvidiaGpuSensorReader.Dispose();
+        _gpuSensorReader.Dispose();
     }
 }

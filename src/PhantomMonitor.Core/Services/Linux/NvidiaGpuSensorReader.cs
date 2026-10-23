@@ -28,16 +28,6 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
     private string _status = "NVML ainda não inicializada.";
 
     public string Status => _status;
-    public bool LastUtilizationAvailable { get; private set; }
-    public bool LastMemoryAvailable { get; private set; }
-    public bool LastTemperatureAvailable { get; private set; }
-
-    public void BeginSample()
-    {
-        LastUtilizationAvailable = false;
-        LastMemoryAvailable = false;
-        LastTemperatureAvailable = false;
-    }
 
     public NvidiaGpuSensorReader()
     {
@@ -139,7 +129,6 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
                 utilizationInfo.Gpu <= 100)
             {
                 utilization = utilizationInfo.Gpu;
-                LastUtilizationAvailable = true;
             }
 
             double? memoryUsedMb = null;
@@ -148,7 +137,6 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
             {
                 memoryUsedMb = memory.Used / BytesPerMegabyte;
                 memoryTotalMb = memory.Total / BytesPerMegabyte;
-                LastMemoryAvailable = true;
             }
 
             double? temperatureCelsius = null;
@@ -156,7 +144,6 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
                 _getTemperature(device, GpuTemperatureSensor, out var temperature) == NvmlSuccess)
             {
                 temperatureCelsius = temperature;
-                LastTemperatureAvailable = true;
             }
 
             reading = new NvidiaGpuReading(label, utilization, memoryUsedMb, memoryTotalMb, temperatureCelsius);

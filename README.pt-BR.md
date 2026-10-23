@@ -32,12 +32,12 @@ O projeto roda um **único app desktop Avalonia** no Windows e no Linux. Release
 
 | Recurso | Windows | Linux |
 | --- | --- | --- |
-| Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe | Sensores de `sysfs`, `procfs`, `hwmon`, DRM e NVML da NVIDIA quando a biblioteca do driver está instalada |
+| Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe via LibreHardwareMonitor | Sensores de `sysfs`, `procfs` (incluindo `fdinfo` DRM), `hwmon`, DRM e NVML opcional da NVIDIA; métricas de GPU variam conforme o driver |
 | FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
 | Overlay | OSD avançado, click-through e perfis (edição via config.json) | Janela flutuante configurável; o compositor controla a posição e o fullscreen |
 | Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |
 | Alertas | Notificação, som, scripts e desligamento configurável | Toast interno, notificações do desktop e execução de scripts |
-| Diagnóstico | Fontes de sensores em tempo real e log de erros | Estado das fontes, erros recentes e detalhes do driver/NVML/hwmon NVIDIA |
+| Diagnóstico | Fontes de sensores em tempo real e log de erros | Driver e fonte por placa/métrica, erros recentes e detalhes da NVML NVIDIA |
 | Fórmulas e ajuste por série | Compatibilidade com as configurações existentes | Editores visuais de sensores customizados e ajuste de cadência/suavização |
 | Telemetria | CSV, JSON, JSONL e exportador HTTP opcional | CSV, JSON, JSONL e exportador HTTP opcional |
 

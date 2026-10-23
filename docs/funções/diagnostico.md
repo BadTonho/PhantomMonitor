@@ -21,7 +21,7 @@ O arquivo é limitado a aproximadamente 1 MB e mensagens repetidas consecutivame
 
 Cada leitura conhecida é descrita como disponível ou indisponível, com a fonte consultada e uma explicação quando possível. A ausência de um sensor opcional é informativa, não uma exceção.
 
-No Linux, os detalhes incluem as fontes `procfs`, `sysfs`, `hwmon`, DRM, NVML e a Phantom Vulkan Layer. Para NVIDIA, a tela identifica a placa e o driver ligado ao dispositivo, informa se `libnvidia-ml.so.1` foi carregada e lista quais métricas vieram de NVML ou `hwmon`. Por exemplo, com Nouveau sem NVML, utilização e VRAM podem não ser fornecidas; temperaturas também dependem de canais publicados pelo driver.
+No Linux, os detalhes incluem as fontes `procfs`, `sysfs`, `hwmon`, DRM, NVML e a Phantom Vulkan Layer. Para cada placa detectada, a tela mostra vendor, driver, PCI e a fonte usada por métrica, além do motivo quando não há leitura. Para NVIDIA, informa se `libnvidia-ml.so.1` foi carregada e separa as métricas de NVML, DRM e `hwmon`. Em Intel `i915`/`xe`, mostra o estado dos contadores `drm-engine-*` em `fdinfo`; a primeira leitura estabelece uma base e a utilização é calculada no intervalo seguinte. Acesso restrito a processos pode impedir essa leitura sem afetar os demais sensores. Nouveau pode ser identificado mesmo quando o driver não publica uso, VRAM ou canais térmicos; nesses casos os valores permanecem indisponíveis e o diagnóstico explica as fontes consultadas.
 
 No Windows, a aba de sensores lista hardware e leituras encontrados pelo LibreHardwareMonitor, o estado do PresentMon/ETW e a disponibilidade dos tipos de série conhecidos.
 

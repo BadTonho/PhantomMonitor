@@ -29,7 +29,8 @@ PhantomMonitor.App (Linux)
           ├── /proc/stat (CPU)
           ├── /proc/meminfo (RAM)
           ├── /sys/class/hwmon (temperaturas e ventoinhas)
-          ├── /sys/class/drm (GPU e VRAM)
+          ├── LinuxGpuSensorReader → DRM/PCI + hwmon + NVML opcional
+          │   └── /proc/<pid>/fdinfo (uso i915/xe quando publicado)
           ├── /proc/diskstats e /proc/net/dev (disco e rede)
           └── LinuxFpsMonitor → PhantomVulkanLayer (memória compartilhada)
 
@@ -53,7 +54,7 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
 * **Temperaturas e Ventoinhas:**
   * Subsistema unificado `hwmon` em `/sys/class/hwmon/hwmon*`.
   * CPU: drivers de temperatura nativos `coretemp` (Intel), `k10temp` ou `zenpower` (AMD) — série por arquivo (`temp1_input` → `CpuTemperature#1`).
-  * GPU: drivers de kernel DRM (`amdgpu`, `nouveau`, `nvidia`) — `GpuTemperature#hwmon` por card; `GpuFan` canônico + `FanSpeed#(hwmon×100 + fanN)` por ventoinha (slot composto: hwmon e o N do arquivo `fan*_input`). O arquivo `tempN_label` diferencia os diodos quando existe: `edge` → `GpuTemperature`, `junction`/`hotspot` → `GpuHotSpot`, `mem`/`vram` → `GpuVramTemperature` (canônicas = maior valor entre os cards).
+  * GPU: o coletor associa `hwmon` ao caminho PCI/DRM da placa para evitar classificar temperaturas Intel como sensores da placa-mãe. Publica `GpuTemperature#i` e, quando os rótulos do driver permitem identificar, `GpuHotSpot#i` e `GpuVramTemperature#i`; `GpuFan` e `FanSpeed#i` aparecem quando há canal `fan*_input`.
   * Controladores/EC: temperaturas por slot + canônica máxima (`MotherboardTemp`, `MotherboardTemp#i`).
 * **Disco:**
   * Leitura e escrita em `/proc/diskstats`, convertendo setores (512 bytes) em throughput: canônico somado ("Discos (somatório)") + `DiskRead#i`/`DiskWrite#i` por device (slot estável por nome).
@@ -61,10 +62,11 @@ No Linux, todas as métricas são consumidas de forma não intrusiva a partir da
   * ↑/↓ somados nas séries canônicas; `NetworkUp#i`/`NetworkDown#i` por interface (slot estável por nome, `lo` ignorado);
   * Totais da sessão: `NetworkUpTotal`/`NetworkDownTotal` (integrando a velocidade observada entre amostras).
 * **GPU (Utilização, VRAM e temperatura):**
-  * AMD: leitura DRM em `/sys/class/drm/card*/device/gpu_busy_percent` e `mem_info_vram_*`.
-  * NVIDIA: leitura opcional pela NVML (`libnvidia-ml.so.1`), fornecida pelo driver NVIDIA instalado; coleta utilização, VRAM usada/total e temperatura principal sem executar `nvidia-smi`.
-  * Multi-GPU: cada card publica séries `GpuCore#i`, `GpuMemoryUsed#i`, `GpuMemoryTotal#i` e `GpuTemperature#i` quando o driver fornece a métrica; a série canônica usa a primeira leitura disponível.
-  * Hot Spot e temperatura da VRAM aparecem somente quando o driver também publica esses canais em `hwmon` com rótulos reconhecidos. O app não distribui a NVML.
+  * AMD: tenta os contadores DRM agregados `gpu_busy_percent` e `mem_info_vram_used/total`, além de temperaturas e ventoinhas `hwmon` identificadas para a placa.
+  * NVIDIA: usa NVML (`libnvidia-ml.so.1`) se o driver instalado a fornecer; Nouveau e outros drivers também podem publicar métricas por DRM ou `hwmon`. Não executa `nvidia-smi` e não distribui NVML.
+  * Intel: associa os canais `hwmon` por caminho PCI e calcula `GpuCore` a partir de `drm-engine-*` em `/proc/<pid>/fdinfo` quando `i915`/`xe` os publicam. O resultado representa o mecanismo mais ocupado, normalizado pelo intervalo e pela capacidade declarada pelo driver; a primeira amostra cria a base e o uso aparece no intervalo seguinte. Processos de outros usuários ou namespaces podem não estar visíveis.
+  * Multi-GPU: placas DRM/PCI recebem séries `GpuCore#i`, `GpuMemoryUsed#i`, `GpuMemoryTotal#i`, `GpuTemperature#i` e outras métricas disponíveis; as chaves canônicas atuais são preservadas. Uso e total de memória vêm apenas de fontes agregadas por placa. Estatísticas por processo não são somadas (buffers podem ser compartilhados) e RAM compartilhada não substitui VRAM.
+  * `GpuHotSpot` e `GpuVramTemperature` só aparecem com canais `hwmon` identificados pelo driver. Cada métrica pode ficar indisponível se a combinação de placa e driver não a publicar; **Diagnóstico** informa driver, fonte e motivo por placa e métrica. Não são necessários privilégios de administrador nem utilitários externos.
 * **Bateria/Fonte AC (P6.4):**
   * `/sys/class/power_supply/BAT*` (classe `type` = `Battery`): nível (`capacity`), tensão (`voltage_now`, µV → V), potência (`power_now` µW; respatilha `current_now` × tensão) e desgaste ((1 − `energy_full`/`energy_full_design`) × 100; respatilha `charge_full(_design)`).
   * Sinal normalizado pelo arquivo `status`: **positivo consumindo**, negativo carregando (drivers divergem no sinal de `current_now`).

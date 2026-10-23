@@ -16,7 +16,8 @@ PhantomMonitor.App (Linux)
           ├── /proc/stat (CPU)
           ├── /proc/meminfo (RAM)
           ├── /sys/class/hwmon (temperatures and fans)
-          ├── /sys/class/drm (GPU and VRAM)
+          ├── LinuxGpuSensorReader → DRM/PCI + hwmon + optional NVML
+          │   └── /proc/<pid>/fdinfo (i915/xe usage when published)
           ├── /proc/diskstats and /proc/net/dev (disk and network)
           └── LinuxFpsMonitor → PhantomVulkanLayer (shared memory)
 
@@ -32,10 +33,10 @@ The service reads standard kernel interfaces without injecting code into other p
 - **CPU usage:** deltas from `/proc/stat`, including one `CpuPerCore#i` series per core.
 - **CPU clocks:** `scaling_cur_freq` under `/sys/devices/system/cpu/cpu*/cpufreq`; published per core as `CpuClock#i` when available.
 - **RAM:** total and available physical memory from `/proc/meminfo`.
-- **Temperatures and fans:** `/sys/class/hwmon/hwmon*`. CPU temperature comes from drivers such as `coretemp`, `k10temp`, and `zenpower`. GPU temperature labels distinguish edge, junction/hotspot, and memory/VRAM temperatures when the driver supplies labels. Motherboard/EC temperatures and fan slots are published when available.
+- **Temperatures and fans:** `/sys/class/hwmon/hwmon*`. CPU temperature comes from drivers such as `coretemp`, `k10temp`, and `zenpower`. GPU hwmon entries are associated with their PCI/DRM device so Intel GPU temperatures are not classified as motherboard sensors. Driver channel labels identify `GpuTemperature#i`, `GpuHotSpot#i`, and `GpuVramTemperature#i`; `GpuFan` and `FanSpeed#i` are available when a `fan*_input` channel exists. Motherboard/EC temperatures are also published when available.
 - **Disk:** `/proc/diskstats` provides aggregate throughput and per-device `DiskRead#i`/`DiskWrite#i` series.
 - **Network:** `/proc/net/dev` publishes aggregate and per-interface throughput; loopback is excluded. Session totals integrate observed throughput.
-- **GPU utilization, VRAM, and temperature:** AMD metrics come from DRM files under `/sys/class/drm/card*/device`. NVIDIA metrics are read optionally through NVML (`libnvidia-ml.so.1`), supplied by the installed NVIDIA driver; this provides utilization, used/total VRAM, and core temperature without spawning `nvidia-smi`. Multiple cards receive per-instance series, and the canonical series uses the first available reading. Hot Spot and VRAM temperature appear only when the driver also exposes recognized `hwmon` labels. NVML is not bundled with the app.
+- **GPU utilization, VRAM, and temperature:** AMD uses aggregate DRM attributes (`gpu_busy_percent`, `mem_info_vram_used/total`) and associated `hwmon` channels. NVIDIA uses NVML (`libnvidia-ml.so.1`) when the installed driver provides it; Nouveau and other drivers can still supply DRM or `hwmon` readings. Intel associates `hwmon` by PCI path and reads `drm-engine-*` from `/proc/<pid>/fdinfo` for `i915`/`xe` usage when available. Usage is the busiest engine normalized by the sample interval and driver-reported capacity; the first sample establishes a baseline, so usage appears on the next interval. Processes owned by other users or hidden by namespaces may not be visible. Memory used/total comes only from per-device aggregate sources: per-process statistics are not added together because buffers can be shared, and system RAM is never presented as VRAM. Multi-GPU devices receive per-card series while existing canonical sensor keys remain. Hot Spot and VRAM temperature require explicitly labeled driver `hwmon` channels. Each metric can be unavailable when a device/driver does not expose it; Diagnostics reports the driver, source, and reason per device and metric. No administrator privileges or external utilities are required, and NVML is not bundled with the app.
 - **Battery and AC power:** `/sys/class/power_supply/BAT*` and mains/UPS entries provide charge, voltage, power, wear, and AC-connected state. Power is positive while discharging and negative while charging. Systems without a power-supply device publish no battery series.
 
 Unavailable values display as `—` in the dashboard; a reported zero remains a valid value.

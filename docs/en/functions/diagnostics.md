@@ -21,7 +21,7 @@ The file is capped at about 1 MB, and consecutive duplicate messages are suppres
 
 Known readings are reported as available or unavailable, with the source queried and an explanation when one can be determined. An optional sensor being absent is informational, not an application exception.
 
-On Linux, details cover `procfs`, `sysfs`, `hwmon`, DRM, NVML, and the Phantom Vulkan layer. For NVIDIA devices, the view identifies the bound driver, reports whether `libnvidia-ml.so.1` loaded, and shows which metrics came from NVML or `hwmon`. For example, Nouveau without NVML may not provide utilization or VRAM metrics; temperatures also depend on channels exposed by the driver.
+On Linux, details cover `procfs`, `sysfs`, `hwmon`, DRM, NVML, and the Phantom Vulkan layer. For each detected GPU, the view shows its vendor, driver, PCI ID, the source used for each metric, and why a reading is missing. For NVIDIA devices, it reports whether `libnvidia-ml.so.1` loaded and separates NVML, DRM, and `hwmon` metrics. For Intel `i915`/`xe`, it reports the state of `drm-engine-*` counters in `fdinfo`; the first sample establishes a baseline and utilization is calculated on the next interval. Restricted process visibility can prevent that reading without stopping other sensors. Nouveau can be identified even when the driver publishes no utilization, VRAM, or temperature channels; in that case values remain unavailable and diagnostics describe the sources checked.
 
 On Windows, the sensor tab lists hardware and readings discovered by LibreHardwareMonitor, PresentMon/ETW state, and availability of known sensor types.
 

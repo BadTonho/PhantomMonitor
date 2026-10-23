@@ -32,7 +32,7 @@ The project runs a **single Avalonia desktop app** on Windows and Linux. Earlier
 
 | Feature | Windows | Linux |
 | --- | --- | --- |
-| Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors via LibreHardwareMonitor | Sensors from `sysfs`, `procfs` (including DRM `fdinfo`), `hwmon`, DRM, and optional NVIDIA NVML; GPU metrics vary by driver |
+| Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors via LibreHardwareMonitor | Sensors from `sysfs`, `procfs` (including DRM `fdinfo`), `hwmon`, Linux thermal zones, DRM, and optional NVIDIA NVML; GPU metrics vary by driver |
 | FPS and frametime | PresentMon through ETW | Phantom Vulkan layer for Vulkan games |
 | Overlay | Advanced OSD, click-through, and profiles (editing via config.json) | Configurable floating window; the compositor controls position and fullscreen behavior |
 | Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |

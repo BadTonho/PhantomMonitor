@@ -34,13 +34,16 @@ internal sealed class LinuxGpuSensorReader : IDisposable
 
     private readonly string _drmRoot;
     private readonly string _hwmonRoot;
+    private readonly string _thermalRoot;
     private readonly NvidiaGpuSensorReader _nvidiaReader;
     private readonly DrmFdInfoGpuUsageReader _fdInfoReader;
     private readonly Dictionary<(int CardIndex, SensorType Type), HashSet<string>> _sources = [];
+    private readonly Dictionary<(int CardIndex, SensorType Type), HashSet<string>> _sourceIssues = [];
     private readonly Dictionary<int, string> _nvidiaStatuses = [];
     private readonly Dictionary<SensorType, HashSet<string>> _unassociatedHwmonSources = [];
     private List<GpuDevice> _devices = [];
     private Dictionary<string, HwmonAssociation> _hwmonAssociations = new(StringComparer.Ordinal);
+    private List<ThermalZoneAssociation> _thermalZones = [];
     private IReadOnlyDictionary<string, double> _fdInfoUsage = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
     public LinuxGpuSensorReader(
@@ -49,10 +52,12 @@ internal sealed class LinuxGpuSensorReader : IDisposable
         string procRoot = "/proc",
         NvidiaGpuSensorReader? nvidiaReader = null,
         DrmFdInfoGpuUsageReader? fdInfoReader = null,
-        string drmDeviceRoot = "/dev/dri")
+        string drmDeviceRoot = "/dev/dri",
+        string thermalRoot = "/sys/class/thermal")
     {
         _drmRoot = drmRoot;
         _hwmonRoot = hwmonRoot;
+        _thermalRoot = thermalRoot;
         _nvidiaReader = nvidiaReader ?? new NvidiaGpuSensorReader();
         _fdInfoReader = fdInfoReader ?? new DrmFdInfoGpuUsageReader(procRoot, drmDeviceRoot: drmDeviceRoot);
     }
@@ -60,10 +65,12 @@ internal sealed class LinuxGpuSensorReader : IDisposable
     public void BeginSample(DateTime timestampUtc)
     {
         _sources.Clear();
+        _sourceIssues.Clear();
         _nvidiaStatuses.Clear();
         _unassociatedHwmonSources.Clear();
         _devices = EnumerateDevices();
         _hwmonAssociations = EnumerateHwmonAssociations();
+        _thermalZones = EnumerateThermalZones();
         _fdInfoUsage = _fdInfoReader.Sample(
             timestampUtc,
             _devices.Select(device => device.PciBusId).Where(id => id is not null).Cast<string>().ToArray());
@@ -92,9 +99,6 @@ internal sealed class LinuxGpuSensorReader : IDisposable
         string tempFile,
         int fileSlot)
     {
-        if (!TryReadDouble(tempFile, out var milliCelsius) || milliCelsius is < 0 or > 200_000)
-            return;
-
         var channelLabel = TryReadText(Path.Combine(hwmonDirectory, $"temp{fileSlot}_label"), out var rawLabel)
             ? rawLabel.ToLowerInvariant()
             : "";
@@ -113,8 +117,30 @@ internal sealed class LinuxGpuSensorReader : IDisposable
                 ? SensorType.GpuVramTemperature
                 : SensorType.GpuTemperature;
 
+        var status = ReadNumericFile(tempFile, out var milliCelsius);
+        if (status != NumericFileStatus.Valid)
+        {
+            RecordSourceIssue(cardIndex, type, DescribeFileIssue("hwmon", tempFile, status));
+            return;
+        }
+
+        if (milliCelsius is < 0 or > 200_000)
+        {
+            RecordSourceIssue(cardIndex, type,
+                $"hwmon/{Path.GetFileName(tempFile)} publicou valor fora do intervalo térmico esperado");
+            return;
+        }
+
         var source = $"hwmon({hwmonName})/{Path.GetFileName(tempFile)}";
         PublishTemperature(data, type, cardIndex, milliCelsius / 1000d, label, source);
+    }
+
+    public void ReportHwmonDirectoryIssue(int cardIndex, string directory, string status)
+    {
+        var issue = $"hwmon/{Path.GetFileName(directory)} não pôde enumerar canais de temperatura ({status})";
+        RecordSourceIssue(cardIndex, SensorType.GpuTemperature, issue);
+        RecordSourceIssue(cardIndex, SensorType.GpuHotSpot, issue);
+        RecordSourceIssue(cardIndex, SensorType.GpuVramTemperature, issue);
     }
 
     public void PublishGpuFan(SensorData data, int cardIndex, double rpm, string label, string source)
@@ -165,6 +191,8 @@ internal sealed class LinuxGpuSensorReader : IDisposable
             PublishMetric(data, SensorType.GpuCore, device.Index, usage, device.Label,
                 "DRM fdinfo (mecanismo mais ocupado)", onlyWhenMissing: true);
         }
+
+        ReadThermalZoneMetrics(data);
     }
 
     public void AppendDiagnostics(ICollection<string> lines, SensorData data)
@@ -298,6 +326,83 @@ internal sealed class LinuxGpuSensorReader : IDisposable
         return matchingDrivers.Length == 1 ? matchingDrivers[0] : null;
     }
 
+    private List<ThermalZoneAssociation> EnumerateThermalZones()
+    {
+        var result = new List<ThermalZoneAssociation>();
+        try
+        {
+            if (!Directory.Exists(_thermalRoot)) return result;
+            foreach (var directory in Directory.GetDirectories(_thermalRoot))
+            {
+                if (!Path.GetFileName(directory).StartsWith("thermal_zone", StringComparison.Ordinal)) continue;
+                var type = TryReadText(Path.Combine(directory, "type"), out var rawType) ? rawType : "";
+                var zonePath = ResolvePath(directory);
+                var linkedDevicePath = ResolvePath(Path.Combine(directory, "device"));
+                var device = FindGpuForThermalZone(zonePath, linkedDevicePath, type);
+                if (device is not null)
+                    result.Add(new ThermalZoneAssociation(directory, type, device));
+            }
+        }
+        catch (Exception ex) when (IsExpectedSysfsFailure(ex))
+        {
+            foreach (var device in _devices)
+                RecordSourceIssue(device.Index, SensorType.GpuTemperature,
+                    $"/sys/class/thermal não pôde enumerar zonas associadas à GPU ({ex.GetType().Name})");
+        }
+
+        return result;
+    }
+
+    private GpuDevice? FindGpuForThermalZone(string zonePath, string linkedDevicePath, string type)
+    {
+        foreach (var device in _devices)
+        {
+            if (device.CanonicalDevicePath is null) continue;
+            if (string.Equals(linkedDevicePath, device.CanonicalDevicePath, StringComparison.Ordinal) ||
+                IsPathWithin(linkedDevicePath, device.CanonicalDevicePath) ||
+                IsPathWithin(zonePath, device.CanonicalDevicePath))
+                return device;
+        }
+
+        var normalizedType = type.ToLowerInvariant();
+        var driverMatches = _devices.Where(device =>
+            device.Driver != "não identificado" &&
+            normalizedType.Contains(device.Driver.ToLowerInvariant(), StringComparison.Ordinal)).ToArray();
+        if (driverMatches.Length == 1) return driverMatches[0];
+
+        // Só usa o nome genérico quando há uma única placa; com mais de uma GPU,
+        // associação ambígua poderia atribuir temperatura de outro componente.
+        return normalizedType.Contains("gpu", StringComparison.Ordinal) && _devices.Count == 1
+            ? _devices[0]
+            : null;
+    }
+
+    private void ReadThermalZoneMetrics(SensorData data)
+    {
+        foreach (var zone in _thermalZones)
+        {
+            var path = Path.Combine(zone.Directory, "temp");
+            var status = ReadNumericFile(path, out var milliCelsius);
+            if (status != NumericFileStatus.Valid)
+            {
+                if (status != NumericFileStatus.Missing)
+                    RecordSourceIssue(zone.Device.Index, SensorType.GpuTemperature,
+                        DescribeFileIssue($"thermal_zone({zone.Type})", path, status));
+                continue;
+            }
+
+            if (milliCelsius is < 0 or > 200_000)
+            {
+                RecordSourceIssue(zone.Device.Index, SensorType.GpuTemperature,
+                    $"thermal_zone({zone.Type})/{Path.GetFileName(path)} publicou valor fora do intervalo térmico esperado");
+                continue;
+            }
+
+            PublishTemperature(data, SensorType.GpuTemperature, zone.Device.Index,
+                milliCelsius / 1000d, zone.Device.Label, $"thermal_zone({zone.Type})/temp", onlyWhenMissing: true);
+        }
+    }
+
     private void ReadDrmAttribute(
         SensorData data,
         GpuDevice device,
@@ -307,12 +412,30 @@ internal sealed class LinuxGpuSensorReader : IDisposable
         string source)
     {
         var path = Path.Combine(device.DevicePath, fileName);
-        if (!TryReadDouble(path, out var rawValue)) return;
-        if (type == SensorType.GpuCore && rawValue is < 0 or > 100) return;
-        if (type != SensorType.GpuCore && rawValue < 0) return;
+        var status = ReadNumericFile(path, out var rawValue);
+        if (status != NumericFileStatus.Valid)
+        {
+            if (status is NumericFileStatus.Inaccessible or NumericFileStatus.Invalid)
+                RecordSourceIssue(device.Index, type, DescribeFileIssue(source, path, status));
+            return;
+        }
+        if (type == SensorType.GpuCore && rawValue is < 0 or > 100)
+        {
+            RecordSourceIssue(device.Index, type, $"{source} publicou valor fora do intervalo de 0 a 100%");
+            return;
+        }
+        if (type != SensorType.GpuCore && rawValue < 0)
+        {
+            RecordSourceIssue(device.Index, type, $"{source} publicou valor negativo");
+            return;
+        }
 
         var value = convert(rawValue);
-        if (!double.IsFinite(value)) return;
+        if (!double.IsFinite(value))
+        {
+            RecordSourceIssue(device.Index, type, $"{source} publicou um valor não finito");
+            return;
+        }
         PublishMetric(data, type, device.Index, value, device.Label, $"{device.CardName}/{source}", onlyWhenMissing: true);
     }
 
@@ -381,7 +504,7 @@ internal sealed class LinuxGpuSensorReader : IDisposable
     {
         var driver = device.Driver;
         var isNvidia = device.Vendor.Equals("0x10de", StringComparison.OrdinalIgnoreCase);
-        return type switch
+        var baseReason = type switch
         {
             SensorType.GpuCore when driver is "i915" or "xe" =>
                 $"o driver {driver} não publicou uma amostra de uso; fdinfo: {TrimTerminalPeriod(_fdInfoReader.GetDeviceStatus(device.PciBusId))}",
@@ -395,13 +518,17 @@ internal sealed class LinuxGpuSensorReader : IDisposable
             SensorType.GpuMemoryUsed => "mem_info_vram_used ou NVML não publicou uso agregado de VRAM",
             SensorType.GpuMemoryTotal => "mem_info_vram_total ou NVML não publicou capacidade de VRAM",
             SensorType.GpuTemperature when isNvidia =>
-                $"hwmon não publicou temp*_input e NVML: {GetNvidiaStatus(device.Index)}",
-            SensorType.GpuTemperature => "hwmon não publicou canal temp*_input da GPU",
+                $"hwmon/thermal_zone não publicou temperatura e NVML: {GetNvidiaStatus(device.Index)}",
+            SensorType.GpuTemperature => "hwmon/thermal_zone não publicou canal de temperatura associado à GPU",
             SensorType.GpuHotSpot => "hwmon não publicou canal com rótulo hotspot/junction",
             SensorType.GpuVramTemperature => "hwmon não publicou canal com rótulo mem/vram",
             SensorType.GpuFan => "hwmon não publicou fan*_input da GPU",
             _ => "nenhuma fonte compatível publicou esta métrica"
         };
+
+        return _sourceIssues.TryGetValue((device.Index, type), out var issues) && issues.Count > 0
+            ? $"{baseReason}; fonte encontrada, mas inválida/inacessível: {string.Join("; ", issues)}"
+            : baseReason;
     }
 
     private static string ExpectedSources(GpuDevice device, SensorType type)
@@ -413,8 +540,9 @@ internal sealed class LinuxGpuSensorReader : IDisposable
             SensorType.GpuCore => "DRM/gpu_busy_percent, DRM fdinfo",
             SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal when isNvidia => "NVML, DRM/mem_info_vram_*",
             SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal => "DRM/mem_info_vram_*",
-            SensorType.GpuTemperature when isNvidia => "NVML, hwmon",
-            SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuVramTemperature => "hwmon",
+            SensorType.GpuTemperature when isNvidia => "NVML, hwmon, thermal_zone",
+            SensorType.GpuTemperature => "hwmon, thermal_zone",
+            SensorType.GpuHotSpot or SensorType.GpuVramTemperature => "hwmon",
             _ => "DRM/hwmon"
         };
     }
@@ -424,12 +552,47 @@ internal sealed class LinuxGpuSensorReader : IDisposable
 
     private static string TrimTerminalPeriod(string value) => value.TrimEnd('.');
 
-    private static bool TryReadDouble(string path, out double value)
+    private static NumericFileStatus ReadNumericFile(string path, out double value)
     {
         value = 0;
-        return TryReadText(path, out var raw) &&
-               double.TryParse(raw.Split('\n')[0], NumberStyles.Float, CultureInfo.InvariantCulture, out value) &&
-               double.IsFinite(value);
+        string raw;
+        try
+        {
+            raw = File.ReadAllText(path).Trim();
+        }
+        catch (FileNotFoundException)
+        {
+            return NumericFileStatus.Missing;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return NumericFileStatus.Missing;
+        }
+        catch (Exception ex) when (IsExpectedSysfsFailure(ex))
+        {
+            return NumericFileStatus.Inaccessible;
+        }
+
+        return double.TryParse(raw.Split('\n')[0], NumberStyles.Float, CultureInfo.InvariantCulture, out value) &&
+               double.IsFinite(value)
+            ? NumericFileStatus.Valid
+            : NumericFileStatus.Invalid;
+    }
+
+    private static string DescribeFileIssue(string source, string path, NumericFileStatus status) =>
+        status switch
+        {
+            NumericFileStatus.Inaccessible => $"{source}/{Path.GetFileName(path)} foi localizado, mas não pôde ser lido (permissão ou remoção durante a amostra)",
+            NumericFileStatus.Invalid => $"{source}/{Path.GetFileName(path)} contém valor inválido",
+            _ => $"{source}/{Path.GetFileName(path)} desapareceu durante a amostra"
+        };
+
+    private void RecordSourceIssue(int cardIndex, SensorType type, string issue)
+    {
+        if (cardIndex <= 0) return;
+        if (!_sourceIssues.TryGetValue((cardIndex, type), out var issues))
+            _sourceIssues[(cardIndex, type)] = issues = new HashSet<string>(StringComparer.Ordinal);
+        issues.Add(issue);
     }
 
     private static bool TryReadText(string path, out string text)
@@ -568,4 +731,14 @@ internal sealed class LinuxGpuSensorReader : IDisposable
         string Label);
 
     private sealed record HwmonAssociation(string Name, GpuDevice? Device);
+
+    private sealed record ThermalZoneAssociation(string Directory, string Type, GpuDevice Device);
+
+    private enum NumericFileStatus
+    {
+        Missing,
+        Valid,
+        Invalid,
+        Inaccessible
+    }
 }

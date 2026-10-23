@@ -368,9 +368,12 @@ public sealed class LinuxSensorService : ISensorService
             {
                 // Por diretório: um hwmon sumindo entre a listagem e a leitura
                 // (permission denied comum em alguns sensores) não pode abortar o restante.
+                var name = "";
+                var gpuCardIndex = 0;
+                var gpuLabel = "";
+                var isGpuHwmon = false;
                 try
                 {
-                    string name = "";
                     var namePath = Path.Combine(dir, "name");
                     if (TryReadSysfsFile(namePath, out var nameRaw))
                     {
@@ -383,7 +386,7 @@ public sealed class LinuxSensorService : ISensorService
                         hwmonSlot = _hwmonSlots[dir] = _hwmonSlots.Count + 1;
 
                     bool isCpuHwmon = name.Contains("coretemp") || name.Contains("k10temp") || name.Contains("zenpower");
-                    bool isGpuHwmon = _gpuSensorReader.IsGpuHwmonDirectory(dir, out var gpuCardIndex, out var gpuLabel);
+                    isGpuHwmon = _gpuSensorReader.IsGpuHwmonDirectory(dir, out gpuCardIndex, out gpuLabel);
                     bool isFanController = !isCpuHwmon && !isGpuHwmon;
                     var hwLabel = name;
 
@@ -391,23 +394,25 @@ public sealed class LinuxSensorService : ISensorService
                     int mbTempSlot = 0;
                     foreach (var tempFile in Directory.GetFiles(dir, "temp*_input"))
                     {
+                        int fileSlot = ParseSysfsIndex(tempFile, "temp");
+                        if (isGpuHwmon)
+                        {
+                            _gpuSensorReader.ReadHwmonTemperature(data, dir, gpuCardIndex, name, gpuLabel,
+                                tempFile, fileSlot);
+                            continue;
+                        }
+
                         if (!TryReadSysfsFile(tempFile, out var tempRaw) ||
                             !double.TryParse(tempRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var milliDeg))
                             continue;
 
                         double deg = milliDeg / 1000.0;
-                        int fileSlot = ParseSysfsIndex(tempFile, "temp");
 
                         if (isCpuHwmon)
                         {
                             data.SetValue(new SensorKey(SensorType.CpuTemperature, fileSlot > 0 ? fileSlot : hwmonSlot), deg, hwLabel);
                             if (data.CpuTemp <= 0 || deg > data.CpuTemp)
                                 data.SetValue(SensorType.CpuTemperature, deg, "CPU Temp");
-                        }
-                        else if (isGpuHwmon)
-                        {
-                            _gpuSensorReader.ReadHwmonTemperature(data, dir, gpuCardIndex, name, gpuLabel,
-                                tempFile, fileSlot);
                         }
                         else if (isFanController)
                         {
@@ -439,7 +444,10 @@ public sealed class LinuxSensorService : ISensorService
                 }
                 catch (Exception ex)
                 {
-                    ErrorLog.Write("LinuxSensorService.HwmonEntry", ex);
+                    if (isGpuHwmon && ex is (IOException or UnauthorizedAccessException))
+                        _gpuSensorReader.ReportHwmonDirectoryIssue(gpuCardIndex, dir, ex.GetType().Name);
+                    else
+                        ErrorLog.Write("LinuxSensorService.HwmonEntry", ex);
                 }
             }
         }

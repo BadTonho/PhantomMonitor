@@ -50,3 +50,5 @@ When loading an older config without `overlay.blocks`, normalization migrates en
 The **Custom sensors** and **Per-series tuning** pages edit `customSensors` and `sensorTuning`, respectively. Their order matters: custom formulas can reference earlier entries, and the last matching tuning rule wins. Sensor categories in `sensors.*` and per-application profiles remain in `config.json`; Windows hotkeys are Windows-only.
 
 The log directory is displayed read-only in Settings. The telemetry listener stays active while collection is paused and serves the frozen latest snapshot; it closes when collection stops. Binding to all interfaces (`listenAll`) has neither TLS nor authentication. If a configuration save fails, the running options remain in effect.
+
+Internally, `AppConfig` remains the read/write boundary. Normalization and overlay migration live in dedicated partials; configuration models are grouped into overlay, sensor, and other option files without changing JSON names or existing defaults.

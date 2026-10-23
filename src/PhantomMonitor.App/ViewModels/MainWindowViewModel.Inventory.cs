@@ -113,6 +113,7 @@ public sealed partial class MainWindowViewModel
     /// nos logs ativos, igual ao ResetSeriesStats do WPF pedido pela janela de inventário.</summary>
     public void ResetSessionStats()
     {
+        _inventoryAggregateStats.Reset();
         try
         {
             _sensorService?.ResetSeriesStats();
@@ -128,7 +129,7 @@ public sealed partial class MainWindowViewModel
         // Reflete na hora: reconciliação adiantada (o próximo snapshot reconciliaria
         // do mesmo jeito, mas alterar a sessão inteira para "--" já ali confirma o clique).
         if (_latestSensorData is { } data)
-            ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data));
+            ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data, _inventoryAggregateStats, useSnapshotStats: false));
 
         InventoryActionStatusText = "Estatísticas resetadas · marcador gravado no CSV/JSONL em uso";
         HasInventoryActionStatus = true;

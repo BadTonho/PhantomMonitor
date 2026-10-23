@@ -56,6 +56,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     // uma nova a cada snapshot (grupos + rows recriados).
     private readonly ObservableCollection<InventoryGroupViewModel> _inventoryGroups =
         new(SensorInventoryBuilder.CreateShellGroups());
+    private readonly InventoryAggregateStatsTracker _inventoryAggregateStats = new();
     private InventoryGroupViewModel? _inventoryOtherGroup;
     private bool _hasInventorySnapshot;
     private bool _isOverview = true;
@@ -425,6 +426,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
 
     public void ShowInventory()
     {
+        CollapseInventoryDetails();
         IsOverview = false;
         IsSettings = false;
         IsAlerts = false;
@@ -432,6 +434,19 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         IsSensorTuning = false;
         IsDiagnostics = false;
         Raise(nameof(IsInventory));
+    }
+
+    private void CollapseInventoryDetails()
+    {
+        foreach (var group in _inventoryGroups)
+        foreach (var row in group.Rows)
+            Collapse(row);
+
+        static void Collapse(InventoryRowViewModel row)
+        {
+            row.IsExpanded = false;
+            foreach (var child in row.Children) Collapse(child);
+        }
     }
 
     public void ShowSettings()
@@ -567,7 +582,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
 
         _latestSensorData = data;
         RefreshOverlaySeriesOptions();
-        ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data));
+        ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data, _inventoryAggregateStats));
         UpdateInventorySession(data);
         UpdateOverlayRows(data);
         RefreshSensorTuningSeriesOptions();
@@ -689,7 +704,10 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
             if (keys[i].Type != type) continue;
             var key = keys[i];
             if (key.IsPrimary || data.Series.ContainsKey(key))
-                return $"{data.GetValue(key):F0} MHz";
+            {
+                var estimate = data.GetLabel(key).Contains("aprox", StringComparison.OrdinalIgnoreCase) ? "≈ " : "";
+                return $"{estimate}{data.GetValue(key):F0} MHz";
+            }
             return "—";
         }
         return "—";

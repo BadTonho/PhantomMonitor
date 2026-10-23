@@ -213,6 +213,7 @@ public sealed class HardwareMonitorService : ISensorService
             ProcessHardware(hardware, data, debugInfo, depth: 0);
         }
 
+        ApplyCpuClockFallback(data, debugInfo);
         ApplyCpuTempFallback(data, debugInfo);
         ApplyRamFallbacks(data, debugInfo);
         ReadBattery(data, debugInfo);
@@ -310,6 +311,74 @@ public sealed class HardwareMonitorService : ISensorService
     }
 
     // ---------- Fallbacks ----------
+
+    private bool _cpuClockFallbackWarningLogged;
+
+    /// <summary>
+    /// Clock geral aproximado via Windows quando o LHM não expõe frequência positiva.
+    /// CurrentMhz acompanha o limite máximo multiplicado pelo throttling atual; não é
+    /// uma leitura por núcleo e nunca preenche as séries CpuClock#i.
+    /// </summary>
+    private void ApplyCpuClockFallback(SensorData data, List<string> debugInfo)
+    {
+        if (data.Values.TryGetValue(SType.CpuClock, out var clock) && double.IsFinite(clock) && clock > 0)
+            return;
+
+        try
+        {
+            var activeProcessorCount = GetActiveProcessorCount(ushort.MaxValue);
+            if (activeProcessorCount == 0 || activeProcessorCount > int.MaxValue) return;
+
+            var processorInfo = new ProcessorPowerInformation[(int)activeProcessorCount];
+            var outputLength = checked(Marshal.SizeOf<ProcessorPowerInformation>() * processorInfo.Length);
+            var status = CallNtPowerInformation(11, IntPtr.Zero, 0, processorInfo, outputLength);
+            if (status != 0)
+            {
+                LogCpuClockFallbackWarning(debugInfo, $"CallNtPowerInformation retornou NTSTATUS 0x{status:X8}");
+                return;
+            }
+
+            var readings = processorInfo.Where(item => item.CurrentMhz > 0).Select(item => (double)item.CurrentMhz).ToArray();
+            if (readings.Length == 0)
+            {
+                LogCpuClockFallbackWarning(debugInfo, "Windows não retornou frequências positivas");
+                return;
+            }
+
+            data.Values[SType.CpuClock] = readings.Average();
+            data.Labels[SType.CpuClock] = "Clock da CPU (aprox. Windows)";
+            debugInfo.Add($"[CPU] Clock geral aproximado pelo Windows = {readings.Average():F0} MHz; não representa clocks individuais.");
+        }
+        catch (Exception ex)
+        {
+            LogCpuClockFallbackWarning(debugInfo, $"Falha na leitura de frequência do Windows: {ex.Message}");
+        }
+    }
+
+    private void LogCpuClockFallbackWarning(List<string> debugInfo, string message)
+    {
+        if (_cpuClockFallbackWarningLogged) return;
+        _cpuClockFallbackWarningLogged = true;
+        debugInfo.Add($"[CPU] Clock aproximado indisponível: {message}");
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ProcessorPowerInformation
+    {
+        public uint Number;
+        public uint MaxMhz;
+        public uint CurrentMhz;
+        public uint MhzLimit;
+        public uint MaxIdleState;
+        public uint CurrentIdleState;
+    }
+
+    [DllImport("PowrProf.dll", EntryPoint = "CallNtPowerInformation")]
+    private static extern int CallNtPowerInformation(int informationLevel, IntPtr inputBuffer, int inputBufferLength,
+        [Out] ProcessorPowerInformation[] outputBuffer, int outputBufferLength);
+
+    [DllImport("kernel32.dll", EntryPoint = "GetActiveProcessorCount")]
+    private static extern uint GetActiveProcessorCount(ushort groupNumber);
 
     private void ApplyCpuTempFallback(SensorData data, List<string> debugInfo)
     {
@@ -808,6 +877,7 @@ public sealed class HardwareMonitorService : ISensorService
                 PutInstance(data, SType.CpuTemperature, core, val, label);
                 break;
             case LhmSensorType.Clock:
+                if (!double.IsFinite(val) || val <= 0) break;
                 PutMax(data, SType.CpuClock, val, label);
                 PutInstance(data, SType.CpuClock, core, val, label);
                 break;

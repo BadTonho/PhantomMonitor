@@ -129,8 +129,10 @@ public sealed partial class MainWindowViewModel
     }
 
     private void ReconcileInventoryRows(InventoryGroupViewModel group, IReadOnlyList<InventoryRowPlan> plan)
+        => ReconcileInventoryRows(group.Rows, plan);
+
+    private void ReconcileInventoryRows(ObservableCollection<InventoryRowViewModel> rows, IReadOnlyList<InventoryRowPlan> plan)
     {
-        var rows = group.Rows;
         var position = 0;
         for (var p = 0; p < plan.Count; p++)
         {
@@ -163,6 +165,9 @@ public sealed partial class MainWindowViewModel
             }
 
             row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available, entry.Min, entry.Max, entry.Avg);
+            var children = entry.Children ?? [];
+            ReconcileInventoryRows(row.Children, children);
+            row.SetExpandable(children.Count > 0);
             position++;
         }
 

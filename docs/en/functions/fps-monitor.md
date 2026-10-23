@@ -6,11 +6,11 @@ FPS collection is platform-specific and does not inject a DLL into the game.
 
 ## Windows: PresentMon and ETW
 
-The WPF frontend starts PresentMon 2.x and reads its CSV stream. It identifies the foreground game using Win32 APIs and consumes frametime and optional PresentMon metrics. PresentMon requires an elevated session or membership in **Performance Log Users**; otherwise diagnostics explain the permission issue in `logs/errors.log`. The app requests only options supported by the installed PresentMon version.
+The unified app starts PresentMon 2.x on Windows and reads its CSV stream. It identifies the foreground game using Win32 APIs and consumes frametime and optional PresentMon metrics. PresentMon requires an elevated session or membership in **Performance Log Users**; otherwise diagnostics explain the permission issue in `logs/errors.log`. The app requests only options supported by the installed PresentMon version.
 
 ## Linux: Phantom Vulkan layer
 
-The Avalonia frontend reads telemetry published by `PhantomVulkanLayer`, a native implicit Vulkan layer that intercepts `vkQueuePresentKHR` and records frame timing in POSIX shared memory. The layer is discovered by the Vulkan loader, but publishes data only when `ENABLE_PHANTOM_OVERLAY=1` is set for the game. `DISABLE_PHANTOM_OVERLAY=1` overrides the enable switch. See [Linux support](linux-support.md) for installation and Steam launch options.
+The unified (Avalonia) frontend reads telemetry published by `PhantomVulkanLayer`, a native implicit Vulkan layer that intercepts `vkQueuePresentKHR` and records frame timing in POSIX shared memory. The layer is discovered by the Vulkan loader, but publishes data only when `ENABLE_PHANTOM_OVERLAY=1` is set for the game. `DISABLE_PHANTOM_OVERLAY=1` overrides the enable switch. See [Linux support](linux-support.md) for installation and Steam launch options.
 
 The Linux reader matches shared-memory objects to live process IDs and ignores stale objects. FPS requires a Vulkan title; non-Vulkan games do not publish frames through this layer.
 

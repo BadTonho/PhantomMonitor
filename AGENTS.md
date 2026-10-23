@@ -44,9 +44,12 @@ Antes de realizar qualquer commit ou push:
 
 ## 3. Estrutura do Projeto e Compilação
 
-* **`src/PhantomMonitor/`**: Aplicação desktop WPF em .NET 10.
+* **`src/PhantomMonitor.App/`**: Aplicação desktop única em Avalonia/.NET 10 (Windows e Linux).
+* **`src/PhantomMonitor.Core/`**: Modelos, configuração, avaliação de alertas e serviços compartilhados em .NET (sensores Windows em `Services/Windows/`, Linux em `Services/Linux/`, updater em `Services/Update/`).
 * **`src/PhantomSensorLib/`**: Biblioteca nativa em C++ para leitura de sensores de baixo nível.
 * **`src/PhantomVulkanLayer/`**: Camada Vulkan nativa em C++ para Linux.
+* **`scripts/`**: Automação local (ex.: `release.ps1`, empacotamento de releases win/linux).
+* **`packaging/`**: Empacotadores (`windows/phantom-monitor.iss` com Inno Setup; `linux/appimage.sh` e `linux/deb.sh`).
 * **`tools/`**: Ferramentas auxiliares externas (ex.: `PresentMon.exe`).
 * **`docs/`**: Documentação de arquitetura e funcionalidades.
 

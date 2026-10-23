@@ -19,7 +19,7 @@ This document records feature comparisons and implementation decisions for Phant
 
 ## P2 — Shared-memory telemetry SDK (completed on Windows/WPF)
 
-The WPF/Windows frontend publishes the versioned `phantom_monitor_telemetry_v1` map: a header and up to 256 fixed-size series entries per snapshot, with a seqlock protocol and a reference reader in `tools/TelemetrySdkReader/`. Avalonia/Linux does not publish this full sensor map; both frontends support the opt-in HTTP exporter (`/values`, `/health`), and Linux also uses separate per-process POSIX shared memory for Vulkan FPS timings. JSON remains a file-based fallback. See [Telemetry SDK](telemetry-sdk.md).
+The retired WPF/Windows frontend published the versioned `phantom_monitor_telemetry_v1` map: a header and up to 256 fixed-size series entries per snapshot, with a seqlock protocol and a reference reader in `tools/TelemetrySdkReader/`. The SDK was retired with the WPF in Phase 2 of the visual unification (`6c4d2c0`); the unified app serves external tools through the opt-in HTTP exporter (`/values`, `/health`) on both systems, and Linux also uses separate per-process POSIX shared memory for Vulkan FPS timings. JSON remains a file-based fallback. See [Telemetry SDK](telemetry-sdk.md).
 
 ## P3 — Per-application OSD profiles (completed on Windows)
 
@@ -90,6 +90,6 @@ Additional distinctions from the reference suites:
 
 ## Project strengths
 
-The WPF shared-memory SDK is open and documented, CSV columns grow dynamically with instance series, and the design avoids hooks into game processes. The Linux frontend offers the opt-in HTTP exporter for full sensor snapshots and uses its POSIX shared-memory channel only for Vulkan frame timings. These choices keep telemetry available to external tools without granting them access to the game's address space.
+The retired WPF shared-memory SDK was open and documented, CSV columns grow dynamically with instance series, and the design avoids hooks into game processes. The unified app offers the opt-in HTTP exporter for full sensor snapshots on both systems and uses the POSIX shared-memory channel only for Vulkan frame timings on Linux. These choices keep telemetry available to external tools without granting them access to the game's address space.
 
 The implementation order recorded in the original roadmap prioritized session statistics/reset, per-app hide, HTTP export, battery, PresentMon metrics, templates, and pause/resume (P6.1–P6.7), followed by custom sensors, WHEA, JSONL, EDID, OSD graphs, GPU memory junction, and per-series tuning. The next larger work items remain vendor-dependent hardware sources rather than missing basic monitoring controls.

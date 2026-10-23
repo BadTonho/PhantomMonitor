@@ -14,13 +14,13 @@ The settings page lets you add detected series or enter keys/patterns manually f
 
 Matching per-instance rows are ordered by family, show the key, hardware label, and formatted value, and are limited to 24. A present zero is displayed as zero. Canonical category rows are not duplicated. On **Windows**, the Avalonia panel is now a true click-through overlay (`WS_EX_TRANSPARENT` + `WS_EX_LAYERED/NOACTIVATE/TOOLWINDOW`), like the WPF: **it does not receive clicks and cannot be dragged** (the × is display-only); it follows the focused app every 30 ms with a 500 ms Topmost reinforcement and is positioned by `overlayPosition`/profiles — day-to-day control lives in the dashboard **Show/Hide overlay** button. On **Linux**, the overlay stays interactive and draggable by its header with fixed Topmost (the compositor controls the initial position and whether the window appears over fullscreen applications; transparency and stacking also depend on compositor support).
 
-The Avalonia overlay now includes the P6.6 templates, the P8.5 per-series graphs, and the per-application profiles below; tray pinning arrives with F1.5 (tray) and the visual editor remains WPF-only — profiles/templates/graphs are edited through `config.json`. On Linux the profile matcher is inactive (there is no focused-window tick), and template/graph changes require an app restart (configuration is read at startup).
+The unified app includes the P6.6 templates, the P8.5 per-series graphs, and the per-application profiles below; tray pinning came with F1.5 (tray) and the visual editor was WPF-only (retired with the frontend in Phase 2) — profiles/templates/graphs are edited through `config.json`. On Linux the profile matcher is inactive (there is no focused-window tick), and template/graph changes require an app restart (configuration is read at startup).
 
-Both the WPF and the Avalonia app now offer the advanced OSD described below, including templates, per-instance series, application profiles, graphs, Windows click-through, and the per-profile accent (the visual editor is WPF-only; the Avalonia tray pin lands with F1.5).
+The unified app offers the advanced OSD described below, including templates, per-instance series, application profiles, graphs, Windows click-through, and the per-profile accent (the visual editor was WPF-only, retired in Phase 2; the tray pin landed with F1.5).
 
-## WPF game OSD
+## Game OSD layout (inherited from the WPF)
 
-The Windows WPF OSD is a transparent, click-through, topmost window designed to stay compact over games. It uses one aligned row per device, monospaced text, device-specific accents, and automatic color changes for high temperature or utilization.
+The Windows OSD is a transparent, click-through, topmost window designed to stay compact over games. It uses one aligned row per device, monospaced text, device-specific accents, and automatic color changes for high temperature or utilization.
 
 | Tag | Display |
 |---|---|
@@ -35,13 +35,13 @@ The Windows WPF OSD is a transparent, click-through, topmost window designed to 
 
 CPU and GPU can show compact secondary details such as clocks, power, voltage, VRAM, hotspot, and VRAM temperature. Network, fan, and motherboard rows are revealed when real readings first appear. Per-instance rows are filtered by `overlay.shownSeries`, grouped by family (GPU, fans, disks, RAM, CPU, network, battery, then other families), and limited to 24. Missing instances are hidden until they return. The FPS section can include average, 1%/0.1% lows, maximum, and a slim frametime chart.
 
-Typical instance tags are `GPU1`/`GPU2...` for multi-GPU metrics; `FAN1...` for fan slots; `DSK1...` for disk activity, throughput, temperature, and health; `CPU1...` for per-core temperature, usage, and clock; `MB1...`, `VRM1...`, and `RL1...` for board temperatures, VRM, and voltage rails; and `NET1...` for interface rates and session totals. Per-core rows are disabled by default in the WPF OSD because they can crowd the display on CPUs with many cores. If a device disappears, its instance row is hidden until the hardware returns.
+Typical instance tags are `GPU1`/`GPU2...` for multi-GPU metrics; `FAN1...` for fan slots; `DSK1...` for disk activity, throughput, temperature, and health; `CPU1...` for per-core temperature, usage, and clock; `MB1...`, `VRM1...`, and `RL1...` for board temperatures, VRM, and voltage rails; and `NET1...` for interface rates and session totals. Per-core rows are disabled by default because they can crowd the display on CPUs with many cores. If a device disappears, its instance row is hidden until the hardware returns.
 
 The device accents are orange for GPU, cyan for CPU, purple for RAM, blue for disks, green for network, pink for fans, light gray for motherboard, and bright green for FPS. Usage and temperature colors change with load. CPU detail can show clock, power, and voltage; GPU detail can show VRAM used/total, core and memory clocks, power, voltage, hotspot, and memory temperature. These detail rows stay hidden when no values are available.
 
-## WPF visual editor
+## Visual editor (WPF-native, retired)
 
-`OverlayEditorWindow` provides a dark grid canvas for moving metric blocks, snapping to a 10 px grid, selecting layers, editing X/Y offsets, and toggling each category. Its inspector controls width, opacity, compact mode, font (8–20 pt), accent color, per-instance patterns, and global hotkey. **Apply & Save** writes `config.json` and updates the running overlay.
+In the WPF, `OverlayEditorWindow` provided a dark grid canvas for moving metric blocks, snapping to a 10 px grid, selecting layers, editing X/Y offsets, and toggling each category. Its inspector controlled width, opacity, compact mode, font (8–20 pt), accent color, per-instance patterns, and global hotkey, and **Apply & Save** wrote `config.json` and updated the running overlay. The window was removed with the WPF in Phase 2; in the unified app these adjustments live in `config.json` and the Settings page.
 
 Dragging a block also changes the overlay's global offset, and the X/Y values track that movement. Quick-position presets cover the four screen corners. The per-instance section exposes family checkboxes for multiple GPUs, extra fans, disks, CPU cores, CPU power domains, motherboard sensors, VRM, voltage rails, network interfaces, and RAM temperatures. Manually configured patterns that have no checkbox remain intact when the editor saves. The editor also manages application profiles and multiline template text; template colors stay in configuration and are preserved for unchanged text.
 
@@ -96,9 +96,9 @@ Core `overlay` fields include:
 ]
 ```
 
-`series` accepts canonical, instance, wildcard, or custom-sensor name. `height` is 12–120 px (default 36); `window` is 30–1200 samples (default 240); `color` defaults to the OSD accent; `min`/`max` optionally fix the Y axis. Missing series hide the graph while preserving its circular history. Up to 12 graphs are retained. Graphs can consume any published series, including custom formulas and PresentMon metrics. They are configured in JSON; applying the WPF visual editor recreates the overlay so new graphs appear. In the Avalonia app each entry builds a persistent sparkline with its own circular buffer (`FrametimeBuffer`; samples only while the series resolves) and an optional fixed axis on the extended `HistoryChart`; config changes require a restart.
+`series` accepts canonical, instance, wildcard, or custom-sensor name. `height` is 12–120 px (default 36); `window` is 30–1200 samples (default 240); `color` defaults to the OSD accent; `min`/`max` optionally fix the Y axis. Missing series hide the graph while preserving its circular history. Up to 12 graphs are retained. Graphs can consume any published series, including custom formulas and PresentMon metrics. They are configured in JSON; new graphs appear after a restart (the retired WPF visual editor recreated the overlay on apply). In the unified app each entry builds a persistent sparkline with its own circular buffer (`FrametimeBuffer`; samples only while the series resolves) and an optional fixed axis on the extended `HistoryChart`; config changes require a restart.
 
-The Windows API uses layered, transparent, topmost window styles (`WS_EX_LAYERED`, `WS_EX_TRANSPARENT`, and `HWND_TOPMOST`). This click-through behavior is specific to the WPF implementation.
+The Windows implementation uses layered, transparent, topmost window styles (`WS_EX_LAYERED`, `WS_EX_TRANSPARENT`, and `HWND_TOPMOST`); the click-through behavior comes from these Windows styles.
 
 Profile `opacity` overrides the global `overlayOpacity` and is normalized to 0.1–1. Use `visible: false` to hide the OSD while a profile matches. The tray profile pin overrides automatic matching for the current app session and does not write back to configuration. When a profile is active, the OSD shows a small `profile: <name>` footer.
 

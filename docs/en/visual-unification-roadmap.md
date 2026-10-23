@@ -3,7 +3,7 @@
 > **Language:** English · [Português (Brasil)](../roadmap-unificacao-visual.md)
 
 > Plan approved in October 2026 — **Phase 0 completed** (`0a6ee28` = plan,
-> `0a00bf6` = Neptune/Slate tokens); Phases 1–3 pending. Origin: comparison between the WPF (Windows) and Avalonia
+> `0a00bf6` = Neptune/Slate tokens); Phases 1–2 done. Origin: comparison between the WPF (Windows) and Avalonia
 > (Linux) frontends. The two looks have drifted since day one and every UI
 > change costs double. Maintainer's decision: adopt the **"single app" path**
 > keeping both current looks as built-in themes, which also front-loads the
@@ -46,7 +46,7 @@ theme) and the UI is never moved twice.
 
 | Working theme | Origin | Reference |
 |---|---|---|
-| `Slate` | Today's WPF look | `src/PhantomMonitor/Resources/Styles.xaml` (dark neutral, blue accent `#2563EB`) |
+| `Slate` | The WPF look (retired in Phase 2) | `src/PhantomMonitor/Resources/Styles.xaml` (removed with the WPF; verbatim tokens in `src/PhantomMonitor.App/Themes/Tokens.Slate.axaml`) — dark neutral, blue accent `#2563EB` |
 | `Neptune` | Today's Avalonia look | `src/PhantomMonitor.App/Views/MainWindow.axaml` (blue-gray) |
 
 > Names finalized in Phase 0 (`0a00bf6`): `Slate` = the WPF look; `Neptune` = the Avalonia look.
@@ -169,10 +169,10 @@ First task, before anything else: **map equivalences** between windows/flows.
       DebugWindow (keep or drop).
 - [ ] Native sensor library (`PhantomSensorLib`) via P/Invoke delivering the
       same sensors on the Avalonia Windows binary.
-- [ ] Unify charts: `Controls/Minigraph.cs` (WPF) and `Controls/HistoryChart.cs`
-      (Avalonia) become **one** control with token-driven colors. F1.6 note:
-      the WPF does not consume the Minigraph in the dashboard — it dies with
-      the WPF retirement in Phase 2 (unifying equals retiring it).
+- [x] Unify charts — **resolved with the WPF retirement (Phase 2)**: the WPF
+      never consumed the Minigraph in the dashboard; the control was removed
+      with the frontend (`6c4d2c0`) and the `HistoryChart` (token-driven
+      colors) is the app's only chart.
 - [x] **F1.6 — WPF visual ported as the complete "Slate" theme + Windows
       build/release** (`ae01a89`): `Tokens.Slate.axaml` rewritten with the WPF
       verbatim values (Styles.xaml palette, banners/pills from `MainWindow.xaml`,
@@ -193,23 +193,48 @@ green build; both built-in themes render the same views.
 
 ## Phase 2 — Retire WPF
 
-- [ ] `scripts/release.ps1` publishes only the Avalonia app (win-x64 +
-      linux-x64).
-- [ ] `packaging/windows/phantom-monitor.iss` points to the final executable.
-- [ ] **Updater continuity decision:** keep asset names (`PhantomMonitor-<v>-win-x64.zip`
-      / `-linux-x64.tar.gz` / `.AppImage`) — no updater changes. Define the
-      final AssemblyName (recommended: unify on `PhantomMonitor.exe` to keep
-      the setup shortcut, Start Menu and post-update relaunch) + how the
-      portable swap handles the leftover old executable (`.bak`), or document
-      that the transition release accepts a full reinstall on Windows.
-- [ ] Remove `src/PhantomMonitor` (separate `chore:` commit, retiring
-      `Styles.xaml`, the windows and `Controls/Minigraph.cs` together).
-- [ ] Docs synchronized: READMEs (en/pt), `main-interface` /
-      `interface-principal`, `updates` / `atualizações`, packaging; the root
-      README line saying "WPF remains the primary app" becomes single-app.
+- [x] **Phase 2 — WPF retired from the pipeline and the repo** (`a6f3e7f` feat +
+      `6c4d2c0` chore):
+      `scripts/release.ps1` publishes only the unified app (win-x64 +
+      linux-x64) — the Windows payload is capped at `PhantomMonitor.exe` +
+      `PresentMon.exe` + `config.example.json` (the single-file bundler
+      embeds PresentMon as native and scatters `.pdb`s; the script guarantees
+      the loose copy and strips the pdbs), tarball holds the `PhantomMonitor`
+      binary + `config.example.json`; missing ISCC becomes a warning instead
+      of an abort (pipeline validated end to end with `-Version 0.2.0-dev`:
+      44.1 MB zip, 40.7 MB tarball).
+- [x] `packaging/windows/phantom-monitor.iss` points to the final executable
+      **with no edits**: with the unified `AssemblyName`, the payload exe is
+      born exactly as `{app}\PhantomMonitor.exe`, the name the stage Source
+      expects.
+- [x] **Updater continuity decision:** asset names kept as the current
+      convention (`PhantomMonitor-<v>-win-x64.zip` / `-linux-x64.tar.gz` /
+      `.AppImage`) — no updater changes. Final `AssemblyName` =
+      **`PhantomMonitor`** (recommendation adopted: the setup shortcut, Start
+      Menu, Run key and post-update relaunch stay valid, and the PresentMon
+      `--exclude PhantomMonitor.exe` matches the real app name on Windows
+      again). The portable swap leaves no orphan: on Windows the name is
+      identical (old exe goes to `.bak`, the new one takes its place); on
+      Linux the transition tarball carries a `PhantomMonitor.App` hardlink to
+      the new binary at zero tar cost, so legacy installs relaunching by the
+      old name boot the new app (shim can be retired in upcoming releases).
+      `avares://PhantomMonitor/...` URIs updated with the rename.
+- [x] Remove `src/PhantomMonitor` (separate `chore:` commit: `6c4d2c0`,
+      retiring `Styles.xaml`, the windows and `Controls/Minigraph.cs`
+      together — 24 files; slnx build 0/0). The Phase 1 "unify the charts"
+      item resolves here: without the WPF, `HistoryChart` is the only chart
+      control.
+- [x] Docs synchronized (following `docs:` commit): READMEs en/pt,
+      `main-interface` / `interface-principal`, `updates` / `atualizações`,
+      `configuration` / `configuracao` (visual editor retired), parity
+      matrices and `AGENTS.md`; the "WPF remains the primary app" line now
+      describes the single app.
 
-**Acceptance criteria:** Windows runs the single app; release/update pipeline
-untouched; WPF out of the repo; no users with broken shortcuts.
+**Acceptance criteria — met:** Windows runs the single app; release/update
+pipeline intact (validated with a local 0.2.0-dev release, zip/tarball
+checked by listing); WPF out of the repo; no users with broken shortcuts
+(the executable name is preserved on Windows and a hardlink shim covers
+Linux). Both themes smoke-tested without `errors.log`.
 
 ## Phase 3 — User-facing theme system
 
@@ -251,6 +276,10 @@ the work queue:
    work (panel/axis/polish) inside the port.
 
 ## Reference inventory (what defines each look today)
+
+> Historical reference: the `src/PhantomMonitor/**` files below were removed
+> with the WPF in Phase 2 (`6c4d2c0`). The current source of truth for the
+> "Slate" look is `src/PhantomMonitor.App/Themes/Tokens.Slate.axaml`.
 
 | File | Role |
 |---|---|

@@ -39,8 +39,8 @@ Avoid smoothing cumulative counters such as `DiskTotalRead`, `DiskTotalWritten`,
 
 The engine does not infer whether a series is an instantaneous measurement or a counter. Configuration authors are responsible for selecting appropriate targets. Network session totals are integrated from throughput on the global tick, so delaying or averaging those totals is not useful.
 
-## Avalonia editor
+## Per-series tuning page
 
-On Linux, **Per-series tuning** edits `sensorTuning` without manually editing JSON. Choose a detected series, retain a saved target that is currently missing, or enter a key or pattern such as `Gpu*` or `CpuTemperature#*`. Unmatched patterns are kept for future sensors. The editor supports up to 64 entries, intervals of `0` or 100–3,600,000 ms, smoothing from 0–60, and rule reordering. As in the engine, the last matching rule wins.
+In the unified app (Windows and Linux), **Per-series tuning** edits `sensorTuning` without manually editing JSON. Choose a detected series, retain a saved target that is currently missing, or enter a key or pattern such as `Gpu*` or `CpuTemperature#*`. Unmatched patterns are kept for future sensors. The editor supports up to 64 entries, intervals of `0` or 100–3,600,000 ms, smoothing from 0–60, and rule reordering. As in the engine, the last matching rule wins.
 
-**Save and apply** writes the configuration and recreates the Linux sensor service. A save failure leaves the active rules unchanged. A stopped collector stays stopped and a paused collector stays paused. Recreating an active service starts a new sensor session and resets its statistics. WPF continues to consume the same `sensorTuning` schema.
+**Save and apply** writes the configuration and recreates the sensor service. A save failure leaves the active rules unchanged. A stopped collector stays stopped and a paused collector stays paused. Recreating an active service starts a new sensor session and resets its statistics. The same `sensorTuning` schema is consumed by the unified app on both systems (the retired WPF used the same block, with no format change).

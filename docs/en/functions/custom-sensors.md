@@ -6,7 +6,7 @@ Each configured formula becomes a telemetry series named `Custom#i`. Formulas ar
 
 ## Configuration
 
-On Linux, the Avalonia **Custom sensors** page can add, edit, remove, and reorder entries. It validates required unique names, formula syntax, and the 64-sensor limit before saving. The WPF app consumes the same schema.
+On the unified app, the **Custom sensors** page can add, edit, remove, and reorder entries. It validates required unique names, formula syntax, and the 64-sensor limit before saving. The retired WPF app consumed the same schema.
 
 ```json
 "customSensors": [

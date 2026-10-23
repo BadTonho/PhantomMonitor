@@ -1,22 +1,32 @@
-# SDK de Telemetria (memória compartilhada + HTTP)
+# SDK de Telemetria (memória compartilhada aposentada + HTTP)
 
 > **Idioma:** Português (Brasil) · [English](en/telemetry-sdk.md)
 
-Terceiros (OBS, AutoHotkey, dashboards, scripts, outros apps) consomem a telemetria
-do Phantom Monitor de duas formas, **sem tocar em arquivos de log**:
+Terceiros (OBS, AutoHotkey, dashboards, scripts, outros apps) consumiam a
+telemetria do Phantom Monitor de duas formas, **sem tocar em arquivos de log**:
 
-1. **Memória compartilhada**: o frontend WPF/Windows publica um snapshot
-   estruturado a cada ciclo de monitoramento (mínimo 100 ms) — parse zero no
-   consumidor. Esse mapa não é publicado pelo frontend Avalonia/Linux.
-2. **Exportador HTTP** (opt-in, `telemetryExport.enabled`): WPF e Avalonia/Linux
+> **Status (Fase 2 da unificação visual):** o mapa de memória compartilhada
+> (`TelemetrySdkWriter`) era exclusivo do frontend WPF e foi aposentado junto
+> com ele (`6c4d2c0`) — o app único não o publica. As interfaces externas
+> atuais são o **exportador HTTP** (`/values`, `/health`) e o
+> `sensors_latest.json` (no Linux, também o canal POSIX da camada Vulkan para
+> timings de frame). O restante do documento fica como **referência histórica**
+> do formato e do leitor em `tools/TelemetrySdkReader/`.
+
+1. **Memória compartilhada** (histórico do WPF, aposentado na Fase 2): publicava
+   um snapshot estruturado a cada ciclo de monitoramento (mínimo 100 ms) —
+   parse zero no consumidor. O app único não publica esse mapa; no Linux nunca
+   foi publicado (só o canal POSIX da camada Vulkan para timings de frame).
+2. **Exportador HTTP** (opt-in, `telemetryExport.enabled`): os dois sistemas
    podem servir o último snapshot como JSON em `GET /values` para dashboards de
    navegador e ferramentas externas.
 
-> No WPF, o mapa é criado quando o monitoramento inicia e destruído quando para.
-> No Linux, o exportador HTTP é a interface de telemetria externa disponível;
-> `sensors_latest.json` continua como fallback para integrações simples.
+> Quando existia (WPF), o mapa era criado quando o monitoramento iniciava e
+> destruído quando parava. No app único, o exportador HTTP é a interface de
+> telemetria externa; `sensors_latest.json` continua como fallback para
+> integrações simples.
 
-## Memória compartilhada (WPF/Windows)
+## Memória compartilhada (WPF aposentado — referência histórica)
 
 - **Nome do mapa:** `phantom_monitor_telemetry_v1` (namespace de sessão local;
   consumidores devem rodar no mesmo usuário/sessão do monitor — `Global\` exigiria
@@ -103,13 +113,14 @@ Complemento de rede para o mapa de memória — mesma cadência, payload maior:
   sem stale), `Content-Type: application/json`, `Content-Length` para keep-alive.
 - **Ciclo de vida:** ligado somente com o monitoramento ativo (criado no início,
   descartado no stop); falha ao abrir a porta é registrada em
-  `errors.log` e **não** impede o monitoramento. No Avalonia/Linux, o arquivo fica
+  `errors.log` e **não** impede o monitoramento. No Linux, o arquivo fica
   em `$XDG_DATA_HOME/PhantomMonitor/logs/` (normalmente `~/.local/share/PhantomMonitor/logs/`);
-  no WPF, fica em `logs/` ao lado do executável. Consulte [diagnóstico](funções/diagnostico.md)
+  no Windows, fica em `%LOCALAPPDATA%\PhantomMonitor\logs\` (o WPF aposentado gravava
+  `logs/` ao lado do executável). Consulte [diagnóstico](funções/diagnostico.md)
   para ver os registros no aplicativo.
 - **Ativo quando pausado (P6.7):** segue servindo o último snapshot válido
   durante a pausa — dashboards não "somem", congelando no valor de pausa.
-- **Avalonia/Linux:** os campos `enabled`, `port` e `listenAll` podem ser editados
+- **Linux:** os campos `enabled`, `port` e `listenAll` podem ser editados
   na página **Configurações**. O dashboard mostra endpoint e estado do listener;
   falhas de bind aparecem ali e no log sem interromper a coleta. Se a porta ou
   o endereço forem alterados durante a pausa, o listener é reaberto e recebe o

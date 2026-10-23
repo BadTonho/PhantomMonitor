@@ -4,9 +4,16 @@
 
 **Status:** architecture study only. No native DLL, hook, or configuration schema was added. The decision is documented with anti-cheat safety and the project's no-injection policy in mind.
 
+> **Note (Phase 2 of the visual unification):** the study was written during the
+> WPF era — the `OverlayWindow` quoted below was the WPF window, retired with
+> the frontend in Phase 2 (`6c4d2c0`). The unified app keeps the same design of
+> a separate OSD window (`WS_EX_LAYERED` on Windows) and the conclusions remain
+> valid as a future direction; the comparison baseline of these sections was
+> the WPF overlay.
+
 ## The problem
 
-The current WPF `OverlayWindow` is a separate layered desktop window. It appears in desktop/window/display capture, but not in OBS game capture, which records the game's swapchain and excludes windows from other processes. An in-frame overlay would be rendered into frames presented by the game.
+At the time, the WPF `OverlayWindow` was a separate layered desktop window. It appears in desktop/window/display capture, but not in OBS game capture, which records the game's swapchain and excludes windows from other processes. An in-frame overlay would be rendered into frames presented by the game.
 
 ## Options considered
 
@@ -31,4 +38,4 @@ Anti-cheat systems may restrict foreign DLLs and Present hooks because those tec
 
 This document records a possible OBS integration only. It does not change current product behavior; the existing telemetry SDK is the proposed contract.
 
-The WPF desktop overlay remains the default external window and does not carry the anti-cheat risk of a hook. No native library, injection path, or dead configuration setting was introduced by this study.
+The desktop overlay (separate external window; the unified app keeps the same design) does not carry the anti-cheat risk of a hook. No native library, injection path, or dead configuration setting was introduced by this study.

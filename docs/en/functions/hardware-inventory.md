@@ -17,9 +17,15 @@ When the service publishes no value for an expected sensor type, the page marks 
 
 Rendering is stable across snapshots: the fixed groups (CPU, GPU, memory, disk, network, fans, battery, and FPS) and their rows persist as the same instances, and each reading is reconciled by key — only strings that actually changed re-render. The **Other** group, for series outside the fixed categories, is added to and removed from the end of the list depending on what the hardware publishes. Source: `ViewModels/SensorInventoryBuilder.cs` (declarative plan with Min/Max/Avg), `ViewModels/MainWindowViewModel.Inventory.cs` (tree/monitors/reset) and `MainWindowViewModel.ReconcileInventoryGroups`.
 
-## WPF inventory window (Windows)
+## Internal inventory details (inherited from the WPF window)
 
-The remaining features in this section describe the WPF inventory window, which now shares the same Core foundation with the Avalonia app (`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) — the difference is presentation: Avalonia uses cards in the Inventory page; the WPF uses the tabs below. Open it from the sidebar. It can help diagnose missing sensors and discover series keys for alerts and OSD configuration. Without an active snapshot it reports that monitoring must be started.
+The WPF frontend — retired in Phase 2 — had a separate inventory window with
+the tabs below; the unified app's **Inventory** page shares the same Core
+foundation (`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) and covers the
+same information as cards (summary above). The tabs remain as a reference for
+the data and the reset markers. It helped diagnose missing sensors and discover
+series keys for alerts and OSD configuration. Without an active snapshot it
+reported that monitoring must be started.
 
 ### Published series
 

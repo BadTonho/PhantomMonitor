@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/global-hotkey.md)
 
-Permite mostrar/ocultar o overlay OSD a partir de qualquer aplicativo — inclusive com um jogo em foco — sem injeção de DLL nem hooks de teclado: usa o `RegisterHotKey` do Win32, que notifica a janela principal via `WM_HOTKEY`.
+Permite mostrar/ocultar o overlay OSD a partir de qualquer aplicativo — inclusive com um jogo em foco — sem injeção de DLL nem hooks de teclado: usa o `RegisterHotKey` do Win32 no Windows (o Linux ainda não registra atalhos globais; X11/XWayland é o caminho futuro).
 
 ## HotkeyParser
 
@@ -15,17 +15,16 @@ Converte a especificação textual do `config.json` (`toggleOverlayHotkey`) em m
 
 ## HotkeyService
 
-- Usa `RegisterHotKey` com `MOD_NOREPEAT` (sem repetição ao segurar a tecla) sobre o HWND da janela principal (WPF `HwndSource`).
-- No **app unificado Avalonia (Windows)** o mesmo comportamento é prestado pelo `GlobalHotkeyService` em `Core/Services/Windows/`: uma janela *message-only* numa thread dedicada recebe os `WM_HOTKEY` (o Avalonia não expõe o WndProc da janela principal) e as ações são publicadas no dispatcher da UI. Mesmos IDs do WPF: overlay (`0x5048`) e pausa (`0x5049`).
-- **Linux:** os atalhos globais ainda não são registrados no frontend Linux (X11/XWayland é o caminho futuro; Wayland puro não permite atalhos globais por design — quando houver suporte X11, a limitação do Wayland puro fica documentada).
-- Mensagens `WM_HOTKEY` chegam ao WndProc da janela e disparam o callback que alterna o toggle "Overlay" da janela principal (mesmo caminho do clique manual).
+- No **app unificado no Windows (F1.5)** o comportamento é prestado pelo `GlobalHotkeyService` em `Core/Services/Windows/`: uma janela *message-only* numa thread dedicada recebe os `WM_HOTKEY` (o Avalonia não expõe o WndProc da janela principal) e as ações são publicadas no dispatcher da UI. O WPF aposentado usava o `HwndSource` da janela; os IDs são os mesmos: overlay (`0x5048`) e pausa (`0x5049`).
+- **Linux:** os atalhos globais ainda não são registrados (X11/XWayland é o caminho futuro; Wayland puro não permite atalhos globais por design — quando houver suporte X11, a limitação do Wayland puro fica documentada).
+- Mensagens `WM_HOTKEY` chegam ao WndProc da janela message-only e disparam o callback que alterna o toggle "Overlay" (mesmo caminho do clique manual).
 - `Register()` retorna `false` (e grava em `logs/errors.log`) quando a especificação é inválida ou a combinação já está em uso por outro aplicativo.
-- Registro/remoção acontecem na carga do app, ao aplicar o Editor de Overlay e ao fechar a janela principal.
-- **Múltiplos atalhos (P6.7):** o service aceita um `hotkeyId` Win32 por instância — o app roda **duas** instâncias no mesmo HWND: overlay (`0x5048`, default) e pausa do monitoramento (`0x5049`), cada um com `WM_HOTKEY` próprio, sem colisão.
+- Registro/remoção acontecem na carga do app e ao aplicar as configurações da página; a janela message-only vive junto ao app.
+- **Múltiplos atalhos (P6.7):** o service aceita um `hotkeyId` Win32 por instância — o app roda **duas** instâncias na mesma thread: overlay (`0x5048`, default) e pausa do monitoramento (`0x5049`), cada um com `WM_HOTKEY` próprio, sem colisão.
 
 ## Configuração
 
 - `toggleOverlayHotkey` (string, padrão `""` = desativado): atalho global para mostrar/ocultar o OSD.
 - `pauseMonitorHotkey` (string, padrão `"Ctrl+Alt+P"` = ativo): atalho global que **pausa/retoma o monitoramento** (P6.7) — ciclos param, CSV/JSON/SDK congelam no último valor e o overlay exibe o último snapshot; estado aceita não sobreviva ao reinício do app. Vazio = desativado.
-- Editáveis no `config.json` (o Editor de Overlay cobre o do OSD); não requerem privilégios administrativos e funcionam independente do aplicativo em foco.
+- Editáveis no `config.json` (a seção "ATALHO GLOBAL" era do Editor Visual do WPF, aposentado na Fase 2); não requerem privilégios administrativos e funcionam independente do aplicativo em foco.
 - O atalho de overlay apenas alterna a visibilidade do overlay — o OSD continua sendo desenhado pela janela topmost do próprio Phantom Monitor.

@@ -6,15 +6,14 @@ O centro de diagnóstico reúne erros registrados e o estado das fontes de senso
 
 ## Acesso
 
-- **Avalonia/Linux:** abra **Diagnóstico** na navegação lateral. Novos registros de erro aparecem em tempo real; a lista **Sensores e fontes** é preenchida ao abrir a aba e ao usar **Atualizar** (que também relê o arquivo local). Use **Abrir arquivo de erros** para abri-lo no aplicativo padrão do sistema.
-- **WPF/Windows:** na janela principal, clique em **Diagnóstico: sensores e erros do aplicativo**. A aba **Sensores e fontes** acompanha as leituras enquanto a janela estiver visível (com a janela oculta ou minimizada, a atualização fica suspensa até reexibi-la); a aba **Erros do aplicativo** mostra os registros recentes e permite atualizar ou abrir o arquivo.
+- **App único (Windows e Linux):** abra **Diagnóstico** na navegação lateral. Novos registros de erro aparecem em tempo real; a lista **Sensores e fontes** é preenchida ao abrir a aba e ao usar **Atualizar** (que também relê o arquivo local). Use **Abrir arquivo de erros** para abri-lo no aplicativo padrão do sistema. (No WPF aposentado, o acesso era pelo clique "Diagnóstico: sensores e erros do aplicativo" na janela principal.)
 
 As telas exibem até 500 registros recentes, em ordem cronológica, com horário, contexto e mensagem. Exceções incluem seus detalhes técnicos. O log permanece local; o aplicativo não envia relatórios.
 
 ## Local e retenção
 
-- **Linux/Avalonia:** `$XDG_DATA_HOME/PhantomMonitor/logs/errors.log`; normalmente `~/.local/share/PhantomMonitor/logs/errors.log`.
-- **Windows/WPF:** `logs/errors.log` ao lado do executável.
+- **Linux (app único):** `$XDG_DATA_HOME/PhantomMonitor/logs/errors.log`; normalmente `~/.local/share/PhantomMonitor/logs/errors.log`.
+- **Windows (app único):** `%LOCALAPPDATA%\PhantomMonitor\logs\errors.log` (o frontend WPF antigo gravava `logs/errors.log` ao lado do executável).
 
 O arquivo é limitado a aproximadamente 1 MB e mensagens repetidas consecutivamente são suprimidas. Se a gravação do arquivo falhar, o registro ainda pode aparecer na lista em memória durante a execução atual.
 

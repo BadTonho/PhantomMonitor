@@ -3,32 +3,35 @@
 > **Idioma:** Português (Brasil) · [English](../en/functions/logging.md)
 
 Sistema de logging para exportação dos dados de sensores em formato CSV e/ou JSON.
-Os formatos e estruturas são compartilhados pelo WPF e pelo Avalonia; a pasta de
-destino depende do frontend.
+Os formatos e estruturas são compartilhados pelas plataformas no app único; a
+pasta de destino é a de dados por usuário do sistema
+(`%LOCALAPPDATA%\PhantomMonitor\logs` no Windows, `~/.local/share/PhantomMonitor/logs`
+no Linux).
 
 ## CsvLogger
 
-Salva os dados de sensores em arquivo CSV. No WPF, usa `logs/` ao lado do app; no
-Avalonia Linux, usa a pasta de dados do usuário `~/.local/share/PhantomMonitor/logs/`
-(respeitando `XDG_DATA_HOME` por meio de `LocalApplicationData`).
+Salva os dados de sensores em arquivo CSV. No app único, usa o diretório de logs
+do usuário: `%LOCALAPPDATA%\PhantomMonitor\logs\` no Windows e
+`~/.local/share/PhantomMonitor/logs/` no Linux (respeitando `XDG_DATA_HOME`
+quando definido).
 
 - Colunas **dinâmicas**: o cabeçalho é escrito na primeira escrita com as séries
   presentes no primeiro snapshot — coluna 0 = `Timestamp`, depois as séries
   canônicas (na ordem do enum `SensorType`) e por fim as séries por instância
   (`GpuCore#1`, `CpuTemperature#3`, `FanSpeed#2`...), ver [sensor-key / hardware-monitor](hardware-monitor.md)
 - Cria um novo arquivo a cada início de monitoramento, com timestamp no nome
-- O Avalonia inclui milissegundos no timestamp da sessão para evitar colisão ao
+- O timestamp da sessão inclui milissegundos para evitar colisão ao
   parar e iniciar novamente dentro do mesmo segundo
 - Hardware que desaparece depois (USB desligada, SSD removido) mantém sua coluna
   na tabela; a célula fica em zero — o alinhamento de planilhas não quebra
-- Formato: `sensors_YYYYMMDD_HHmmss.csv` (WPF) ou
-  `sensors_YYYYMMDD_HHmmss_fff.csv` (Avalonia Linux)
+- Formato: `sensors_YYYYMMDD_HHmmss_fff.csv` (o formato antigo do WPF aposentado,
+  `_YYYYMMDD_HHmmss.csv`, permanece legível por quem consome as colunas)
 
 ## JsonLogger
 
 Salva o snapshot mais recente em `sensors_latest.json` no diretório de logs do
-frontend: `logs/` ao lado do app WPF ou `~/.local/share/PhantomMonitor/logs/` no
-Avalonia Linux.
+app: `%LOCALAPPDATA%\PhantomMonitor\logs\` no Windows ou
+`~/.local/share/PhantomMonitor/logs/` no Linux.
 
 - Sempre sobrescreve o mesmo arquivo (`sensors_latest.json`)
 - Escrita **atômica** (`.tmp` + substituição): leitores externos nunca veem JSON truncado
@@ -40,7 +43,7 @@ Avalonia Linux.
 - `monitors` traz a identidade dos monitores conectados (EDID via WMI, cache de ~60 s):
   fabricante, modelo, código de produto, nº de série, diagonal em polegadas,
   ano/semana de fabricação e flag de monitor primário — os processos da GPU NÃO
-  entram no snapshot (são exibidos apenas na janela principal)
+  entram no snapshot (são exibidos apenas na página Inventário)
 - Útil para integração com outras ferramentas
 
 ## Marcadores no CSV (`#marker`)
@@ -57,10 +60,10 @@ interface durante o monitoramento.
 
 ## JsonJournalLogger (journal JSON contínuo, JSONL)
 
-Journal **append-only** em `sensors_YYYYMMDD_HHmmss.jsonl` (WPF) ou
-`sensors_YYYYMMDD_HHmmss_fff.jsonl` (Avalonia Linux) na pasta de logs do
-frontend: `logs/` ao lado do app WPF ou `~/.local/share/PhantomMonitor/logs/` no
-Avalonia Linux. Registra **uma linha por
+Journal **append-only** em `sensors_YYYYMMDD_HHmmss_fff.jsonl` (milissegundos; o
+formato antigo do WPF `_YYYYMMDD_HHmmss.jsonl` permanece legível) no diretório de
+logs do app: `%LOCALAPPDATA%\PhantomMonitor\logs\` no Windows ou
+`~/.local/share/PhantomMonitor/logs/` no Linux. Registra **uma linha por
 evento**, custo de gravação constante (nada é reescrito a cada ciclo, diferente
 do snapshot sensors_latest.json) — indicado para benchmarks longos e replay.
 
@@ -86,7 +89,7 @@ do snapshot sensors_latest.json) — indicado para benchmarks longos e replay.
 
 ## ErrorLog (`errors.log`)
 
-Registro local de falhas e eventos de diagnóstico. No WPF, fica em `logs/` ao lado do executável. No Avalonia/Linux, fica na pasta de dados do usuário (`~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`), junto aos logs de telemetria.
+Registro local de falhas e eventos de diagnóstico. No Windows fica em `%LOCALAPPDATA%\PhantomMonitor\logs\` (o WPF antigo gravava `logs/` ao lado do executável; o app unificado sempre usa a pasta de dados do usuário). No Linux, fica na pasta de dados do usuário (`~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`), junto aos logs de telemetria.
 
 - Formato: `data hora [contexto] mensagem`
 - Mensagens idênticas consecutivas são suprimidas; o arquivo é zerado ao passar de ~1 MB
@@ -94,7 +97,7 @@ Registro local de falhas e eventos de diagnóstico. No WPF, fica em `logs/` ao l
 - O centro **Diagnóstico** exibe até 500 registros recentes, atualiza quando novas mensagens chegam e oferece abrir o arquivo no aplicativo padrão do sistema
 - Em caso de falha ao escrever o arquivo, a ocorrência pode permanecer visível na lista em memória durante a execução atual
 
-WPF e Avalonia registram exceções não tratadas da UI, do domínio da aplicação e de tarefas não observadas. Falhas inesperadas dos leitores Linux também são registradas com contexto; arquivos opcionais ausentes continuam sendo tratados como informação de disponibilidade.
+O app único registra exceções não tratadas da UI, do domínio da aplicação e de tarefas não observadas. Falhas inesperadas dos leitores Linux também são registradas com contexto; arquivos opcionais ausentes continuam sendo tratados como informação de disponibilidade.
 
 ## Ativação
 
@@ -103,9 +106,9 @@ Controlado pelo `config.json`, carregado quando o app inicia:
 - `logToJson` - Ativar logging JSON
 - `logToJsonJournal` - Ativar journal JSON contínuo (JSONL)
 
-No Avalonia Linux, essas opções são lidas ao iniciar o app e aplicadas quando a
+No app único, essas opções são lidas ao iniciar o app e aplicadas quando a
 coleta inicia; também podem ser editadas na página **Configurações**, que salva
-no `config.json` e aplica os novos loggers sem interromper o dashboard. No WPF,
-podem ser alteradas pelos checkboxes da interface principal e são aplicadas na
-próxima sessão de monitoramento. Pausar a coleta interrompe temporariamente a
+no `config.json` e aplica os novos loggers sem interromper o dashboard (o
+comportamento herdado do WPF aplicava na próxima sessão de monitoramento).
+Pausar a coleta interrompe temporariamente a
 entrada de novas amostras; parar ou fechar o app fecha os arquivos ativos.

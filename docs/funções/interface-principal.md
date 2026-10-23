@@ -1,18 +1,18 @@
-# MainWindow
+# Interface principal (app único)
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/main-interface.md)
 
-Descrição da interface principal WPF do Phantom Monitor para Windows, com tema escuro e layout de sidebar + conteúdo. O dashboard Avalonia para Linux está descrito em [suporte-linux.md](suporte-linux.md) e inclui visão geral, inventário, sensores customizados, alertas e configurações.
+Descrição da interface principal do app único do Phantom Monitor (Avalonia multiplataforma, Windows e Linux), com tema escuro e layout de sidebar + conteúdo. As diferenças operacionais no Linux (sensores nativos do kernel, D-Bus, Wayland, camada Vulkan) estão em [suporte-linux.md](suporte-linux.md); inventário, sensores customizados, ajuste por série, alertas e configurações são as mesmas páginas nos dois sistemas.
 
 ## Funcionalidades
 
-- **Sidebar Compacta:** Status da execução (`Monitorando` / `Parado` / `Pausado` (P6.7)), tempo ativo, contagem de sensores, navegação rápida, toggle `Overlay no Jogo`, atalhos para o Editor de Overlay e o Inventário de Hardware, controles de exportação (CSV/JSON/Journal JSONL — P8.3) e opção `Iniciar com o Windows` (registro `Run`, aplicada na hora).
-- **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Resetar estatísticas, Pausar monitoramento, seção de perfis do OSD e Sair) — ver [tray.md](tray.md).
+- **Sidebar:** estado da execução (`Monitorando` / `Parado` / `Pausado` (P6.7)), tempo ativo, contagem de sensores, navegação entre as páginas (visão geral, inventário, sensores customizados, ajuste por série, alertas, configurações e diagnóstico), toggle `Overlay no Jogo`, controles de exportação (CSV/JSON/Journal JSONL — P8.3) e opção `Iniciar com o Windows` (registro `Run`, aplicada na hora).
+- **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Resetar estatísticas, Pausar monitoramento, seção de perfis do OSD e Sair) — portada da bandeja do WPF na F1.5; ver [tray.md](tray.md).
 - **Cards de Métricas Clean:** Cards dedicados para Processador (CPU), Placa de Vídeo (GPU), Taxa de Quadros (FPS), Memória RAM, Armazenamento (Disco), Rede (↓/↑) e Placa-mãe & Ventoinhas (maior temperatura + ventoinhas GPU/Sistema).
 - **Linhas de Detalhes:** Os cards de CPU (clock, potência, voltagem) e GPU (VRAM usada/total, clock, potência, hotspot e temp de VRAM — P8.6) exibem uma linha secundária com os valores avançados disponíveis; quando nenhum sensor existe, informam a indisponibilidade.
 - **Indicadores Visuais Sutis:** Barras de progresso horizontais finas (5px) e badges em pílula com borda translúcida para temperatura e frametime (sem efeitos neon ou círculos exagerados).
 - **Lista de Processos Ativos:** Visualização limpa em tabela de processos consumindo a GPU.
-- **Janela de Diagnóstico:** Acesso direto à visualização de sensores detectados em tempo real (`DebugWindow`).
+- **Diagnóstico:** view no próprio app com os sensores detectados em tempo real e os erros recentes (port do `DebugWindow`) — ver [diagnostico.md](diagnostico.md).
 - **Aviso de Elevação:** Alerta discreto quando a aplicação não possui privilégios administrativos.
 
 ## Auto-inicialização
@@ -29,14 +29,15 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
   - Uso 75% a 90%: Âmbar suave (`#F59E0B`).
   - Uso ≥ 90%: Coral (`#EF4444`).
   - Temperatura: Pílulas discretas com tons esmeralda (≤ 65°C), âmbar (≤ 80°C) ou coral (> 80°C).
-- **Tokens de tema (Avalonia):** no frontend Avalonia, as cores e os acentos das
+- **Tokens de tema:** no app único, as cores e os acentos das
   views moram em dicionários de tema (`src/PhantomMonitor.App/Themes/Tokens.*.axaml`,
   46 chaves espelhadas entre os dois temas) e são consumidas via `{DynamicResource}`
   (as faixas dinâmicas usam brushes resolvidos por chave no ViewModel — mesmo
-  catálogo). A F1.6 fecha os dois temas builtin: `Neptune` preserva o visual do
-  Avalonia (valores congelados) e `Slate` porta o visual do WPF verbatim
-  (`Resources/Styles.xaml`, banners/pílulas do `MainWindow.xaml`, painel do OSD
-  `#CC070A0F`/`#25FFFFFF`, toast do `AlertPopupWindow`). A escolha fica no
+  catálogo). A F1.6 fecha os dois temas builtin: `Neptune` preserva o visual
+  original do Avalonia e `Slate` porta verbatim o visual do WPF aposentado
+  (`Styles.xaml`, banners/pílulas do shell `MainWindow.xaml` e painel do OSD
+  `#CC070A0F`/`#25FFFFFF` do WPF — arquivos removidos na Fase 2 da unificação,
+  proveniência por linha no dicionário). A escolha fica no
   `config.json` — `"uiTheme": "neptune" | "slate"`, aplicada no boot; a CLI
   `--ui-theme=<nome>` sobrepõe para comparação/smoke — e a troca em runtime pela
   UI chega na Fase 3 do

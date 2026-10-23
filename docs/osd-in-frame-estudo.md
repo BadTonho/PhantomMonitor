@@ -6,9 +6,15 @@
 schema de config foi adicionado — a decisão deixa isso explícito por segurança
 (anti-cheat) e pela filosofia do projeto descrita no README.
 
+> **Nota (Fase 2 da unificação visual):** o estudo foi escrito na era do frontend
+> WPF — o `OverlayWindow` citado abaixo era a janela WPF, aposentada com o
+> frontend na Fase 2 (`6c4d2c0`). O app único mantém o mesmo desenho de OSD em
+> janela separada (`WS_EX_LAYERED` no Windows) e as conclusões seguem válidas
+> como direção futura; o baseline comparativo das seções era o overlay do WPF.
+
 ## 1. O problema
 
-O `OverlayWindow` atual é uma janela WPF `WS_EX_LAYERED` **separada** do jogo:
+Na época, o `OverlayWindow` do WPF era uma janela `WS_EX_LAYERED` **separada** do jogo:
 
 - aparece no desktop e em `window capture`/`display capture` do OBS;
 - **não aparece** em `game capture` (capture de swapchain): o compositor captura

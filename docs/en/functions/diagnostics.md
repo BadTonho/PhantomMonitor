@@ -6,15 +6,14 @@ The diagnostics center combines recorded errors with the current health of senso
 
 ## Access
 
-- **Avalonia/Linux:** open **Diagnostics** in the sidebar. New error entries appear live; the **Sensors and sources** list is filled when the tab is opened and via **Refresh** (which also rereads the local file). Use **Open error log** to open it with the system's default application.
-- **WPF/Windows:** click **Diagnostics: sensors and application errors** in the main window. The **Sensors and sources** tab follows current readings while the window is visible (when hidden or minimized, updates pause until the window is shown again); **Application errors** shows recent entries and offers refresh and open-file actions.
+- **Unified app (Windows and Linux):** open **Diagnostics** in the sidebar. New error entries appear live; the **Sensors and sources** list is filled when the tab is opened and via **Refresh** (which also rereads the local file). Use **Open error log** to open it with the system's default application. (In the retired WPF, access was the "Diagnostics: sensors and application errors" click in the main window.)
 
 Both views show up to 500 recent entries in chronological order, with timestamp, context, and message. Exception entries include technical details. The log stays on the local computer; the app does not upload reports.
 
 ## Location and retention
 
-- **Linux/Avalonia:** `$XDG_DATA_HOME/PhantomMonitor/logs/errors.log`, normally `~/.local/share/PhantomMonitor/logs/errors.log`.
-- **Windows/WPF:** `logs/errors.log` beside the executable.
+- **Linux (unified app):** `$XDG_DATA_HOME/PhantomMonitor/logs/errors.log`, normally `~/.local/share/PhantomMonitor/logs/errors.log`.
+- **Windows (unified app):** `%LOCALAPPDATA%\PhantomMonitor\logs\errors.log` (the old WPF frontend wrote `logs/errors.log` beside the executable).
 
 The file is capped at about 1 MB, and consecutive duplicate messages are suppressed. If writing the file fails, the entry may still appear in the in-memory list for the current run.
 

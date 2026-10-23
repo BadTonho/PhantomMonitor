@@ -13,7 +13,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white" alt=".NET 10" />
-  <img src="https://img.shields.io/badge/Windows-WPF-0078D4?logo=windows&logoColor=white" alt="Windows com WPF" />
+  <img src="https://img.shields.io/badge/Windows-Avalonia-0078D4?logo=windows&logoColor=white" alt="Windows com Avalonia" />
   <img src="https://img.shields.io/badge/Linux-Avalonia-FCC624?logo=linux&logoColor=111111" alt="Linux com Avalonia" />
 </p>
 
@@ -26,15 +26,15 @@
 
 O **Phantom Monitor** acompanha sensores do computador e apresenta as leituras em tempo real. Ele reúne uso, temperaturas, clocks, memória, armazenamento, rede, ventoinhas e telemetria de jogos em uma interface desktop.
 
-O projeto tem dois frontends: **WPF no Windows** e **Avalonia no Linux**. Cada plataforma oferece recursos próprios; a tabela abaixo resume as diferenças atuais.
+O projeto roda um **único app desktop Avalonia** no Windows e no Linux. Releases anteriores tinham um frontend WPF no Windows, aposentado na fase 2 do [roadmap de unificação visual](docs/roadmap-unificacao-visual.md); a tabela abaixo resume o suporte atual por plataforma.
 
 ## Recursos
 
-| Recurso | Windows · WPF | Linux · Avalonia |
+| Recurso | Windows | Linux |
 | --- | --- | --- |
 | Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe | Sensores de `sysfs`, `procfs`, `hwmon`, DRM e NVML da NVIDIA quando a biblioteca do driver está instalada |
 | FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
-| Overlay | OSD avançado, click-through, perfis e editor visual | Janela flutuante configurável; o compositor controla a posição e o fullscreen |
+| Overlay | OSD avançado, click-through e perfis (edição via config.json) | Janela flutuante configurável; o compositor controla a posição e o fullscreen |
 | Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |
 | Alertas | Notificação, som, scripts e desligamento configurável | Toast interno, notificações do desktop e execução de scripts |
 | Diagnóstico | Fontes de sensores em tempo real e log de erros | Estado das fontes, erros recentes e detalhes do driver/NVML/hwmon NVIDIA |
@@ -73,11 +73,13 @@ O dashboard e o overlay Linux funcionam sem a camada quando você não precisa d
 
 ### Windows
 
-Inicie o frontend WPF:
+Inicie o app:
 
 ```powershell
-dotnet run --project src/PhantomMonitor
+dotnet run --project src/PhantomMonitor.App
 ```
+
+O tema builtin é escolhido com `uiTheme` no `config.json` (`neptune` = visual original do Avalonia, `slate` = porta verbatim do visual do WPF) ou pela linha de comando com `--ui-theme=<nome>`.
 
 Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.
 
@@ -87,9 +89,9 @@ Builds publicados ficam na [página de Releases](https://github.com/BadTonho/Pha
 
 | Asset | Plataforma |
 | --- | --- |
-| `PhantomMonitor-<versão>-win-x64.zip` | Windows · WPF (portable; também é o payload do instalador) |
-| `PhantomMonitor-<versão>-linux-x64.tar.gz` | Linux · Avalonia (portable) |
-| `PhantomMonitor-<versão>-linux-x64.AppImage` | Linux · Avalonia (AppImage) |
+| `PhantomMonitor-<versão>-win-x64.zip` | Windows (portável; também é o payload do instalador) |
+| `PhantomMonitor-<versão>-linux-x64.tar.gz` | Linux (portável) |
+| `PhantomMonitor-<versão>-linux-x64.AppImage` | Linux (AppImage) |
 | `PhantomMonitorSetup-<versão>.exe` | Windows (instalador per-user via Inno Setup) |
 | `phantom-monitor_<versão>_amd64.deb` | Linux (pacote .deb) |
 | `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan (instalação manual com `install_layer.sh`; não entra na troca automática) |
@@ -106,14 +108,13 @@ No Linux, os logs de telemetria e de erros ficam em `~/.local/share/PhantomMonit
 
 ```text
 src/
-├── PhantomMonitor.App/   # Frontend Avalonia para Linux
+├── PhantomMonitor.App/   # App desktop unificado em Avalonia (Windows + Linux)
 ├── PhantomMonitor.Core/  # Modelos e serviços compartilhados em .NET
-├── PhantomMonitor/       # Frontend WPF para Windows
 ├── PhantomVulkanLayer/   # Camada Vulkan nativa para FPS no Linux
 └── PhantomSensorLib/     # Biblioteca nativa C++ prevista para extensão futura
 ```
 
-O Core compartilha modelos, configuração, avaliação de alertas e serviços de telemetria. Os frontends mantêm as integrações específicas de cada sistema operacional. A camada Vulkan é compilada separadamente com CMake e `install_layer.sh`; ela não faz parte do build da solução .NET.
+O Core compartilha modelos, configuração, avaliação de alertas e serviços de telemetria; o app mantém as integrações específicas de cada sistema operacional. A camada Vulkan é compilada separadamente com CMake e `install_layer.sh`; ela não faz parte do build da solução .NET.
 
 ## Documentação
 
@@ -127,7 +128,7 @@ A documentação também está disponível em [English](docs/en/README.md); os o
 
 ## Estado do projeto
 
-O frontend Avalonia é a interface Linux atual. No Windows, o frontend WPF continua sendo a aplicação principal; os recursos de interface e as ações disponíveis podem variar entre plataformas. Consulte o [roadmap](docs/roadmap-paridade.md) para acompanhar a migração.
+O app é o **único frontend desktop Avalonia, tanto no Windows quanto no Linux**; os recursos disponíveis variam por sistema operacional (integrações de sensores, FPS e OSD). Consulte o [roadmap](docs/roadmap-paridade.md) para acompanhar os próximos passos por plataforma.
 
 ## Licença
 

@@ -2,9 +2,9 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/system-tray.md)
 
-Integração com a bandeja do Windows **sem WinForms**: usa `Shell_NotifyIcon` do Win32 puro sobre o HWND da janela principal, e o ícone é desenhado em runtime com WPF (`RenderTargetBitmap` → `CreateDIBSection` → `CreateIconIndirect`) — sem assets externos nem pacotes adicionais.
+Integração com a bandeja **sem WinForms**: usa `Shell_NotifyIcon` do Win32 e o ícone é desenhado em runtime, sem assets externos nem pacotes adicionais (o WPF aposentado desenhava com `RenderTargetBitmap` → `CreateDIBSection` → `CreateIconIndirect`; o app único usa a API `TrayIcon` do Avalonia — seção abaixo).
 
-## TrayIconService
+## TrayIconService (implementação do WPF aposentado)
 
 - **Ícone:** quadrado escuro (`#0B1220`) com borda azul (`#1E90FF`) e uma linha de gráfico ciano (`#00E5FF`), coerente com a identidade do OSD. Em caso de falha no desenho, cai para o ícone padrão do sistema (`IDI_APPLICATION`).
 - **Notificações:** versão 4 do protocolo (`NIM_SETVERSION`), que entrega eventos modernos (`NIN_SELECT`, `WM_CONTEXTMENU`) e respeita DPI.
@@ -37,7 +37,7 @@ O app único traz a mesma bandeja via API `TrayIcon` do Avalonia
   suporte (KDE, GNOME com a extensão/painel de área de notificação); em
   *desktops* sem StatusNotifier o ícone simplesmente não aparece e o app segue
   funcional (o estado de overlay/pausa continua pela sidebar/atalhos quando houver).
-- **Menu:** mesmos itens do WPF (`Mostrar Phantom Monitor`, `Overlay no Jogo`,
+- **Menu:** mesmos itens herdados do WPF (`Mostrar Phantom Monitor`, `Overlay no Jogo`,
   `Iniciar com o sistema`, `Resetar estatísticas`, `Pausar monitoramento`, seção
   dinâmica de perfis e `Sair`), com checks reconstruídos quando o estado muda
   (`InvalidateMenu`), clique esquerdo no ícone ativando a janela e o item de perfil
@@ -53,19 +53,19 @@ O `StartupManagerFactory` (Core) devolve a implementação do SO:
 
 - **Windows (`WindowsStartupManager`):** escreve/remove a entrada
   `PhantomMonitor` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` com o
-  caminho do executável atual entre aspas (sem exigir administrador) — mesma
-  conduta do WPF.
+  caminho do executável atual entre aspas (sem exigir administrador) — mesmo
+  comportamento herdado do WPF aposentado.
 - **Linux (`LinuxStartupManager`):** entrada XDG autostart
   `~/.config/autostart/phantom-monitor.desktop` com `Exec="<executável atual>"`;
   `IsEnabled()` valida que a entrada ainda aponta para este executável.
 - Ambos: `SetEnabled(bool)` retorna `false` (e registra erro em
   `logs/errors.log`) em caso de política restrita/falha; a UI relê o estado real
-  após a tentativa (checkbox volta ao estado vivo, como no WPF).
+  após a tentativa (checkbox volta ao estado vivo, comportamento herdado do WPF).
 
 ## Interface
 
 - **Sidebar:** checkbox `Iniciar com o sistema` (aplicado na hora, estado lido do registro/autostart na abertura).
-- **Menu da bandeja:** itens `Overlay no Jogo` e `Iniciar com o sistema` com marcação de check do estado atual (nos dois frontends).
+- **Menu da bandeja:** itens `Overlay no Jogo` e `Iniciar com o sistema` com marcação de check do estado atual (no app único).
 
 ## Observações
 

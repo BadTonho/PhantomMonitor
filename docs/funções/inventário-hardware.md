@@ -54,20 +54,20 @@ sai do fim da lista conforme o que o hardware publica. Fonte:
 `ViewModels/MainWindowViewModel.Inventory.cs` (árvore/monitores/reset) e
 `MainWindowViewModel.ReconcileInventoryGroups`.
 
-## Janela de inventário do WPF (Windows)
+## Detalhes internos do inventário (herdados da janela do WPF)
 
-O restante desta página descreve a janela de inventário do frontend WPF para
-Windows, que agora compartilha com o Avalonia a mesma fonte Core
-(`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) — a diferença é a
-apresentação: o Avalonia usa cards na página Inventário; o WPF usa as abas
-abaixo.
+O frontend WPF — aposentado na Fase 2 — tinha uma janela de inventário separada
+com as abas abaixo; a página **Inventário** do app único compartilha a MESMA
+fonte Core (`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) e cobre as mesmas
+informações em cards (resumo acima). As abas ficam como referência dos dados e
+dos marcadores de reset.
 
-Janela que lista **o que o monitor enxerga do hardware** em tempo real. Serve para
+Janela que listava **o que o monitor enxerga do hardware** em tempo real. Servia para
 duas tarefas práticas: diagnosticar por que um sensor não aparece (ex.: falta de
 administrador) e descobrir **chaves de série** para usar em alertas
 (`sensorIndex`) ou na whitelist do OSD (`overlay.shownSeries`).
 
-## Acesso
+## Acesso (janela histórica do WPF)
 
 - Sidebar → "🔎 Inventário de Hardware" (nova janela não modal).
 - **Não exige** que o monitor esteja monitorando; sem snapshot ativo a janela mostra

@@ -2,7 +2,7 @@
 
 # System tray and Windows startup
 
-The WPF frontend integrates with the Windows notification area using native Win32 `Shell_NotifyIcon`, without WinForms. The tray icon is drawn at runtime with WPF; a system icon is used as a fallback.
+The tray integrates with the Windows notification area using native Win32 `Shell_NotifyIcon`, without WinForms, and the icon is drawn at runtime (a system icon is used as a fallback). In the retired WPF it was drawn through WPF rendering; the unified app uses Avalonia's `TrayIcon` API (section below).
 
 ## Tray icon
 
@@ -34,7 +34,7 @@ The unified app ships the same tray through Avalonia's `TrayIcon` API (`src/Phan
 
 - **Windows:** the same `Shell_NotifyIcon` protocol underneath the Avalonia API.
 - **Linux:** integration via **StatusNotifier/DBus** — it works on desktops with support (KDE, GNOME with the notification-area extension); on desktops without StatusNotifier the icon simply does not appear and the app stays functional.
-- **Menu:** the same WPF items (`Show Phantom Monitor`, `Game overlay`, `Start with the system`, `Reset statistics`, `Pause monitoring`, the dynamic OSD-profile section and `Exit`), with checks rebuilt when state changes (`InvalidateMenu`), left-click on the icon activating the window, and the profile item applying the P3 pin (`SetPinnedProfile` — session-only, not persisted to the config).
+- **Menu:** the same items inherited from the WPF (`Show Phantom Monitor`, `Game overlay`, `Start with the system`, `Reset statistics`, `Pause monitoring`, the dynamic OSD-profile section and `Exit`), with checks rebuilt when state changes (`InvalidateMenu`), left-click on the icon activating the window, and the profile item applying the P3 pin (`SetPinnedProfile` — session-only, not persisted to the config).
 - `Reset statistics` in the unified app zeroes min/max/average and writes the `#marker reset (inventory)` marker to the active CSV (plus the equivalent note in the active JSONL journal) — the same semantics documented for the inventory window.
 
 Startup is per-OS via `StartupManagerFactory` (Core): `WindowsStartupManager` keeps the HKCU Run entry described above, and on Linux `LinuxStartupManager` writes an XDG autostart entry at `~/.config/autostart/phantom-monitor.desktop` whose `Exec` points to the current executable; `IsEnabled()` validates the entry still matches it. The sidebar and tray menu share the real OS state (`Start with the system`).

@@ -2,11 +2,11 @@
 
 # Logging (CSV / JSON / JSONL)
 
-WPF and Avalonia share the log formats. Their output directories differ: WPF writes `logs/` beside the app, while Avalonia Linux writes to the user's data directory, normally `~/.local/share/PhantomMonitor/logs/` and respecting `XDG_DATA_HOME`.
+The unified app shares the log formats across platforms and writes to the per-user data directory: `%LOCALAPPDATA%\PhantomMonitor\logs` on Windows and normally `~/.local/share/PhantomMonitor/logs/` on Linux, respecting `XDG_DATA_HOME` when set.
 
 ## CSV (`CsvLogger`)
 
-CSV columns are created from the first snapshot: `Timestamp`, canonical sensor series, then per-instance keys such as `GpuCore#1`, `CpuTemperature#3`, and `FanSpeed#2`. A new file is created for each collection session. Names are `sensors_YYYYMMDD_HHmmss.csv` in WPF and `sensors_YYYYMMDD_HHmmss_fff.csv` in Avalonia. If hardware disappears, its column remains and the row contains zero to preserve table alignment.
+CSV columns are created from the first snapshot: `Timestamp`, canonical sensor series, then per-instance keys such as `GpuCore#1`, `CpuTemperature#3`, and `FanSpeed#2`. A new file is created for each collection session. Names use a millisecond suffix, `sensors_YYYYMMDD_HHmmss_fff.csv` (the retired WPF format `sensors_YYYYMMDD_HHmmss.csv` remains readable). If hardware disappears, its column remains and the row contains zero to preserve table alignment.
 
 `WriteMarker()` adds `#marker,<timestamp>,<label>` to the active CSV. Resetting session statistics creates a marker such as `reset (inventory)` without disrupting spreadsheet columns.
 
@@ -18,7 +18,7 @@ Only series that have values in the snapshot are included. Instance series use t
 
 ## Append-only JSONL (`JsonJournalLogger`)
 
-Each session gets `sensors_YYYYMMDD_HHmmss.jsonl` (WPF) or a millisecond-suffixed filename (Avalonia). One JSON object is appended per event:
+Each session gets a millisecond-suffixed `sensors_YYYYMMDD_HHmmss_fff.jsonl` (the retired WPF format had no suffix). One JSON object is appended per event:
 
 ```json
 {"kind":"meta","ts":"...","labels":{"GpuCore":"GPU Core","Custom#1":"DeltaTemp (°C)"}}
@@ -32,12 +32,12 @@ Because the metadata record is created with the first sample, it may follow the 
 
 ## Error log
 
-`errors.log` records local errors and diagnostic events as timestamp, context, and message. WPF stores it under `logs/` beside the executable. Avalonia/Linux stores it in the per-user data directory (`~/.local/share/PhantomMonitor/logs/`, respecting `XDG_DATA_HOME`) with telemetry files. Consecutive duplicate messages are suppressed; the file is cleared after it grows beyond roughly 1 MB. Logging failures never throw into the app. The **Diagnostics** center shows up to 500 recent entries, updates as new entries arrive, and can open the file with the system's default application. If file writing fails, an entry may remain visible in memory for the current run.
+`errors.log` records local errors and diagnostic events as timestamp, context, and message. On Windows it lives under `%LOCALAPPDATA%\PhantomMonitor\logs` (the old WPF wrote `logs/` beside the executable; the unified app always uses the per-user data directory). On Linux it is stored in the per-user data directory (`~/.local/share/PhantomMonitor/logs/`, respecting `XDG_DATA_HOME`) with telemetry files. Consecutive duplicate messages are suppressed; the file is cleared after it grows beyond roughly 1 MB. Logging failures never throw into the app. The **Diagnostics** center shows up to 500 recent entries, updates as new entries arrive, and can open the file with the system's default application. If file writing fails, an entry may remain visible in memory for the current run.
 
-Both frontends record unhandled UI, application-domain, and unobserved-task exceptions. Unexpected Linux sensor-reader failures are also recorded with context; optional missing files remain source-availability information rather than repeated errors.
+The unified app records unhandled UI, application-domain, and unobserved-task exceptions. Unexpected Linux sensor-reader failures are also recorded with context; optional missing files remain source-availability information rather than repeated errors.
 
 ## Activation and lifecycle
 
-The `config.json` flags `logToCsv`, `logToJson`, and `logToJsonJournal` control each format independently. On Linux, the Avalonia **Settings** page edits these flags and applies changes when saving successfully. WPF exposes its existing main-window toggles, applied to the next monitoring session. Pausing stops new samples while keeping files open; stopping collection or closing the app closes active files. See [configuration](configuration.md) for paths and settings.
+The `config.json` flags `logToCsv`, `logToJson`, and `logToJsonJournal` control each format independently. The unified **Settings** page edits these flags and applies changes when saving successfully (the WPF used the main-window toggles, applied to the next monitoring session). Pausing stops new samples while keeping files open; stopping collection or closing the app closes active files. See [configuration](configuration.md) for paths and settings.
 
-CSV filenames use session timestamps (`sensors_YYYYMMDD_HHmmss.csv` on WPF and a millisecond suffix on Avalonia). JSON always uses the fixed name `sensors_latest.json`. JSONL receives a timestamped filename per session. WPF stores its error log beside the executable; Avalonia/Linux stores it with telemetry files under `~/.local/share/PhantomMonitor/logs/`, or under `$XDG_DATA_HOME` when set.
+CSV filenames use session timestamps with a millisecond suffix on the unified app (`sensors_YYYYMMDD_HHmmss.csv` was the retired WPF's format). JSON always uses the fixed name `sensors_latest.json`. JSONL receives a timestamped filename per session. On Windows the error log lives under `%LOCALAPPDATA%\PhantomMonitor\logs`; on Linux it is stored with telemetry files under `~/.local/share/PhantomMonitor/logs/`, or under `$XDG_DATA_HOME` when set.

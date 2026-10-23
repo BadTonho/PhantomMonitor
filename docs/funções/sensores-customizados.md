@@ -10,11 +10,11 @@
 
 ## Config
 
-No Avalonia/Linux, a página **Sensores customizados** permite criar, editar,
+No app único, a página **Sensores customizados** permite criar, editar,
 remover e reordenar essas entradas sem editar o JSON manualmente. O editor valida
 nomes obrigatórios e únicos, sintaxe das fórmulas e o limite de 64 sensores antes
 de salvar. A configuração continua usando exatamente o schema abaixo, também
-consumido pelo WPF.
+consumido pelo frontend WPF antes da aposentadoria (Fase 2).
 
 Em `config.json` (junto a `sensors`/`profiles`):
 
@@ -82,11 +82,10 @@ ciclo ausente.
 - A engine é compartilhada entre Windows (`HardwareMonitorService`) e Linux
   (`LinuxSensorService`): fórmulas usam as séries que cada provedor publica
   (ex.: no Linux não há `PresentLatency`, mas há `NetworkDown`/`GpuCore`).
-- No Avalonia/Linux, **Salvar e aplicar** persiste as alterações e recria o
+- No app único, **Salvar e aplicar** persiste as alterações e recria o
   serviço imediatamente. Se a coleta estiver rodando, ela reinicia; se pausada,
   volta pausada; se parada, continua parada. A recriação zera as estatísticas da
-  sessão. No WPF, o formato permanece compatível e a engine é criada junto ao
-  serviço de sensores.
+  sessão (mesma aplicação que o WPF fazia; o formato permanece compatível).
 - A ordem determina o índice `Custom#i` e a ordem de avaliação. Uma fórmula só
   pode referenciar sensores customizados anteriores. Reordenar pode mudar os
   índices usados por alertas, por isso o editor mostra um aviso antes de salvar.

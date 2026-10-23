@@ -2,7 +2,7 @@
 
 > **Language:** English · [Português (Brasil)](../../funções/atualizações.md)
 
-Phantom Monitor checks for newer versions published on GitHub Releases and notifies the UI — and, on Windows and Linux (portable/AppImage), the "Atualizar e reiniciar" (Update and restart) button goes further: it downloads, swaps the files and relaunches on its own. The check is shared by both frontends (implemented in `PhantomMonitor.Services.Update`, in Core); applying the update is platform-specific (appliers).
+Phantom Monitor checks for newer versions published on GitHub Releases and notifies the UI — and, on Windows and Linux (portable/AppImage), the "Atualizar e reiniciar" (Update and restart) button goes further: it downloads, swaps the files and relaunches on its own. The check is shared by all platforms (implemented in `PhantomMonitor.Services.Update`, in Core); applying the update is platform-specific (appliers).
 
 ## How it works
 
@@ -18,17 +18,13 @@ Phantom Monitor checks for newer versions published on GitHub Releases and notif
 
 Network/rate-limit failures are logged to `logs/errors.log` and surfaced as a short message in the card — no modal, no interruption of monitoring.
 
-## Interface (Windows, WPF)
+## Interface (unified app)
 
-- **"Atualizações" card** (bottom of the page): installed version, last check, "Buscar agora" (Check now), a button that opens the releases page in the browser, and the automatic-check/beta-channel toggles.
-- **"Nova versão disponível" banner** in the main content when a newer version exists, with "Ver no GitHub" and — when the swap is possible — the **"Atualizar e reiniciar"** button (shows "Baixando: N %" while downloading and "Reiniciando..." during the swap).
-- **"Nova versão" badge** in the sidebar, next to the monitor state; clicking it opens the releases page.
+The same elements serve Windows and Linux (the WPF details were ported during the visual unification):
 
-## Interface (Linux, Avalonia)
-
-- **"ATUALIZAÇÕES (GITHUB RELEASES)" card** on the Settings page: automatic-check and beta-channel toggles, a "Repository" field (empty uses the official one), installed version, last check and the "Buscar agora" (Check now), "Abrir página de releases" and — when the swap is possible — "Atualizar e reiniciar" buttons. The preferences go through the page's own "Salvar e aplicar" (Save and apply) button (validation: `owner/repo` or a GitHub URL).
-- **"PHANTOM MONITOR · ATUALIZAÇÃO" toast** in the right corner of the dashboard when a newer version exists or a download/swap is in progress, with the same buttons.
+- **"PHANTOM MONITOR · ATUALIZAÇÃO" toast** in the right corner of the dashboard when a newer version exists or a download/swap is in progress, with the same buttons (on the WPF it was the "Nova versão disponível" banner in the main content, with "Ver no GitHub" and the **"Atualizar e reiniciar"** button — it shows "Baixando: N %" while downloading and "Reiniciando..." during the swap).
 - **Update badge** in the sidebar STATUS box (discrete green chip): shows "Nova versão: <tag>", "Baixando: N %" or "Pronto para reiniciar" depending on the state; it is clickable and opens the Settings page (visual unification F1.2, WPF parity).
+- **"ATUALIZAÇÕES (GITHUB RELEASES)" card** on the Settings page: automatic-check and beta-channel toggles, a "Repository" field (empty uses the official one), installed version, last check and the "Buscar agora" (Check now), "Abrir página de releases" and — when the swap is possible — "Atualizar e reiniciar" buttons. The preferences go through the page's own "Salvar e aplicar" (Save and apply) button (validation: `owner/repo` or a GitHub URL).
 - On a development build (`0.0.0-dev`), the card states that checking is disabled.
 
 ## Applying the update automatically (Windows)
@@ -39,6 +35,8 @@ The "Atualizar e reiniciar" button runs the full cycle:
 2. Extracts to `%LOCALAPPDATA%\PhantomMonitor\UpdateStaging\<version>\` (older stagings are cleaned before each preparation).
 3. Launches the one-shot updater (`apply_update.cmd` generated into staging): waits for the app process to exit (up to 30 s), swaps files with **backups** (`*.bak`), relaunches the executable and deletes the backups. On a failed copy, the `.bak` is restored immediately — the app never relaunches with half-swapped files.
 4. The app closes and reopens on the new version. The user config (`%APPDATA%\PhantomMonitor\config.json`) and logs live outside the swapped folder and are untouched.
+
+During the visual unification transition (Phase 2) the payload became the unified app **under the same name**: the executable is still called `PhantomMonitor.exe`, so `apply_update.cmd` swaps it in place (the old WPF exe becomes a `.bak` and is removed after the copy) — the desktop shortcut, Start Menu, Run key and post-update relaunch stay valid, with no reinstall needed. The payload is three files: `PhantomMonitor.exe` (unified Avalonia app), `PresentMon.exe` and `config.example.json`.
 
 Honest limits:
 
@@ -52,6 +50,8 @@ On Linux the flow is detected at startup in two formats:
 
 - **Portable (tarball)** — asset `PhantomMonitor-<version>-linux-x64.tar.gz`: downloads, extracts with the system `tar` into `$XDG_DATA_HOME/PhantomMonitor/UpdateStaging/<version>/` and the one-shot `apply_update.sh` waits for the process to exit (up to 60 s, `kill -0`), swaps files with backups (`*.bak`) — restored on a failed copy — and relaunches the executable with `nohup` when the swap completes.
 - **AppImage** (`$APPIMAGE` set) — asset `PhantomMonitor-<version>-linux-x64.AppImage`: the script just replaces the AppImage file, runs `chmod +x` and relaunches it.
+
+Unification transition (Phase 2): the portable binary went from `PhantomMonitor.App` to `PhantomMonitor`. The transition tarball carries an **extra hardlink** `PhantomMonitor.App` pointing to the new binary (zero cost in the tar), so the `apply_update.sh` generated by old versions — which relaunches by the legacy name — boots the new app during the same swap; in following releases the canonical name is `PhantomMonitor` and the shim can be retired.
 
 Limits and fallbacks:
 
@@ -74,7 +74,7 @@ Releases are generated locally (no publishing CI); the updater looks for these e
 
 Publishing flow:
 
-1. `scripts/release.ps1 -Version <x.y.z>`: publishes both frontends self-contained single-file with `-p:Version=<version>` and generates the zip and tarball under `releases/<version>/`. Options: `-PackWindowsSetup` (installer when Inno Setup 6 is present), `-LayerSoPath <so>` (attaches the compiled Vulkan layer), `-SkipWindows/-SkipLinux` and `-OutDirectory`.
+1. `scripts/release.ps1 -Version <x.y.z>`: publishes the unified app (win-x64 and linux-x64) self-contained single-file with `-p:Version=<version>` and generates the zip and tarball under `releases/<version>/` — the Windows payload is `PhantomMonitor.exe` + `PresentMon.exe` + `config.example.json` (the script guarantees a loose PresentMon and strips the `*.pdb`s) and the Linux one is the binary plus the transitional hardlink. Options: `-PackWindowsSetup` (installer when Inno Setup 6 is present), `-LayerSoPath <so>` (attaches the compiled Vulkan layer), `-SkipWindows/-SkipLinux` and `-OutDirectory`.
 2. On Linux, the experimental packagers (NOT TESTED) live in `packaging/linux/`: `appimage.sh` (appimagetool) and `deb.sh` (dpkg-deb). The Windows installer is `packaging/windows/phantom-monitor.iss`.
 3. Review the packages, create the `v<x.y.z>` tag (`git tag v1.2.3 && git push --tags`) and publish: the script prints a `gh release create v1.2.3 ...` command with the assets — or upload everything through the GitHub page.
 4. A draft is not seen as an available update; the tag must match the version itself (e.g. `v1.2.3` ↔ `1.2.3`, "v" tolerated by the SemVer parser).

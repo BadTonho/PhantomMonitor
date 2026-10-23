@@ -1,15 +1,17 @@
 > **Language:** English · [Português (Brasil)](../telemetry-sdk.md)
 
-# Telemetry SDK (shared memory and HTTP)
+# Telemetry SDK (retired shared memory and HTTP)
 
-External tools such as OBS, AutoHotkey, dashboards, scripts, and other apps can consume Phantom Monitor telemetry without reading log files:
+External tools such as OBS, AutoHotkey, dashboards, scripts, and other apps consumed Phantom Monitor telemetry without reading log files:
 
-1. **Shared memory** is published by the WPF/Windows frontend while monitoring. A structured snapshot is written at the monitor cadence (minimum 100 ms). Avalonia/Linux does not publish this map.
-2. **HTTP exporter** is available in both frontends when `telemetryExport.enabled` is set; it exposes the latest snapshot as JSON at `GET /values`.
+1. **Shared memory** was published by the WPF-era Windows frontend only, and was retired with it in Phase 2 (`6c4d2c0`) — the unified app does not publish this map. Linux never published it (the Vulkan layer's POSIX channel carries frame timings only).
+2. **HTTP exporter** is the current external interface on both operating systems when `telemetryExport.enabled` is set; it exposes the latest snapshot as JSON at `GET /values`.
 
-The WPF shared-memory map is created when collection starts and removed when it stops. On Linux, the HTTP exporter is the external telemetry interface; `sensors_latest.json` remains a file-based fallback.
+> **Status (Phase 2 of the visual unification):** the shared-memory SDK (`TelemetrySdkWriter`) was WPF-only and retired together with the frontend. The current external interfaces are the HTTP exporter and `sensors_latest.json`; the rest of this document remains as a **historical reference** of the format and the `tools/TelemetrySdkReader/`.
 
-## Shared memory (WPF/Windows): identity and layout
+When it existed (WPF), the map was created when collection started and removed when it stopped. In the unified app, the HTTP exporter is the external telemetry interface; `sensors_latest.json` remains a file-based fallback.
+
+## Shared memory (WPF/Windows, retired): identity and layout
 
 - Map name: `phantom_monitor_telemetry_v1`, scoped to the local user/session. Readers should run in the same session; a global namespace would require broader permissions.
 - Size: 20,544 bytes: 64-byte header plus 256 entries of 80 bytes each.
@@ -59,7 +61,7 @@ In C, read the same sequence around the copied entries. On ARM64, load `seq` wit
 - Responses use `Cache-Control: no-store`, JSON content type, and content length.
 - The listener exists only while monitoring is started. It continues serving the frozen last snapshot while paused. Bind failures are logged and do not stop collection.
 - On Linux, **Settings** edits `enabled`, `port`, and `listenAll`, and shows the endpoint and listener state. Changing the address or port during a pause reopens the listener and republishes the frozen snapshot.
-- On Windows, the WPF frontend uses the same endpoints and configuration block. The shared-memory map described above is a separate Windows-only interface.
+- On Windows, the unified app uses the same endpoints and configuration block. The shared-memory map described above is a separate Windows-only interface.
 
 HTTP is used instead of UDP for discoverability, keep-alive, standard headers, and easy access from browsers and common clients. Shared memory remains better suited to high-frequency local consumers.
 

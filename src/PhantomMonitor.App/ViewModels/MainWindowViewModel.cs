@@ -117,7 +117,6 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private DispatcherTimer? _alertToastTimer;
     private bool _alertEditorInitialized;
     private readonly LinuxDesktopNotificationService? _desktopNotificationService;
-    private readonly LinuxAlertScriptRunner _alertScriptRunner = new();
     private bool _windowActive;
     private bool _windowMinimized;
 
@@ -337,6 +336,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         RefreshAlertEditor();
         _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs, _config);
         AttachSensorService(_sensorService);
+        RefreshStartWithWindows();
+        ApplyHotkeys();
         UpdateOverlayRows(null);
         LoadDiagnosticEntries();
         ErrorLog.EntryWritten += OnDiagnosticEntryWritten;
@@ -595,7 +596,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
 
         foreach (var alert in _alertEvaluator.Evaluate(data))
         {
-            _alertScriptRunner.Run(alert);
+            // Ações de sistema por SO (som/script/shutdown com guard) na F1.5;
+            // toast + notificação de desktop continuam no RecordAlert.
+            ExecuteAlertActions(alert);
             RecordAlert(alert, data.Timestamp);
         }
     }
@@ -707,6 +710,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _disposed = true;
         ErrorLog.EntryWritten -= OnDiagnosticEntryWritten;
         DetachSensorService(_sensorService);
+        if (OperatingSystem.IsWindows()) _hotkeys?.Dispose();
         if (IsRunning)
         {
             _sensorService.SetPaused(false);

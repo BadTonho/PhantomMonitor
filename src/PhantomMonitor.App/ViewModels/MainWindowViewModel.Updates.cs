@@ -7,11 +7,12 @@ using PhantomMonitor.Services.Update;
 
 namespace PhantomMonitor.App.ViewModels;
 
-// Atualizações no Linux: checagem automática (arranque + DispatcherTimer de 24h),
-// estado para o usuário (card de Configurações + toast no canto) e "Atualizar e
-// reiniciar" via LinuxUpdateApplier (tarball/AppImage; instalação de sistema fica
-// em modo notificação com link). Os toggles e o campo de repositório são textos
-// editáveis persistidos pelo SaveSettings (ConfigApply).
+// Atualizações: checagem automática (arranque + DispatcherTimer de 24h), estado para
+// o usuário (card de Configurações + toast no canto) e "Atualizar e reiniciar" via o
+// applier por SO (F1.5): WindowsUpdateApplier (zip portable + one-shot cmd) ou
+// LinuxUpdateApplier (tarball/AppImage; instalação de sistema fica em modo notificação
+// com link). Os toggles e o campo de repositório são textos editáveis persistidos pelo
+// SaveSettings (ConfigApply).
 public sealed partial class MainWindowViewModel
 {
     private UpdateService? _updates;
@@ -55,11 +56,12 @@ public sealed partial class MainWindowViewModel
         _updateRepositoryText = _config.Update.Repository;
         _updateVersionText = $"Versão instalada: v{UpdateVersion.Current}";
 
+        // Applier por SO (F1.5): o zip com one-shot cmd no Windows, tarball/AppImage no Linux.
         _updates = new UpdateService(
             _config.Update.Repository,
             autoCheck: () => _config.Update.AutoCheck,
             includePreRelease: () => _config.Update.CheckBeta,
-            applier: LinuxUpdateApplier.Shared);
+            applier: OperatingSystem.IsWindows() ? WindowsUpdateApplier.Shared : LinuxUpdateApplier.Shared);
         _updates.StateChanged += state => Dispatcher.UIThread.Post(() => OnUpdateStateChanged(state));
 
         if (UpdateVersion.IsDevelopmentBuild)

@@ -132,9 +132,36 @@ public sealed partial class MainWindowViewModel
         }
     }
 
-    private void RecordAlert(AlertTrigger trigger, DateTime timestamp)
+    /// <summary>
+    /// Orquestração das ações por alerta (F1.5), na ordem do AlertService do WPF:
+    /// som (beep no Windows — a notificação de desktop do Linux carrega o próprio som),
+    /// script da regra, e desligamento com guard <c>allowShutdown</c> (mensagem idêntica
+    /// à do WPF quando bloqueado). Popup/toast + notificação fora de foco ficam no
+    /// RecordAlert, imediatamente depois.
+    /// </summary>
+    private void ExecuteAlertActions(AlertTrigger trigger)
     {
-        AlertHistory.Insert(0, new AlertHistoryEntryViewModel(
+        try
+        {
+            if (trigger.Rule.Sound) _alertActions.Sound();
+            _alertActions.RunScript(trigger);
+            if (trigger.Rule.Shutdown)
+            {
+                if (_config.Alerts.AllowShutdown)
+                    _alertActions.Shutdown(trigger.Message);
+                else
+                    ErrorLog.Write("AlertActions",
+                        "Ação 'shutdown' ignorada: defina alerts.allowShutdown=true no config para permiti-la.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("AlertActions.Trigger", ex);
+        }
+    }
+
+    private void RecordAlert(AlertTrigger trigger, DateTime timestamp)
+    {        AlertHistory.Insert(0, new AlertHistoryEntryViewModel(
             timestamp.ToLocalTime().ToString("HH:mm:ss"),
             trigger.SensorName,
             trigger.Message,

@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using System.Diagnostics;
+using PhantomMonitor.App.Services;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
 
@@ -10,6 +11,7 @@ public sealed partial class MainWindow : Window
 {
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     private OverlayWindow? _overlayWindow;
+    private TrayIconService? _tray;
 
     public MainWindow()
     {
@@ -21,6 +23,7 @@ public sealed partial class MainWindow : Window
             RefreshWindowPresentationState();
             ViewModel.Start();
             SyncOverlayVisibility();
+            InitTrayIcon();
         };
         Activated += (_, _) => RefreshWindowPresentationState();
         Deactivated += (_, _) => RefreshWindowPresentationState();
@@ -31,6 +34,11 @@ public sealed partial class MainWindow : Window
         };
         Closed += (_, _) =>
         {
+            if (_tray is { } tray)
+            {
+                tray.Dispose();
+                _tray = null;
+            }
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _overlayWindow?.Close();
             ViewModel.Dispose();
@@ -62,8 +70,54 @@ public sealed partial class MainWindow : Window
         _overlayWindow = overlay;
     }
 
+    /// <summary>Cria o ícone da bandeja (silencioso em falha: o app continua funcional), como no WPF.</summary>
+    private void InitTrayIcon()
+    {
+        try
+        {
+            _tray = new TrayIconService();
+            _tray.ActivateRequested += ActivateMainWindow;
+            _tray.OverlayToggleRequested += ViewModel.ToggleOverlay;
+            _tray.StartupToggleRequested += () => ViewModel.StartWithWindows = !ViewModel.StartWithWindows;
+            _tray.ResetStatsRequested += ViewModel.ResetSessionStats;
+            _tray.PauseToggleRequested += ViewModel.TogglePause;
+            _tray.ExitRequested += Close;
+            _tray.IsOverlayVisible = () => ViewModel.OverlayVisible;
+            _tray.IsStartupEnabled = () => ViewModel.StartWithWindows;
+            _tray.IsPaused = () => ViewModel.IsPaused;
+            // Seção dinâmica: perfis do OSD (fixar perfil / voltar ao automático) — pin (P3).
+            _tray.SetDynamicItems(() => ViewModel.BuildTrayProfileEntries(), id => ViewModel.ApplyTrayProfileClick(id));
+            RefreshTrayMenu();
+        }
+        catch (Exception ex)
+        {
+            _tray = null;
+            ErrorLog.Write("TrayIcon.Init", ex);
+        }
+    }
+
+    private void ActivateMainWindow()
+    {
+        Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+    }
+
+    private void RefreshTrayMenu()
+    {
+        _tray?.InvalidateMenu();
+    }
+
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        // Menu da bandeja: rebuild nos estados com check (overlay/pausa/startup/perfil fixado).
+        if (e.PropertyName is nameof(MainWindowViewModel.OverlayVisible)
+            or nameof(MainWindowViewModel.IsPaused)
+            or nameof(MainWindowViewModel.StartWithWindows)
+            or nameof(MainWindowViewModel.HasOverlayProfileTag)
+            or nameof(MainWindowViewModel.OverlayProfileTagText))
+            RefreshTrayMenu();
+
         if (e.PropertyName == nameof(MainWindowViewModel.OverlayVisible))
             SyncOverlayVisibility();
         else if (e.PropertyName == nameof(MainWindowViewModel.OverlayWidth) && _overlayWindow is not null)

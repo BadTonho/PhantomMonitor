@@ -14,9 +14,71 @@ namespace PhantomMonitor.App.ViewModels;
 // acento é dado do config (hex), não token; os tints são derivados dela.
 public sealed partial class MainWindowViewModel
 {
-    private string? _pinnedProfileName; // bandeja (F1.5): sempre nulo hoje; o matcher já entende
+    private string? _pinnedProfileName; // bandeja (F1.5): fixa um perfil na sessão do usuário
     private OverlayProfile? _activeProfile;
     private readonly Dictionary<int, string> _foregroundNameCache = [];
+
+    /// <summary>Id base dos itens dinâmicos do menu da bandeja (paridade do MenuDynamicBase do WPF: 0x500).</summary>
+    public const int TrayMenuDynamicBase = 0x500;
+
+    /// <summary>Entrada da seção dinâmica da bandeja: id (base WPF), título e estado do check.</summary>
+    public sealed record TrayProfileMenuEntry(int Id, string Title, bool Checked);
+
+    public string? PinnedProfileName => _pinnedProfileName;
+
+    /// <summary>
+    /// Entradas da seção dinâmica da bandeja: "Automático (por aplicativo)" + perfis,
+    /// avaliadas a cada reconstrução do menu (paridade do provedor do WPF).
+    /// </summary>
+    public List<TrayProfileMenuEntry> BuildTrayProfileEntries()
+    {
+        var entries = new List<TrayProfileMenuEntry>
+        {
+            new(TrayMenuDynamicBase, "Automático (por aplicativo)", _pinnedProfileName is null)
+        };
+        for (var index = 0; index < _config.Profiles.Count; index++)
+        {
+            var profile = _config.Profiles[index];
+            entries.Add(new(
+                TrayMenuDynamicBase + index + 1,
+                profile.Name,
+                string.Equals(_pinnedProfileName, profile.Name, StringComparison.OrdinalIgnoreCase)));
+        }
+        return entries;
+    }
+
+    /// <summary>Chegada de clique da bandeja: id da base desfixa (automático), demais fixam por índice.</summary>
+    public void ApplyTrayProfileClick(int id)
+    {
+        if (id == TrayMenuDynamicBase)
+        {
+            SetPinnedProfile(null);
+            return;
+        }
+
+        var index = id - TrayMenuDynamicBase - 1;
+        if (index < 0 || index >= _config.Profiles.Count) return;
+        SetPinnedProfile(_config.Profiles[index].Name);
+    }
+
+    /// <summary>
+    /// Pin da bandeja: fixa o perfil na sessão (não persiste no config, como no WPF).
+    /// Reaplica os overrides imediatamente — o próximo tick de posição já usaria o pin.
+    /// </summary>
+    public void SetPinnedProfile(string? profileName)
+    {
+        var pinned = string.IsNullOrWhiteSpace(profileName) ? null : profileName.Trim();
+        if (string.Equals(_pinnedProfileName, pinned, StringComparison.OrdinalIgnoreCase)) return;
+        _pinnedProfileName = pinned;
+
+        var target = pinned is null
+            ? null
+            : _config.Profiles.FirstOrDefault(p => string.Equals(p.Name, pinned, StringComparison.OrdinalIgnoreCase));
+        if (string.Equals(_activeProfile?.Name, target?.Name, StringComparison.OrdinalIgnoreCase)) return;
+
+        _activeProfile = target;
+        ApplyOverlayProfile(target);
+    }
 
     // ---- Aparência efetiva (config ⊕ perfil) — fonte de verdade para os props da view ----
     private double _overlayFontEffective = 11.5;

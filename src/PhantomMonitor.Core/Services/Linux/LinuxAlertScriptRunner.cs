@@ -2,11 +2,14 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using PhantomMonitor.Models;
-using PhantomMonitor.Services;
 
-namespace PhantomMonitor.App.Services;
+namespace PhantomMonitor.Services.Linux;
 
-/// <summary>Starts alert scripts on Linux without passing arguments through a shell.</summary>
+/// <summary>
+/// Inicia scripts de alerta no Linux sem passar argumentos por shell: .sh via
+/// /bin/sh; outros arquivos precisam do bit de execução. Move a pergunta de
+/// App -&gt; Core na F1.5 (com a orquestração por SO), mesmo contrato do WPF.
+/// </summary>
 public sealed class LinuxAlertScriptRunner
 {
     public void Run(AlertTrigger trigger)

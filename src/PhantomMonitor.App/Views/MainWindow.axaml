@@ -71,6 +71,10 @@
             <Button Classes="update-badge" IsVisible="{Binding UpdateBadgeVisible}" Click="OnUpdateBadgeClick">
               <TextBlock Text="{Binding UpdateBadgeText}" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="10" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Left" />
             </Button>
+            <CheckBox IsVisible="{Binding StartupSupported}" Content="Iniciar com o sistema"
+                      IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
+                      Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10"
+                      ToolTip.Tip="Registra o aplicativo para iniciar com o sistema (Run do Windows / entrada autostart no Linux)." />
           </StackPanel>
         </Border>
       </Grid>

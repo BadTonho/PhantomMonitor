@@ -11,6 +11,7 @@ public sealed partial class MainWindow : Window
 {
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     private OverlayWindow? _overlayWindow;
+    private OverlayEditorWindow? _overlayEditorWindow;
     private TrayIconService? _tray;
 
     public MainWindow()
@@ -215,9 +216,21 @@ public sealed partial class MainWindow : Window
         ViewModel.ShowSettings();
     }
     private void OnSaveSettingsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveSettings();
-    private void OnAddDetectedOverlaySeriesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddDetectedOverlaySeries();
-    private void OnAddOverlaySeriesPatternClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddManualOverlaySeriesPattern();
-    private void OnRestoreOverlaySeriesDefaultsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestoreDefaultOverlaySeriesPatterns();
+
+    // Editor do overlay em janela dedicada: mesma instância do VM, reabre/ativa.
+
+    private void OnOpenOverlayEditorClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_overlayEditorWindow is null)
+        {
+            _overlayEditorWindow = new OverlayEditorWindow { DataContext = DataContext };
+            _overlayEditorWindow.Closed += (_, _) => _overlayEditorWindow = null;
+            _overlayEditorWindow.Show(this);
+            return;
+        }
+
+        _overlayEditorWindow.Activate();
+    }
     private void OnRestartAsAdminClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestartAsAdmin();
     private void OnUpdateBadgeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSettings();
     private void OnCheckUpdatesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.CheckUpdatesNow();
@@ -291,12 +304,6 @@ public sealed partial class MainWindow : Window
     {
         if (sender is Control { DataContext: CustomSensorEditorViewModel editor })
             ViewModel.RemoveCustomSensor(editor);
-    }
-
-    private void OnRemoveOverlaySeriesPatternClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: OverlaySeriesPatternViewModel pattern })
-            ViewModel.RemoveOverlaySeriesPattern(pattern);
     }
 
     private void OnMoveCustomSensorUpClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => MoveCustomSensor(sender, -1);

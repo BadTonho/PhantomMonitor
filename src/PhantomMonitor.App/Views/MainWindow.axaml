@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:charts="using:PhantomMonitor.App.Controls"
-        xmlns:vm="using:PhantomMonitor.App.ViewModels"
         x:Class="PhantomMonitor.App.Views.MainWindow"
         Title="Phantom Monitor"
         Width="1120" Height="790" MinWidth="850" MinHeight="640"
@@ -467,141 +466,11 @@
         <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="10">
             <TextBlock Text="OVERLAY FLUTUANTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-            <TextBlock Text="Escolha as categorias mostradas na janela compacta. Salve para aplicar." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock Text="PRÉVIA AO VIVO (segue largura, opacidade, fonte e modo compacto enquanto você edita)"
-                       Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" Margin="0,2,0,0" />
-            <Border CornerRadius="10" HorizontalAlignment="Left" Width="{Binding OverlayPreviewWidth}"
-                    Background="{DynamicResource BgOverlayPanelBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}"
-                    BorderThickness="1" Padding="{Binding OverlayPreviewPadding}" Opacity="{Binding OverlayPreviewOpacity}">
-              <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="{Binding OverlayPreviewContentSpacing}">
-                  <ItemsControl ItemsSource="{Binding OverlayRows}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border CornerRadius="4" Background="{DynamicResource BgChipBrush}"
-                                BorderBrush="{DynamicResource BgDividerBrush}" BorderThickness="0.5"
-                                Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}"
-                                Padding="{Binding $parent[Window].DataContext.OverlayPreviewBlockPadding}">
-                          <StackPanel Spacing="2">
-                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
-                                       FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}"
-                                       FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
-                                       FontFamily="monospace" TextWrapping="WrapWithOverflow" />
-                            <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
-                                                 Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
-                                                 Stroke="{Binding $parent[Window].DataContext.OverlayAccentBrush}"
-                                                 GuideBrush="{DynamicResource OverlayGuideBrush}"
-                                                 MinY="0" MaxFloor="33.3" GuideAt="16.66"
-                                                 Height="{Binding $parent[Window].DataContext.OverlayPreviewFrametimeGraphHeight}" />
-                          </StackPanel>
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                  <ItemsControl ItemsSource="{Binding OverlayExtraRows}">
-                    <ItemsControl.DataTemplates>
-                      <DataTemplate DataType="vm:OverlayGraphRowViewModel">
-                        <Border CornerRadius="2" BorderThickness="0.5" IsVisible="{Binding IsVisible}"
-                                Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgDividerBrush}"
-                                Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}">
-                          <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
-                                               MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
-                        </Border>
-                      </DataTemplate>
-                      <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
-                        <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
-                                   FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
-                                   FontFamily="monospace" TextTrimming="CharacterEllipsis"
-                                   Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}" />
-                      </DataTemplate>
-                    </ItemsControl.DataTemplates>
-                  </ItemsControl>
-                  <TextBlock Text="{Binding OverlayProfileTagText}" IsVisible="{Binding HasOverlayProfileTag}"
-                             Foreground="{DynamicResource TextOverlaySecondaryBrush}" FontSize="{Binding OverlayPreviewProfileTagFontSize}" />
-                  <TextBlock Text="{Binding LastUpdateText}" Foreground="{DynamicResource TextLabelBrush}"
-                             FontSize="{Binding OverlayPreviewSecondaryFontSize}" HorizontalAlignment="Right" />
-                </StackPanel>
-              </ScrollViewer>
-            </Border>
-            <TextBlock IsVisible="{Binding OverlayPreviewWidthInvalid}"
-                       Text="Largura inválida — a prévia está usando o último valor aplicado (140–700 px)."
-                       Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock Text="A prévia reflete os ajustes globais em tempo real e inclui as séries por instância da whitelist; perfis por aplicativo ativos podem sobrepor a janela real. &quot;Salvar e aplicar&quot; envia os valores salvos para a janela."
-                       Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-              <StackPanel Spacing="5">
-                <TextBlock Text="LARGURA (140–700 PX)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                <TextBox Text="{Binding OverlayWidthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="5" MinWidth="180">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="OPACIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Grid.Column="1" Text="{Binding OverlayOpacityLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
-                </Grid>
-                <Slider Minimum="10" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
-                        Value="{Binding OverlayOpacityPercent, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-            <TextBlock Text="A largura e a opacidade são aplicadas à janela aberta ao salvar, sem reiniciar a coleta." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-              <StackPanel Spacing="5" Width="125">
-                <TextBlock Text="FONTE (8–20 PT)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                <TextBox Text="{Binding OverlayFontSizeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="5">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="TAMANHO DA FONTE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Grid.Column="1" Text="{Binding OverlayFontSizeLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
-                </Grid>
-                <Slider Minimum="8" Maximum="20" TickFrequency="0.5" IsSnapToTickEnabled="True"
-                        Value="{Binding OverlayFontSizeSlider, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-            <CheckBox Content="Modo compacto (reduz margens e espaçamento das linhas)"
-                      IsChecked="{Binding OverlayCompactModeSetting, Mode=TwoWay}" />
-            <WrapPanel Orientation="Horizontal" ItemWidth="170">
-              <CheckBox Content="CPU" IsChecked="{Binding OverlayShowCpu, Mode=TwoWay}" />
-              <CheckBox Content="GPU" IsChecked="{Binding OverlayShowGpu, Mode=TwoWay}" />
-              <CheckBox Content="RAM" IsChecked="{Binding OverlayShowRam, Mode=TwoWay}" />
-              <CheckBox Content="Disco" IsChecked="{Binding OverlayShowDisk, Mode=TwoWay}" />
-              <CheckBox Content="Rede" IsChecked="{Binding OverlayShowNetwork, Mode=TwoWay}" />
-              <CheckBox Content="Ventoinhas" IsChecked="{Binding OverlayShowFans, Mode=TwoWay}" />
-              <CheckBox Content="Placa-mãe" IsChecked="{Binding OverlayShowMotherboard, Mode=TwoWay}" />
-              <CheckBox Content="FPS e frametime" IsChecked="{Binding OverlayShowFps, Mode=TwoWay}" />
-            </WrapPanel>
-            <CheckBox Content="Gráfico de frametime no overlay (requer FPS/frametime)"
-                      IsEnabled="{Binding OverlayShowFps}"
-                      IsChecked="{Binding OverlayShowFrametimeGraph, Mode=TwoWay}" />
-            <TextBlock Text="O gráfico aparece abaixo da linha JOGO quando há pelo menos duas amostras. A pausa mantém o histórico congelado."
-                       Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock Text="SÉRIES POR INSTÂNCIA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" Margin="0,4,0,0" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <ComboBox ItemsSource="{Binding OverlaySeriesOptions}" SelectedItem="{Binding SelectedOverlaySeries, Mode=TwoWay}"
-                        PlaceholderText="Escolha uma série detectada" />
-              <Button Grid.Column="1" Classes="action" Content="Adicionar" Click="OnAddDetectedOverlaySeriesClick" />
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBox Text="{Binding OverlaySeriesPatternInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                       PlaceholderText="Ex.: Gpu*, CpuTemperature#* ou DiskRead#1" />
-              <Button Grid.Column="1" Classes="action" Content="Adicionar padrão" Click="OnAddOverlaySeriesPatternClick" />
-            </Grid>
-            <ItemsControl ItemsSource="{Binding OverlaySeriesPatterns}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                    <TextBlock Text="{Binding Pattern}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Content="Remover" Padding="8,3" Click="OnRemoveOverlaySeriesPatternClick" />
-                  </Grid>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <TextBlock Text="Personalize largura, opacidade, fonte, categorias, frametime e séries por instância na janela dedicada do editor, com prévia ao vivo." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Restaurar padrões" Click="OnRestoreOverlaySeriesDefaultsClick" />
-              <TextBlock Text="A lista funciona como whitelist. Padrões aceitam chave exata, *, prefixo* ou *sufixo; os não detectados ficam salvos." Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
+              <Button Classes="action" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
+              <TextBlock Text="Salvar entra no config e aplica à janela aberta sem reiniciar a coleta." Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
             </StackPanel>
-            <TextBlock Text="O overlay é arrastável e recebe cliques. No Wayland, o compositor define sua posição inicial e seu comportamento sobre janelas em tela cheia." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 

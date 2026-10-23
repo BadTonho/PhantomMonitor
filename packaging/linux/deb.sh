@@ -12,7 +12,7 @@ set -eu
 PUBLISH_DIR=${1:?Uso: deb.sh <dir-do-publish-linux> <versão> <dir-de-saída>}
 PACKAGE_VERSION=${2:?Uso: deb.sh <dir-do-publish-linux> <versão> <dir-de-saída>}
 OUT_DIR=${3:?Uso: deb.sh <dir-do-publish-linux> <versão> <dir-de-saída>}
-APPNAME=PhantomMonitor.App
+APPNAME=PhantomMonitor
 
 [ -x "$PUBLISH_DIR/$APPNAME" ] || {
     echo "ERROR: $PUBLISH_DIR/$APPNAME not found/not executable. Publish first." >&2

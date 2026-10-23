@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PhantomMonitor.App</RootNamespace>
-    <AssemblyName>PhantomMonitor.App</AssemblyName>
+    <AssemblyName>PhantomMonitor</AssemblyName>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <!-- Marcador de build de desenvolvimento: o updater nunca "atualiza" um 0.0.0-dev.
          A release passa /p:Version=<tag> no publish e a versão compilada passa a casar. -->

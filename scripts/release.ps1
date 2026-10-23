@@ -3,7 +3,7 @@
     Gera releases locais do Phantom Monitor (o projeto não publica via CI).
 
 .DESCRIPTION
-    Publica os dois frontends self-contained single-file (win-x64 e linux-x64)
+    Publica o app único self-contained single-file (win-x64 e linux-x64)
     com a versão compilada casando com a tag, monta os pacotes na convenção
     que o updater espera (docs/funções/atualizações.md) e imprime o próximo
     passo: criar a tag v<versão> e subir os arquivos manualmente no GitHub.
@@ -51,12 +51,23 @@ function Write-Step($text) {
 
 try {
     if (-not $SkipWindows) {
-        Write-Step "Publicando Windows (WPF, win-x64 self-contained single-file)..."
-        dotnet publish (Join-Path $repoRoot "src\PhantomMonitor\PhantomMonitor.csproj") `
+        Write-Step "Publicando Windows (app único, win-x64 self-contained single-file)..."
+        dotnet publish (Join-Path $repoRoot "src\PhantomMonitor.App\PhantomMonitor.App.csproj") `
             -c Release -r win-x64 --self-contained true `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:Version=$Version -o (Join-Path $stage "win")
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish do Windows falhou." }
+
+        # O bundler single-file classifica o PresentMon.exe (binário PE nativo)
+        # como biblioteca nativa e o embute (reaparece em %TEMP%\.net no
+        # arranque — caminho que o FpsMonitor não usa). O contrato do payload
+        # (docs/funções/atualizações.md) é tê-lo SOLTO na pasta do app:
+        # garantimos a cópia e limpamos os *.pdb (símbolos não entram no
+        # payload).
+        Copy-Item (Join-Path $repoRoot "tools\PresentMon.exe") `
+            (Join-Path $stage "win\PresentMon.exe") -Force
+        Get-ChildItem (Join-Path $stage "win") -Filter "*.pdb" -ErrorAction SilentlyContinue |
+            Remove-Item -Force
 
         Write-Step "Empacotando zip do Windows..."
         $zip = Join-Path $OutDirectory ("PhantomMonitor-{0}-win-x64.zip" -f $Version)
@@ -64,12 +75,27 @@ try {
     }
 
     if (-not $SkipLinux) {
-        Write-Step "Publicando Linux (Avalonia, linux-x64 self-contained single-file)..."
+        Write-Step "Publicando Linux (app único, linux-x64 self-contained single-file)..."
         dotnet publish (Join-Path $repoRoot "src\PhantomMonitor.App\PhantomMonitor.App.csproj") `
             -c Release -r linux-x64 --self-contained true `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:Version=$Version -o (Join-Path $stage "linux")
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish do Linux falhou." }
+
+        # Hardlink transicional: installs portáteis antigos relançam pelo nome
+        # legado "PhantomMonitor.App" no apply_update.sh gerado POR ELES; o nome
+        # extra aponta para o mesmo binário ao extraer e custa zero bytes no
+        # tar (entrada hardlink). A partir da próxima atualização o nome
+        # canônico é "PhantomMonitor" e o shim pode ser aposentado.
+        New-Item -ItemType HardLink `
+            -Path (Join-Path $stage "linux\PhantomMonitor.App") `
+            -Target (Join-Path $stage "linux\PhantomMonitor") | Out-Null
+
+        # Payload limpo no Linux: sem *.pdb (símbolos) e sem PresentMon.exe
+        # (ferramenta Windows/ETW que o Include do csproj atravessa aqui).
+        Get-ChildItem (Join-Path $stage "linux") -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like "*.pdb" -or $_.Name -eq "PresentMon.exe" } |
+            Remove-Item -Force
 
         Write-Step "Empacotando tarball do Linux..."
         $tarball = Join-Path $OutDirectory ("PhantomMonitor-{0}-linux-x64.tar.gz" -f $Version)

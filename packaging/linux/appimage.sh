@@ -11,7 +11,7 @@ set -eu
 
 PUBLISH_DIR=${1:?Uso: appimage.sh <dir-do-publish-linux> <saida>.AppImage}
 OUTPUT_APPIMAGE=${2:?Uso: appimage.sh <dir-do-publish-linux> <saida>.AppImage}
-APPNAME=PhantomMonitor.App
+APPNAME=PhantomMonitor
 
 [ -x "$PUBLISH_DIR/$APPNAME" ] || {
     echo "ERROR: $PUBLISH_DIR/$APPNAME not found/not executable. Publish first." >&2
@@ -38,10 +38,10 @@ cp "$REPO_ROOT/fantasma.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/phant
 cp "$REPO_ROOT/fantasma.png" "$APPDIR/.DirIcon"
 
 # AppRun mínimo: executa o binário .NET junto dos assets empacotados.
-cat > "$APPDIR/AppRun" <<'EOF'
+cat > "$APPDIR/AppRun" <<EOF
 #!/bin/sh
-HERE=$(dirname "$(readlink -f "$0")")
-exec "$HERE/usr/bin/PhantomMonitor.App" "$@"
+HERE=\$(dirname "\$(readlink -f "\$0")")
+exec "\$HERE/usr/bin/$APPNAME" "\$@"
 EOF
 chmod +x "$APPDIR/AppRun"
 
@@ -50,7 +50,7 @@ cat > "$APPDIR/phantom-monitor.desktop" <<'EOF'
 Type=Application
 Name=Phantom Monitor
 Comment=Hardware, FPS and frametime local monitor
-Exec=PhantomMonitor.App
+Exec=PhantomMonitor
 Icon=phantom-monitor
 Categories=System;Utility;
 EOF

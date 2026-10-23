@@ -30,8 +30,8 @@ public sealed partial class App : Application
     private void ApplyConfiguredUiTheme()
     {
         var source = ResolveUiTheme() == "slate"
-            ? "avares://PhantomMonitor.App/Themes/Tokens.Slate.axaml"
-            : "avares://PhantomMonitor.App/Themes/Tokens.Neptune.axaml";
+            ? "avares://PhantomMonitor/Themes/Tokens.Slate.axaml"
+            : "avares://PhantomMonitor/Themes/Tokens.Neptune.axaml";
 
         Resources.MergedDictionaries.Clear();
         Resources.MergedDictionaries.Add(

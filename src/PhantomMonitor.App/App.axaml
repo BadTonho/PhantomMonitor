@@ -13,7 +13,7 @@
              ui-theme=<nome> (dois hífens como prefixo) sobrepõe (smoke/
              troubleshooting). Os dois dicionários têm a MESMA lista de chaves; as
              views usam DynamicResource. Troca em runtime pela UI chega na Fase 3. -->
-        <ResourceInclude Source="avares://PhantomMonitor.App/Themes/Tokens.Neptune.axaml" />
+        <ResourceInclude Source="avares://PhantomMonitor/Themes/Tokens.Neptune.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

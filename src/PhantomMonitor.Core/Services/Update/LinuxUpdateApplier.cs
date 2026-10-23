@@ -103,8 +103,8 @@ public sealed class LinuxUpdateApplier : IUpdateApplier
             var stagingDir = Path.Combine(stagingRoot, version);
             if (!Directory.Exists(stagingDir))
                 throw new InvalidOperationException("Arquivos do staging não existem mais; refaça a preparação.");
-            var exeName = Path.GetFileName(Environment.ProcessPath ?? "PhantomMonitor.App");
-            arguments += $"\"{stagingDir}\" \"{InstallDirectory}\" \"{(string.IsNullOrWhiteSpace(exeName) ? "PhantomMonitor.App" : exeName)}\" portable";
+            var exeName = Path.GetFileName(Environment.ProcessPath ?? "PhantomMonitor");
+            arguments += $"\"{stagingDir}\" \"{InstallDirectory}\" \"{(string.IsNullOrWhiteSpace(exeName) ? "PhantomMonitor" : exeName)}\" portable";
         }
 
         // Script roda com /bin/sh (POSIX); não depende de bash nem de pacotes extras.

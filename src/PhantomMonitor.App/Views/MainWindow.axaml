@@ -20,6 +20,24 @@
       <Setter Property="Padding" Value="14,9" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
+    <Style Selector="Button.diagnostic-tab">
+      <Setter Property="Background" Value="{DynamicResource BgCardBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="14,8" />
+      <Setter Property="Foreground" Value="{DynamicResource NavForegroundBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.diagnostic-tab:pointerover">
+      <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NavForegroundSelectedBrush}" />
+    </Style>
+    <Style Selector="Button.diagnostic-tab.selected">
+      <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NavForegroundSelectedBrush}" />
+    </Style>
     <!-- Navegação da sidebar (porta do RadioButton do Styles.xaml do WPF): indicador
          3×14 com AccentLightBrush no selecionado, fundo/texto por tokens Nav*.
          Hover = NavSoftBrush, selecionado = NavSelectedBrush + SemiBold. -->
@@ -841,13 +859,45 @@
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
           <StackPanel Spacing="4">
             <TextBlock Text="Diagnóstico" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="Erros e fontes de sensores detectadas neste sistema." Classes="muted" FontSize="11" />
+            <TextBlock Text="Resumo, erros e fontes de sensores detectadas neste sistema." Classes="muted" FontSize="11" />
           </StackPanel>
           <Button Grid.Column="1" Classes="action" Content="Atualizar" Click="OnRefreshDiagnosticsClick" VerticalAlignment="Center" />
           <Button Grid.Column="2" Classes="action" Content="Abrir arquivo de erros" Click="OnOpenErrorLogClick" VerticalAlignment="Center" />
         </Grid>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button x:Name="DiagnosticSummaryTab" Classes="diagnostic-tab selected" Content="Resumo" Click="OnDiagnosticSummaryClick" />
+          <Button x:Name="DiagnosticErrorsTab" Classes="diagnostic-tab" Content="Erros" Click="OnDiagnosticErrorsClick" />
+          <Button x:Name="DiagnosticSensorsTab" Classes="diagnostic-tab" Content="Sensores" Click="OnDiagnosticSensorsClick" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsDiagnosticSummary}" Spacing="12">
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+            <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+              <StackPanel Spacing="7">
+                <TextBlock Text="ESTADO DO MONITORAMENTO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextStatusBrush}" FontSize="18" FontWeight="SemiBold" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+              <StackPanel Spacing="7">
+                <TextBlock Text="ERROS RECENTES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="{Binding DiagnosticErrorCountText}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="18" FontWeight="SemiBold" />
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+            <StackPanel Spacing="8">
+              <TextBlock Text="OCORRÊNCIA MAIS RECENTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock IsVisible="{Binding HasDiagnosticEntries}" Text="{Binding DiagnosticLatestErrorHeader}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="10" />
+              <TextBlock IsVisible="{Binding HasDiagnosticEntries}" Text="{Binding DiagnosticLatestErrorMessage}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding !HasDiagnosticEntries}" Text="Nenhum erro registrado. Novas ocorrências aparecerão aqui automaticamente." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <Border IsVisible="{Binding IsDiagnosticSensors}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
           <StackPanel Spacing="8">
             <TextBlock Text="FONTES E SENSORES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Os estados descrevem o que o kernel e os drivers reportaram. Sensor não exposto não significa falha do app." Classes="muted" FontSize="10" TextWrapping="Wrap" />
@@ -863,7 +913,7 @@
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border IsVisible="{Binding IsDiagnosticErrors}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Text="ERROS REGISTRADOS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />

@@ -6,9 +6,9 @@ The diagnostics center combines recorded errors with the current health of senso
 
 ## Access
 
-- **Unified app (Windows and Linux):** open **Diagnostics** in the sidebar. New error entries appear live; the **Sensors and sources** list is filled when the tab is opened and via **Refresh** (which also rereads the local file). Use **Open error log** to open it with the system's default application. (In the retired WPF, access was the "Diagnostics: sensors and application errors" click in the main window.)
+- **Unified app (Windows and Linux):** open **Diagnostics** in the sidebar. The page opens on **Summary**, showing monitoring status, the recent error count, and the newest occurrence. Use **Errors** and **Sensors** to open the detailed lists. New errors appear live; **Refresh** rereads the local file and refreshes sensor sources. **Open error log** opens the log with the system's default application.
 
-Both views show up to 500 recent entries in chronological order, with timestamp, context, and message. Exception entries include technical details. The log stays on the local computer; the app does not upload reports.
+The **Errors** option shows up to 500 recent entries in chronological order, with timestamp, context, and message. Exception entries include technical details. The log stays on the local computer; the app does not upload reports.
 
 ## Location and retention
 

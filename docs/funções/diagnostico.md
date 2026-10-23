@@ -6,9 +6,9 @@ O centro de diagnóstico reúne erros registrados e o estado das fontes de senso
 
 ## Acesso
 
-- **App único (Windows e Linux):** abra **Diagnóstico** na navegação lateral. Novos registros de erro aparecem em tempo real; a lista **Sensores e fontes** é preenchida ao abrir a aba e ao usar **Atualizar** (que também relê o arquivo local). Use **Abrir arquivo de erros** para abri-lo no aplicativo padrão do sistema. (No WPF aposentado, o acesso era pelo clique "Diagnóstico: sensores e erros do aplicativo" na janela principal.)
+- **App único (Windows e Linux):** abra **Diagnóstico** na navegação lateral. A tela inicia em **Resumo**, com o estado do monitoramento, a contagem de erros recentes e a ocorrência mais nova. Use **Erros** e **Sensores** para abrir as listas detalhadas. Novos registros aparecem em tempo real; **Atualizar** relê o arquivo local e atualiza as fontes de sensores. **Abrir arquivo de erros** abre o log no aplicativo padrão do sistema.
 
-As telas exibem até 500 registros recentes, em ordem cronológica, com horário, contexto e mensagem. Exceções incluem seus detalhes técnicos. O log permanece local; o aplicativo não envia relatórios.
+A opção **Erros** exibe até 500 registros recentes, em ordem cronológica, com horário, contexto e mensagem. Exceções incluem seus detalhes técnicos. O log permanece local; o aplicativo não envia relatórios.
 
 ## Local e retenção
 

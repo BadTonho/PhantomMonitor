@@ -15,6 +15,19 @@ namespace PhantomMonitor.App.ViewModels;
 // Diagnóstico: entradas do ErrorLog e linhas de sensores apenas sob demanda.
 public sealed partial class MainWindowViewModel
 {
+    public void SelectDiagnosticSection(string section)
+    {
+        if (section is not ("summary" or "errors" or "sensors") ||
+            _selectedDiagnosticSection == section)
+            return;
+
+        _selectedDiagnosticSection = section;
+        Raise(nameof(SelectedDiagnosticSection));
+        Raise(nameof(IsDiagnosticSummary));
+        Raise(nameof(IsDiagnosticErrors));
+        Raise(nameof(IsDiagnosticSensors));
+    }
+
     public void RefreshDiagnostics()
     {
         LoadDiagnosticEntries();
@@ -40,8 +53,7 @@ public sealed partial class MainWindowViewModel
         DiagnosticEntries.Clear();
         foreach (var entry in ErrorLog.ReadRecentEntries())
             DiagnosticEntries.Add(entry);
-        Raise(nameof(HasDiagnosticEntries));
-        Raise(nameof(DiagnosticEntriesSummary));
+        RaiseDiagnosticEntryProperties();
     }
 
     private void OnDiagnosticEntryWritten(ErrorLogEntry entry)
@@ -53,9 +65,17 @@ public sealed partial class MainWindowViewModel
             DiagnosticEntries.Add(entry);
             while (DiagnosticEntries.Count > 500)
                 DiagnosticEntries.RemoveAt(0);
-            Raise(nameof(HasDiagnosticEntries));
-            Raise(nameof(DiagnosticEntriesSummary));
+            RaiseDiagnosticEntryProperties();
         });
+    }
+
+    private void RaiseDiagnosticEntryProperties()
+    {
+        Raise(nameof(HasDiagnosticEntries));
+        Raise(nameof(DiagnosticEntriesSummary));
+        Raise(nameof(DiagnosticErrorCountText));
+        Raise(nameof(DiagnosticLatestErrorHeader));
+        Raise(nameof(DiagnosticLatestErrorMessage));
     }
 
 }

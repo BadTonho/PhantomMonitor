@@ -227,7 +227,44 @@ public sealed partial class MainWindow : Window
     {
         SyncNavPage("diagnostics");
         ViewModel.ShowDiagnostics();
+        SyncDiagnosticTabSelection();
     }
+    private Button?[]? _diagnosticTabButtons;
+    private static readonly string[] DiagnosticSectionCodes = ["summary", "errors", "sensors"];
+
+    private void OnDiagnosticSummaryClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SelectDiagnosticSection("summary");
+    private void OnDiagnosticErrorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SelectDiagnosticSection("errors");
+    private void OnDiagnosticSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SelectDiagnosticSection("sensors");
+
+    private void SelectDiagnosticSection(string section)
+    {
+        ViewModel.SelectDiagnosticSection(section);
+        SyncDiagnosticTabSelection();
+    }
+
+    private void SyncDiagnosticTabSelection()
+    {
+        _diagnosticTabButtons ??=
+        [
+            this.FindControl<Button>("DiagnosticSummaryTab"),
+            this.FindControl<Button>("DiagnosticErrorsTab"),
+            this.FindControl<Button>("DiagnosticSensorsTab"),
+        ];
+
+        for (var i = 0; i < DiagnosticSectionCodes.Length; i++)
+        {
+            if (_diagnosticTabButtons[i] is not { } button) continue;
+            if (DiagnosticSectionCodes[i] == ViewModel.SelectedDiagnosticSection)
+            {
+                if (!button.Classes.Contains("selected")) button.Classes.Add("selected");
+            }
+            else
+            {
+                button.Classes.Remove("selected");
+            }
+        }
+    }
+
     private void OnRefreshDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RefreshDiagnostics();
     private void OnOpenErrorLogClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

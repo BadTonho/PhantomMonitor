@@ -64,6 +64,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private bool _isCustomSensors;
     private bool _isSensorTuning;
     private bool _isDiagnostics;
+    private string _selectedDiagnosticSection = "summary";
     private readonly ObservableCollection<ErrorLogEntry> _diagnosticEntries = new();
     private IReadOnlyList<string> _diagnosticSensorLines = ["Aguardando a primeira leitura dos sensores."];
     private string _diagnosticsMessage = "Os diagnósticos ficam somente neste computador.";
@@ -154,6 +155,10 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public bool IsCustomSensors { get => _isCustomSensors; private set => Set(ref _isCustomSensors, value); }
     public bool IsSensorTuning { get => _isSensorTuning; private set => Set(ref _isSensorTuning, value); }
     public bool IsDiagnostics { get => _isDiagnostics; private set => Set(ref _isDiagnostics, value); }
+    public string SelectedDiagnosticSection => _selectedDiagnosticSection;
+    public bool IsDiagnosticSummary => SelectedDiagnosticSection == "summary";
+    public bool IsDiagnosticErrors => SelectedDiagnosticSection == "errors";
+    public bool IsDiagnosticSensors => SelectedDiagnosticSection == "sensors";
     public ObservableCollection<ErrorLogEntry> DiagnosticEntries => _diagnosticEntries;
     public IReadOnlyList<string> DiagnosticSensorLines { get => _diagnosticSensorLines; private set => Set(ref _diagnosticSensorLines, value); }
     public string DiagnosticsMessage { get => _diagnosticsMessage; private set => Set(ref _diagnosticsMessage, value); }
@@ -162,6 +167,11 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public string DiagnosticEntriesSummary => HasDiagnosticEntries
         ? $"Exibindo {DiagnosticEntries.Count} registros recentes."
         : "Nenhum erro registrado nesta execução ou no arquivo local.";
+    public string DiagnosticErrorCountText => $"{DiagnosticEntries.Count} {(DiagnosticEntries.Count == 1 ? "erro recente" : "erros recentes")}";
+    public string DiagnosticLatestErrorHeader => DiagnosticEntries.LastOrDefault() is { } entry
+        ? $"{entry.TimestampText} · {entry.Context}"
+        : "";
+    public string DiagnosticLatestErrorMessage => DiagnosticEntries.LastOrDefault()?.Message ?? "";
     public ObservableCollection<AlertRuleEditorViewModel> AlertRules => _alertRules;
     public ObservableCollection<AlertHistoryEntryViewModel> AlertHistory => _alertHistory;
     public ObservableCollection<CustomSensorEditorViewModel> CustomSensorEditors => _customSensorEditors;
@@ -476,6 +486,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         IsCustomSensors = false;
         IsSensorTuning = false;
         IsDiagnostics = true;
+        SelectDiagnosticSection("summary");
         LoadDiagnosticEntries();
         RefreshDiagnosticSensorLines();
         Raise(nameof(IsInventory));

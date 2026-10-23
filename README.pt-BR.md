@@ -79,7 +79,7 @@ Inicie o app:
 dotnet run --project src/PhantomMonitor.App
 ```
 
-O tema builtin é escolhido com `uiTheme` no `config.json` (`neptune` = visual original do Avalonia, `slate` = porta verbatim do visual do WPF) ou pela linha de comando com `--ui-theme=<nome>`.
+O tema builtin é escolhido com `theme` no `config.json` (`neptune` = visual original do Avalonia, `slate` = porta verbatim do visual do WPF; a chave legada `uiTheme` continua sendo lida e migra), pelo card **INTERFACE** em Configurações (trocado na interface em execução, sem reiniciar) ou pela linha de comando com `--theme=<nome>` (o `--ui-theme=` legado segue aceito).
 
 Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.
 

@@ -79,7 +79,7 @@ Run the app:
 dotnet run --project src/PhantomMonitor.App
 ```
 
-Pick the built-in theme with `uiTheme` in `config.json` (`neptune` = original Avalonia look, `slate` = verbatim port of the WPF look) or run with `--ui-theme=<name>`.
+Pick the built-in theme with `theme` in `config.json` (`neptune` = original Avalonia look, `slate` = verbatim port of the WPF look; the legacy `uiTheme` key still loads and migrates), through the **INTERFACE** card in Settings (applied to the running UI without a restart) or with `--theme=<name>` (legacy `--ui-theme=` accepted).
 
 Local release build of the Windows binary:
 

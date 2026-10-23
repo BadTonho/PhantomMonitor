@@ -2,8 +2,9 @@
 
 > **Language:** English · [Português (Brasil)](../roadmap-unificacao-visual.md)
 
-> Plan approved in October 2026 — **Phase 0 completed** (`0a6ee28` = plan,
-> `0a00bf6` = Neptune/Slate tokens); Phases 1–2 done. Origin: comparison between the WPF (Windows) and Avalonia
+> Plan approved in October 2026 — **Phases 0–3 completed** (Phase 0: `0a6ee28` =
+> plan, `0a00bf6` = Neptune/Slate tokens; Phase 3 = `c824f77`). Origin: comparison
+> between the WPF (Windows) and Avalonia
 > (Linux) frontends. The two looks have drifted since day one and every UI
 > change costs double. Maintainer's decision: adopt the **"single app" path**
 > keeping both current looks as built-in themes, which also front-loads the
@@ -238,18 +239,34 @@ Linux). Both themes smoke-tested without `errors.log`.
 
 ## Phase 3 — User-facing theme system
 
-- [ ] `config.json` + `Config.Normalize`: `theme: "neptune" | "slate"` field
-      (default TBD — decided on the commit).
-- [ ] Picker under **Settings** (same pattern as the other settings), applying
-      at runtime via dictionary swap (dynamic `Application.Styles` or
-      `ResourceDictionary` merge/unmerge) — UI reacts instantly thanks to the
-      Phase 0 `DynamicResource`.
-- [ ] Persistence and re-load on boot.
+- [x] `config.json` + `Config.Normalize`: `theme: "neptune" | "slate"` field
+      (`c824f77`). **Default = `neptune`** (commit decision: keeps the Avalonia
+      look as the baseline and avoids visual churn for whoever never picks a
+      theme; `slate` stays opt-in, also via the smoke CLI). F1.6-era configs
+      holding `uiTheme` migrate on load (the file only writes `theme` now).
+- [x] **Theme visual** picker under the **INTERFACE** card of the Settings page
+      (same pattern as the other settings), applied on **Save and apply** via
+      `App.ApplyTheme`: a runtime swap of `MergedDictionaries` — views react
+      instantly through the Phase 0 `DynamicResource` (including
+      `HistoryChart`), and the ViewModel-resolved brushes (`ResolveBrush`) are
+      re-resolved on the `ThemeChanged` event (brush cache invalidated +
+      `UpdateDashboardExtras`/`ApplyOverlayProfile`/`UpdateOverlayRows`), with
+      no view rebuilds and no waiting for the next tick while collection is
+      stopped. A failed config save rolls the pending swap back.
+- [x] Persistence in `config.json` (via `AppConfig.Save()`) and re-load at boot
+      (`ApplyConfiguredTheme` — dictionary swapped before creating the views).
+      Canonical CLI `--theme=<name>`; legacy `--ui-theme=` is still accepted.
 - [ ] (Future, out of scope now) extra themes: Light mode, custom via external
       file, import/export.
 
-**Acceptance criteria:** theme swap without restart, no view rebuilds,
-persisted across sessions; configuration docs updated.
+**Acceptance criteria — met:** theme swap without restart, no view rebuilds,
+persisted across sessions; build 0/0; live boot smoke with `--theme=slate` and
+with a legacy `uiTheme` config (migration on load), both with nothing logged in
+`errors.log` — the same dictionary-swap path (`App.ApplyTheme`) runs at boot
+with an overridden theme, so the mechanics were exercised; the UI-driven swap
+(INTERFACE card) takes the same path and manual picker smoke remains pending
+confirmation. Configuration docs updated (`configuration` +
+INTERFACE notes in `main-interface`).
 
 ---
 

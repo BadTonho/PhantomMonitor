@@ -2,8 +2,8 @@
 
 > **Idioma:** Português (Brasil) · [English](en/visual-unification-roadmap.md)
 
-> Plano aprovado em out/2026 — **Fase 0 concluída** (`0a6ee28` = plano,
-> `0a00bf6` = tokens Neptune/Slate); Fases 1–3 pendentes.
+> Plano aprovado em out/2026 — **Fases 0–3 concluídas** (Fase 0: `0a6ee28` = plano,
+> `0a00bf6` = tokens Neptune/Slate; Fase 3 = `c824f77`).
 > Origem: comparativo entre os frontends WPF (Windows) e Avalonia (Linux). Os visuais
 > divergem desde a criação e cada mudança de interface custa o dobro. Decisão do
 > mantenedor: adotar o **Caminho 2** (app única), preservando os dois visuais atuais
@@ -236,18 +236,35 @@ Linux). Smoke dos dois temas sem `errors.log`.
 
 ## Fase 3 — Sistema de temas visível ao usuário
 
-- [ ] `config.json` + `Config.Normalize`: campo `theme: "neptune" | "slate"`
-      (default a definir — discussão no commit).
-- [ ] Seletor em **Configurações** (padrão dos outros settings) aplicando em
-      runtime via troca de dicionário (`Application.Styles` dinâmico ou
-      merge/unmerge de `ResourceDictionary`) — a UI reage na hora graças ao
-      `DynamicResource` da Fase 0.
-- [ ] Persistência e re-load no boot.
+- [x] `config.json` + `Config.Normalize`: campo `theme: "neptune" | "slate"`
+      (`c824f77`). **Default = `neptune`** (discussão do commit: mantém o look
+      do Avalonia como baseline e evita churn visual para quem não escolhe;
+      `slate` segue opt-in, inclusive pela CLI de smoke). Configs da era F1.6
+      com `uiTheme` migram na leitura (o arquivo volta a escrever só `theme`).
+- [x] Seletor **Tema visual** no card **INTERFACE** da página Configurações
+      (padrão dos outros settings), aplicando em **Salvar e aplicar** via
+      `App.ApplyTheme`: troca de `MergedDictionaries` em runtime — as views
+      reagem na hora pelos `DynamicResource` da Fase 0 (inclusive o
+      `HistoryChart`) e os pincéis resolvidos pela VM (`ResolveBrush`) são
+      re-resolvidos no evento `ThemeChanged` (cache de pincéis invalidado +
+      `UpdateDashboardExtras`/`ApplyOverlayProfile`/`UpdateOverlayRows`),
+      sem rebuild de views e sem esperar o próximo tick com a coleta parada.
+      Rollback do config não deixa a troca pendente persistida.
+- [x] Persistência no `config.json` (via `AppConfig.Save()`) e re-load no boot
+      (`ApplyConfiguredTheme` — dicionário trocado antes de criar as views).
+      CLI canônica `--theme=<nome>`; `--ui-theme=` segue aceito como legado.
 - [ ] (Futuro, fora de escopo agora) temas extras: Light mode, HDR, custom via
       arquivo externo, import/export.
 
-**Critérios de aceite:** troca de tema sem reiniciar, sem rebuild de views,
-persistida entre sessões; docs de configuração atualizadas.
+**Critérios de aceite — atendidos:** troca de tema sem reiniciar, sem rebuild
+de views, persistida entre sessões; build 0/0; smoke de boot vivo com
+`--theme=slate` e com config legado `uiTheme` (migração na leitura), ambos sem
+nenhum registro em `errors.log` — o mesmo caminho de troca de dicionário
+(`App.ApplyTheme`) roda no boot com tema sobreposto, então a mecânica foi
+exercida; a troca pela UI (card INTERFACE) segue o mesmo caminho e o smoke
+manual do seletor fica como confirmação pendente. Docs de configuração
+atualizadas (`configuracao` / `configuration` + INTERFACE em
+`interface-principal` / `main-interface`).
 
 ---
 

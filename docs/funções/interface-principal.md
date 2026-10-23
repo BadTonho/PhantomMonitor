@@ -38,9 +38,11 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
   (`Styles.xaml`, banners/pílulas do shell `MainWindow.xaml` e painel do OSD
   `#CC070A0F`/`#25FFFFFF` do WPF — arquivos removidos na Fase 2 da unificação,
   proveniência por linha no dicionário). A escolha fica no
-  `config.json` — `"uiTheme": "neptune" | "slate"`, aplicada no boot; a CLI
-  `--ui-theme=<nome>` sobrepõe para comparação/smoke — e a troca em runtime pela
-  UI chega na Fase 3 do
+  `config.json` — `"theme": "neptune" | "slate"` (configs F1.6 com `uiTheme`
+  migram na leitura), aplicada no boot e trocável **em runtime** pelo seletor
+  em Configurações → INTERFACE (Fase 3: troca de dicionário sem reiniciar; a
+  CLI `--theme=<nome>` sobrepõe a leitura do arquivo para comparação/smoke,
+  com `--ui-theme=` legado aceito) — ver o
   [roadmap de unificação visual](../roadmap-unificacao-visual.md). Também na
   F1.6: nav da sidebar com estado selecionado (fundo + indicador 3×14) via
   tokens `Nav*`, toasts de alerta com tokens `AlertToast*` (borda/título âmbar

@@ -136,6 +136,64 @@ public sealed partial class MainWindowViewModel
         ScheduleInventoryStatusClear();
     }
 
+    // Keep inventory groups and rows stable between snapshots so the tree does not
+    // re-measure every sensor on each update.
+    private void ReconcileInventoryGroups(IReadOnlyList<InventoryGroupPlan> plan)
+    {
+        var groups = _inventoryGroups;
+        while (groups.Count > plan.Count)
+            groups.RemoveAt(groups.Count - 1);
+        while (groups.Count < plan.Count)
+            groups.Add(_inventoryOtherGroup ??= SensorInventoryBuilder.CreateOtherGroup());
+
+        for (var index = 0; index < plan.Count; index++)
+            ReconcileInventoryRows(groups[index], plan[index].Rows);
+    }
+
+    private void ReconcileInventoryRows(InventoryGroupViewModel group, IReadOnlyList<InventoryRowPlan> plan)
+        => ReconcileInventoryRows(group.Rows, plan);
+
+    private void ReconcileInventoryRows(ObservableCollection<InventoryRowViewModel> rows, IReadOnlyList<InventoryRowPlan> plan)
+    {
+        var position = 0;
+        for (var p = 0; p < plan.Count; p++)
+        {
+            var entry = plan[p];
+            InventoryRowViewModel row;
+            if (position < rows.Count && rows[position].Key == entry.Key)
+            {
+                row = rows[position];
+            }
+            else
+            {
+                // Reuse a row later in the list when plan order changes; Move raises
+                // one CollectionChanged event and preserves the row's view state.
+                var found = -1;
+                for (var s = position + 1; s < rows.Count && found < 0; s++)
+                    if (rows[s].Key == entry.Key)
+                        found = s;
+                if (found > 0)
+                {
+                    row = rows[found];
+                    rows.Move(found, position);
+                }
+                else
+                {
+                    row = new InventoryRowViewModel(entry.Key);
+                    rows.Insert(position, row);
+                }
+            }
+
+            row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available, entry.Min, entry.Max, entry.Avg);
+            ReconcileInventoryRows(row.Children, entry.Children ?? []);
+            position++;
+        }
+
+        // Remove rows no longer published while keeping each fixed group shell.
+        while (rows.Count > position)
+            rows.RemoveAt(rows.Count - 1);
+    }
+
     private void ScheduleInventoryStatusClear()
     {
         _inventoryStatusClearTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };

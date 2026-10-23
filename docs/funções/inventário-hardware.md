@@ -61,8 +61,8 @@ re-renderiza. O estado aberto/recolhido dos grupos é mantido durante a execuç�
 O grupo **Outros**, com séries fora das categorias fixas, entra e sai do fim da
 lista conforme o que o hardware publica. Fonte:
 `ViewModels/SensorInventoryBuilder.cs` (plano declarativo com Min/Max/Avg),
-`ViewModels/MainWindowViewModel.Inventory.cs` (árvore/monitores/reset) e
-`MainWindowViewModel.ReconcileInventoryGroups`.
+`ViewModels/MainWindowViewModel.Inventory.cs` (árvore, monitores, reset e
+reconciliação dos grupos e linhas do inventário).
 
 ## Detalhes internos do inventário (herdados da janela do WPF)
 

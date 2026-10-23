@@ -1,5 +1,4 @@
 using Avalonia.Threading;
-using System.Collections.ObjectModel;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
@@ -99,68 +98,6 @@ public sealed partial class MainWindowViewModel
         }
 
         // Sobras: plan encolheu (série sumiu, opção desligada).
-        while (rows.Count > position)
-            rows.RemoveAt(rows.Count - 1);
-    }
-
-    // Inventário persistente, pelas mesmas razões do overlay: antes, todo snapshot
-    // substituía grupos e rows e o ItemsControl re-media toda a árvore (até 10x/s),
-    // mesmo com a aba de inventário fora de vista.
-    private void ReconcileInventoryGroups(IReadOnlyList<InventoryGroupPlan> plan)
-    {
-        var groups = _inventoryGroups;
-
-        // O plano contém "Outros" somente quando há séries fora dos tipos fixos;
-        // a casca entra/sai apenas do fim da lista e é criada uma única vez.
-        while (groups.Count > plan.Count)
-            groups.RemoveAt(groups.Count - 1);
-        while (groups.Count < plan.Count)
-            groups.Add(_inventoryOtherGroup ??= SensorInventoryBuilder.CreateOtherGroup());
-        for (var index = 0; index < plan.Count; index++)
-            ReconcileInventoryRows(groups[index], plan[index].Rows);
-    }
-
-    private void ReconcileInventoryRows(InventoryGroupViewModel group, IReadOnlyList<InventoryRowPlan> plan)
-        => ReconcileInventoryRows(group.Rows, plan);
-
-    private void ReconcileInventoryRows(ObservableCollection<InventoryRowViewModel> rows, IReadOnlyList<InventoryRowPlan> plan)
-    {
-        var position = 0;
-        for (var p = 0; p < plan.Count; p++)
-        {
-            var entry = plan[p];
-            InventoryRowViewModel row;
-            if (position < rows.Count && rows[position].Key == entry.Key)
-            {
-                row = rows[position];
-            }
-            else
-            {
-                // A row já pode existir mais adiante (série por instância nova
-                // detectada, reordenação do plano): move para o lugar certo.
-                // Move dispara um único evento CollectionChanged.
-                int found = -1;
-                for (var s = position + 1; s < rows.Count && found < 0; s++)
-                    if (rows[s].Key == entry.Key)
-                        found = s;
-                if (found > 0)
-                {
-                    row = rows[found];
-                    rows.Move(found, position);
-                }
-                else
-                {
-                    row = new InventoryRowViewModel(entry.Key);
-                    rows.Insert(position, row);
-                }
-            }
-            row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available, entry.Min, entry.Max, entry.Avg);
-            var children = entry.Children ?? [];
-            ReconcileInventoryRows(row.Children, children);
-            position++;
-        }
-        // Sobras: o plano encolheu (série deixou de ser publicada); a casca
-        // do grupo permanece.
         while (rows.Count > position)
             rows.RemoveAt(rows.Count - 1);
     }

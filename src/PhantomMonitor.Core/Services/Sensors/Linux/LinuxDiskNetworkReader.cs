@@ -4,9 +4,21 @@ using PhantomMonitor.Services;
 
 namespace PhantomMonitor.Services.Linux;
 
-public sealed partial class LinuxSensorService
+internal sealed class LinuxDiskNetworkReader
 {
-    private void ReadDiskStats(SensorData data)
+
+    private long _prevDiskReadSectors;
+    private long _prevDiskWriteSectors;
+    private DateTime _prevDiskTimestamp = DateTime.UtcNow;
+    private readonly Dictionary<string, int> _diskSlots = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (long Read, long Write)> _prevPerDisk = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _nicSlots = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (long Rx, long Tx)> _prevPerNic = new(StringComparer.Ordinal);
+    private DateTime _prevNetTimestamp = DateTime.MinValue;
+    private DateTime? _lastNetSampleUtc;
+    private double _netDownSessionBytes;
+    private double _netUpSessionBytes;
+    internal void ReadDiskStats(SensorData data)
     {
         try
         {
@@ -87,7 +99,7 @@ public sealed partial class LinuxSensorService
     /// Lê tráfego de rede por interface a partir de /proc/net/dev (↑/↓ + totais da sessão).
     /// </summary>
 
-    private void ReadNetworkStats(SensorData data)
+    internal void ReadNetworkStats(SensorData data)
     {
         try
         {

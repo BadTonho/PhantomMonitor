@@ -4,9 +4,14 @@ using PhantomMonitor.Services;
 
 namespace PhantomMonitor.Services.Linux;
 
-public sealed partial class LinuxSensorService
+internal sealed class LinuxHardwarePowerReader
 {
-    private void ReadHwmonSensors(SensorData data)
+
+    private readonly Dictionary<string, int> _hwmonSlots = new(StringComparer.Ordinal);
+    private readonly LinuxGpuSensorReader _gpuSensorReader;
+
+    public LinuxHardwarePowerReader(LinuxGpuSensorReader gpuSensorReader) => _gpuSensorReader = gpuSensorReader;
+    internal void ReadHwmonSensors(SensorData data)
     {
         try
         {
@@ -149,7 +154,7 @@ public sealed partial class LinuxSensorService
     /// sinal de current_now/power_now). Desktop sem power_supply não publica nada.
     /// </summary>
 
-    private void ReadPowerSupply(SensorData data)
+    internal void ReadPowerSupply(SensorData data)
     {
         try
         {

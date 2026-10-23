@@ -4,9 +4,14 @@ using PhantomMonitor.Services;
 
 namespace PhantomMonitor.Services.Linux;
 
-public sealed partial class LinuxSensorService
+internal sealed class LinuxCpuMemoryReader
 {
-    private void ReadCpuStats(SensorData data)
+
+    private long _prevCpuTotal;
+    private long _prevCpuIdle;
+    private readonly Dictionary<int, (long Total, long Idle)> _prevPerCore = [];
+    private int? _cpuCoreCount;
+    internal void ReadCpuStats(SensorData data)
     {
         try
         {
@@ -122,7 +127,7 @@ public sealed partial class LinuxSensorService
     /// Lê a memória física a partir de /proc/meminfo
     /// </summary>
 
-    private void ReadMemInfo(SensorData data)
+    internal void ReadMemInfo(SensorData data)
     {
         try
         {

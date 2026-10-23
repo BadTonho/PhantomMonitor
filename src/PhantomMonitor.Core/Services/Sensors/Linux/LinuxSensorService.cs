@@ -15,36 +15,12 @@ public sealed partial class LinuxSensorService : ISensorService
     private readonly Timer _timer;
     private readonly int _updateIntervalMs;
     private readonly LinuxFpsMonitor _fpsMonitor = new();
+    private readonly LinuxCpuMemoryReader _cpuMemoryReader = new();
+    private readonly LinuxDiskNetworkReader _diskNetworkReader = new();
     private readonly LinuxGpuSensorReader _gpuSensorReader = new();
+    private readonly LinuxHardwarePowerReader _hardwarePowerReader;
     private readonly object _updateLock = new();
     private SensorData _current = new();
-
-    // CPU calculation state
-    private long _prevCpuTotal;
-    private long _prevCpuIdle;
-    private readonly Dictionary<int, (long Total, long Idle)> _prevPerCore = [];
-
-    // Disk calculation state
-    private long _prevDiskReadSectors;
-    private long _prevDiskWriteSectors;
-    private DateTime _prevDiskTimestamp = DateTime.UtcNow;
-    private readonly Dictionary<string, int> _diskSlots = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, (long Read, long Write)> _prevPerDisk = new(StringComparer.Ordinal);
-
-    /// <summary>Contagem de núcleos com cpufreq, detectada na primeira leitura
-    /// (layout estável na sessão; ver ReadCpuStats).</summary>
-    private int? _cpuCoreCount;
-
-    // Network state (↑/↓ por interface + totais da sessão)
-    private readonly Dictionary<string, int> _nicSlots = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, (long Rx, long Tx)> _prevPerNic = new(StringComparer.Ordinal);
-    private DateTime _prevNetTimestamp = DateTime.MinValue;
-    private DateTime? _lastNetSampleUtc;
-    private double _netDownSessionBytes;
-    private double _netUpSessionBytes;
-
-    // Slot estável por caminho de hwmon (hwmon com o mesmo "name", como duas amdgpu).
-    private readonly Dictionary<string, int> _hwmonSlots = new(StringComparer.Ordinal);
 
     // Diagnóstico de fontes: reconstruído no máximo 1x/s (re-enumera sysfs/DRM por
     // chamada; a cada tick multiplicava I/O em polling rápido). Lista reusada entre
@@ -75,6 +51,7 @@ public sealed partial class LinuxSensorService : ISensorService
     public LinuxSensorService(int updateIntervalMs = 1000, CustomSensorEngine? customSensors = null, SensorTuningEngine? sensorTuning = null)
     {
         _updateIntervalMs = updateIntervalMs;
+        _hardwarePowerReader = new LinuxHardwarePowerReader(_gpuSensorReader);
         _customSensors = customSensors;
         _sensorTuning = sensorTuning;
         _timer = new Timer(_ => Update(), null, Timeout.Infinite, Timeout.Infinite);
@@ -115,13 +92,13 @@ public sealed partial class LinuxSensorService : ISensorService
             };
 
             _gpuSensorReader.BeginSample(data.Timestamp);
-            ReadCpuStats(data);
-            ReadMemInfo(data);
-            ReadNetworkStats(data);
-            ReadHwmonSensors(data);
-            ReadDiskStats(data);
+            _cpuMemoryReader.ReadCpuStats(data);
+            _cpuMemoryReader.ReadMemInfo(data);
+            _diskNetworkReader.ReadNetworkStats(data);
+            _hardwarePowerReader.ReadHwmonSensors(data);
+            _diskNetworkReader.ReadDiskStats(data);
             _gpuSensorReader.ReadDeviceMetrics(data);
-            ReadPowerSupply(data);
+            _hardwarePowerReader.ReadPowerSupply(data);
 
             if (_fpsMonitor.HasData)
             {

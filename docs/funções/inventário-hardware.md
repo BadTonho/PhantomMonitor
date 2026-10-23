@@ -6,12 +6,13 @@
 
 No dashboard Avalonia, **Inventário** é uma página da janela principal, acessível
 pela barra lateral. Ela acompanha os snapshots do serviço ativo e agrupa as séries
-em CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. Cada linha mostra a
-chave (`CpuPerCore#1`), o rótulo da origem, o valor atual e a unidade. Séries por
-núcleo, dispositivo, interface e demais instâncias são exibidas individualmente.
-Desde a F1.4, cada linha também tem as **estatísticas de sessão** — Mín (sessão),
-Máx (sessão) e Média, com unidade embutida e conversões de magnitude por
-estatística (B/s → MB/s, MHz → GHz); sem amostra aparece `--` (NaN).
+em CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. Cada categoria é um
+grupo expansível, aberto por padrão, com uma tabela compacta: Sensor, Atual,
+Mínimo, Máximo e Média. O nome amigável da origem é exibido como sensor; a chave
+técnica (por exemplo, `CpuPerCore#1`) fica no tooltip. A unidade acompanha o valor
+atual e as estatísticas de sessão. Séries por núcleo, dispositivo, interface e
+demais instâncias são exibidas individualmente; sem amostra, as estatísticas
+mostram `--` (NaN).
 
 A página também tem, desde a F1.4, os acréscimos do InventoryWindow do WPF:
 
@@ -50,8 +51,9 @@ os últimos valores recebidos e as estatísticas da sessão até o reset. A pág
 A renderização é estável entre snapshots: os grupos fixos (CPU, GPU, memória,
 disco, rede, ventoinhas, bateria e FPS) e as linhas continuam sendo as mesmas
 instâncias, e cada leitura é reconciliada por chave — apenas a string que mudou
-re-renderiza. O grupo **Outros**, com séries fora das categorias fixas, entra e
-sai do fim da lista conforme o que o hardware publica. Fonte:
+re-renderiza. O estado aberto/recolhido dos grupos é mantido durante a execução.
+O grupo **Outros**, com séries fora das categorias fixas, entra e sai do fim da
+lista conforme o que o hardware publica. Fonte:
 `ViewModels/SensorInventoryBuilder.cs` (plano declarativo com Min/Max/Avg),
 `ViewModels/MainWindowViewModel.Inventory.cs` (árvore/monitores/reset) e
 `MainWindowViewModel.ReconcileInventoryGroups`.
@@ -61,7 +63,8 @@ sai do fim da lista conforme o que o hardware publica. Fonte:
 O frontend WPF — aposentado na Fase 2 — tinha uma janela de inventário separada
 com as abas abaixo; a página **Inventário** do app único compartilha a MESMA
 fonte Core (`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) e cobre as mesmas
-informações em cards (resumo acima). As abas ficam como referência dos dados e
+informações em grupos de sensores expansíveis e seções de hardware/monitores
+(resumo acima). As abas ficam como referência dos dados e
 dos marcadores de reset.
 
 Janela que listava **o que o monitor enxerga do hardware** em tempo real. Servia para

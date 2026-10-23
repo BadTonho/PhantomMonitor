@@ -10,10 +10,26 @@ namespace PhantomMonitor.App.ViewModels;
 /// snapshot. Antes, o grupo inteiro era recriado por snapshot e o ItemsControl
 /// re-media/re-renderizava toda a árvore (até 10x/s) mesmo com a aba fora de vista.
 /// </summary>
-public sealed class InventoryGroupViewModel(string title, ObservableCollection<InventoryRowViewModel> rows)
+public sealed class InventoryGroupViewModel(string title, ObservableCollection<InventoryRowViewModel> rows) : INotifyPropertyChanged
 {
+    private bool _isExpanded = true;
+
     public string Title { get; } = title;
     public ObservableCollection<InventoryRowViewModel> Rows { get; } = rows;
+
+    /// <summary>Estado visual do grupo, preservado nos snapshots durante a execução.</summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded == value) return;
+            _isExpanded = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 /// <summary>
@@ -45,6 +61,19 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
 
     public string Key { get; }
 
+    /// <summary>Nome legível da origem; para séries indisponíveis, usa a chave da categoria.</summary>
+    public string SensorName => IsAvailable && !string.IsNullOrWhiteSpace(Source) && Source != "—" ? Source : Key;
+
+    /// <summary>Valor atual com unidade na mesma célula, como na lista do HWiNFO.</summary>
+    public string Current
+    {
+        get
+        {
+            if (!IsAvailable || string.IsNullOrWhiteSpace(Unit) || Value is "Conectada" or "Desconectada") return Value;
+            return $"{Value} {Unit}";
+        }
+    }
+
     public string Source
     {
         get => _source;
@@ -53,6 +82,7 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
             if (_source == value) return;
             _source = value;
             Raise();
+            Raise(nameof(SensorName));
         }
     }
 
@@ -64,6 +94,7 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
             if (_value == value) return;
             _value = value;
             Raise();
+            Raise(nameof(Current));
         }
     }
 
@@ -75,6 +106,7 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
             if (_unit == value) return;
             _unit = value;
             Raise();
+            Raise(nameof(Current));
         }
     }
 
@@ -86,6 +118,8 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
             if (_isAvailable == value) return;
             _isAvailable = value;
             Raise();
+            Raise(nameof(SensorName));
+            Raise(nameof(Current));
         }
     }
 

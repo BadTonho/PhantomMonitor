@@ -19,6 +19,8 @@
     <SolidColorBrush x:Key="BgSidebarBorderBrush" Color="#263244" />
     <SolidColorBrush x:Key="BgCardBrush" Color="#1B2634" />
     <SolidColorBrush x:Key="BgCardBorderBrush" Color="#29374A" />
+    <SolidColorBrush x:Key="InventoryValueCellBrush" Color="#24394D" />
+    <SolidColorBrush x:Key="InventoryValueCellBorderBrush" Color="#344D62" />
     <SolidColorBrush x:Key="BgChipBrush" Color="#243345" />
     <SolidColorBrush x:Key="BgDividerBrush" Color="#39475A" />
     <SolidColorBrush x:Key="BgOverlayPanelBrush" Color="#E6111824" />

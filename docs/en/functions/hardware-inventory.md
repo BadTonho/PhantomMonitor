@@ -4,7 +4,7 @@
 
 ## Avalonia inventory
 
-**Inventory** is a page in the Avalonia main window, accessible from the sidebar. It follows the active service snapshots and groups series into CPU, GPU, memory, disk, network, fans, battery, and FPS. Each row shows its key (for example, `CpuPerCore#1`), source label, current value, and unit. Per-core, per-device, per-interface, and other instance series are shown individually. Since F1.4, each row also carries the **session statistics** — session minimum/maximum/average with the unit embedded and magnitude conversions per stat (B/s → MB/s, MHz → GHz); without a sample the cell shows `--` (NaN).
+**Inventory** is a page in the Avalonia main window, accessible from the sidebar. It follows the active service snapshots and groups series into CPU, GPU, memory, disk, network, fans, battery, and FPS. Each category is an expandable group, open by default, with a compact table: Sensor, Current, Minimum, Maximum, and Average. The friendly source label is shown as the sensor name; the technical key (for example, `CpuPerCore#1`) is available in a tooltip. Units appear with the current value and session statistics. Per-core, per-device, per-interface, and other instance series are shown individually; statistics display `--` (NaN) before a sample is available.
 
 Since F1.4, the page also carries the WPF `InventoryWindow` additions:
 
@@ -15,14 +15,15 @@ Since F1.4, the page also carries the WPF `InventoryWindow` additions:
 
 When the service publishes no value for an expected sensor type, the page marks it **Unavailable** (session cells `--`). Windows-only categories are not treated as missing on Linux. A published zero remains a valid reading; for example, a disconnected AC source is shown as disconnected rather than unavailable. The page updates with each snapshot and retains the last values (and session statistics, until reset) while collection is paused or stopped. It is read-only.
 
-Rendering is stable across snapshots: the fixed groups (CPU, GPU, memory, disk, network, fans, battery, and FPS) and their rows persist as the same instances, and each reading is reconciled by key — only strings that actually changed re-render. The **Other** group, for series outside the fixed categories, is added to and removed from the end of the list depending on what the hardware publishes. Source: `ViewModels/SensorInventoryBuilder.cs` (declarative plan with Min/Max/Avg), `ViewModels/MainWindowViewModel.Inventory.cs` (tree/monitors/reset) and `MainWindowViewModel.ReconcileInventoryGroups`.
+Rendering is stable across snapshots: the fixed groups (CPU, GPU, memory, disk, network, fans, battery, and FPS) and their rows persist as the same instances, and each reading is reconciled by key — only strings that actually changed re-render. Group expansion state is preserved while the app is running. The **Other** group, for series outside the fixed categories, is added to and removed from the end of the list depending on what the hardware publishes. Source: `ViewModels/SensorInventoryBuilder.cs` (declarative plan with Min/Max/Avg), `ViewModels/MainWindowViewModel.Inventory.cs` (tree/monitors/reset) and `MainWindowViewModel.ReconcileInventoryGroups`.
 
 ## Internal inventory details (inherited from the WPF window)
 
 The WPF frontend — retired in Phase 2 — had a separate inventory window with
 the tabs below; the unified app's **Inventory** page shares the same Core
 foundation (`InventoryBuilder`, `SeriesStats`, `MonitorInfo`) and covers the
-same information as cards (summary above). The tabs remain as a reference for
+same information in expandable sensor groups and hardware/monitor sections
+(summary above). The tabs remain as a reference for
 the data and the reset markers. It helped diagnose missing sensors and discover
 series keys for alerts and OSD configuration. Without an active snapshot it
 reported that monitoring must be started.

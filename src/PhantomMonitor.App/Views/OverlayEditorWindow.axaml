@@ -24,17 +24,23 @@
                                     LineBrush="{DynamicResource OverlayGridBrush}" GridSpacing="20" />
           <ItemsControl x:Name="EditorBlockCanvas" ItemsSource="{Binding OverlayBlocks}"
                         Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}">
+            <ItemsControl.ItemContainerTheme>
+              <ControlTheme TargetType="ContentPresenter">
+                <Setter Property="Canvas.Left" Value="{Binding CanvasX}" />
+                <Setter Property="Canvas.Top" Value="{Binding CanvasY}" />
+              </ControlTheme>
+            </ItemsControl.ItemContainerTheme>
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Canvas.Left="{Binding CanvasX}" Canvas.Top="{Binding CanvasY}"
-                        Width="{Binding $parent[Window].DataContext.OverlayPreviewWidth}"
+                <Border Width="{Binding $parent[Window].DataContext.OverlayPreviewWidth}"
                         IsVisible="{Binding HasContent}" CornerRadius="5"
                         Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}"
                         BorderThickness="1" Padding="{Binding $parent[Window].DataContext.OverlayPreviewBlockPadding}"
-                        PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved" PointerReleased="OnBlockPointerReleased"
+                        PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"
+                        PointerReleased="OnBlockPointerReleased" PointerCaptureLost="OnBlockPointerCaptureLost"
                         Cursor="SizeAll">
                   <StackPanel Spacing="3">
                     <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"

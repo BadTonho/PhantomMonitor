@@ -71,4 +71,9 @@ public partial class OverlayEditorWindow : Window
         _dragBlock = null;
         e.Handled = true;
     }
+
+    private void OnBlockPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _dragBlock = null;
+    }
 }

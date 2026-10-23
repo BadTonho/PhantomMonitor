@@ -10,8 +10,6 @@
   <Grid Margin="22" RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,350" ColumnSpacing="18" RowSpacing="14">
     <StackPanel Grid.ColumnSpan="2" Spacing="4">
       <TextBlock Text="EDITOR DO OVERLAY" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="19" FontWeight="SemiBold" />
-      <TextBlock Text="Arraste os blocos na área de prévia e ajuste as opções no painel lateral. Salve para aplicar ao overlay."
-                 Classes="muted" FontSize="11" TextWrapping="Wrap" />
     </StackPanel>
 
     <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto" RowSpacing="8">

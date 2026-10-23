@@ -99,3 +99,5 @@ ciclo ausente.
   históricas" (buffer de frametime). Condições podem ser emuladas com `min`/`max`
   — ex. saturar CPU a 100: `min({CpuPerCore} + 10, 100)`.
 - A unidade não participa do cálculo (rótulo apenas).
+
+No Core, `CustomSensorEngine` coordena compilação e avaliação; o parser e os nós da AST ficam em `Services/Sensors/CustomSensorFormulaParser.cs`.

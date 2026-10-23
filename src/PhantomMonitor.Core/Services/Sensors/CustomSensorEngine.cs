@@ -1,4 +1,3 @@
-using System.Globalization;
 using PhantomMonitor.Models;
 
 namespace PhantomMonitor.Services;
@@ -31,11 +30,9 @@ public sealed class CustomSensorEngine
     /// <summary>Teto de fórmulas ativas (a tabela da SDK de telemetria tem 256 entradas).</summary>
     public const int MaxSensors = 64;
 
-    private const int MaxFormulaNodes = 256;
+    private readonly List<(CustomSensorExpression Expression, string Label)> _definitions;
 
-    private readonly List<(Node Expression, string Label)> _definitions;
-
-    private CustomSensorEngine(List<(Node Expression, string Label)> definitions) => _definitions = definitions;
+    private CustomSensorEngine(List<(CustomSensorExpression Expression, string Label)> definitions) => _definitions = definitions;
 
     /// <summary>
     /// Cria a engine a partir do config (null/instância vazia = null: nenhum custo
@@ -47,13 +44,13 @@ public sealed class CustomSensorEngine
         var entries = config?.CustomSensors;
         if (entries is not { Count: > 0 }) return null;
 
-        var definitions = new List<(Node, string)>(entries.Count);
+        var definitions = new List<(CustomSensorExpression, string)>(entries.Count);
         for (var index = 0; index < entries.Count && definitions.Count < MaxSensors; index++)
         {
             var entry = entries[index];
             if (entry is null || string.IsNullOrWhiteSpace(entry.Formula)) continue;
 
-            var expression = FormulaParser.Parse(entry.Formula);
+            var expression = CustomSensorFormulaParser.Parse(entry.Formula);
             if (expression is null)
             {
                 ErrorLog.Write("CustomSensorEngine",
@@ -74,7 +71,7 @@ public sealed class CustomSensorEngine
     public static bool IsFormulaValid(string? formula)
     {
         if (string.IsNullOrWhiteSpace(formula)) return false;
-        return FormulaParser.Parse(formula) is not null;
+        return CustomSensorFormulaParser.Parse(formula) is not null;
     }
 
     /// <summary>
@@ -87,294 +84,10 @@ public sealed class CustomSensorEngine
         for (var i = 0; i < _definitions.Count; i++)
         {
             var (expression, label) = _definitions[i];
-            if (!expression.TryEval(data, out var value)) continue;
+            if (!expression.TryEvaluate(data, out var value)) continue;
             if (!double.IsFinite(value)) continue; // div/0, NaN, ±∞ → sem amostra neste ciclo
 
             data.SetValue(new SensorKey(SensorType.Custom, i + 1), value, label);
-        }
-    }
-
-    private static class FormulaParser
-    {
-        public static Node? Parse(string formula)
-        {
-            try
-            {
-                var parser = new Parser(formula);
-                var node = parser.ParseExpression();
-                parser.SkipSpaces();
-                return parser.Eof && node != null ? node : null;
-            }
-            catch (FormatException)
-            {
-                return null;
-            }
-        }
-    }
-
-    // ---------- AST ----------
-
-    private abstract class Node
-    {
-        public abstract bool TryEval(SensorData data, out double value);
-    }
-
-    private sealed class NumberNode(double value) : Node
-    {
-        public override bool TryEval(SensorData data, out double value)
-        {
-            value = _value;
-            return true;
-        }
-
-        private readonly double _value = value;
-    }
-
-    /// <summary>Referência a série ("GpuTemperature", "Custom#1", "Gpu*", "MeuSensor").</summary>
-    private sealed class SeriesNode(string token) : Node
-    {
-        public override bool TryEval(SensorData data, out double value) =>
-            TryResolveSeries(data, _token, out value);
-
-        private readonly string _token = token;
-    }
-
-    private sealed class UnaryNode(Node inner) : Node
-    {
-        public override bool TryEval(SensorData data, out double value)
-        {
-            if (!_inner.TryEval(data, out var v))
-            {
-                value = 0;
-                return false;
-            }
-
-            value = -v;
-            return true;
-        }
-
-        private readonly Node _inner = inner;
-    }
-
-    private sealed class BinaryNode(char op, Node left, Node right) : Node
-    {
-        public override bool TryEval(SensorData data, out double value)
-        {
-            if (!_left.TryEval(data, out var l) || !_right.TryEval(data, out var r))
-            {
-                value = 0; // operando não resolvido → série escondida neste ciclo
-                return false;
-            }
-
-            value = _op switch
-            {
-                '+' => l + r,
-                '-' => l - r,
-                '*' => l * r,
-                _ => l / r // div/0 → ±∞/NaN; o chamador descarta
-            };
-            return double.IsFinite(value);
-        }
-
-        private readonly char _op = op;
-        private readonly Node _left = left;
-        private readonly Node _right = right;
-    }
-
-    private sealed class FuncNode(string name, List<Node> args) : Node
-    {
-        public override bool TryEval(SensorData data, out double value)
-        {
-            var resolved = new List<double>(_args.Count);
-            foreach (var arg in _args)
-            {
-                if (!arg.TryEval(data, out var v))
-                {
-                    value = 0;
-                    return false; // argumento não resolvido → série escondida
-                }
-                resolved.Add(v);
-            }
-
-            value = Name switch
-            {
-                "abs" => resolved.Count == 1 ? Math.Abs(resolved[0]) : double.NaN,
-                "min" => resolved.Count > 0 ? resolved.Min() : double.NaN,
-                _ => resolved.Count > 0 ? resolved.Max() : double.NaN // "max"
-            };
-            return double.IsFinite(value);
-        }
-
-        private string Name { get; } = name.ToLowerInvariant();
-        private readonly List<Node> _args = args;
-    }
-
-    // ---------- Parser ----------
-
-    private sealed class Parser(string source)
-    {
-        private int _pos;
-        private int _budget = MaxFormulaNodes;
-        private readonly string _s = source;
-
-        public bool Eof
-        {
-            get
-            {
-                SkipSpaces();
-                return _pos >= _s.Length;
-            }
-        }
-
-        public Node? ParseExpression()
-        {
-            var left = ParseTerm();
-            if (left is null) return null;
-
-            while (true)
-            {
-                SkipSpaces();
-                var op = NextChar();
-                if (op is not ('+' or '-')) break;
-                Advance();
-                var right = ParseTerm();
-                if (right is null) return null;
-                if (!ReserveNode()) return null;
-                left = new BinaryNode(op, left, right);
-            }
-            return left;
-        }
-
-        private Node? ParseTerm()
-        {
-            var left = ParseFactor();
-            if (left is null) return null;
-
-            while (true)
-            {
-                SkipSpaces();
-                var op = NextChar();
-                if (op is not ('*' or '/')) break;
-                Advance();
-                var right = ParseFactor();
-                if (right is null) return null;
-                if (!ReserveNode()) return null;
-                left = new BinaryNode(op, left, right);
-            }
-            return left;
-        }
-
-        private Node? ParseFactor()
-        {
-            if (!ReserveNode()) return null;
-            SkipSpaces();
-            if (_pos >= _s.Length) return null;
-
-            var c = _s[_pos];
-
-            // Unário -/+
-            if (c is '-' or '+')
-            {
-                Advance();
-                var inner = ParseFactor();
-                if (inner is null) return null;
-                return c == '-' ? new UnaryNode(inner) : inner;
-            }
-
-            // Parênteses
-            if (c == '(')
-            {
-                Advance();
-                var expr = ParseExpression();
-                if (expr is null) return null;
-                SkipSpaces();
-                if (NextChar() != ')') return null;
-                Advance();
-                return expr;
-            }
-
-            // Referência {Chave} (1..64 chars)
-            if (c == '{')
-            {
-                var close = _s.IndexOf('}', _pos + 1);
-                if (close < 0) return null;
-                var token = _s[(_pos + 1)..close].Trim();
-                if (token.Length is 0 or > 64) return null;
-                AdvanceTo(close + 1);
-                return new SeriesNode(token);
-            }
-
-            // Função min()/max()/abs(...) — restantes são erro.
-            if (char.IsAsciiLetter(c) || c == '_')
-            {
-                var start = _pos;
-                while (_pos < _s.Length && (char.IsAsciiLetterOrDigit(_s[_pos]) || _s[_pos] == '_')) _pos++;
-                var name = _s[start.._pos];
-
-                SkipSpaces();
-                if (NextChar() != '(') return null;
-                Advance();
-                SkipSpaces();
-
-                var args = new List<Node>();
-                if (NextChar() != ')')
-                {
-                    while (true)
-                    {
-                        var arg = ParseExpression();
-                        if (arg is null) return null;
-                        args.Add(arg);
-                        SkipSpaces();
-                        var terminator = NextChar();
-                        if (terminator == ',') { Advance(); continue; }
-                        if (terminator == ')') break;
-                        return null;
-                    }
-                }
-
-                SkipSpaces();
-                if (NextChar() != ')') return null;
-                Advance();
-                return name.Equals("min", StringComparison.OrdinalIgnoreCase) ? new FuncNode("min", args)
-                     : name.Equals("max", StringComparison.OrdinalIgnoreCase) ? new FuncNode("max", args)
-                     : name.Equals("abs", StringComparison.OrdinalIgnoreCase) ? new FuncNode("abs", args)
-                     : null;
-            }
-
-            // Número (decimal com ponto; vírgula é separador de argumento).
-            if (char.IsAsciiDigit(c) || c == '.')
-            {
-                var start = _pos;
-                while (_pos < _s.Length && (char.IsAsciiDigit(_s[_pos]) || _s[_pos] == '.')) _pos++;
-                return double.TryParse(_s[start.._pos], NumberStyles.Integer | NumberStyles.AllowDecimalPoint,
-                    CultureInfo.InvariantCulture, out var value)
-                    ? new NumberNode(value)
-                    : null;
-            }
-
-            return null;
-        }
-
-        public void SkipSpaces()
-        {
-            while (_pos < _s.Length && char.IsWhiteSpace(_s[_pos])) _pos++;
-        }
-
-        public char NextChar()
-        {
-            SkipSpaces();
-            return _pos < _s.Length ? _s[_pos] : '\0';
-        }
-
-        private void Advance() => _pos++;
-
-        private void AdvanceTo(int position) => _pos = Math.Max(position, _pos);
-
-        private bool ReserveNode()
-        {
-            if (_budget <= 0) return false;
-            _budget--;
-            return true;
         }
     }
 

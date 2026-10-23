@@ -43,3 +43,5 @@ Formulas are compiled once into an AST with a maximum of 256 nodes. At most 64 f
 Each formula is compiled once by `CustomSensorEngine`; per-snapshot work is reference lookup and arithmetic. A syntactically valid formula can be saved when its physical source sensor is currently absent. The output simply remains unavailable until all inputs resolve. When the service is recreated, runtime calculation and session-statistic state starts fresh.
 
 The language has no modulo, exponentiation, conditionals, or historical-series references. `min` and `max` can express simple bounds, for example `min({CpuPerCore} + 10, 100)`. Units affect labels only and are not part of calculations.
+
+In Core, `CustomSensorEngine` coordinates compilation and evaluation; the parser and AST nodes live in `Services/Sensors/CustomSensorFormulaParser.cs`.

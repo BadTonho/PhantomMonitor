@@ -5,69 +5,105 @@ namespace PhantomMonitor.App.ViewModels;
 
 public sealed partial class MainWindowViewModel
 {
-    private static readonly string[] OverlayBlockTitles =
-        ["CPU", "GPU", "RAM", "DISCO", "REDE", "VENTOINHAS", "PLACA-MÃE", "FPS / FRAMETIME", "GRÁFICOS E TEMPLATES"];
+    private readonly Dictionary<string, OverlayFrametimeGraphViewModel> _frametimeGraphItems = new(StringComparer.OrdinalIgnoreCase);
 
     private void InitializeOverlayBlocks()
     {
         _overlayBlocks.Clear();
-        for (var index = 0; index < OverlayBlockKeys.Ordered.Length; index++)
+        _overlayAppliedBlocks.Clear();
+        foreach (var config in _config.Overlay.Blocks ?? [])
         {
-            var key = OverlayBlockKeys.Ordered[index];
-            var block = new OverlayCanvasBlockViewModel(key, OverlayBlockTitles[index], this, SetOverlayBlockPosition);
-            var position = GetOverlayBlockPosition(key);
-            block.SetNormalizedPosition(position.X, position.Y);
+            var blockConfig = CloneOverlayBlock(config);
+            var block = new OverlayCanvasBlockViewModel(blockConfig, this, SetOverlayBlockPosition);
             block.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
             _overlayBlocks.Add(block);
+            var applied = new OverlayCanvasBlockViewModel(CloneOverlayBlock(blockConfig), this, static (_, _, _) => { });
+            applied.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
+            _overlayAppliedBlocks.Add(applied);
         }
     }
 
-    private static OverlayBlockPosition DefaultOverlayBlockPosition(string key)
+    private void SetOverlayBlockPosition(string id, double x, double y)
     {
-        var index = Array.IndexOf(OverlayBlockKeys.Ordered, key);
-        if (index < 0) index = OverlayBlockKeys.Ordered.Length - 1;
-        return new OverlayBlockPosition
-        {
-            X = 0.02,
-            Y = 0.035 + index * 0.105
-        };
-    }
-
-    private OverlayBlockPosition GetOverlayBlockPosition(string key)
-    {
-        if (_overlayLayoutDraft.TryGetValue(key, out var draft)) return draft;
-        return DefaultOverlayBlockPosition(key);
-    }
-
-    private void SetOverlayBlockPosition(string key, double x, double y)
-    {
-        // Materializa todos os padrões ao primeiro movimento para manter o layout
-        // atual estável se os padrões da aplicação mudarem em versões futuras.
-        foreach (var item in OverlayBlockKeys.Ordered)
-        {
-            if (_overlayLayoutDraft.ContainsKey(item)) continue;
-            var position = DefaultOverlayBlockPosition(item);
-            _overlayLayoutDraft[item] = position;
-        }
-
-        _overlayLayoutDraft[key] = new OverlayBlockPosition { X = x, Y = y };
-        var block = _overlayBlocks.FirstOrDefault(item => item.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+        var block = _overlayBlocks.FirstOrDefault(item => item.Key.Equals(id, StringComparison.OrdinalIgnoreCase));
         block?.SetNormalizedPosition(x, y);
+    }
+
+    public void ApplyOverlayBlockPosition(string id, double x, double y) => SetOverlayBlockPosition(id, x, y);
+
+    public OverlayCanvasBlockViewModel AddOverlayBlock(double x, double y)
+    {
+        var config = new OverlayBlockConfig { Id = Guid.NewGuid().ToString("N"), X = Math.Clamp(x, 0, 1), Y = Math.Clamp(y, 0, 1) };
+        var block = new OverlayCanvasBlockViewModel(config, this, SetOverlayBlockPosition);
+        block.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
+        _overlayBlocks.Add(block);
+        return block;
+    }
+
+    public void RemoveOverlayBlock(OverlayCanvasBlockViewModel block)
+    {
+        if (!_overlayBlocks.Remove(block)) return;
+        UpdateOverlayRows(_latestSensorData);
+    }
+
+    public void SetOverlayBlockItems(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items)
+    {
+        block.Config.Items = items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList();
+        EnsureOverlayExtrasCurrent();
+        UpdateOverlayRows(_latestSensorData);
+    }
+
+    public void SetOverlayBlockDefinition(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items,
+        IEnumerable<OverlayGraph> graphs, IEnumerable<OverlayTemplate> templates)
+    {
+        block.Config.Items = items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList();
+        _overlayGraphsDraft.Clear();
+        foreach (var graph in graphs) _overlayGraphsDraft.Add(CloneOverlayGraph(graph));
+        _overlayTemplatesDraft.Clear();
+        foreach (var template in templates) _overlayTemplatesDraft.Add(CloneOverlayTemplate(template));
+        var graphIds = _overlayGraphsDraft.Select(graph => graph.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var templateIds = _overlayTemplatesDraft.Select(template => template.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var candidate in _overlayBlocks)
+            candidate.Config.Items.RemoveAll(item => item.Kind == "graph" && !graphIds.Contains(item.Value)
+                || item.Kind == "template" && !templateIds.Contains(item.Value));
+        EnsureOverlayExtrasCurrent();
+        UpdateOverlayRows(_latestSensorData);
+    }
+
+    public void RefreshOverlayBlockContent() => UpdateOverlayRows(_latestSensorData);
+
+    public void CancelOverlayLayoutDraft() => ReloadOverlayLayoutDraft();
+
+    private OverlayFrametimeGraphViewModel GetFrametimeGraphItem(string key)
+    {
+        if (!_frametimeGraphItems.TryGetValue(key, out var item))
+            _frametimeGraphItems[key] = item = new OverlayFrametimeGraphViewModel(this);
+        return item;
     }
 
     public bool OverlayLayoutHasChanges()
     {
-        foreach (var (key, position) in _overlayLayoutDraft)
+        if (_config.Overlay.BlocksMigrated) return true;
+        var saved = _config.Overlay.Blocks ?? [];
+        if (saved.Count != _overlayBlocks.Count) return true;
+        for (var index = 0; index < saved.Count; index++)
         {
-            if (!_config.Overlay.Layout.TryGetValue(key, out var current)
-                || Math.Abs(current.X - position.X) > 0.0001
-                || Math.Abs(current.Y - position.Y) > 0.0001)
+            var current = _overlayBlocks[index].Config;
+            var previous = saved[index];
+            if (current.Id != previous.Id || Math.Abs(current.X - previous.X) > 0.0001
+                || Math.Abs(current.Y - previous.Y) > 0.0001 || current.Items.Count != previous.Items.Count)
                 return true;
+            for (var itemIndex = 0; itemIndex < current.Items.Count; itemIndex++)
+                if (current.Items[itemIndex].Kind != previous.Items[itemIndex].Kind
+                    || current.Items[itemIndex].Value != previous.Items[itemIndex].Value)
+                    return true;
         }
-        return false;
+        return !OverlayDefinitionsEqual(_config.Overlay.Graphs, _overlayGraphsDraft)
+            || !OverlayDefinitionsEqual(_config.Overlay.Templates, _overlayTemplatesDraft);
     }
 
-    public void ApplyOverlayBlockPosition(string key, double x, double y) => SetOverlayBlockPosition(key, x, y);
+    private static bool OverlayDefinitionsEqual<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)
+        => System.Text.Json.JsonSerializer.Serialize(left) == System.Text.Json.JsonSerializer.Serialize(right);
 
     public void SetOverlayCanvasSize(double width, double height)
     {
@@ -78,76 +114,112 @@ public sealed partial class MainWindowViewModel
         OverlayCanvasHeight = height;
         foreach (var block in _overlayBlocks)
             block.SetCanvasSize(width, height);
+        foreach (var block in _overlayAppliedBlocks)
+            block.SetCanvasSize(width, height);
     }
 
-    private void ReconcileOverlayBlocks()
+    private void ApplyOverlayLayoutDraft()
     {
-        var rowPlans = _overlayBlocks.ToDictionary(block => block.Key, _ => new List<OverlayMetricViewModel>(), StringComparer.OrdinalIgnoreCase);
-        foreach (var row in OverlayRows)
+        BuildOverlayAppliedExtraRows();
+        _overlayAppliedBlocks.Clear();
+        foreach (var config in _overlayBlocks.Select(block => CloneOverlayBlock(block.Config)))
         {
-            var key = OverlayBlockKeys.ForIdentity(row.Identity);
-            rowPlans[key].Add(row);
+            var block = new OverlayCanvasBlockViewModel(config, this, static (_, _, _) => { });
+            block.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
+            _overlayAppliedBlocks.Add(block);
         }
-
-        foreach (var block in _overlayBlocks)
-            ReconcileCollection(block.Rows, rowPlans[block.Key]);
-
-        var extras = _overlayBlocks.First(item => item.Key == OverlayBlockKeys.Extras);
-        ReconcileCollection(extras.Extras, OverlayExtraRows.Cast<object>().ToList());
-
-        foreach (var block in _overlayBlocks)
-            block.NotifyRowsChanged();
+        UpdateOverlayRows(_latestSensorData);
     }
 
-    private static void ReconcileCollection<T>(System.Collections.ObjectModel.ObservableCollection<T> current, IReadOnlyList<T> desired)
-        where T : class
+    private void ReconcileOverlayBlocks(IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> categoryPlans,
+        IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> instancePlans)
     {
-        var position = 0;
-        for (var i = 0; i < desired.Count; i++)
+        var categoryRows = OverlayRows.ToDictionary(row => row.Identity, StringComparer.OrdinalIgnoreCase);
+        var draftExtras = OverlayExtraRows.ToDictionary(row => row switch
         {
-            var item = desired[i];
-            if (position < current.Count && ReferenceEquals(current[position], item))
-            {
-                position++;
-                continue;
-            }
+            OverlayGraphRowViewModel graph => ("graph", graph.Identity["#graph:".Length..]),
+            OverlayTemplateRowViewModel template => ("template", template.Identity["#template:".Length..]),
+            _ => ("", "")
+        });
+        var appliedExtras = OverlayAppliedExtraRows.ToDictionary(row => row switch
+        {
+            OverlayGraphRowViewModel graph => ("graph", graph.Identity["#graph:".Length..]),
+            OverlayTemplateRowViewModel template => ("template", template.Identity["#template:".Length..]),
+            _ => ("", "")
+        });
 
-            var found = -1;
-            for (var scan = position + 1; scan < current.Count; scan++)
-            {
-                if (!ReferenceEquals(current[scan], item)) continue;
-                found = scan;
-                break;
-            }
+        ReconcileOverlayBlocks(_overlayBlocks, categoryRows, draftExtras, categoryPlans, instancePlans, null);
+        var profileSeries = _activeProfile?.ShownSeries is { Count: > 0 } series ? series : null;
+        ReconcileOverlayBlocks(_overlayAppliedBlocks, categoryRows, appliedExtras, categoryPlans, instancePlans, profileSeries);
+    }
 
-            if (found >= 0)
-                current.Move(found, position);
-            else
-                current.Insert(position, item);
-            position++;
+    private void ReconcileOverlayBlocks(IEnumerable<OverlayCanvasBlockViewModel> blocks,
+        IReadOnlyDictionary<string, OverlayMetricViewModel> categoryRows,
+        IReadOnlyDictionary<(string Kind, string Value), object> extras,
+        IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> categoryPlans,
+        IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> instancePlans,
+        IReadOnlyList<string>? profileSeries)
+    {
+        foreach (var block in blocks)
+        {
+            var desired = new List<object>();
+            foreach (var item in block.Config.Items)
+            {
+                if (item.Kind == "category")
+                {
+                    foreach (var plan in categoryPlans.Where(plan => OverlayBlockKeys.ForIdentity(plan.Identity) == item.Value))
+                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(row);
+                }
+                else if (item.Kind == "series")
+                {
+                    foreach (var plan in instancePlans.Where(plan => SensorKey.TryParse(plan.Identity, out var key)
+                        && (key.IsPrimary
+                            ? !item.Value.Contains('*') && key.MatchesPattern(item.Value)
+                            : key.MatchesPattern(item.Value)
+                                && (profileSeries is null || profileSeries.Count == 0 || profileSeries.Any(key.MatchesPattern)))))
+                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(row);
+                }
+                else if (item.Kind == "frametime") desired.Add(GetFrametimeGraphItem(block.Key + ":" + item.Value));
+                else if (extras.TryGetValue((item.Kind, item.Value), out var extra)) desired.Add(extra);
+            }
+            block.ReconcileContent(desired.Distinct(ReferenceEqualityComparer.Instance).ToArray());
         }
-
-        while (current.Count > position)
-            current.RemoveAt(current.Count - 1);
     }
 
     private void CopyOverlayLayoutToConfig()
     {
-        _config.Overlay.Layout = _overlayLayoutDraft.ToDictionary(
-            pair => pair.Key,
-            pair => new OverlayBlockPosition { X = pair.Value.X, Y = pair.Value.Y },
-            StringComparer.OrdinalIgnoreCase);
+        _config.Overlay.Blocks = _overlayBlocks.Select(block => CloneOverlayBlock(block.Config)).ToList();
+        _config.Overlay.Graphs = _overlayGraphsDraft.Select(CloneOverlayGraph).ToList();
+        _config.Overlay.Templates = _overlayTemplatesDraft.Select(CloneOverlayTemplate).ToList();
     }
 
     private void ReloadOverlayLayoutDraft()
     {
-        _overlayLayoutDraft.Clear();
-        foreach (var (key, position) in _config.Overlay.Layout)
-            _overlayLayoutDraft[key] = new OverlayBlockPosition { X = position.X, Y = position.Y };
-        foreach (var block in _overlayBlocks)
-        {
-            var position = GetOverlayBlockPosition(block.Key);
-            block.SetNormalizedPosition(position.X, position.Y);
-        }
+        _overlayGraphsDraft.Clear();
+        foreach (var graph in _config.Overlay.Graphs) _overlayGraphsDraft.Add(CloneOverlayGraph(graph));
+        _overlayTemplatesDraft.Clear();
+        foreach (var template in _config.Overlay.Templates) _overlayTemplatesDraft.Add(CloneOverlayTemplate(template));
+        InitializeOverlayBlocks();
+        EnsureOverlayExtrasCurrent();
+        UpdateOverlayRows(_latestSensorData);
     }
+
+    private static OverlayBlockConfig CloneOverlayBlock(OverlayBlockConfig block) => new()
+    {
+        Id = block.Id,
+        X = block.X,
+        Y = block.Y,
+        Items = block.Items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList()
+    };
+
+    private static OverlayGraph CloneOverlayGraph(OverlayGraph graph) => new()
+    {
+        Id = graph.Id, Series = graph.Series, Height = graph.Height, Window = graph.Window,
+        Color = graph.Color, Min = graph.Min, Max = graph.Max
+    };
+
+    private static OverlayTemplate CloneOverlayTemplate(OverlayTemplate template) => new()
+    {
+        Id = template.Id, Text = template.Text, Color = template.Color
+    };
 }

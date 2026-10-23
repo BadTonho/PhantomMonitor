@@ -6,19 +6,21 @@
 
 The Avalonia dashboard offers a floating overlay controlled by `showOverlay` and the **Show/Hide overlay** button. Each category is a separate transparent window, so freely placed blocks do not create a full-screen native window that captures clicks outside the metrics. If a block is closed by the system, the whole overlay is disabled and can be reopened from the dashboard.
 
-Under **Settings → Floating overlay**, **Open overlay editor** opens a live preview on a gridded canvas at left and a scrollable customization panel at right. Drag CPU, GPU, RAM, disk, network, fan, motherboard, FPS/frametime, and the graphs/templates block to reposition them. Positions are normalized from 0 to 1 relative to the monitored window on Windows or the primary screen on Linux. Configurations without saved positions start in a vertical column. The panel edits categories, width (140–700 px), opacity (10–100%), font size (8–20 pt), compact mode, frametime graph, and the per-instance series allowlist. **Save and apply** persists positions and applies changes without restarting collection.
+Under **Settings → Floating overlay**, **Open overlay editor** opens a live preview on a gridded canvas without a side panel. Right-click an empty area to create a block; left-drag to move it; double-click to choose multiple categories, individual series or patterns, graphs, and templates. Right-click a block to edit or remove it. Graphs and templates can be created and edited in the content selector. Changes remain a draft: **Save and apply** writes them and updates the running overlay; closing the editor discards unsaved changes.
 
-The frametime option uses `overlay.showFrametimeGraph`; the sparkline appears inside the FPS block once at least two samples exist, using a gold line, 24 px high normally and 18 px in compact mode. It stops advancing while paused.
+Positions in `overlay.blocks` are normalized from 0 to 1 relative to the monitored window on Windows or the available screen area on Linux. Configurations without `blocks` are migrated while preserving enabled categories, per-instance series, graphs, templates, and existing positions; when no positions exist, blocks start in a vertical column. New installations also start with the current default blocks. Width (140–700 px), opacity (10–100%), font size (8–20 pt), and compact mode are global settings on **Settings → Floating overlay**.
+
+The **Frametime graph** item can be combined with other content in any block. The gold sparkline appears once at least two samples exist, is 24 px high normally and 18 px in compact mode, and stops advancing while paused.
 
 ### Per-instance series
 
-The editor lets you add detected series or enter keys/patterns manually for `overlay.shownSeries`. The list is a whitelist: a series appears when any saved pattern matches. Supported examples include `Gpu*`, `*Total`, and `CpuTemperature#*`. Unmatched patterns remain saved for future hardware. Remove patterns individually or restore the defaults `Gpu*`, `FanSpeed*`, and `Disk*`. An empty list cannot be saved because configuration normalization restores the defaults.
+In a block's content selector, choose a detected series or add a key/pattern such as `Gpu*`, `*Total`, or `CpuTemperature#*`. Unmatched patterns stay in the block and begin displaying data when the series appears. The legacy `overlay.shownSeries` setting is preserved for compatibility and migrates to series items in blocks on the first save.
 
-Overlay rows are rendered as **hardware blocks** with a small label and large monospace values; long content wraps. Per-instance rows follow their sensor-family block, while graphs and templates stay together in a separate block. The preview follows category and appearance edits before saving. Invalid widths outside 140–700 px make the preview use the last applied width and show a warning. Active per-application profiles may override global settings in the real overlay.
+Blocks can contain any combination of categories, series, graphs, and templates. The preview shows live values; each block's content and position are independent. Active per-application profiles can still override global appearance and filter per-instance series in the running overlay.
 
 Matching per-instance rows are ordered by family, show the key, hardware label, and formatted value, and are limited to 24. A present zero is displayed as zero. Canonical category rows are not duplicated. On **Windows**, each block is click-through (`WS_EX_TRANSPARENT`) and follows the focused app every 30 ms; `overlayPosition` and profiles offset the group. On **Linux**, each block is an individual Topmost window; the compositor controls its initial position and whether it appears over fullscreen applications.
 
-The unified app includes the P6.6 templates, the P8.5 per-series graphs, and the per-application profiles below; profiles/templates/graphs are edited through `config.json`. On Linux the profile matcher is inactive, and template/graph changes require an app restart (configuration is read at startup).
+The unified app includes templates, per-series graphs, and per-application profiles. Blocks, series, graphs, and templates can be composed in the visual editor; per-application profiles remain in `config.json`. On Linux the profile matcher is inactive.
 
 The unified app offers the advanced OSD described below, including templates, per-instance series, application profiles, graphs, Windows click-through, and the per-profile accent (the visual editor was WPF-only, retired in Phase 2; the tray pin landed with F1.5).
 
@@ -37,7 +39,7 @@ The Windows OSD is a transparent, click-through, topmost window designed to stay
 | `MB` | Highest motherboard/SuperIO temperature, gray |
 | `FPS` | FPS and frametime, bright green |
 
-CPU and GPU can show compact secondary details such as clocks, power, voltage, VRAM, hotspot, and VRAM temperature. Network, fan, and motherboard rows are revealed when real readings first appear. Per-instance rows are filtered by `overlay.shownSeries`, grouped by family (GPU, fans, disks, RAM, CPU, network, battery, then other families), and limited to 24. Missing instances are hidden until they return. The FPS section can include average, 1%/0.1% lows, maximum, and a slim frametime chart.
+CPU and GPU can show compact secondary details such as clocks, power, voltage, VRAM, hotspot, and VRAM temperature. Network, fan, and motherboard rows are revealed when real readings first appear. Per-instance rows are selected by block contents (an active profile can apply its `shownSeries` allowlist), grouped by family, and limited to 24 per block. Missing instances are hidden until they return. The FPS section can include average, 1%/0.1% lows, maximum, and a slim frametime chart.
 
 Typical instance tags are `GPU1`/`GPU2...` for multi-GPU metrics; `FAN1...` for fan slots; `DSK1...` for disk activity, throughput, temperature, and health; `CPU1...` for per-core temperature, usage, and clock; `MB1...`, `VRM1...`, and `RL1...` for board temperatures, VRM, and voltage rails; and `NET1...` for interface rates and session totals. Per-core rows are disabled by default because they can crowd the display on CPUs with many cores. If a device disappears, its instance row is hidden until the hardware returns.
 
@@ -45,16 +47,15 @@ The device accents are orange for GPU, cyan for CPU, purple for RAM, blue for di
 
 ## Visual overlay editor
 
-The current editor has a gridded canvas on the left and a scrollable inspector on the right. Block positions are normalized `x`/`y` values from 0 to 1. On Windows they use the monitored window as their reference; on Linux they use the primary screen. Dragging a block moves its per-instance series with it; graphs and templates use one additional block. Existing configurations without `layout` use the vertical default until the first move; saving then stores the default and changed positions.
+The editor is a gridded canvas with a live preview. Right-click an empty area to create a block; left-drag to move it; double-click to open the multi-item selector; right-click a block to edit or remove it. Normalized `x`/`y` positions range from 0 to 1 and use the monitored window as reference on Windows and the available screen area on Linux. Content and positions stay as a draft until **Save and apply**. Older configurations migrate from `layout` and other legacy options into `blocks`; without saved positions, blocks start in the default vertical order.
 
 ### Configuration
 
-Core `overlay` fields include:
+Current block composition is stored in `overlay.blocks`; global appearance is edited on **Settings → Floating overlay**. The legacy fields remain for compatibility and migration:
 
 - `width`, `fontSize`, `compactMode`, `accentColor`, and global `overlayOpacity`.
-- `showCpu`, `showGpu`, `showRam`, `showDisk`, `showNetwork`, `showFans`, `showMotherboard`, `showFps`, and `showFrametimeGraph`.
-- `shownSeries`: a `SensorKey` pattern allowlist; defaults to `["Gpu*", "FanSpeed*", "Disk*"]`.
-- `layout`: normalized positions for `cpu`, `gpu`, `ram`, `disk`, `network`, `fans`, `motherboard`, `fps`, and `extras`; each entry contains `x` and `y` values from 0 to 1.
+- `blocks`: `{ id, x, y, items: [{ kind, value }] }`; `kind` is `category`, `series`, `graph`, `template`, or `frametime`. A block can contain multiple items.
+- `showCpu`, `showGpu`, `showRam`, `showDisk`, `showNetwork`, `showFans`, `showMotherboard`, `showFps`, `showFrametimeGraph`, `shownSeries`, and `layout` are read when migrating an older config without `blocks`.
 - `overlayPosition`: screen coordinates.
 - `toggleOverlayHotkey` and `pauseMonitorHotkey` on Windows.
 
@@ -72,9 +73,9 @@ Core `overlay` fields include:
 ]
 ```
 
-`visible: false` hides the OSD while the profile matches. A tray menu can pin a profile for the current session or return to automatic matching. When a profile is active, a small footer indicator names it. The visual editor manages profile fields and series patterns. The Avalonia app consumes `profiles` from `config.json` the same way (matcher on the focused-process tick on Windows; tray pin arrives with F1.5).
+`visible: false` hides the OSD while the profile matches. A tray menu can pin a profile for the current session or return to automatic matching. When a profile is active, a small footer indicator names it. Profile fields remain in `config.json`; the Avalonia app consumes `profiles` on the focused-process tick on Windows.
 
-### Custom text templates (Windows)
+### Custom text templates
 
 `overlay.templates` appends custom text rows after per-instance series:
 
@@ -85,9 +86,9 @@ Core `overlay` fields include:
 ]
 ```
 
-`{Key}` resolves canonical or instance data; wildcard placeholders select the first match. `{Key:N}` chooses 0–3 decimals (default 1). Literal text supplies units. A row stays hidden until all placeholders resolve. Font follows the OSD at base size minus one point. Color is configured in JSON; the editor changes text while preserving the color for unchanged rows. In the Avalonia app the rendering is identical, and edits to `config.json` require a restart.
+`{Key}` resolves canonical or instance data; wildcard placeholders select the first match. `{Key:N}` chooses 0–3 decimals (default 1). Literal text supplies units. A row stays hidden until all placeholders resolve. Font follows the OSD at base size minus one point. The visual editor can create and edit templates; changes apply after **Save and apply**.
 
-### Per-series history graphs (Windows)
+### Per-series history graphs
 
 `overlay.graphs` defines sparklines before the template block:
 
@@ -99,7 +100,7 @@ Core `overlay` fields include:
 ]
 ```
 
-`series` accepts canonical, instance, wildcard, or custom-sensor name. `height` is 12–120 px (default 36); `window` is 30–1200 samples (default 240); `color` defaults to the OSD accent; `min`/`max` optionally fix the Y axis. Missing series hide the graph while preserving its circular history. Up to 12 graphs are retained. Graphs can consume any published series, including custom formulas and PresentMon metrics. They are configured in JSON; new graphs appear after a restart (the retired WPF visual editor recreated the overlay on apply). In the unified app each entry builds a persistent sparkline with its own circular buffer (`FrametimeBuffer`; samples only while the series resolves) and an optional fixed axis on the extended `HistoryChart`; config changes require a restart.
+`series` accepts canonical, instance, wildcard, or custom-sensor name. `height` is 12–120 px (default 36); `window` is 30–1200 samples (default 240); `color` defaults to the OSD accent; `min`/`max` optionally fix the Y axis. Missing series hide the graph while preserving its circular history. Up to 12 graphs are retained. Graphs can consume any published series, including custom formulas and PresentMon metrics. The visual editor can create and edit graphs; changes apply after **Save and apply**. Each entry has its own persistent circular history and optional fixed axis.
 
 The Windows implementation uses layered, transparent, topmost window styles (`WS_EX_LAYERED`, `WS_EX_TRANSPARENT`, and `HWND_TOPMOST`); the click-through behavior comes from these Windows styles.
 

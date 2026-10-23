@@ -14,7 +14,8 @@ internal static class OverlayMetricsBuilder
     public static IReadOnlyList<OverlayRowPlan> Plan(
         SensorData? data,
         OverlayConfigSelection selection,
-        IReadOnlyList<string>? shownSeries = null)
+        IReadOnlyList<string>? shownSeries = null,
+        bool includePrimarySeries = false)
     {
         var rows = new List<OverlayRowPlan>();
 
@@ -121,7 +122,7 @@ internal static class OverlayMetricsBuilder
         if (data is not null && shownSeries is { Count: > 0 })
         {
             var instanceRows = data.Series.Keys
-                .Where(key => !key.IsPrimary && shownSeries.Any(key.MatchesPattern))
+                .Where(key => (includePrimarySeries || !key.IsPrimary) && shownSeries.Any(key.MatchesPattern))
                 .Distinct()
                 .OrderBy(FamilyOrder)
                 .ThenBy(key => key.Type.ToString(), StringComparer.Ordinal)

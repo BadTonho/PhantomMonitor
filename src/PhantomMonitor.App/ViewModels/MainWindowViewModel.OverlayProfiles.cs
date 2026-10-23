@@ -212,6 +212,7 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayPanelBorderBrush));
         Raise(nameof(OverlayWidth));
         Raise(nameof(OverlayOpacity));
+        RefreshOverlayGraphStrokes();
         if (fontChanged) RaiseOverlayAppearanceProperties();
 
         // Whitelist vigente pode mudar o conjunto de séries por instância.

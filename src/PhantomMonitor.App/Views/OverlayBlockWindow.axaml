@@ -16,9 +16,9 @@
       <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                  FontSize="{Binding Owner.OverlayMetricNameFontSize}" FontWeight="SemiBold"
                  PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll" />
-      <ItemsControl ItemsSource="{Binding Rows}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
+      <ItemsControl ItemsSource="{Binding Content}">
+        <ItemsControl.DataTemplates>
+          <DataTemplate DataType="vm:OverlayMetricViewModel">
             <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.Owner.OverlayRowMargin}">
               <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                          FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricNameFontSize}" TextTrimming="CharacterEllipsis" />
@@ -33,13 +33,16 @@
                                    Height="{Binding $parent[Window].DataContext.Owner.OverlayFrametimeGraphHeight}" />
             </StackPanel>
           </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-      <ItemsControl ItemsSource="{Binding Extras}">
-        <ItemsControl.DataTemplates>
           <DataTemplate DataType="vm:OverlayGraphRowViewModel">
             <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
                                  MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
+          </DataTemplate>
+          <DataTemplate DataType="vm:OverlayFrametimeGraphViewModel">
+            <charts:HistoryChart Values="{Binding Owner.FrametimeSamples}"
+                                 Stroke="{Binding Owner.OverlayAccentBrush}"
+                                 GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                 MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                 Height="{Binding Owner.OverlayFrametimeGraphHeight}" />
           </DataTemplate>
           <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
             <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"

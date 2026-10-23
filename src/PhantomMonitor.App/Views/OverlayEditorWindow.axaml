@@ -4,23 +4,26 @@
         xmlns:vm="using:PhantomMonitor.App.ViewModels"
         x:Class="PhantomMonitor.App.Views.OverlayEditorWindow"
         Title="Editor do overlay flutuante"
-        Width="1320" Height="860" MinWidth="1000" MinHeight="650"
+        Width="1120" Height="820" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
-  <Grid Margin="22" RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,350" ColumnSpacing="18" RowSpacing="14">
-    <StackPanel Grid.ColumnSpan="2" Spacing="4">
+  <Grid Margin="20" RowDefinitions="Auto,*,Auto" RowSpacing="12">
+    <StackPanel Spacing="4">
       <TextBlock Text="EDITOR DO OVERLAY" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="19" FontWeight="SemiBold" />
+      <TextBlock Text="Clique com o botão direito no canvas para adicionar um bloco. Arraste para mover e dê duplo clique para escolher o conteúdo."
+                 Classes="muted" FontSize="11" TextWrapping="Wrap" />
     </StackPanel>
 
-    <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto" RowSpacing="8">
+    <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="8">
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Text="PRÉVIA AO VIVO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-        <TextBlock Grid.Column="1" Text="GRADE · ARRASTE OS BLOCOS" Foreground="{DynamicResource TextDimBrush}" FontSize="9" />
+        <TextBlock Grid.Column="1" Text="GRADE · BOTÃO DIREITO ADICIONA" Foreground="{DynamicResource TextDimBrush}" FontSize="9" />
       </Grid>
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <Grid Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}">
+        <Grid x:Name="EditorCanvasSurface" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
+              Background="Transparent" PointerPressed="OnCanvasPointerPressed">
           <Border CornerRadius="6" Background="{DynamicResource BgOverlayPanelBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1" />
-          <charts:OverlayGridCanvas Grid.Row="0" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
+          <charts:OverlayGridCanvas Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
                                     LineBrush="{DynamicResource OverlayGridBrush}" GridSpacing="20" />
           <ItemsControl x:Name="EditorBlockCanvas" ItemsSource="{Binding OverlayBlocks}"
                         Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}">
@@ -36,18 +39,24 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border Width="{Binding $parent[Window].DataContext.OverlayPreviewWidth}"
-                        IsVisible="{Binding HasContent}" CornerRadius="5"
+                        IsVisible="{Binding IsEditorVisible}" CornerRadius="5"
                         Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}"
                         BorderThickness="1" Padding="{Binding $parent[Window].DataContext.OverlayPreviewBlockPadding}"
                         PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"
                         PointerReleased="OnBlockPointerReleased" PointerCaptureLost="OnBlockPointerCaptureLost"
-                        Cursor="SizeAll">
+                        DoubleTapped="OnBlockDoubleTapped" Cursor="SizeAll">
+                  <Border.ContextMenu>
+                    <ContextMenu DataContext="{Binding}">
+                      <MenuItem Header="Editar conteúdo" Click="OnEditBlockContentClick" />
+                      <MenuItem Header="Remover bloco" Click="OnRemoveBlockClick" />
+                    </ContextMenu>
+                  </Border.ContextMenu>
                   <StackPanel Spacing="3">
                     <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                                FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" FontWeight="SemiBold" />
-                    <ItemsControl ItemsSource="{Binding Rows}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
+                    <ItemsControl ItemsSource="{Binding Content}">
+                      <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="vm:OverlayMetricViewModel">
                           <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}">
                             <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                                        FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" TextTrimming="CharacterEllipsis" />
@@ -62,13 +71,16 @@
                                                  Height="{Binding $parent[Window].DataContext.OverlayPreviewFrametimeGraphHeight}" />
                           </StackPanel>
                         </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <ItemsControl ItemsSource="{Binding Extras}">
-                      <ItemsControl.DataTemplates>
                         <DataTemplate DataType="vm:OverlayGraphRowViewModel">
                           <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
                                                MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:OverlayFrametimeGraphViewModel">
+                          <charts:HistoryChart Values="{Binding Owner.FrametimeSamples}"
+                                               Stroke="{Binding Owner.OverlayAccentBrush}"
+                                               GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                               MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                               Height="{Binding Owner.OverlayPreviewFrametimeGraphHeight}" />
                         </DataTemplate>
                         <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
                           <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
@@ -84,97 +96,13 @@
           </ItemsControl>
         </Grid>
       </ScrollViewer>
-      <TextBlock Grid.Row="2" Text="A disposição é relativa à área da janela monitorada. A prévia mostra valores atuais ou traços quando a coleta está parada."
-                 Classes="muted" FontSize="10" TextWrapping="Wrap" />
     </Grid>
 
-    <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource BgCardBrush}"
-            BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="10">
-      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="17" Spacing="14">
-          <TextBlock Text="PERSONALIZAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-
-          <StackPanel Spacing="8">
-            <TextBlock Text="CATEGORIAS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-            <UniformGrid Columns="2">
-              <CheckBox Content="CPU" IsChecked="{Binding OverlayShowCpu, Mode=TwoWay}" />
-              <CheckBox Content="GPU" IsChecked="{Binding OverlayShowGpu, Mode=TwoWay}" />
-              <CheckBox Content="RAM" IsChecked="{Binding OverlayShowRam, Mode=TwoWay}" />
-              <CheckBox Content="Disco" IsChecked="{Binding OverlayShowDisk, Mode=TwoWay}" />
-              <CheckBox Content="Rede" IsChecked="{Binding OverlayShowNetwork, Mode=TwoWay}" />
-              <CheckBox Content="Ventoinhas" IsChecked="{Binding OverlayShowFans, Mode=TwoWay}" />
-              <CheckBox Content="Placa-mãe" IsChecked="{Binding OverlayShowMotherboard, Mode=TwoWay}" />
-              <CheckBox Content="FPS" IsChecked="{Binding OverlayShowFps, Mode=TwoWay}" />
-            </UniformGrid>
-            <CheckBox Content="Gráfico de frametime" IsEnabled="{Binding OverlayShowFps}"
-                      IsChecked="{Binding OverlayShowFrametimeGraph, Mode=TwoWay}" />
-          </StackPanel>
-
-          <Border Height="1" Background="{DynamicResource BgDividerBrush}" />
-          <StackPanel Spacing="8">
-            <TextBlock Text="APARÊNCIA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <StackPanel Spacing="4">
-                <TextBlock Text="LARGURA (140–700 PX)" Classes="muted" FontSize="9" />
-                <TextBox Text="{Binding OverlayWidthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="4" MinWidth="96">
-                <TextBlock Text="OPACIDADE" Classes="muted" FontSize="9" />
-                <TextBlock Text="{Binding OverlayOpacityLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
-              </StackPanel>
-            </Grid>
-            <Slider Minimum="10" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
-                    Value="{Binding OverlayOpacityPercent, Mode=TwoWay}" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <StackPanel Spacing="4">
-                <TextBlock Text="FONTE (8–20 PT)" Classes="muted" FontSize="9" />
-                <TextBox Text="{Binding OverlayFontSizeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <TextBlock Grid.Column="1" Text="{Binding OverlayFontSizeLabel}" Foreground="{DynamicResource TextMonoBrush}"
-                         FontSize="10" VerticalAlignment="Bottom" Margin="0,0,0,8" />
-            </Grid>
-            <Slider Minimum="8" Maximum="20" TickFrequency="0.5" IsSnapToTickEnabled="True"
-                    Value="{Binding OverlayFontSizeSlider, Mode=TwoWay}" />
-            <CheckBox Content="Modo compacto" IsChecked="{Binding OverlayCompactModeSetting, Mode=TwoWay}" />
-          </StackPanel>
-
-          <Border Height="1" Background="{DynamicResource BgDividerBrush}" />
-          <StackPanel Spacing="7">
-            <TextBlock Text="SÉRIES POR INSTÂNCIA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <ComboBox ItemsSource="{Binding OverlaySeriesOptions}" SelectedItem="{Binding SelectedOverlaySeries, Mode=TwoWay}"
-                        PlaceholderText="Escolha uma série" />
-              <Button Grid.Column="1" Classes="action" Content="Adicionar" Click="OnAddDetectedOverlaySeriesClick" />
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <TextBox Text="{Binding OverlaySeriesPatternInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                       PlaceholderText="Ex.: Gpu* ou DiskRead#1" />
-              <Button Grid.Column="1" Content="+" Padding="10,4" Click="OnAddOverlaySeriesPatternClick" />
-            </Grid>
-            <ItemsControl ItemsSource="{Binding OverlaySeriesPatterns}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                    <TextBlock Text="{Binding Pattern}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Content="Remover" Padding="7,3" Click="OnRemoveOverlaySeriesPatternClick" />
-                  </Grid>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <Button Content="Restaurar padrões" HorizontalAlignment="Left" Click="OnRestoreOverlaySeriesDefaultsClick" />
-            <TextBlock Text="Padrões aceitam chave exata, prefixo* ou *sufixo. Séries por instância acompanham o bloco da categoria."
-                       Classes="muted" FontSize="9" TextWrapping="Wrap" />
-          </StackPanel>
-
-          <TextBlock IsVisible="{Binding OverlayPreviewWidthInvalid}"
-                     Text="Largura inválida; a prévia usa o último valor aplicado (140–700 px)."
-                     Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding SettingsMessage}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
-          <Button Classes="action" Content="Salvar e aplicar" HorizontalAlignment="Stretch" Click="OnSaveSettingsClick" />
-        </StackPanel>
-      </ScrollViewer>
-    </Border>
-    <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="No Windows o layout acompanha a janela em foco. No Linux, a posição inicial e a sobreposição em tela cheia dependem do compositor."
-               Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+      <TextBlock Text="A posição é relativa à janela monitorada. O overlay acompanha a janela ativa no Windows; no Linux, a posição depende do compositor."
+                 Classes="muted" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+      <Button Grid.Column="1" Content="Fechar" Click="OnCloseClick" />
+      <Button Grid.Column="2" Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
+    </Grid>
   </Grid>
 </Window>

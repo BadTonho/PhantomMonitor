@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Collections.Specialized;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using PhantomMonitor.App.ViewModels;
@@ -18,11 +19,12 @@ public sealed partial class OverlayWindow : IDisposable
     public OverlayWindow(MainWindowViewModel viewModel)
     {
         _viewModel = viewModel;
-        foreach (var block in viewModel.OverlayBlocks)
+        foreach (var block in viewModel.OverlayAppliedBlocks)
         {
             block.PropertyChanged += OnBlockPropertyChanged;
             _windows[block.Key] = CreateBlockWindow(block);
         }
+        viewModel.OverlayAppliedBlocks.CollectionChanged += OnBlocksChanged;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
@@ -68,7 +70,8 @@ public sealed partial class OverlayWindow : IDisposable
         _closing = true;
         StopWindowsTimers();
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        foreach (var block in _viewModel.OverlayBlocks)
+        _viewModel.OverlayAppliedBlocks.CollectionChanged -= OnBlocksChanged;
+        foreach (var block in _viewModel.OverlayAppliedBlocks)
             block.PropertyChanged -= OnBlockPropertyChanged;
         foreach (var window in _windows.Values)
             window.Close();
@@ -90,7 +93,8 @@ public sealed partial class OverlayWindow : IDisposable
         };
         window.Closed += (_, _) =>
         {
-            if (_closing || _disposed) return;
+            if (_closing || _disposed || !_windows.TryGetValue(block.Key, out var current)
+                || !ReferenceEquals(current, window)) return;
             _closing = true;
             foreach (var other in _windows.Values)
                 if (!ReferenceEquals(other, window)) other.Close();
@@ -106,11 +110,35 @@ public sealed partial class OverlayWindow : IDisposable
     {
         if (e.PropertyName is nameof(OverlayCanvasBlockViewModel.HasContent)
             or nameof(OverlayCanvasBlockViewModel.IsRenderable)
+            or nameof(OverlayCanvasBlockViewModel.Content)
             or nameof(OverlayCanvasBlockViewModel.X)
             or nameof(OverlayCanvasBlockViewModel.Y)
             or nameof(OverlayCanvasBlockViewModel.CanvasX)
             or nameof(OverlayCanvasBlockViewModel.CanvasY))
             Refresh();
+    }
+
+    private void OnBlocksChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+        {
+            foreach (OverlayCanvasBlockViewModel block in e.OldItems)
+            {
+                block.PropertyChanged -= OnBlockPropertyChanged;
+                if (!_windows.Remove(block.Key, out var window)) continue;
+                window.Hide();
+                window.Close();
+            }
+        }
+        if (e.NewItems is not null)
+        {
+            foreach (OverlayCanvasBlockViewModel block in e.NewItems)
+            {
+                block.PropertyChanged += OnBlockPropertyChanged;
+                _windows[block.Key] = CreateBlockWindow(block);
+            }
+        }
+        Refresh();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

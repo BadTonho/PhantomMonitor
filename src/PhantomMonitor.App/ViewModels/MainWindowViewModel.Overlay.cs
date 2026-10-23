@@ -45,25 +45,22 @@ public sealed partial class MainWindowViewModel
 
     private void UpdateOverlayRows(SensorData? data)
     {
-        var selection = new OverlayConfigSelection(
-            OverlayShowCpu,
-            OverlayShowGpu,
-            OverlayShowRam,
-            OverlayShowDisk,
-            OverlayShowNetwork,
-            OverlayShowFans,
-            OverlayShowMotherboard,
-            OverlayShowFps,
-            _config.Overlay.ShowFrametimeGraph);
+        var categories = new OverlayConfigSelection(true, true, true, true, true, true, true, true, false);
+        var categoryPlans = OverlayMetricsBuilder.Plan(data, categories);
+        var instancePlans = OverlayMetricsBuilder.Plan(data,
+            new OverlayConfigSelection(false, false, false, false, false, false, false, false, false), ["*"], includePrimarySeries: true);
 
         // Reconciliação de rows persistentes: rows são reutilizadas e só a string que
         // mudou dispara PropertyChanged. Sem isso, OverlayRows era Clear+re-add
         // por snapshot — o ItemsControl re-media/re-renderiza tudo (até 10x/s).
         // Whitelist em vigor (perfil > global) e rows extras (graphs P8.5/templates P6.6).
-        ReconcileOverlayRows(OverlayMetricsBuilder.Plan(data, selection, EffectiveOverlayShownSeries()));
+        ReconcileOverlayRows(categoryPlans.Concat(instancePlans)
+            .GroupBy(plan => plan.Identity, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First()).ToArray());
         EnsureOverlayExtrasCurrent();
         UpdateOverlayExtraRows(data);
-        ReconcileOverlayBlocks();
+        UpdateOverlayAppliedExtraRows(data);
+        ReconcileOverlayBlocks(categoryPlans, instancePlans);
     }
 
     private void ReconcileOverlayRows(IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> plan)
@@ -263,7 +260,6 @@ public sealed partial class MainWindowViewModel
     private void RefreshOverlaySeriesOptions()
     {
         var options = _latestSensorData?.Series.Keys
-            .Where(key => !key.IsPrimary)
             .Select(key => key.ToString())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)

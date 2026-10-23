@@ -132,6 +132,65 @@ public sealed class AppConfig
     private static readonly System.Text.RegularExpressions.Regex HexColorRegex =
         new("^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", System.Text.RegularExpressions.RegexOptions.Compiled);
 
+    private static List<OverlayBlockConfig> MigrateLegacyOverlayBlocks(OverlayConfig overlay)
+    {
+        var categories = new (string Key, bool Enabled)[]
+        {
+            ("cpu", overlay.ShowCpu), ("gpu", overlay.ShowGpu), ("ram", overlay.ShowRam),
+            ("disk", overlay.ShowDisk), ("network", overlay.ShowNetwork), ("fans", overlay.ShowFans),
+            ("motherboard", overlay.ShowMotherboard), ("fps", overlay.ShowFps)
+        };
+        var blocks = new Dictionary<string, OverlayBlockConfig>(StringComparer.OrdinalIgnoreCase);
+
+        OverlayBlockConfig Ensure(string key)
+        {
+            if (blocks.TryGetValue(key, out var existing)) return existing;
+            var index = Array.FindIndex(categories, item => item.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) index = categories.Length;
+            overlay.Layout.TryGetValue(key, out var oldPosition);
+            var block = new OverlayBlockConfig
+            {
+                Id = key,
+                X = oldPosition?.X ?? 0.02,
+                Y = oldPosition?.Y ?? 0.035 + index * 0.105
+            };
+            blocks[key] = block;
+            return block;
+        }
+
+        foreach (var (key, enabled) in categories)
+        {
+            if (!enabled) continue;
+            var block = Ensure(key);
+            block.Items.Add(new OverlayBlockItemConfig { Kind = "category", Value = key });
+            if (key == "fps" && overlay.ShowFrametimeGraph)
+                block.Items.Add(new OverlayBlockItemConfig { Kind = "frametime", Value = "frametime" });
+        }
+
+        foreach (var pattern in overlay.ShownSeries ?? [])
+        {
+            var key = pattern.StartsWith("Gpu", StringComparison.OrdinalIgnoreCase) ? "gpu"
+                : pattern.StartsWith("Fan", StringComparison.OrdinalIgnoreCase) ? "fans"
+                : pattern.StartsWith("Disk", StringComparison.OrdinalIgnoreCase) ? "disk"
+                : pattern.StartsWith("Cpu", StringComparison.OrdinalIgnoreCase) ? "cpu"
+                : pattern.StartsWith("Ram", StringComparison.OrdinalIgnoreCase) ? "ram"
+                : pattern.StartsWith("Network", StringComparison.OrdinalIgnoreCase) ? "network"
+                : "extras";
+            Ensure(key).Items.Add(new OverlayBlockItemConfig { Kind = "series", Value = pattern });
+        }
+
+        if ((overlay.Graphs?.Count ?? 0) > 0 || (overlay.Templates?.Count ?? 0) > 0)
+        {
+            var extras = Ensure("extras");
+            foreach (var graph in overlay.Graphs ?? [])
+                extras.Items.Add(new OverlayBlockItemConfig { Kind = "graph", Value = graph.Id });
+            foreach (var template in overlay.Templates ?? [])
+                extras.Items.Add(new OverlayBlockItemConfig { Kind = "template", Value = template.Id });
+        }
+
+        return blocks.Values.ToList();
+    }
+
     // Options cacheados: recriar por chamada invalide o cache interno de metadados
     // de reflexão do System.Text.Json e era chamado a cada Save (UI thread).
     private static readonly JsonSerializerOptions LoadOptions = new() { PropertyNameCaseInsensitive = true };
@@ -163,6 +222,14 @@ public sealed class AppConfig
             normalizedOverlayLayout[key.Trim().ToLowerInvariant()] = position;
         }
         Overlay.Layout = normalizedOverlayLayout;
+        Overlay.Graphs ??= [];
+        var graphIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var graph in Overlay.Graphs)
+            if (string.IsNullOrWhiteSpace(graph.Id) || !graphIds.Add(graph.Id)) graph.Id = Guid.NewGuid().ToString("N");
+        Overlay.Templates ??= [];
+        var templateIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var template in Overlay.Templates)
+            if (string.IsNullOrWhiteSpace(template.Id) || !templateIds.Add(template.Id)) template.Id = Guid.NewGuid().ToString("N");
         Sensors ??= new();
 
         // Exportador HTTP: porta em faixa de usuário (abaixo de 1024 costuma exigir
@@ -190,6 +257,32 @@ public sealed class AppConfig
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
             if (Overlay.ShownSeries.Count == 0) Overlay.ShownSeries = [.. defaultSeries];
+        }
+
+        if (Overlay.Blocks is null)
+        {
+            Overlay.Blocks = MigrateLegacyOverlayBlocks(Overlay);
+            Overlay.BlocksMigrated = true;
+        }
+        Overlay.Blocks.RemoveAll(block => block is null);
+        var blockIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var block in Overlay.Blocks)
+        {
+            block.Id = string.IsNullOrWhiteSpace(block.Id) || !blockIds.Add(block.Id)
+                ? Guid.NewGuid().ToString("N")
+                : block.Id.Trim();
+            block.X = double.IsFinite(block.X) ? Math.Clamp(block.X, 0, 1) : 0;
+            block.Y = double.IsFinite(block.Y) ? Math.Clamp(block.Y, 0, 1) : 0;
+            block.Items ??= [];
+            block.Items.RemoveAll(item => item is null);
+            foreach (var item in block.Items)
+            {
+                item.Kind = (item.Kind ?? "").Trim().ToLowerInvariant();
+                item.Value = (item.Value ?? "").Trim();
+                if (item.Kind is not ("category" or "series" or "graph" or "template" or "frametime") || item.Value.Length == 0)
+                    item.Kind = "invalid";
+            }
+            block.Items.RemoveAll(item => item.Kind == "invalid");
         }
 
         Overlay.Width = Math.Clamp(Overlay.Width, 140, 700);
@@ -371,6 +464,11 @@ public sealed class OverlayConfig
     /// </summary>
     public Dictionary<string, OverlayBlockPosition> Layout { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Layout configurável do editor visual. Null indica config legado ainda não migrado.</summary>
+    public List<OverlayBlockConfig>? Blocks { get; set; }
+    [JsonIgnore]
+    public bool BlocksMigrated { get; set; }
+
     /// <summary>
     /// Linhas de template do usuário (P6.6): texto livre com placeholders
     /// {Chave} / {Chave:N} resolvidos no fim do painel; ver OverlayTemplate.
@@ -400,6 +498,20 @@ public sealed class OverlayBlockPosition
     public double Y { get; set; }
 }
 
+public sealed class OverlayBlockConfig
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public double X { get; set; }
+    public double Y { get; set; }
+    public List<OverlayBlockItemConfig> Items { get; set; } = [];
+}
+
+public sealed class OverlayBlockItemConfig
+{
+    public string Kind { get; set; } = "category";
+    public string Value { get; set; } = "cpu";
+}
+
 /// <summary>
 /// Linha personalizada do OSD (P6.6): <c>text</c> é renderizado no fim do painel
 /// com placeholders resolvidos a cada ciclo — <c>{GpuMemoryTotal}</c> casa a série
@@ -410,6 +522,7 @@ public sealed class OverlayBlockPosition
 /// </summary>
 public sealed class OverlayTemplate
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Text { get; set; } = "";
 
     /// <summary>Cor da linha (#RRGGBB ou #AARRGGBB); null/válido ausente = branco padrão.</summary>
@@ -427,6 +540,7 @@ public sealed class OverlayTemplate
 /// </summary>
 public sealed class OverlayGraph
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
     /// <summary>Série monitorada: "GpuTemperature", "GpuTemperature#1", "Custom#*" ou nome amigável.</summary>
     public string Series { get; set; } = "";
 

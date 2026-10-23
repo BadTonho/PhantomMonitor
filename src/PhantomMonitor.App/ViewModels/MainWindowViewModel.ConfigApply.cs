@@ -77,36 +77,14 @@ public sealed partial class MainWindowViewModel
         var oldUpdateAutoCheck = _config.Update.AutoCheck;
         var oldUpdateBeta = _config.Update.CheckBeta;
         var oldUpdateRepository = _config.Update.Repository;
-        var oldOverlayCpu = _config.Overlay.ShowCpu;
         var oldOverlayWidth = _config.Overlay.Width;
         var oldOverlayOpacity = _config.OverlayOpacity;
         var oldOverlayFontSize = _config.Overlay.FontSize;
         var oldOverlayCompactMode = _config.Overlay.CompactMode;
-        var oldOverlayGpu = _config.Overlay.ShowGpu;
-        var oldOverlayRam = _config.Overlay.ShowRam;
-        var oldOverlayDisk = _config.Overlay.ShowDisk;
-        var oldOverlayNetwork = _config.Overlay.ShowNetwork;
-        var oldOverlayFans = _config.Overlay.ShowFans;
-        var oldOverlayMotherboard = _config.Overlay.ShowMotherboard;
-        var oldOverlayFps = _config.Overlay.ShowFps;
         var oldOverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
-        var oldOverlayShownSeries = _config.Overlay.ShownSeries?.ToList() ?? ["Gpu*", "FanSpeed*", "Disk*"];
-        var oldOverlayLayout = _config.Overlay.Layout.ToDictionary(
-            pair => pair.Key,
-            pair => new OverlayBlockPosition { X = pair.Value.X, Y = pair.Value.Y },
-            StringComparer.OrdinalIgnoreCase);
-        var newOverlayShownSeries = _overlaySeriesPatterns.Select(item => item.Pattern).ToList();
-        if (newOverlayShownSeries.Count == 0)
-        {
-            SettingsMessage = "Adicione ao menos um padrão de série ou restaure os padrões antes de salvar.";
-            return;
-        }
-        var invalidPattern = newOverlayShownSeries.FirstOrDefault(pattern => !IsValidOverlaySeriesPattern(pattern));
-        if (invalidPattern is not null)
-        {
-            SettingsMessage = $"O padrão '{invalidPattern}' é inválido.";
-            return;
-        }
+        var oldOverlayBlocks = (_config.Overlay.Blocks ?? []).Select(CloneOverlayBlock).ToList();
+        var oldOverlayGraphs = _config.Overlay.Graphs.Select(CloneOverlayGraph).ToList();
+        var oldOverlayTemplates = _config.Overlay.Templates.Select(CloneOverlayTemplate).ToList();
         var collectionWasRunning = IsRunning;
         var collectionWasPaused = IsPaused;
         var intervalChanged = newInterval.HasValue && newInterval.Value != oldInterval;
@@ -121,18 +99,10 @@ public sealed partial class MainWindowViewModel
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
             || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
         var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
-            || OverlayCompactModeSetting != oldOverlayCompactMode;
-        var overlayChanged = OverlayShowCpu != oldOverlayCpu
-            || OverlayShowGpu != oldOverlayGpu
-            || OverlayShowRam != oldOverlayRam
-            || OverlayShowDisk != oldOverlayDisk
-            || OverlayShowNetwork != oldOverlayNetwork
-            || OverlayShowFans != oldOverlayFans
-            || OverlayShowMotherboard != oldOverlayMotherboard
-            || OverlayShowFps != oldOverlayFps
-            || OverlayShowFrametimeGraph != oldOverlayShowFrametimeGraph
-            || !oldOverlayShownSeries.SequenceEqual(newOverlayShownSeries, StringComparer.OrdinalIgnoreCase)
-            || OverlayLayoutHasChanges()
+            || OverlayCompactModeSetting != oldOverlayCompactMode
+            || OverlayShowFrametimeGraph != oldOverlayShowFrametimeGraph;
+        var overlayLayoutChanged = OverlayLayoutHasChanges();
+        var overlayChanged = overlayLayoutChanged
             || overlayVisualChanged
             || overlayAppearanceChanged;
 
@@ -155,20 +125,11 @@ public sealed partial class MainWindowViewModel
         _config.Update.CheckBeta = UpdateBetaChannel;
         _config.Update.Repository = updateRepository;
         _config.Theme = ThemeIndex == 1 ? "slate" : "neptune";
-        _config.Overlay.ShowCpu = OverlayShowCpu;
-        _config.Overlay.ShowGpu = OverlayShowGpu;
-        _config.Overlay.ShowRam = OverlayShowRam;
-        _config.Overlay.ShowDisk = OverlayShowDisk;
-        _config.Overlay.ShowNetwork = OverlayShowNetwork;
-        _config.Overlay.ShowFans = OverlayShowFans;
-        _config.Overlay.ShowMotherboard = OverlayShowMotherboard;
-        _config.Overlay.ShowFps = OverlayShowFps;
-        _config.Overlay.ShowFrametimeGraph = OverlayShowFrametimeGraph;
-        _config.Overlay.ShownSeries = newOverlayShownSeries;
         _config.Overlay.Width = overlayWidth;
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
         _config.Overlay.FontSize = overlayFontSize;
         _config.Overlay.CompactMode = OverlayCompactModeSetting;
+        _config.Overlay.ShowFrametimeGraph = OverlayShowFrametimeGraph;
         CopyOverlayLayoutToConfig();
 
         if (!_config.Save(ConfigPaths.ConfigFile))
@@ -184,36 +145,22 @@ public sealed partial class MainWindowViewModel
             _config.Update.CheckBeta = oldUpdateBeta;
             _config.Update.Repository = oldUpdateRepository;
             _config.Theme = oldTheme;
-            _config.Overlay.ShowCpu = oldOverlayCpu;
-            _config.Overlay.ShowGpu = oldOverlayGpu;
-            _config.Overlay.ShowRam = oldOverlayRam;
-            _config.Overlay.ShowDisk = oldOverlayDisk;
-            _config.Overlay.ShowNetwork = oldOverlayNetwork;
-            _config.Overlay.ShowFans = oldOverlayFans;
-            _config.Overlay.ShowMotherboard = oldOverlayMotherboard;
-            _config.Overlay.ShowFps = oldOverlayFps;
-            _config.Overlay.ShowFrametimeGraph = oldOverlayShowFrametimeGraph;
-            _config.Overlay.ShownSeries = oldOverlayShownSeries;
             _config.Overlay.Width = oldOverlayWidth;
             _config.OverlayOpacity = oldOverlayOpacity;
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
-            _config.Overlay.Layout = oldOverlayLayout;
-            OverlayShowCpu = oldOverlayCpu;
-            OverlayShowGpu = oldOverlayGpu;
-            OverlayShowRam = oldOverlayRam;
-            OverlayShowDisk = oldOverlayDisk;
-            OverlayShowNetwork = oldOverlayNetwork;
-            OverlayShowFans = oldOverlayFans;
-            OverlayShowMotherboard = oldOverlayMotherboard;
-            OverlayShowFps = oldOverlayFps;
-            OverlayShowFrametimeGraph = oldOverlayShowFrametimeGraph;
-            UpdateOverlayRows(_latestSensorData);
-            LoadOverlaySeriesPatterns();
+            _config.Overlay.ShowFrametimeGraph = oldOverlayShowFrametimeGraph;
+            _config.Overlay.Blocks = oldOverlayBlocks;
+            _config.Overlay.Graphs = oldOverlayGraphs;
+            _config.Overlay.Templates = oldOverlayTemplates;
             ReloadOverlayLayoutDraft();
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
             return;
         }
+
+        _config.Overlay.BlocksMigrated = false;
+        if (overlayLayoutChanged)
+            ApplyOverlayLayoutDraft();
 
         // Fase 3 — troca de dicionário em runtime (isolada ou junto das demais
         // alterações). As views reagem pelos DynamicResource e a VM repinta os
@@ -241,7 +188,6 @@ public sealed partial class MainWindowViewModel
 
         ConfigureTelemetryExporter();
 
-        LoadOverlaySeriesPatterns();
         // Base do overlay mudou (largura/fonte/opacidade/acento): reaplica o perfil
         // em vigor sobre ela (perfis P3 — F1.3).
         OnOverlayBaseConfigChanged();

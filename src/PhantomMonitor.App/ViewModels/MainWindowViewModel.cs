@@ -97,7 +97,10 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private bool _overlayCompactModeSetting;
     private readonly ObservableCollection<OverlayMetricViewModel> _overlayRows = new();
     private readonly ObservableCollection<OverlayCanvasBlockViewModel> _overlayBlocks = new();
-    private readonly Dictionary<string, OverlayBlockPosition> _overlayLayoutDraft = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ObservableCollection<OverlayCanvasBlockViewModel> _overlayAppliedBlocks = new();
+    private readonly ObservableCollection<OverlayGraph> _overlayGraphsDraft = new();
+    private readonly ObservableCollection<OverlayTemplate> _overlayTemplatesDraft = new();
+    private readonly ObservableCollection<object> _overlayAppliedExtraRows = new();
     private double _overlayCanvasWidth = 960;
     private double _overlayCanvasHeight = 620;
     private readonly ObservableCollection<OverlaySeriesPatternViewModel> _overlaySeriesPatterns = new();
@@ -325,6 +328,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
     public ObservableCollection<OverlayMetricViewModel> OverlayRows => _overlayRows;
     public ObservableCollection<OverlayCanvasBlockViewModel> OverlayBlocks => _overlayBlocks;
+    public ObservableCollection<OverlayCanvasBlockViewModel> OverlayAppliedBlocks => _overlayAppliedBlocks;
+    public ObservableCollection<OverlayGraph> OverlayGraphsDraft => _overlayGraphsDraft;
+    public ObservableCollection<OverlayTemplate> OverlayTemplatesDraft => _overlayTemplatesDraft;
     public double OverlayCanvasWidth { get => _overlayCanvasWidth; private set => Set(ref _overlayCanvasWidth, value); }
     public double OverlayCanvasHeight { get => _overlayCanvasHeight; private set => Set(ref _overlayCanvasHeight, value); }
     public ObservableCollection<OverlaySeriesPatternViewModel> OverlaySeriesPatterns => _overlaySeriesPatterns;
@@ -419,15 +425,17 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public MainWindowViewModel()
     {
         _config = AppConfig.Load(ConfigPaths.ConfigFile);
+        _config.Normalize();
         _overlayFontEffective = _config.Overlay.FontSize;
         _overlayWidthEffective = _config.Overlay.Width;
         _overlayOpacityEffective = Math.Clamp(_config.OverlayOpacity <= 0 ? 0.85 : _config.OverlayOpacity, 0.1, 1.0);
         FollowOffsetX = _config.OverlayPosition.X;
         FollowOffsetY = _config.OverlayPosition.Y;
-        foreach (var (key, position) in _config.Overlay.Layout)
-            _overlayLayoutDraft[key] = new OverlayBlockPosition { X = position.X, Y = position.Y };
+        foreach (var graph in _config.Overlay.Graphs) _overlayGraphsDraft.Add(CloneOverlayGraph(graph));
+        foreach (var template in _config.Overlay.Templates) _overlayTemplatesDraft.Add(CloneOverlayTemplate(template));
         InitializeOverlayBlocks();
         BuildOverlayExtraRows();
+        BuildOverlayAppliedExtraRows();
         ApplyOverlayProfile(null);
         _updateIntervalText = _config.UpdateIntervalMs.ToString(CultureInfo.CurrentCulture);
         _logToCsv = _config.LogToCsv;

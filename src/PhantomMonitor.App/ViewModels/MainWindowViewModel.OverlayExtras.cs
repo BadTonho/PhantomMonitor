@@ -5,19 +5,19 @@ using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.ViewModels;
 
-// Partes "estáticas por config" do OSD que o WPF mantinha no code-behind da
-// janela (P6.6 templates + P8.5 gráficos por série): compiladas uma única vez —
-// os dois campos só mudam por edição manual do config.json (recarregar exige
-// reiniciar o app, mesma política do WPF, cuja recriação do overlay faz isso).
-// As amostras avançam a cada snapshot via UpdateOverlayExtraRows (chamado por
-// UpdateOverlayRows) e as rows são reconciliadas por identidade.
+// Compila separadamente o rascunho de prévia e as definições aplicadas no OSD.
+// Assim, alterações no editor só chegam ao overlay após salvar; as séries continuam
+// recebendo amostras ao vivo nos dois conjuntos.
 public sealed partial class MainWindowViewModel
 {
     public ObservableCollection<object> OverlayExtraRows => _overlayExtraRows;
+    public ObservableCollection<object> OverlayAppliedExtraRows => _overlayAppliedExtraRows;
     private readonly ObservableCollection<object> _overlayExtraRows = new();
 
     private readonly List<OverlayGraphRuntime> _overlayGraphs = [];
     private readonly List<OverlayTemplateRuntime> _overlayTemplates = [];
+    private readonly List<OverlayGraphRuntime> _overlayAppliedGraphs = [];
+    private readonly List<OverlayTemplateRuntime> _overlayAppliedTemplates = [];
     private string _overlayGraphConfigHash = "";
 
     private sealed class OverlayGraphRuntime
@@ -40,13 +40,24 @@ public sealed partial class MainWindowViewModel
     /// <summary>Compila graphs/templates do config (uma vez por arranque do VM).</summary>
     private void BuildOverlayExtraRows()
     {
-        var graphs = _config.Overlay.Graphs ?? [];
-        var templates = _config.Overlay.Templates ?? [];
+        BuildOverlayExtraRows(_overlayGraphsDraft, _overlayTemplatesDraft,
+            _overlayExtraRows, _overlayGraphs, _overlayTemplates);
+        _overlayGraphConfigHash = ComputeOverlayExtrasHash(_overlayGraphsDraft, _overlayTemplatesDraft);
+    }
 
-        _overlayExtraRows.Clear();
-        _overlayGraphs.Clear();
-        _overlayTemplates.Clear();
-        _overlayGraphConfigHash = ComputeOverlayExtrasHash(graphs, templates);
+    private void BuildOverlayAppliedExtraRows()
+    {
+        BuildOverlayExtraRows(_config.Overlay.Graphs, _config.Overlay.Templates,
+            _overlayAppliedExtraRows, _overlayAppliedGraphs, _overlayAppliedTemplates);
+    }
+
+    private void BuildOverlayExtraRows(IEnumerable<OverlayGraph> graphs, IEnumerable<OverlayTemplate> templates,
+        ObservableCollection<object> rows, List<OverlayGraphRuntime> graphRuntimes,
+        List<OverlayTemplateRuntime> templateRuntimes)
+    {
+        rows.Clear();
+        graphRuntimes.Clear();
+        templateRuntimes.Clear();
 
         foreach (var graph in graphs)
         {
@@ -56,13 +67,13 @@ public sealed partial class MainWindowViewModel
             var segment = segments.FirstOrDefault(s => !s.IsLiteral);
             if (segment is null) continue;
 
-            var row = new OverlayGraphRowViewModel($"#graph:{graph.Series}")
+            var row = new OverlayGraphRowViewModel($"#graph:{graph.Id}")
             {
                 MinY = graph.Min,
                 MaxY = graph.Max,
                 Height = Math.Clamp(graph.Height, 8, 120),
             };
-            _overlayGraphs.Add(new OverlayGraphRuntime
+            graphRuntimes.Add(new OverlayGraphRuntime
             {
                 Identity = row.Identity,
                 Buffer = new FrametimeBuffer(Math.Clamp(graph.Window, 30, 1200)),
@@ -70,7 +81,7 @@ public sealed partial class MainWindowViewModel
                 Segment = segment,
                 ColorHex = graph.Color,
             });
-            _overlayExtraRows.Add(row);
+            rows.Add(row);
         }
 
         foreach (var template in templates)
@@ -78,18 +89,18 @@ public sealed partial class MainWindowViewModel
             var segments = OverlayPlaceholderParser.Compile(template.Text);
             if (segments.Count == 0) continue;
 
-            var row = new OverlayTemplateRowViewModel($"#template:{template.Text}");
-            _overlayTemplates.Add(new OverlayTemplateRuntime
+            var row = new OverlayTemplateRowViewModel($"#template:{template.Id}");
+            templateRuntimes.Add(new OverlayTemplateRuntime
             {
                 Identity = row.Identity,
                 Row = row,
                 Segments = segments,
                 ColorHex = template.Color,
             });
-            _overlayExtraRows.Add(row);
+            rows.Add(row);
         }
 
-        RefreshOverlayGraphStrokes();
+        RefreshOverlayGraphStrokes(graphRuntimes, templateRuntimes);
     }
 
     /// <summary>
@@ -98,20 +109,27 @@ public sealed partial class MainWindowViewModel
     /// </summary>
     public void EnsureOverlayExtrasCurrent()
     {
-        var hash = ComputeOverlayExtrasHash(_config.Overlay.Graphs ?? [], _config.Overlay.Templates ?? []);
+        var hash = ComputeOverlayExtrasHash(_overlayGraphsDraft, _overlayTemplatesDraft);
         if (hash != _overlayGraphConfigHash)
             BuildOverlayExtraRows();
     }
 
+    private void UpdateOverlayAppliedExtraRows(SensorData? data)
+        => UpdateOverlayExtraRows(data, _overlayAppliedGraphs, _overlayAppliedTemplates);
+
     private static string ComputeOverlayExtrasHash(IEnumerable<OverlayGraph>? graphs, IEnumerable<OverlayTemplate>? templates) =>
-        string.Join("|", (graphs ?? []).Select(g => $"{g.Series};{g.Height:0.#};{g.Window};{g.Min};{g.Max};{g.Color}")
-            .Concat((templates ?? []).Select(t => $"{t.Text};{t.Color}")));
+        string.Join("|", (graphs ?? []).Select(g => $"{g.Id};{g.Series};{g.Height:0.#};{g.Window};{g.Min};{g.Max};{g.Color}")
+            .Concat((templates ?? []).Select(t => $"{t.Id};{t.Text};{t.Color}")));
 
     private void UpdateOverlayExtraRows(SensorData? data)
-    {
-        if (data is null || (_overlayGraphs.Count == 0 && _overlayTemplates.Count == 0)) return;
+        => UpdateOverlayExtraRows(data, _overlayGraphs, _overlayTemplates);
 
-        foreach (var graph in _overlayGraphs)
+    private static void UpdateOverlayExtraRows(SensorData? data, IReadOnlyList<OverlayGraphRuntime> graphs,
+        IReadOnlyList<OverlayTemplateRuntime> templates)
+    {
+        if (data is null || (graphs.Count == 0 && templates.Count == 0)) return;
+
+        foreach (var graph in graphs)
         {
             if (!OverlayPlaceholderParser.TryResolveValue(data, graph.Segment, out var value))
             {
@@ -125,7 +143,7 @@ public sealed partial class MainWindowViewModel
             graph.Row.Samples = graph.Buffer.ToArray().Select(x => (double)x).ToArray();
         }
 
-        foreach (var template in _overlayTemplates)
+        foreach (var template in templates)
         {
             if (!OverlayPlaceholderParser.TryRender(data, template.Segments, out var text))
             {
@@ -141,9 +159,16 @@ public sealed partial class MainWindowViewModel
     /// <summary>Redesenha as strokes dos gráficos (acento do config/perfil mudou).</summary>
     private void RefreshOverlayGraphStrokes()
     {
-        foreach (var graph in _overlayGraphs)
+        RefreshOverlayGraphStrokes(_overlayGraphs, _overlayTemplates);
+        RefreshOverlayGraphStrokes(_overlayAppliedGraphs, _overlayAppliedTemplates);
+    }
+
+    private void RefreshOverlayGraphStrokes(IReadOnlyList<OverlayGraphRuntime> graphs,
+        IReadOnlyList<OverlayTemplateRuntime> templates)
+    {
+        foreach (var graph in graphs)
             graph.Row.Stroke = ResolveOverlayLineBrush(graph.ColorHex);
-        foreach (var template in _overlayTemplates)
+        foreach (var template in templates)
             template.Row.TextBrush = template.ColorHex is { Length: > 0 } hex
                 ? OverlayBrushHelper.Resolve(hex, ResolveBrush("TextPrimaryBrush"))
                 : ResolveBrush("TextPrimaryBrush");

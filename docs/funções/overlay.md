@@ -6,19 +6,21 @@
 
 O app único oferece o overlay flutuante independente da janela principal. Ele é controlado por `showOverlay` e pelo botão **Mostrar/Ocultar overlay** da visão geral. Cada categoria é uma janela transparente independente, o que permite posicionar os blocos sem cobrir toda a tela com uma janela nativa. Se um bloco for fechado pelo sistema, o overlay inteiro é desativado e pode ser reaberto pelo dashboard.
 
-O botão **Abrir editor do overlay** abre o editor dedicado: um canvas escuro com grade e prévia ao vivo à esquerda, e os controles na lateral direita. Arraste CPU, GPU, RAM, disco, rede, ventoinhas, placa-mãe, FPS/frametime e o bloco de gráficos/templates para reposicioná-los. A posição é normalizada entre 0 e 1 em relação à janela monitorada no Windows ou à tela principal no Linux. Configurações sem posições salvas começam em uma coluna vertical. A lateral reúne categorias, largura (140–700 px), opacidade (10–100%), fonte (8–20 pt), modo compacto, gráfico de frametime e whitelist de séries por instância. **Salvar e aplicar** persiste o layout e aplica as alterações sem reiniciar a coleta.
+O botão **Abrir editor do overlay** abre um canvas escuro com grade e prévia ao vivo, sem painel lateral. Clique com o botão direito em uma área vazia para criar um bloco; arraste com o botão esquerdo para movê-lo; dê duplo clique para escolher várias categorias, séries individuais ou padrões, gráficos e templates. O menu do botão direito sobre um bloco permite editar ou removê-lo. Gráficos e templates podem ser criados e editados no seletor. As alterações ficam como rascunho: **Salvar e aplicar** grava e atualiza o overlay em execução; fechar o editor descarta as mudanças não salvas.
 
-A opção **Gráfico de frametime no overlay** controla a sparkline dourada exibida no bloco JOGO quando FPS/frametime está ativo e há pelo menos duas amostras. Ela mede 24 px no modo normal e 18 px no compacto, acompanha as amostras e congela durante a pausa.
+As posições de `overlay.blocks` são normalizadas entre 0 e 1 em relação à janela monitorada no Windows ou à área disponível no Linux. Configurações antigas sem `blocks` são migradas preservando categorias ativadas, séries por instância, gráficos, templates e posições existentes; quando não há posições, os blocos começam em uma coluna vertical. Instalações novas também começam com os blocos padrão atuais. A largura (140–700 px), opacidade (10–100%), fonte (8–20 pt) e modo compacto são ajustes globais na página **Configurações → Overlay flutuante**.
+
+O item **Gráfico de frametime** pode ser combinado com outros conteúdos em qualquer bloco. A sparkline dourada aparece quando há pelo menos duas amostras; mede 24 px no modo normal e 18 px no compacto, acompanha as amostras e congela durante a pausa.
 
 As linhas do overlay são renderizadas como **blocos por hardware** (mesma ideia de um OSD estilo editor de jogos): rótulo pequeno no topo (`CPU`, `GPU`, `RAM`, `DISCO`, `REDE`, `VENTOINHA`, `PLACA`, `JOGO` ou a chave da série por instância) e o valor em destaque monospace abaixo, com quebra de linha para conteúdos longos; a sparkline de frametime vive dentro do bloco JOGO.
 
-A prévia acompanha largura, opacidade, fonte, modo compacto e categorias enquanto os campos são editados. Séries por instância ficam agrupadas com sua categoria; gráficos e templates ficam juntos no bloco **Gráficos e templates**. Larguras inválidas ou fora de 140–700 px fazem a prévia usar o último valor aplicado e exibem um aviso. Perfis por aplicativo ativos ainda podem substituir os valores globais no overlay real.
+O conteúdo e a posição de cada bloco são independentes; séries, gráficos e templates podem ser combinados com categorias no mesmo bloco. O perfil por aplicativo ainda pode substituir a aparência global e filtrar as séries por instância no overlay real. No Windows, o overlay acompanha a janela ativa e mantém clique-through; no Linux, posição inicial e sobreposição em tela cheia dependem do compositor.
 
-Na lista **Séries por instância**, selecione uma chave detectada para adicioná-la como alvo exato ou digite uma chave/padrão (`Gpu*`, `*Total`, `CpuTemperature#*`). A lista funciona como whitelist: qualquer padrão correspondente inclui a série. Padrões sem correspondência permanecem salvos para sensores que apareçam depois. Remova entradas individualmente ou use **Restaurar padrões** (`Gpu*`, `FanSpeed*`, `Disk*`). Não é permitido salvar uma lista vazia porque o `AppConfig.Normalize()` a substituiria pelos padrões. As séries são ordenadas por família, incluem chave e rótulo do hardware, exibem zero quando a leitura está presente e são limitadas a 24 linhas; as linhas canônicas das categorias não são repetidas.
+No seletor de conteúdo do bloco, escolha uma série detectada ou adicione uma chave/padrão (`Gpu*`, `*Total`, `CpuTemperature#*`). Padrões sem correspondência continuam no bloco e passam a exibir dados quando a série aparecer. A configuração antiga `overlay.shownSeries` é preservada para compatibilidade e migra para os itens de série dos blocos na primeira gravação. As séries são ordenadas por família, incluem chave e rótulo do hardware, exibem zero quando a leitura está presente e são limitadas a 24 linhas por bloco.
 
 O overlay recebe os snapshots do monitor; valores indisponíveis aparecem como `—`, e a pausa mantém a última leitura. As linhas são reconciliadas por identidade e permanecem agrupadas em blocos independentes. No **Windows**, cada bloco é clique-through (`WS_EX_TRANSPARENT`) e acompanha a janela em foco a cada 30 ms; os perfis e `overlayPosition` deslocam o conjunto. No **Linux**, os blocos são janelas individuais com Topmost, e a posição inicial e a sobreposição em tela cheia dependem do compositor. O matcher de perfis continua inativo no Linux; templates e gráficos são lidos no arranque.
 
-O app único oferece o OSD avançado descrito abaixo, incluindo templates, séries por instância, perfis por aplicativo, gráficos, clique-through no Windows e acento por perfil (o editor visual é a janela *Editor do overlay flutuante*; o editor do WPF foi aposentado na Fase 2; o pin da bandeja veio na F1.5).
+O app único oferece o OSD avançado descrito abaixo, incluindo templates, séries por instância, perfis por aplicativo, gráficos, clique-through no Windows e acento por perfil. A composição de blocos, séries, gráficos e templates pode ser feita na janela *Editor do overlay flutuante*; perfis por aplicativo continuam em `config.json`.
 
 Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual clássico de OSD de jogos. É compacta, clicável (click-through), sem impacto visual excessivo sobre os jogos e sempre visível no topo.
 
@@ -46,7 +48,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
   - `CPU1..` — temperatura, uso e clock por núcleo (desligado por padrão, poluído em CPUs com 32 núcleos);
   - `MB1..`, `VRM1..`, `RL1..` — temperaturas por sensor, zonas VRM e rails de tensão;
   - `NET1..` — rede por interface com velocidade e totais da sessão.
-  - Filtrada pela whitelist `overlay.shownSeries` (wildcards, ver [configuracao.md](configuracao.md)), ordenadas por família (GPU → ventoinhas → discos → RAM → CPU → rede → bateria → demais famílias: placa-mãe/VRM/rails/outros) e limitadas a 24 linhas para não explodir o OSD em máquinas cheias; hardware que some esconde a linha até reenumerar.
+  - Filtradas pelos itens de série dos blocos (perfis podem aplicar sua whitelist `shownSeries`), ordenadas por família (GPU → ventoinhas → discos → RAM → CPU → rede → bateria → demais famílias: placa-mãe/VRM/rails/outros) e limitadas a 24 linhas por bloco; hardware que some esconde a linha até reenumerar.
 - **Estatísticas de FPS:** Sublinha compacta com `AVG`, `1% Low`, `0.1% Low` e `MAX` (quebra em linha automaticamente se não couber)
 - **Gráfico de Frametime Slim:** Mini-gráfico de 24px (18px no modo compacto) com linha guia de 60 FPS (16.6ms) para detecção instantânea de stuttering
 - **Tipografia:** Fonte monoespaçada (`Consolas / Cascadia Mono`) para evitar que os números fiquem oscilando ou pulando de posição na tela
@@ -54,11 +56,11 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
 
 ## Editor visual do overlay
 
-O editor atual oferece canvas com grade à esquerda e painel de personalização rolável à direita. As posições dos blocos são proporções `x`/`y` de 0 a 1; no Windows usam a janela monitorada como referência e no Linux usam a tela principal. Ao arrastar um bloco, ele e as séries por instância da mesma família se movem juntos. Gráficos e templates permanecem juntos em um bloco adicional. Configurações antigas sem `layout` usam a disposição vertical padrão até o primeiro movimento; ao salvar, as posições padrão e alteradas são persistidas.
+O editor usa um canvas com grade e prévia ao vivo. Clique direito em uma área vazia cria um bloco; botão esquerdo arrasta; duplo clique abre o seletor multi-item; botão direito sobre um bloco abre as ações de edição e remoção. As posições normalizadas `x`/`y` vão de 0 a 1 e usam a janela monitorada como referência no Windows e a área disponível no Linux. Conteúdo e posição ficam em rascunho até **Salvar e aplicar**. Configurações antigas são migradas de `layout` e demais opções legadas para `blocks`; sem posições salvas, os blocos começam na ordem vertical padrão.
 
 ## Configuração
 
-Configurado via `config.json` (a página **Configurações → Overlay flutuante** edita os campos principais):
+Configuração atual por `overlay.blocks` e aparência global na página **Configurações → Overlay flutuante**. Campos antigos permanecem para compatibilidade e migração:
 - `width` - Largura da janela
 - `showCpu/Gpu/Ram/Disk/Fps/ShowFrametimeGraph` - Alternar visibilidade de cada linha
 - `showNetwork` - Linha de rede (`NET`) com ↓/↑ (oculta até o primeiro dado real)
@@ -66,6 +68,7 @@ Configurado via `config.json` (a página **Configurações → Overlay flutuante
 - `showMotherboard` - Linha de placa-mãe (`MB`) com a maior temperatura (oculta até o primeiro dado real)
 - `shownSeries` - Whitelist (padrões wildcard) das séries por instância; padrão `["Gpu*", "FanSpeed*", "Disk*"]` (ver seção "Linhas por Instância" acima)
 - `layout` - Mapa de posições normalizadas dos blocos (`cpu`, `gpu`, `ram`, `disk`, `network`, `fans`, `motherboard`, `fps`, `extras`), cada uma com `x` e `y` entre 0 e 1.
+- `blocks` - Blocos com `{ id, x, y, items: [{ kind, value }] }`; `kind` aceita categoria, série, gráfico, template ou frametime. Vários itens podem ser reunidos em cada bloco.
 - `compactMode` - Modo compacto: reduz paddings, espaçamento das linhas e a altura do gráfico de frametime
 - `accentColor` - Cor de destaque (hex) aplicada à linha do gráfico de frametime e ao contorno do painel
 - `fontSize` - Tamanho base da fonte do OSD em pt (8–20; sublinhas de detalhes/estatísticas usam fonte −2 pt)
@@ -180,9 +183,8 @@ OSD" das suítes de referência):
   circular preserva o histórico (não zera o gráfico por um ciclo caído).
 - **Eixo:** auto min/max pela janela atual, com guias tracejadas nos extremos —
   os mesmos guias do frametime; valores fixos dão escala estável (benchmark).
-- **Edição:** via `config.json` (a leitura é feita no arranque — novas entradas
-  exigem reiniciar o app; o Editor Visual do WPF aposentado aplicava
-  recriando o overlay). Teto de
+- **Edição:** no seletor de conteúdo do editor do overlay; alterações entram
+  em vigor depois de **Salvar e aplicar**. Teto de
   **12 gráficos** (normalização descarta o excesso).
 - **Porta do Avalonia:** cada entrada vira sparkline persistente com buffer
   circular próprio (`FrametimeBuffer`; amostra empurrada só quando a série

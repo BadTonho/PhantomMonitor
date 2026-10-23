@@ -1,48 +1,38 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia;
 using PhantomMonitor.App.ViewModels;
 
 namespace PhantomMonitor.App.Views;
 
-/// <summary>
-/// Janela dedicada ao editor do overlay flutuante: prévia ao vivo + todos os
-/// controles (largura, opacidade, fonte, modo compacto, categorias, frametime e
-/// whitelist de séries por instância). Compartilha o mesmo MainWindowViewModel
-/// da janela principal; "Salvar e aplicar" usa o mesmo SaveSettings das
-/// Configurações.
-/// </summary>
 public partial class OverlayEditorWindow : Window
 {
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     private OverlayCanvasBlockViewModel? _dragBlock;
     private Point _dragOffset;
 
-    public OverlayEditorWindow()
+    public OverlayEditorWindow() => InitializeComponent();
+
+    private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        InitializeComponent();
-    }
-
-    private void OnSaveSettingsClick(object? sender, RoutedEventArgs e) => ViewModel.SaveSettings();
-
-    private void OnAddDetectedOverlaySeriesClick(object? sender, RoutedEventArgs e) => ViewModel.AddDetectedOverlaySeries();
-
-    private void OnAddOverlaySeriesPatternClick(object? sender, RoutedEventArgs e) => ViewModel.AddManualOverlaySeriesPattern();
-
-    private void OnRestoreOverlaySeriesDefaultsClick(object? sender, RoutedEventArgs e) => ViewModel.RestoreDefaultOverlaySeriesPatterns();
-
-    private void OnRemoveOverlaySeriesPatternClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: ViewModels.OverlaySeriesPatternViewModel pattern })
-            ViewModel.RemoveOverlaySeriesPattern(pattern);
+        if (!e.GetCurrentPoint(EditorBlockCanvas).Properties.IsRightButtonPressed) return;
+        var point = e.GetPosition(EditorBlockCanvas);
+        var maxX = Math.Max(1, EditorBlockCanvas.Width - ViewModel.OverlayPreviewWidth);
+        var maxY = Math.Max(1, EditorBlockCanvas.Height - 90);
+        ViewModel.AddOverlayBlock(point.X / maxX, point.Y / maxY);
+        e.Handled = true;
     }
 
     private void OnBlockPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed
-            || sender is not Control { DataContext: OverlayCanvasBlockViewModel block } control)
+        if (sender is not Control { DataContext: OverlayCanvasBlockViewModel block } control) return;
+        if (e.GetCurrentPoint(control).Properties.IsRightButtonPressed)
+        {
+            e.Handled = true;
             return;
+        }
+        if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed) return;
 
         _dragBlock = block;
         var point = e.GetPosition(EditorBlockCanvas);
@@ -72,8 +62,41 @@ public partial class OverlayEditorWindow : Window
         e.Handled = true;
     }
 
-    private void OnBlockPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    private void OnBlockPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) => _dragBlock = null;
+
+    private async void OnBlockDoubleTapped(object? sender, TappedEventArgs e)
     {
-        _dragBlock = null;
+        if (sender is not Control { DataContext: OverlayCanvasBlockViewModel block }) return;
+        e.Handled = true;
+        await EditBlockAsync(block);
+    }
+
+    private async void OnEditBlockContentClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { DataContext: OverlayCanvasBlockViewModel block })
+            await EditBlockAsync(block);
+    }
+
+    private async Task EditBlockAsync(OverlayCanvasBlockViewModel block)
+    {
+        var dialog = new OverlayBlockContentDialog(ViewModel, block);
+        if (await dialog.ShowDialog<bool>(this))
+            ViewModel.SetOverlayBlockDefinition(block, dialog.Result, dialog.ResultGraphs, dialog.ResultTemplates);
+    }
+
+    private void OnRemoveBlockClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { DataContext: OverlayCanvasBlockViewModel block })
+            ViewModel.RemoveOverlayBlock(block);
+    }
+
+    private void OnSaveSettingsClick(object? sender, RoutedEventArgs e) => ViewModel.SaveSettings();
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+            viewModel.CancelOverlayLayoutDraft();
+        base.OnClosed(e);
     }
 }

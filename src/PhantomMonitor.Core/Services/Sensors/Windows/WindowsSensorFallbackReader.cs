@@ -3,15 +3,51 @@ using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using PhantomMonitor.Models;
-using LibreHardwareMonitor.Hardware;
 using SType = PhantomMonitor.Models.SensorType;
 
 namespace PhantomMonitor.Services;
 
-public sealed partial class HardwareMonitorService
+[SupportedOSPlatform("windows")]
+internal sealed class WindowsSensorFallbackReader : IDisposable
 {
-    private void ApplyCpuClockFallback(SensorData data, List<string> debugInfo)
+    private static readonly TimeSpan WmiTempInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan BatteryInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan WheaInterval = TimeSpan.FromSeconds(10);
+    private bool _cpuClockFallbackWarningLogged;
+    private DateTime _lastWmiTemp = DateTime.MinValue;
+    private double _cachedWmiTemp;
+    private PerformanceCounter? _ramCounter;
+    private readonly HashSet<string> _unsupportedWmiClasses = new(StringComparer.OrdinalIgnoreCase);
+    private BatterySnapshot? _cachedBattery;
+    private DateTime _lastBatteryRead = DateTime.MinValue;
+    private DateTime? _wheaSessionStart;
+    private int _wheaSessionCount;
+    private DateTime _lastWheaRead = DateTime.MinValue;
+
+    public void StartSession() => _wheaSessionStart = DateTime.Now;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ProcessorPowerInformation
+    {
+        public uint Number;
+        public uint MaxMhz;
+        public uint CurrentMhz;
+        public uint MhzLimit;
+        public uint MaxIdleState;
+        public uint CurrentIdleState;
+    }
+
+    [DllImport("PowrProf.dll", EntryPoint = "CallNtPowerInformation")]
+    private static extern int CallNtPowerInformation(int informationLevel, IntPtr inputBuffer, int inputBufferLength,
+        [Out] ProcessorPowerInformation[] outputBuffer, int outputBufferLength);
+
+    [DllImport("kernel32.dll", EntryPoint = "GetActiveProcessorCount")]
+    private static extern uint GetActiveProcessorCount(ushort groupNumber);
+
+    private sealed record BatterySnapshot(double Level, double Voltage, double Power, double Wear, double AcPower);
+    internal void ApplyCpuClockFallback(SensorData data, List<string> debugInfo)
     {
         if (data.Values.TryGetValue(SType.CpuClock, out var clock) && double.IsFinite(clock) && clock > 0)
             return;
@@ -54,7 +90,7 @@ public sealed partial class HardwareMonitorService
         debugInfo.Add($"[CPU] Clock aproximado indisponível: {message}");
     }
 
-    private void ApplyCpuTempFallback(SensorData data, List<string> debugInfo)
+    internal void ApplyCpuTempFallback(SensorData data, List<string> debugInfo)
     {
         if (data.Values.ContainsKey(SType.CpuTemperature)) return;
 
@@ -87,7 +123,7 @@ public sealed partial class HardwareMonitorService
         }
     }
 
-    private void ApplyRamFallbacks(SensorData data, List<string> debugInfo)
+    internal void ApplyRamFallbacks(SensorData data, List<string> debugInfo)
     {
         // LibreHardwareMonitor expõe Memory Used/Available em GB.
         if (data.Values.TryGetValue(SType.RamUsed, out var used) &&
@@ -140,7 +176,7 @@ public sealed partial class HardwareMonitorService
         }
     }
 
-    private void ReadBattery(SensorData data, List<string> debugInfo)
+    internal void ReadBattery(SensorData data, List<string> debugInfo)
     {
         if (DateTime.UtcNow - _lastBatteryRead >= BatteryInterval)
         {
@@ -279,7 +315,7 @@ public sealed partial class HardwareMonitorService
 
     /// <summary>Propriedade WMI tolerante: propriedade ausente do driver devolve fallback (não lança).</summary>
 
-    private static double WmiProp(ManagementBaseObject obj, string name, double fallback = 0)
+    internal static double WmiProp(ManagementBaseObject obj, string name, double fallback = 0)
     {
         try
         {
@@ -293,7 +329,7 @@ public sealed partial class HardwareMonitorService
         return fallback;
     }
 
-    private static object? WmiValue(ManagementBaseObject obj, string name)
+    internal static object? WmiValue(ManagementBaseObject obj, string name)
     {
         try { return obj.Properties[name]?.Value; }
         catch { return null; }
@@ -324,7 +360,7 @@ public sealed partial class HardwareMonitorService
     /// eventos por consulta (log gigante/repasse de hardware antigo).
     /// </summary>
 
-    private void ReadWheaErrors(SensorData data, List<string> debugInfo)
+    internal void ReadWheaErrors(SensorData data, List<string> debugInfo)
     {
         if (DateTime.UtcNow - _lastWheaRead < WheaInterval)
         {
@@ -426,5 +462,5 @@ public sealed partial class HardwareMonitorService
         return (0, 0);
     }
 
-    // ---------- Mapeamento de sensores ----------
+    public void Dispose() => _ramCounter?.Dispose();
 }

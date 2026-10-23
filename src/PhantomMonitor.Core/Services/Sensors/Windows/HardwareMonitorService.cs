@@ -1,11 +1,3 @@
-using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
-using System.Collections;
-using System.Globalization;
-using System.IO;
-using System.Management;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using LibreHardwareMonitor.Hardware;
 using PhantomMonitor.Models;
@@ -16,11 +8,8 @@ using SType = PhantomMonitor.Models.SensorType;
 namespace PhantomMonitor.Services;
 
 [SupportedOSPlatform("windows")]
-public sealed partial class HardwareMonitorService : ISensorService
+public sealed class HardwareMonitorService : ISensorService
 {
-    private static readonly TimeSpan WmiTempInterval = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan GpuProcessInterval = TimeSpan.FromSeconds(3);
-    private static readonly Regex GpuEngineRegex = new(@"pid_(\d+)_.*engtype_(.+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly SType[] GpuAvailabilityTypes =
     [
         SType.GpuCore,
@@ -63,41 +52,15 @@ public sealed partial class HardwareMonitorService : ISensorService
     private double _netUpSessionBytes;
     private double _netDownSessionBytes;
 
-    // Fallbacks e caches (evitam consultas WMI pesadas a cada ciclo)
-    private PerformanceCounter? _ramCounter;
-    private DateTime _lastWmiTemp = DateTime.MinValue;
-    private double _cachedWmiTemp;
-    private DateTime _lastGpuProcesses = DateTime.MinValue;
-    private List<GpuProcessInfo> _cachedGpuProcesses = [];
-    private readonly Dictionary<int, string> _pidNames = [];
-    private readonly HashSet<string> _unsupportedWmiClasses = new(StringComparer.OrdinalIgnoreCase);
-
-    // Bateria (P6.4): leitura WMI a cada 10 s é mais que suficiente — carga/tensão
-    // mudam devagar, e a consulta atravessa WMI COM, que custa mais que o ciclo.
-    private BatterySnapshot? _cachedBattery;
-    private DateTime _lastBatteryRead = DateTime.MinValue;
-    private static readonly TimeSpan BatteryInterval = TimeSpan.FromSeconds(10);
-
     // Sensores customizados (fórmulas do usuário): avaliados no fim de cada snapshot.
     private readonly CustomSensorEngine? _customSensors;
 
     // Ajuste por série (P9.1): cadência de amostragem + suavização antes das estatísticas.
     private readonly SensorTuningEngine? _sensorTuning;
 
-    // WHEA (paridade HWiNFO): contagem de erros de hardware desde o início da sessão.
-    // Consulta ao log de eventos é direção reversa com early-break (a assinatura do
-    // log é estável; reler tudo a cada ciclo encheria buffers desnecessariamente).
-    private DateTime? _wheaSessionStart;
-    private int _wheaSessionCount;
-    private DateTime _lastWheaRead = DateTime.MinValue;
-    private static readonly TimeSpan WheaInterval = TimeSpan.FromSeconds(10);
-
-    // Identidade dos monitores (EDID via root\wmi): cache de 60 s — painéis/slot
-    // de monitor não mudam a cada ciclo, e a consulta atravessa WMI COM por fullscreen.
-    private List<MonitorInfo> _cachedMonitors = [];
-    private DateTime _lastMonitorsRead = DateTime.MinValue;
-    private static readonly TimeSpan MonitorsInterval = TimeSpan.FromSeconds(60);
-    private bool _monitorWmiFailureLogged;
+    private readonly WindowsGpuProcessReader _gpuProcessReader = new();
+    private readonly WindowsSensorFallbackReader _sensorFallbackReader = new();
+    private readonly WindowsMonitorInventoryReader _monitorInventoryReader = new();
 
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
@@ -138,7 +101,7 @@ public sealed partial class HardwareMonitorService : ISensorService
             _computer.Open();
             _fpsMonitor.Start();
             IsRunning = true;
-            _wheaSessionStart = DateTime.Now; // EventLogReader.TimeCreated é hora local
+            _sensorFallbackReader.StartSession();
             _timer.Change(0, _updateIntervalMs);
         }
     }
@@ -226,15 +189,15 @@ public sealed partial class HardwareMonitorService : ISensorService
 
         AppendGpuAvailabilityDiagnostics(data, debugInfo);
 
-        ApplyCpuClockFallback(data, debugInfo);
-        ApplyCpuTempFallback(data, debugInfo);
-        ApplyRamFallbacks(data, debugInfo);
-        ReadBattery(data, debugInfo);
-        ReadWheaErrors(data, debugInfo);
+        _sensorFallbackReader.ApplyCpuClockFallback(data, debugInfo);
+        _sensorFallbackReader.ApplyCpuTempFallback(data, debugInfo);
+        _sensorFallbackReader.ApplyRamFallbacks(data, debugInfo);
+        _sensorFallbackReader.ReadBattery(data, debugInfo);
+        _sensorFallbackReader.ReadWheaErrors(data, debugInfo);
 
-        data.Monitors = GetMonitors();
+        data.Monitors = _monitorInventoryReader.GetMonitors();
 
-        data.GpuProcesses = GetGpuProcesses();
+        data.GpuProcesses = _gpuProcessReader.GetGpuProcesses();
 
         // Totais de rede da sessão: acumula velocidade observada x tempo desde a amostra anterior.
         if (_lastNetSampleUtc is { } last && data.GetValue(SType.NetworkUp) + data.GetValue(SType.NetworkDown) > 0)
@@ -367,44 +330,6 @@ public sealed partial class HardwareMonitorService : ISensorService
         reported.Add(metric);
     }
 
-    // ---------- Fallbacks ----------
-
-    private bool _cpuClockFallbackWarningLogged;
-
-    /// <summary>
-    /// Clock geral aproximado via Windows quando o LHM não expõe frequência positiva.
-    /// CurrentMhz acompanha o limite máximo multiplicado pelo throttling atual; não é
-    /// uma leitura por núcleo e nunca preenche as séries CpuClock#i.
-    /// </summary>
-#pragma warning disable CS0649 // O Windows preenche o buffer retornado por CallNtPowerInformation.
-    private struct ProcessorPowerInformation
-    {
-        public uint Number;
-        public uint MaxMhz;
-        public uint CurrentMhz;
-        public uint MhzLimit;
-        public uint MaxIdleState;
-        public uint CurrentIdleState;
-    }
-#pragma warning restore CS0649
-
-    [DllImport("PowrProf.dll", EntryPoint = "CallNtPowerInformation")]
-    private static extern int CallNtPowerInformation(int informationLevel, IntPtr inputBuffer, int inputBufferLength,
-        [Out] ProcessorPowerInformation[] outputBuffer, int outputBufferLength);
-
-    [DllImport("kernel32.dll", EntryPoint = "GetActiveProcessorCount")]
-    private static extern uint GetActiveProcessorCount(ushort groupNumber);
-
-    private sealed record BatterySnapshot(double Level, double Voltage, double Power, double Wear, double AcPower);
-
-    /// <summary>
-    /// Bateria (P6.4): só publica séries quando HÁ bateria (notebook/UPS) — desktop fica
-    /// sem nenhuma série da família BAT. Fontes em cascata: `root\WMI` (BatteryStatus:
-    /// tensão/potência/AC; BatteryFullChargedCapacity + BatteryStaticData: desgaste) e
-    /// `Win32_Battery` (nível estimado + resultado de respatilha para tensão/desgaste).
-    /// Consultas são a cada 10 s; `SELECT *` com acesso defensivo às propriedades porque
-    /// drivers de bateria variam o que expõem.
-    /// </summary>
     private static void Put(SensorData data, SType type, double val, string label)
     {
         data.Values[type] = val;
@@ -785,7 +710,7 @@ public sealed partial class HardwareMonitorService : ISensorService
             _disposed = true;
             _timer.Dispose();
             _fpsMonitor.Dispose();
-            _ramCounter?.Dispose();
+            _sensorFallbackReader.Dispose();
         }
     }
 }

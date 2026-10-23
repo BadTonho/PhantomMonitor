@@ -6,7 +6,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 
 ## Funcionalidades
 
-No Core, o serviço fica em `Services/Sensors/Windows/`; fallbacks WMI, identificação de monitores e consulta de processos da GPU estão em arquivos parciais da mesma classe para manter a coordenação e o estado compartilhado.
+No Core, o serviço fica em `Services/Sensors/Windows/` e coordena leitores internos dedicados a fallbacks WMI, identidade de monitores e processos que usam a GPU.
 
 - Leitura de temperatura, uso, clock, voltagem e potência da CPU
 - Leitura de temperatura, uso, clock e potência da GPU

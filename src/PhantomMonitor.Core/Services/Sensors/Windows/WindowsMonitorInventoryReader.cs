@@ -1,17 +1,21 @@
-using System.Diagnostics;
 using System.Collections;
 using System.Globalization;
 using System.Management;
 using System.Text;
+using System.Runtime.Versioning;
 using PhantomMonitor.Models;
-using LibreHardwareMonitor.Hardware;
-using SType = PhantomMonitor.Models.SensorType;
 
 namespace PhantomMonitor.Services;
 
-public sealed partial class HardwareMonitorService
+[SupportedOSPlatform("windows")]
+internal sealed class WindowsMonitorInventoryReader
 {
-    private List<MonitorInfo> GetMonitors()
+    private static readonly TimeSpan MonitorsInterval = TimeSpan.FromSeconds(60);
+    private List<MonitorInfo> _cachedMonitors = [];
+    private DateTime _lastMonitorsRead = DateTime.MinValue;
+    private bool _monitorWmiFailureLogged;
+
+    internal List<MonitorInfo> GetMonitors()
     {
         if (DateTime.UtcNow - _lastMonitorsRead < MonitorsInterval)
             return _cachedMonitors;
@@ -31,15 +35,15 @@ public sealed partial class HardwareMonitorService
                 {
                     using (obj)
                     {
-                        var instance = WmiValue(obj, "InstanceName")?.ToString() ?? "";
+                        var instance = WindowsSensorFallbackReader.WmiValue(obj, "InstanceName")?.ToString() ?? "";
                         if (instance.Length == 0) continue;
 
-                        var hCm = WmiProp(obj, "MaxHorizontalImageSize");
-                        var vCm = WmiProp(obj, "MaxVerticalImageSize");
+                        var hCm = WindowsSensorFallbackReader.WmiProp(obj, "MaxHorizontalImageSize");
+                        var vCm = WindowsSensorFallbackReader.WmiProp(obj, "MaxVerticalImageSize");
                         var inches = hCm > 0 && vCm > 0
                             ? Math.Ceiling(Math.Sqrt(hCm * hCm + vCm * vCm) / 2.54 * 10.0) / 10.0
                             : 0.0;
-                        var isPrimary = WmiProp(obj, "VideoInputType", 0) % 2 == 1;
+                        var isPrimary = WindowsSensorFallbackReader.WmiProp(obj, "VideoInputType", 0) % 2 == 1;
                         sizes[instance] = (inches, isPrimary);
                     }
                 }
@@ -54,20 +58,20 @@ public sealed partial class HardwareMonitorService
                 {
                     using (obj)
                     {
-                        if (WmiProp(obj, "Active", 1) == 0) continue; // monitor "fantasma" no registro
+                        if (WindowsSensorFallbackReader.WmiProp(obj, "Active", 1) == 0) continue; // monitor "fantasma" no registro
 
-                        var instance = WmiValue(obj, "InstanceName")?.ToString() ?? "";
+                        var instance = WindowsSensorFallbackReader.WmiValue(obj, "InstanceName")?.ToString() ?? "";
                         var info = new MonitorInfo
                         {
                             InstanceName = instance,
-                            Manufacturer = DecodeEdidString(WmiValue(obj, "ManufacturerName")),
+                            Manufacturer = DecodeEdidString(WindowsSensorFallbackReader.WmiValue(obj, "ManufacturerName")),
                             Model = DecodeUserFriendlyName(obj),
-                            ProductCode = DecodeProductCode(WmiValue(obj, "ProductCodeID")),
-                            Serial = DecodeEdidString(WmiValue(obj, "SerialNumberID")),
+                            ProductCode = DecodeProductCode(WindowsSensorFallbackReader.WmiValue(obj, "ProductCodeID")),
+                            Serial = DecodeEdidString(WindowsSensorFallbackReader.WmiValue(obj, "SerialNumberID")),
                             DiagonalInches = sizes.TryGetValue(instance, out var size) ? size.In : 0.0,
                             Primary = sizes.TryGetValue(instance, out var size2) && size2.Primary,
-                            WeekOfManufacture = (int)WmiProp(obj, "WeekOfManufacture"),
-                            YearOfManufacture = (int)WmiProp(obj, "YearOfManufacture")
+                            WeekOfManufacture = (int)WindowsSensorFallbackReader.WmiProp(obj, "WeekOfManufacture"),
+                            YearOfManufacture = (int)WindowsSensorFallbackReader.WmiProp(obj, "YearOfManufacture")
                         };
                         result.Add(info);
                     }
@@ -115,7 +119,7 @@ public sealed partial class HardwareMonitorService
     {
         try
         {
-            var name = WmiValue(obj, "UserFriendlyName") switch
+            var name = WindowsSensorFallbackReader.WmiValue(obj, "UserFriendlyName") switch
             {
                 char[] chars => (object?)chars,
                 string str => str,
@@ -123,7 +127,7 @@ public sealed partial class HardwareMonitorService
             };
             if (name is char[] array)
             {
-                var length = (int)WmiProp(obj, "UserFriendlyNameLength");
+                var length = (int)WindowsSensorFallbackReader.WmiProp(obj, "UserFriendlyNameLength");
                 var sb = new StringBuilder(length > 0 && length <= array.Length ? length : array.Length);
                 foreach (var c in array)
                 {
@@ -135,7 +139,7 @@ public sealed partial class HardwareMonitorService
             }
 
             // Painel sem UserFriendlyName (alguns laptops/DUMY devices): usa o product code.
-            var code = DecodeProductCode(WmiValue(obj, "ProductCodeID"));
+            var code = DecodeProductCode(WindowsSensorFallbackReader.WmiValue(obj, "ProductCodeID"));
             return code.Length > 0 ? code : "";
         }
         catch

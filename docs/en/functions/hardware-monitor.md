@@ -6,7 +6,7 @@
 
 ## Windows readings
 
-In Core, the service lives under `Services/Sensors/Windows/`; WMI fallbacks, monitor identification, and GPU process queries are grouped in partial files of the same class to retain coordination and shared state.
+In Core, the service lives under `Services/Sensors/Windows/` and coordinates internal readers dedicated to WMI fallbacks, monitor identity, and GPU process queries.
 
 The service collects CPU and GPU temperature, utilization, clocks, voltage, and power; GPU VRAM; RAM usage; disk activity and I/O; network throughput; fans; and motherboard sensors. CPU temperature falls back to ACPI thermal-zone sources only when LibreHardwareMonitor has no reading. RAM also has a WMI fallback. GPU-using processes are grouped by PID and cached briefly.
 

@@ -1,15 +1,22 @@
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
 using PhantomMonitor.Models;
-using LibreHardwareMonitor.Hardware;
-using SType = PhantomMonitor.Models.SensorType;
 
 namespace PhantomMonitor.Services;
 
-public sealed partial class HardwareMonitorService
+[SupportedOSPlatform("windows")]
+internal sealed class WindowsGpuProcessReader
 {
-    private List<GpuProcessInfo> GetGpuProcesses()
+    private static readonly TimeSpan GpuProcessInterval = TimeSpan.FromSeconds(3);
+    private static readonly Regex GpuEngineRegex = new(@"pid_(\d+)_.*engtype_(.+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private DateTime _lastGpuProcesses = DateTime.MinValue;
+    private List<GpuProcessInfo> _cachedGpuProcesses = [];
+    private readonly Dictionary<int, string> _pidNames = [];
+
+    internal List<GpuProcessInfo> GetGpuProcesses()
     {
         if (DateTime.UtcNow - _lastGpuProcesses < GpuProcessInterval)
             return _cachedGpuProcesses;

@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            x:Class="PhantomMonitor.App.Views.SettingsPage">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSettings}">
+      <StackPanel Margin="28,23,28,28" Spacing="16">
+        <StackPanel Spacing="4" Margin="0,0,0,3">
+          <TextBlock Text="Configurações" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Text="Ajuste a coleta, o overlay e os arquivos de telemetria." Classes="muted" FontSize="11" />
+        </StackPanel>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="COLETA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Intervalo global (milissegundos)" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" />
+            <TextBox Classes="settings-input" Text="{Binding UpdateIntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Text="Use um valor entre 100 e 60.000 ms. Um intervalo menor atualiza o painel com mais frequência." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="OVERLAY FLUTUANTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Ajuste a aparência global aqui. O conteúdo e a posição dos blocos são editados no canvas." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+              <StackPanel Spacing="5">
+                <TextBlock Text="LARGURA (140–700 PX)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBox Text="{Binding OverlayWidthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+              <StackPanel Spacing="5">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="OPACIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="{Binding OverlayOpacityLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
+                </Grid>
+                <Slider Minimum="10" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                        Value="{Binding OverlayOpacityPercent, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="5">
+                <TextBlock Text="FONTE (8–20 PT)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBox Text="{Binding OverlayFontSizeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+              <TextBlock Text="{Binding OverlayFontSizeLabel}" Foreground="{DynamicResource TextMonoBrush}"
+                         FontSize="10" VerticalAlignment="Bottom" Margin="0,0,0,8" />
+            </Grid>
+            <Slider Minimum="8" Maximum="20" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                    Value="{Binding OverlayFontSizeSlider, Mode=TwoWay}" />
+            <CheckBox Content="Modo compacto" IsChecked="{Binding OverlayCompactModeSetting, Mode=TwoWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="action" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
+              <TextBlock Text="Salvar entra no config e aplica à janela aberta sem reiniciar a coleta." Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="INTERFACE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <StackPanel Spacing="5">
+              <TextBlock Text="TEMA VISUAL" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <ComboBox SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}" ItemsSource="{Binding ThemeOptions}" MinWidth="260" HorizontalAlignment="Left" />
+            </StackPanel>
+            <TextBlock Text="Neptune = visual original do Avalonia; Slate = porta verbatim do visual do WPF. A escolha entra em vigor em &quot;Salvar e aplicar&quot;, trocando o dicionário de cores em runtime (não reinicia o app)." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <CheckBox Content="Exportar CSV" IsChecked="{Binding LogToCsv, Mode=TwoWay}" />
+            <CheckBox Content="Snapshot JSON mais recente" IsChecked="{Binding LogToJson, Mode=TwoWay}" />
+            <CheckBox Content="Journal JSON contínuo (JSONL)" IsChecked="{Binding LogToJsonJournal, Mode=TwoWay}" />
+            <StackPanel Spacing="4" Margin="0,6,0,0">
+              <TextBlock Text="PASTA DOS ARQUIVOS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding LogDirectoryText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="EXPORTADOR HTTP" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <CheckBox Content="Ativar endpoints de telemetria" IsChecked="{Binding TelemetryExportEnabled, Mode=TwoWay}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+              <StackPanel Spacing="5">
+                <TextBlock Text="PORTA (1024–65535)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBox Text="{Binding TelemetryExportPortText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="7317" />
+              </StackPanel>
+              <StackPanel Spacing="5">
+                <TextBlock Text="ENDPOINTS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="{Binding TelemetryExportEndpointText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </StackPanel>
+            </Grid>
+            <CheckBox Content="Escutar em todas as interfaces (LAN)" IsChecked="{Binding TelemetryExportListenAll, Mode=TwoWay}" />
+            <TextBlock Text="A opção LAN permite acesso por outros dispositivos da rede e não usa TLS nem autenticação. Ative somente em uma rede confiável." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+            <StackPanel Spacing="4">
+              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding TelemetryExportStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock Text="GET /values retorna o último snapshot JSON; GET /health verifica o listener. O servidor funciona enquanto a coleta estiver ativa e mantém o último snapshot durante a pausa." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
+            <TextBlock Text="ATUALIZAÇÕES (GITHUB RELEASES)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <CheckBox Content="Verificar automaticamente (no arranque e a cada 24h)" IsChecked="{Binding UpdateAutoCheck, Mode=TwoWay}" />
+            <CheckBox Content="Canal beta (aceitar pré-releases do GitHub)" IsChecked="{Binding UpdateBetaChannel, Mode=TwoWay}" />
+            <StackPanel Spacing="5">
+              <TextBlock Text="REPOSITÓRIO (VAZIO USA O OFICIAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBox Text="{Binding UpdateRepositoryText, Mode=TwoWay}" PlaceholderText="BadTonho/PhantomMonitor" />
+            </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="{Binding UpdateVersionText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding UpdateStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="action" Content="Buscar agora" Click="OnCheckUpdatesClick" />
+              <Button Content="Abrir página de releases" Click="OnOpenReleasesPageClick" />
+              <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"
+                      IsVisible="{Binding CanApplyUpdate}" IsEnabled="{Binding CanApplyUpdateEnabled}" />
+            </StackPanel>
+            <TextBlock Text="A troca baixa a nova versão, aguarda o app encerrar e reabre sozinho. Config (config.json) e logs ficam fora da pasta trocada. Em instalação por pacote do sistema, a troca não é oferecida e o card fica apenas na notificação." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
+          <TextBlock Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+</UserControl>

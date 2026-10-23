@@ -4,6 +4,8 @@
 
 Descrição da interface principal do app único do Phantom Monitor (Avalonia multiplataforma, Windows e Linux), com tema escuro e layout de sidebar + conteúdo. As diferenças operacionais no Linux (sensores nativos do kernel, D-Bus, Wayland, camada Vulkan) estão em [suporte-linux.md](suporte-linux.md); inventário, sensores customizados, ajuste por série, alertas e configurações são as mesmas páginas nos dois sistemas.
 
+Na implementação, a janela principal mantém a sidebar, a navegação e os elementos globais; Configurações, Sensores customizados, Alertas e Diagnóstico são controles de página próprios com o mesmo ViewModel compartilhado. Inventário, visão geral e ajuste por série continuam no XAML principal.
+
 ## Funcionalidades
 
 - **Sidebar:** estado da execução (`Monitorando` / `Parado` / `Pausado` (P6.7)), tempo ativo, contagem de sensores, navegação entre as páginas (visão geral, inventário, sensores customizados, ajuste por série, alertas, configurações e diagnóstico), toggle `Overlay no Jogo`, controles de exportação (CSV/JSON/Journal JSONL — P8.3) e opção `Iniciar com o Windows` (registro `Run`, aplicada na hora).

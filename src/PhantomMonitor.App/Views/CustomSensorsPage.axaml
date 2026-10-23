@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            x:Class="PhantomMonitor.App.Views.CustomSensorsPage">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsCustomSensors}">
+      <StackPanel Margin="28,23,28,28" Spacing="16">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Sensores customizados" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Crie séries derivadas de outras leituras usando fórmulas." Classes="muted" FontSize="11" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          </StackPanel>
+        </Grid>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+          <StackPanel Spacing="8">
+            <TextBlock Text="FÓRMULAS E ÍNDICES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Use +, -, *, /, parênteses, min(...), max(...), abs(...) e referências como {CpuTemperature} ou {GpuTemperature#1}. Números decimais usam ponto." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock Text="A ordem define Custom#1, Custom#2… e a sequência de cálculo. Reordenar pode alterar alertas que apontam para Custom#i. Fórmulas podem referenciar sensores customizados anteriores; referências físicas ausentes só deixam a série sem leitura até os dados aparecerem." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Salvar alterações reinicia a sessão de sensores e zera suas estatísticas. Coleta parada permanece parada; coleta pausada continua pausada." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="4">
+            <TextBlock Text="SÉRIES DERIVADAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="Até 64 fórmulas. Nomes devem ser únicos." Classes="muted" FontSize="10" />
+          </StackPanel>
+          <Button Classes="action" Content="Adicionar sensor" Click="OnAddCustomSensorClick" />
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding CustomSensorEditors}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                <StackPanel Spacing="10">
+                  <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding SeriesKey}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="11" VerticalAlignment="Center" />
+                    <Button Content="↑" IsEnabled="{Binding CanMoveUp}" Click="OnMoveCustomSensorUpClick" />
+                    <Button Grid.Column="2" Content="↓" IsEnabled="{Binding CanMoveDown}" Click="OnMoveCustomSensorDownClick" />
+                    <Button Grid.Column="3" Content="Remover" Click="OnRemoveCustomSensorClick" />
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="NOME" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="DeltaTemp" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="UNIDADE (OPCIONAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBox Text="{Binding Unit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="°C, %, MB…" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="5">
+                    <TextBlock Text="FÓRMULA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBox Text="{Binding Formula, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Ex.: {GpuTemperature} - {CpuTemperature}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+          <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveCustomSensorsClick" />
+          <TextBlock Text="{Binding CustomSensorsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+</UserControl>

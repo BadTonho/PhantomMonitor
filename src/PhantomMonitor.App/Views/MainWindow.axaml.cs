@@ -1,6 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Platform.Storage;
-using System.Diagnostics;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
@@ -208,11 +206,9 @@ public sealed partial class MainWindow : Window
         SyncNavPage("settings");
         ViewModel.ShowSettings();
     }
-    private void OnSaveSettingsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveSettings();
-
     // Editor do overlay em janela dedicada: mesma instância do VM, reabre/ativa.
 
-    private void OnOpenOverlayEditorClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnOpenOverlayEditorRequested(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_overlayEditorWindow is null)
         {
@@ -226,87 +222,16 @@ public sealed partial class MainWindow : Window
     }
     private void OnRestartAsAdminClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestartAsAdmin();
     private void OnUpdateBadgeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSettings();
-    private void OnCheckUpdatesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.CheckUpdatesNow();
     private void OnOpenReleasesPageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.OpenReleasesPage();
     private void OnApplyUpdateClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _ = ViewModel.ApplyUpdateAsync();
     private void OnDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         SyncNavPage("diagnostics");
         ViewModel.ShowDiagnostics();
-        SyncDiagnosticTabSelection();
+        this.FindControl<DiagnosticsPage>("DiagnosticsPageControl")?.SyncTabSelection();
     }
-    private Button?[]? _diagnosticTabButtons;
-    private static readonly string[] DiagnosticSectionCodes = ["summary", "errors", "sensors"];
-
-    private void OnDiagnosticSummaryClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SelectDiagnosticSection("summary");
-    private void OnDiagnosticErrorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SelectDiagnosticSection("errors");
-    private void OnDiagnosticSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SelectDiagnosticSection("sensors");
-
-    private void SelectDiagnosticSection(string section)
-    {
-        ViewModel.SelectDiagnosticSection(section);
-        SyncDiagnosticTabSelection();
-    }
-
-    private void SyncDiagnosticTabSelection()
-    {
-        _diagnosticTabButtons ??=
-        [
-            this.FindControl<Button>("DiagnosticSummaryTab"),
-            this.FindControl<Button>("DiagnosticErrorsTab"),
-            this.FindControl<Button>("DiagnosticSensorsTab"),
-        ];
-
-        for (var i = 0; i < DiagnosticSectionCodes.Length; i++)
-        {
-            if (_diagnosticTabButtons[i] is not { } button) continue;
-            if (DiagnosticSectionCodes[i] == ViewModel.SelectedDiagnosticSection)
-            {
-                if (!button.Classes.Contains("selected")) button.Classes.Add("selected");
-            }
-            else
-            {
-                button.Classes.Remove("selected");
-            }
-        }
-    }
-
-    private void OnRefreshDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RefreshDiagnostics();
-    private void OnOpenErrorLogClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        try
-        {
-            ErrorLog.EnsureLogFileExists();
-            Process.Start(new ProcessStartInfo(ErrorLog.LogFilePath) { UseShellExecute = true });
-            ViewModel.SetDiagnosticsMessage("Arquivo de erros aberto no aplicativo padrão.");
-        }
-        catch (Exception ex)
-        {
-            ErrorLog.Write("Diagnostics.OpenErrorLog", ex);
-            ViewModel.SetDiagnosticsMessage($"Não foi possível abrir o arquivo: {ex.Message}");
-        }
-    }
-    private void OnAddAlertRuleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddAlertRule();
-    private void OnSaveAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveAlerts();
-    private void OnAddCustomSensorClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddCustomSensor();
-    private void OnSaveCustomSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveCustomSensors();
     private void OnAddSensorTuningClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddSensorTuning();
     private void OnSaveSensorTuningsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveSensorTunings();
-
-    private void OnRemoveCustomSensorClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: CustomSensorEditorViewModel editor })
-            ViewModel.RemoveCustomSensor(editor);
-    }
-
-    private void OnMoveCustomSensorUpClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => MoveCustomSensor(sender, -1);
-    private void OnMoveCustomSensorDownClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => MoveCustomSensor(sender, 1);
-
-    private void MoveCustomSensor(object? sender, int offset)
-    {
-        if (sender is Control { DataContext: CustomSensorEditorViewModel editor })
-            ViewModel.MoveCustomSensor(editor, offset);
-    }
 
     private void OnRemoveSensorTuningClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -323,31 +248,4 @@ public sealed partial class MainWindow : Window
             ViewModel.MoveSensorTuning(editor, offset);
     }
 
-    private async void OnSelectAlertScriptClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (sender is not Control { DataContext: AlertRuleEditorViewModel rule })
-            return;
-
-        try
-        {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "Selecionar script de alerta",
-                AllowMultiple = false
-            });
-            var path = files.FirstOrDefault()?.TryGetLocalPath();
-            if (!string.IsNullOrWhiteSpace(path))
-                rule.Script = path;
-        }
-        catch (Exception ex)
-        {
-            ErrorLog.Write("AlertScriptPicker", ex);
-        }
-    }
-
-    private void OnRemoveAlertRuleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (sender is Avalonia.Controls.Control { DataContext: AlertRuleEditorViewModel rule })
-            ViewModel.RemoveAlertRule(rule);
-    }
 }

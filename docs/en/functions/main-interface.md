@@ -4,6 +4,8 @@
 
 The unified app (Avalonia, Windows and Linux) uses a dark dashboard with a sidebar and metric cards. Linux-specific behavior is described in [Linux support](linux-support.md).
 
+In the implementation, the main window owns the sidebar, navigation, and global elements; Settings, Custom Sensors, Alerts, and Diagnostics are separate page controls that share the same ViewModel. Overview, Inventory, and Per-series tuning remain in the main XAML.
+
 ## Dashboard
 
 The sidebar shows monitor status, uptime, sensor count, page navigation (overview, inventory, custom sensors, series tuning, alerts, settings and diagnostics), overlay visibility, CSV/JSON/JSONL toggles, and the Windows startup option. A system-tray menu provides window visibility, overlay, startup, statistics reset, monitoring pause, OSD profiles, and exit (tray ported from the WPF in F1.5).

@@ -68,6 +68,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private string _selectedDiagnosticSection = "summary";
     private readonly ObservableCollection<ErrorLogEntry> _diagnosticEntries = new();
     private IReadOnlyList<string> _diagnosticSensorLines = ["Aguardando a primeira leitura dos sensores."];
+    private IReadOnlyList<DiagnosticSensorWarningViewModel> _diagnosticSensorWarnings = [];
+    private bool _hasDiagnosticSensorSnapshot;
     private string _diagnosticsMessage = "Os diagnósticos ficam somente neste computador.";
     private string _updateIntervalText;
     private bool _intervalEdited;
@@ -162,9 +164,36 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public bool IsDiagnosticSensors => SelectedDiagnosticSection == "sensors";
     public ObservableCollection<ErrorLogEntry> DiagnosticEntries => _diagnosticEntries;
     public IReadOnlyList<string> DiagnosticSensorLines { get => _diagnosticSensorLines; private set => Set(ref _diagnosticSensorLines, value); }
+    public IReadOnlyList<DiagnosticSensorWarningViewModel> DiagnosticSensorWarnings
+    {
+        get => _diagnosticSensorWarnings;
+        private set
+        {
+            if (!Set(ref _diagnosticSensorWarnings, value)) return;
+            Raise(nameof(HasDiagnosticSensorWarnings));
+            Raise(nameof(DiagnosticSensorWarningsSummary));
+        }
+    }
+    public bool HasDiagnosticSensorSnapshot
+    {
+        get => _hasDiagnosticSensorSnapshot;
+        private set
+        {
+            if (!Set(ref _hasDiagnosticSensorSnapshot, value)) return;
+            Raise(nameof(DiagnosticSensorWarningsSummary));
+        }
+    }
     public string DiagnosticsMessage { get => _diagnosticsMessage; private set => Set(ref _diagnosticsMessage, value); }
     public string ErrorLogPathText => ErrorLog.LogFilePath;
     public bool HasDiagnosticEntries => DiagnosticEntries.Count > 0;
+    public bool HasDiagnosticSensorWarnings => DiagnosticSensorWarnings.Count > 0;
+    public string DiagnosticSensorWarningsSummary => !HasDiagnosticSensorSnapshot
+        ? "Aguardando a primeira amostra de sensores."
+        : DiagnosticSensorWarnings.Any(warning => warning.IsGeneralWarning)
+            ? "Nenhuma GPU enumerada pelo coletor nesta amostra."
+        : HasDiagnosticSensorWarnings
+            ? $"{DiagnosticSensorWarnings.Count} {(DiagnosticSensorWarnings.Count == 1 ? "métrica indisponível" : "métricas indisponíveis")} nesta amostra."
+            : "Todas as métricas GPU consultadas estão disponíveis.";
     public string DiagnosticEntriesSummary => HasDiagnosticEntries
         ? $"Exibindo {DiagnosticEntries.Count} registros recentes."
         : "Nenhum erro registrado nesta execução ou no arquivo local.";
@@ -503,7 +532,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         IsDiagnostics = true;
         SelectDiagnosticSection("summary");
         LoadDiagnosticEntries();
-        RefreshDiagnosticSensorLines();
+        RefreshDiagnosticSensorState();
         Raise(nameof(IsInventory));
     }
 
@@ -581,6 +610,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         if (_disposed || !_started) return;
 
         _latestSensorData = data;
+        if (IsDiagnostics && (SelectedDiagnosticSection is "errors" or "sensors"))
+            RefreshDiagnosticSensorState(data);
         RefreshOverlaySeriesOptions();
         ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data, _inventoryAggregateStats));
         UpdateInventorySession(data);

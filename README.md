@@ -37,7 +37,7 @@ The project runs a **single Avalonia desktop app** on Windows and Linux. Earlier
 | Overlay | Advanced OSD, click-through, and profiles (editing via config.json) | Configurable floating window; the compositor controls position and fullscreen behavior |
 | Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |
 | Alerts | Notifications, sound, scripts, and configurable shutdown action | In-app toast, desktop notifications, and scripts |
-| Diagnostics | Live sensor/source details and application error log | Per-GPU driver/source status by metric, recent errors, and NVIDIA NVML details |
+| Diagnostics | Sensor sources, current GPU warnings, and application error log | Per-GPU driver/source status, current GPU warnings, recent errors, and NVIDIA NVML details |
 | Formulas and per-series tuning | Compatible with the existing configuration format | Visual editors for custom sensors and sampling/smoothing rules |
 | Telemetry | CSV, JSON, JSONL, and optional HTTP exporter | CSV, JSON, JSONL, and optional HTTP exporter |
 

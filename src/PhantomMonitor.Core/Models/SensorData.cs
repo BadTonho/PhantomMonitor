@@ -38,6 +38,10 @@ public sealed class SensorData
     [JsonIgnore]
     public List<string> SensorDebugInfo { get; set; } = [];
 
+    /// <summary>Disponibilidade estruturada das métricas opcionais, sem alterar o snapshot serializado.</summary>
+    [JsonIgnore]
+    public List<SensorAvailabilityDiagnostic> SensorAvailabilityDiagnostics { get; set; } = [];
+
     public double GetValue(SensorType type) =>
         Values.TryGetValue(type, out var v) ? v : 0;
 

@@ -53,6 +53,7 @@ public sealed class LinuxSensorService : ISensorService
     private static readonly TimeSpan DiagnosticsRefreshInterval = TimeSpan.FromSeconds(1);
     private DateTime _lastDiagnosticsBuild = DateTime.MinValue;
     private List<string> _cachedDiagnostics = [];
+    private List<SensorAvailabilityDiagnostic> _cachedSensorAvailabilityDiagnostics = [];
 
     // Estatísticas por série da sessão (min/max/avg; zeradas pelo usuário).
     private readonly SeriesStatsTracker _seriesStats = new();
@@ -161,8 +162,10 @@ public sealed class LinuxSensorService : ISensorService
             {
                 _lastDiagnosticsBuild = data.Timestamp;
                 _cachedDiagnostics = BuildSensorDiagnostics(data);
+                _cachedSensorAvailabilityDiagnostics = data.SensorAvailabilityDiagnostics;
             }
             data.SensorDebugInfo = _cachedDiagnostics;
+            data.SensorAvailabilityDiagnostics = _cachedSensorAvailabilityDiagnostics;
 
             _current = data;
             if (IsRunning)

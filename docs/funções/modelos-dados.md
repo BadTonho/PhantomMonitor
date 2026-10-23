@@ -38,6 +38,7 @@ Modelo principal que carrega todos os dados de sensores em um snapshot:
 - `Monitors` - Identidade dos monitores conectados (P8.4; EDID via WMI — ver MonitorInfo abaixo)
 - `GpuProcesses` - Lista de processos usando GPU (não serializada no JSON)
 - `SensorDebugInfo` - Informações de debug de cada sensor (não serializadas no JSON)
+- `SensorAvailabilityDiagnostics` - Estado estruturado atual das métricas GPU, com dispositivo, tipo opcional, disponibilidade, fonte e motivo (não serializado no JSON)
 - `FrametimeHistory` - Array com histórico de frametime para gráficos (não serializado no JSON)
 
 ### Propriedades calculadas

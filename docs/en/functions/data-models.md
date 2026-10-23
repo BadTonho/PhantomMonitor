@@ -25,7 +25,7 @@ Categories can also be published as `Category#index` instance series. Index 0 is
 - `Series` and `SeriesLabels`: per-instance telemetry keyed by `SensorKey`.
 - `SeriesStats`: session minimum, maximum, and average per series.
 - `Monitors`: connected display identities where provided.
-- `GpuProcesses`, `SensorDebugInfo`, and `FrametimeHistory`: runtime/dashboard data not serialized in the JSON snapshot.
+- `GpuProcesses`, `SensorDebugInfo`, `SensorAvailabilityDiagnostics`, and `FrametimeHistory`: runtime/dashboard data not serialized in the JSON snapshot. `SensorAvailabilityDiagnostics` contains the current device, optional metric, availability, source, and reason; a null metric represents a general warning such as no GPU being enumerated.
 - Calculated convenience properties include CPU/GPU usage and temperature, RAM usage/availability, FPS, frametime, averages, lows, and maximum.
 
 The GPU process list, sensor diagnostics, and frametime buffer are runtime-facing properties and are not serialized in `sensors_latest.json`. Monitor identity is serialized separately under `monitors`; sensor statistics are under `seriesStats`.

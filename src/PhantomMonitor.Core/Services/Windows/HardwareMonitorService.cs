@@ -21,6 +21,15 @@ public sealed class HardwareMonitorService : ISensorService
     private static readonly TimeSpan WmiTempInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan GpuProcessInterval = TimeSpan.FromSeconds(3);
     private static readonly Regex GpuEngineRegex = new(@"pid_(\d+)_.*engtype_(.+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly SType[] GpuAvailabilityTypes =
+    [
+        SType.GpuCore,
+        SType.GpuMemoryUsed,
+        SType.GpuMemoryTotal,
+        SType.GpuTemperature,
+        SType.GpuHotSpot,
+        SType.GpuVramTemperature
+    ];
 
     private readonly Computer _computer;
     private readonly Timer _timer;
@@ -41,6 +50,7 @@ public sealed class HardwareMonitorService : ISensorService
     // Instância "#i" por nó de hardware: GPU (dedicada = 1), discos e interfaces de rede
     // (cursores por família, resetados a cada ciclo — a ordem do enumerador do LHM é estável).
     private readonly Dictionary<IHardware, int> _hardwareInstanceFor = [];
+    private readonly Dictionary<int, HashSet<SType>> _gpuMetricsReported = [];
     private int _diskInstanceCursor;
     private int _netInstanceCursor;
 
@@ -198,6 +208,7 @@ public sealed class HardwareMonitorService : ISensorService
         // GPUs integradas primeiro: a GPU dedicada (processada depois) prevalece nos valores
         // canônicos (índice 0). Para os índices de instância (#1, #2...), a dedicada é a GPU 1.
         _hardwareInstanceFor.Clear();
+        _gpuMetricsReported.Clear();
         _diskInstanceCursor = 0;
         _netInstanceCursor = 0;
         var instance = 1;
@@ -212,6 +223,8 @@ public sealed class HardwareMonitorService : ISensorService
         {
             ProcessHardware(hardware, data, debugInfo, depth: 0);
         }
+
+        AppendGpuAvailabilityDiagnostics(data, debugInfo);
 
         ApplyCpuClockFallback(data, debugInfo);
         ApplyCpuTempFallback(data, debugInfo);
@@ -284,10 +297,13 @@ public sealed class HardwareMonitorService : ISensorService
         return data;
     }
 
-    private void ProcessHardware(IHardware hardware, SensorData data, List<string> debugInfo, int depth)
+    private void ProcessHardware(IHardware hardware, SensorData data, List<string> debugInfo, int depth, int gpuInstance = 0)
     {
         var indent = new string(' ', depth * 2);
         debugInfo.Add($"{indent}[HWR] {hardware.HardwareType}: {hardware.Name}");
+
+        if (hardware.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
+            gpuInstance = _hardwareInstanceFor.GetValueOrDefault(hardware, gpuInstance);
 
         // Instância "#i" quando o nó de topo for disco ou interface de rede
         // (GPUs já têm índice pré-computado: a dedicada é a GPU 1).
@@ -298,7 +314,7 @@ public sealed class HardwareMonitorService : ISensorService
 
         foreach (var sensor in hardware.Sensors)
         {
-            MapSensor(sensor, data);
+            MapSensor(sensor, data, gpuInstance);
             var val = sensor.Value?.ToString("F2") ?? "null";
             debugInfo.Add($"{indent}  [{hardware.HardwareType}] {sensor.Name} ({sensor.SensorType}) = {val}");
         }
@@ -306,8 +322,49 @@ public sealed class HardwareMonitorService : ISensorService
         // Sensores de placa-mãe/SuperIO ficam em sub-hardware.
         foreach (var sub in hardware.SubHardware)
         {
-            ProcessHardware(sub, data, debugInfo, depth + 1);
+            ProcessHardware(sub, data, debugInfo, depth + 1, gpuInstance);
         }
+    }
+
+    private void AppendGpuAvailabilityDiagnostics(SensorData data, List<string> debugInfo)
+    {
+        data.SensorAvailabilityDiagnostics = [];
+        var gpus = _computer.Hardware
+            .Where(hardware => hardware.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
+            .ToArray();
+
+        if (gpus.Length == 0)
+        {
+            const string reason = "O LibreHardwareMonitor não enumerou nenhum dispositivo GPU nesta amostra.";
+            data.SensorAvailabilityDiagnostics.Add(new SensorAvailabilityDiagnostic(
+                "Sistema", null, false, "LibreHardwareMonitor", reason));
+            debugInfo.Add($"[GPU] {reason}");
+            return;
+        }
+
+        foreach (var gpu in gpus)
+        {
+            var instance = _hardwareInstanceFor.GetValueOrDefault(gpu);
+            var reported = _gpuMetricsReported.GetValueOrDefault(instance);
+            foreach (var metric in GpuAvailabilityTypes)
+            {
+                var available = reported?.Contains(metric) == true;
+                var reason = available
+                    ? ""
+                    : "O LibreHardwareMonitor não publicou uma leitura válida desta métrica nesta amostra.";
+                data.SensorAvailabilityDiagnostics.Add(new SensorAvailabilityDiagnostic(
+                    gpu.Name, metric, available, "LibreHardwareMonitor", reason));
+                debugInfo.Add($"[GPU] {gpu.Name} {metric}: {(available ? "disponível via LibreHardwareMonitor" : $"indisponível — {reason}")}");
+            }
+        }
+    }
+
+    private void TrackGpuMetric(int instance, SType metric)
+    {
+        if (instance <= 0) return;
+        if (!_gpuMetricsReported.TryGetValue(instance, out var reported))
+            _gpuMetricsReported[instance] = reported = [];
+        reported.Add(metric);
     }
 
     // ---------- Fallbacks ----------
@@ -807,7 +864,7 @@ public sealed class HardwareMonitorService : ISensorService
         Put(data, type, val, label);
     }
 
-    private void MapSensor(ISensor sensor, SensorData data)
+    private void MapSensor(ISensor sensor, SensorData data, int gpuDiagnosticInstance = 0)
     {
         var val = sensor.Value;
         if (!val.HasValue) return;
@@ -826,7 +883,8 @@ public sealed class HardwareMonitorService : ISensorService
             case HardwareType.GpuNvidia:
             case HardwareType.GpuAmd:
             case HardwareType.GpuIntel:
-                MapGpuSensor(sensor, v, label, data, instance, sensor.Hardware.Name);
+                MapGpuSensor(sensor, v, label, data, instance, sensor.Hardware.Name,
+                    gpuDiagnosticInstance > 0 ? gpuDiagnosticInstance : instance);
                 break;
             case HardwareType.Memory:
                 MapMemorySensor(sensor, v, label, data);
@@ -903,13 +961,21 @@ public sealed class HardwareMonitorService : ISensorService
 
     private static readonly Regex CoreIndexRegex = new(@"#(\d+)", RegexOptions.Compiled);
 
-    private void MapGpuSensor(ISensor sensor, double val, string label, SensorData data, int instance, string gpuName)
+    private void MapGpuSensor(
+        ISensor sensor,
+        double val,
+        string label,
+        SensorData data,
+        int instance,
+        string gpuName,
+        int diagnosticInstance)
     {
         switch (sensor.SensorType)
         {
             case LhmSensorType.Load when sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuCore, val, label);
                 PutInstance(data, SType.GpuCore, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuCore);
                 break;
             case LhmSensorType.Load when sensor.Name.Contains("Memory", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuMemory, val, label);
@@ -920,18 +986,22 @@ public sealed class HardwareMonitorService : ISensorService
             case LhmSensorType.SmallData when sensor.Name.Contains("GPU Memory Total", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryTotal, val, label, 2);
                 PutInstance(data, SType.GpuMemoryTotal, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuMemoryTotal);
                 break;
             case LhmSensorType.SmallData when sensor.Name.Contains("D3D Dedicated Memory Total", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryTotal, val, label, 1);
                 PutInstance(data, SType.GpuMemoryTotal, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuMemoryTotal);
                 break;
             case LhmSensorType.SmallData when sensor.Name.Contains("GPU Memory Used", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryUsed, val, label, 2);
                 PutInstance(data, SType.GpuMemoryUsed, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuMemoryUsed);
                 break;
             case LhmSensorType.SmallData when sensor.Name.Contains("D3D Dedicated Memory Used", StringComparison.OrdinalIgnoreCase):
                 PutPreferred(data, SType.GpuMemoryUsed, val, label, 1);
                 PutInstance(data, SType.GpuMemoryUsed, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuMemoryUsed);
                 break;
             case LhmSensorType.Clock when sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuCoreClock, val, label);
@@ -944,6 +1014,7 @@ public sealed class HardwareMonitorService : ISensorService
             case LhmSensorType.Temperature when sensor.Name.Contains("Hot Spot", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuHotSpot, val, label);
                 PutInstance(data, SType.GpuHotSpot, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuHotSpot);
                 break;
             // Temperatura da junction da VRAM: NVIDIA "GPU Memory Temperature", AMD "GPU VRAM"
             // e nome legado "Memory Junction". "GPU VRM Memory" (fase do VRM, não a memória) fica
@@ -955,6 +1026,7 @@ public sealed class HardwareMonitorService : ISensorService
                 !sensor.Name.Contains("VRM", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.GpuVramTemperature, val, label);
                 PutInstance(data, SType.GpuVramTemperature, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuVramTemperature);
                 break;
             // Fallthrough do restante: "GPU Core" tem prioridade sobre os demais diodos da GPU.
             // VRM/Liquid/PLX da AMD não são temperatura de diodo da GPU — não mapeiam nenhuma
@@ -967,6 +1039,7 @@ public sealed class HardwareMonitorService : ISensorService
                 PutPreferred(data, SType.GpuTemperature, val, label,
                     sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ? 2 : 1);
                 PutInstance(data, SType.GpuTemperature, instance, val, gpuName);
+                TrackGpuMetric(diagnosticInstance, SType.GpuTemperature);
                 break;
             case LhmSensorType.Voltage:
                 Put(data, SType.GpuVoltage, val, label);

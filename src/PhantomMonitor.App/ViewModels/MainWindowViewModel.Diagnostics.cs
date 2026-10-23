@@ -12,7 +12,7 @@ using PhantomMonitor.Services.Telemetry;
 
 namespace PhantomMonitor.App.ViewModels;
 
-// Diagnóstico: entradas do ErrorLog e linhas de sensores apenas sob demanda.
+// Diagnóstico: erros registrados e estado atual de disponibilidade dos sensores.
 public sealed partial class MainWindowViewModel
 {
     public void SelectDiagnosticSection(string section)
@@ -26,24 +26,28 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(IsDiagnosticSummary));
         Raise(nameof(IsDiagnosticErrors));
         Raise(nameof(IsDiagnosticSensors));
+        if (section is "errors" or "sensors")
+            RefreshDiagnosticSensorState();
     }
 
     public void RefreshDiagnostics()
     {
         LoadDiagnosticEntries();
-        RefreshDiagnosticSensorLines();
+        RefreshDiagnosticSensorState();
         DiagnosticsMessage = "Diagnóstico atualizado.";
     }
 
-    /// <summary>
-    /// Alimenta a lista de linhas de diagnóstico apenas sob demanda (aba aberta ou
-    /// botão de atualizar). O array de debug chega a cada snapshot, mas reatribuí-lo
-    /// por tick re-renderizava o ItemsControl mesmo com a aba invisível.
-    /// </summary>
-    private void RefreshDiagnosticSensorLines()
+    private void RefreshDiagnosticSensorState(SensorData? snapshot = null)
     {
-        if (_latestSensorData is not null)
-            DiagnosticSensorLines = _latestSensorData.SensorDebugInfo.ToArray();
+        snapshot ??= _latestSensorData;
+        if (snapshot is null) return;
+
+        HasDiagnosticSensorSnapshot = true;
+        DiagnosticSensorLines = snapshot.SensorDebugInfo.ToArray();
+        DiagnosticSensorWarnings = snapshot.SensorAvailabilityDiagnostics
+            .Where(diagnostic => !diagnostic.IsAvailable)
+            .Select(DiagnosticSensorWarningViewModel.From)
+            .ToArray();
     }
 
     public void SetDiagnosticsMessage(string message) => DiagnosticsMessage = message;

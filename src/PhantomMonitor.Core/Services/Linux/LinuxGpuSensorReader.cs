@@ -22,6 +22,16 @@ internal sealed class LinuxGpuSensorReader : IDisposable
         SensorType.GpuFan
     ];
 
+    private static readonly SensorType[] AvailabilityWarningTypes =
+    [
+        SensorType.GpuCore,
+        SensorType.GpuMemoryUsed,
+        SensorType.GpuMemoryTotal,
+        SensorType.GpuTemperature,
+        SensorType.GpuHotSpot,
+        SensorType.GpuVramTemperature
+    ];
+
     private readonly string _drmRoot;
     private readonly string _hwmonRoot;
     private readonly NvidiaGpuSensorReader _nvidiaReader;
@@ -159,9 +169,13 @@ internal sealed class LinuxGpuSensorReader : IDisposable
 
     public void AppendDiagnostics(ICollection<string> lines, SensorData data)
     {
+        data.SensorAvailabilityDiagnostics = [];
         if (_devices.Count == 0)
         {
             lines.Add("[GPU] Nenhuma placa gráfica foi detectada em /sys/class/drm/card*/device.");
+            data.SensorAvailabilityDiagnostics.Add(new SensorAvailabilityDiagnostic(
+                "Sistema", null, false, "DRM (/sys/class/drm)",
+                "Nenhuma placa DRM foi enumerada pelo coletor."));
             foreach (var type in DiagnosticTypes)
                 lines.Add($"[GPU] {type}: indisponível — nenhum dispositivo DRM foi detectado.");
             return;
@@ -186,6 +200,18 @@ internal sealed class LinuxGpuSensorReader : IDisposable
                 }
 
                 lines.Add($"[GPU] {device.CardName} {type}: indisponível — {MissingReason(device, type)}.");
+            }
+
+            foreach (var type in AvailabilityWarningTypes)
+            {
+                var sources = GetSources(device.Index, type);
+                var available = sources.Length > 0;
+                data.SensorAvailabilityDiagnostics.Add(new SensorAvailabilityDiagnostic(
+                    $"{device.CardName} · {device.Label}",
+                    type,
+                    available,
+                    available ? string.Join(", ", sources) : ExpectedSources(device, type),
+                    available ? "" : MissingReason(device, type)));
             }
         }
 
@@ -375,6 +401,21 @@ internal sealed class LinuxGpuSensorReader : IDisposable
             SensorType.GpuVramTemperature => "hwmon não publicou canal com rótulo mem/vram",
             SensorType.GpuFan => "hwmon não publicou fan*_input da GPU",
             _ => "nenhuma fonte compatível publicou esta métrica"
+        };
+    }
+
+    private static string ExpectedSources(GpuDevice device, SensorType type)
+    {
+        var isNvidia = device.Vendor.Equals("0x10de", StringComparison.OrdinalIgnoreCase);
+        return type switch
+        {
+            SensorType.GpuCore when isNvidia => "NVML, DRM/gpu_busy_percent, DRM fdinfo",
+            SensorType.GpuCore => "DRM/gpu_busy_percent, DRM fdinfo",
+            SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal when isNvidia => "NVML, DRM/mem_info_vram_*",
+            SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal => "DRM/mem_info_vram_*",
+            SensorType.GpuTemperature when isNvidia => "NVML, hwmon",
+            SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuVramTemperature => "hwmon",
+            _ => "DRM/hwmon"
         };
     }
 

@@ -6,9 +6,9 @@ The diagnostics center combines recorded errors with the current health of senso
 
 ## Access
 
-- **Unified app (Windows and Linux):** open **Diagnostics** in the sidebar. The page opens on **Summary**, showing monitoring status, the recent error count, and the newest occurrence. Use **Errors** and **Sensors** to open the detailed lists. New errors appear live; **Refresh** rereads the local file and refreshes sensor sources. **Open error log** opens the log with the system's default application.
+- **Unified app (Windows and Linux):** open **Diagnostics** in the sidebar. The page opens on **Summary**, showing monitoring status, the recent error count, and the newest occurrence. Use **Errors** and **Sensors** to open the detailed lists. New errors appear live; **Refresh** rereads the local file and refreshes status from the latest sample. **Open error log** opens the log with the system's default application.
 
-The **Errors** option shows up to 500 recent entries in chronological order, with timestamp, context, and message. Exception entries include technical details. The log stays on the local computer; the app does not upload reports.
+The **Errors** option separates **Current GPU sensor warnings** from **Recorded errors**. Warnings show one row per unavailable metric with its GPU, source, and reason; they update with new samples, disappear when a reading returns, and are not written to `errors.log`. A general warning appears when no GPU is enumerated. Recorded errors show up to 500 recent entries in chronological order, with timestamp, context, and message. Exception entries include technical details. The log stays on the local computer; the app does not upload reports.
 
 ## Location and retention
 
@@ -23,7 +23,7 @@ Known readings are reported as available or unavailable, with the source queried
 
 On Linux, details cover `procfs`, `sysfs`, `hwmon`, DRM, NVML, and the Phantom Vulkan layer. For each detected GPU, the view shows its vendor, driver, PCI ID, the source used for each metric, and why a reading is missing. For NVIDIA devices, it reports whether `libnvidia-ml.so.1` loaded and separates NVML, DRM, and `hwmon` metrics. For Intel `i915`/`xe`, it reports the state of `drm-engine-*` counters in `fdinfo`; the first sample establishes a baseline and utilization is calculated on the next interval. Restricted process visibility can prevent that reading without stopping other sensors. Nouveau can be identified even when the driver publishes no utilization, VRAM, or temperature channels; in that case values remain unavailable and diagnostics describe the sources checked.
 
-On Windows, the sensor tab lists hardware and readings discovered by LibreHardwareMonitor, PresentMon/ETW state, and availability of known sensor types.
+On Windows, the sensor tab lists hardware and readings discovered by LibreHardwareMonitor, PresentMon/ETW state, and availability of known sensor types. The **Errors** tab also shows current warnings for the dashboard's six GPU metrics when LibreHardwareMonitor does not publish a valid reading.
 
 ## Limits
 

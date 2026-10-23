@@ -135,7 +135,7 @@ consumidos do `config.json` no arranque da app — ver
 
 Os arquivos CSV/JSON/JSONL e o `errors.log` ficam em
 `~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`. A página
-**Diagnóstico** mostra os registros recentes e o estado das fontes de sensores;
+**Diagnóstico** mostra os registros recentes, avisos atuais para métricas GPU indisponíveis na aba **Erros** e o estado detalhado das fontes na aba **Sensores**;
 para NVIDIA, inclui driver, NVML, hwmon e métricas publicadas. O exportador HTTP
 é opcional, desativado por padrão e restrito ao loopback; ativar `listenAll`
 expõe os endpoints na rede sem TLS ou autenticação.

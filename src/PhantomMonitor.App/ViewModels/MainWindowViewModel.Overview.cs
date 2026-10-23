@@ -12,8 +12,10 @@ namespace PhantomMonitor.App.ViewModels;
 // detalhe de CPU/GPU (SensorFormatter do Core), card Placa-mãe & ventoinhas,
 // lista de processos na GPU e cores por faixa (normal/morno/quente). As cores
 // não trazem hex: todas saem dos tokens dos Themes/Tokens.*.axaml resolvidos
-// por chave (equivalente ao FindResource do WPF). O cache vale para a execução
-// inteira — a troca de tema é uma troca de binário (rebuild/restart), Fase 0.
+// por chave (equivalente ao FindResource do WPF). O cache vale por sessão e é
+// limpo a cada troca de tema em runtime (Fase 3 — App.ThemeChanged): os pincéis
+// da VM re-resolvem na próxima repintura (tick de coleta ou repintura forçada
+// da VM no evento).
 public sealed partial class MainWindowViewModel
 {
     private static readonly Dictionary<string, IBrush> DashboardBrushCache = new();

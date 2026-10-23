@@ -223,6 +223,17 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         }
     }
     public string OverlayOpacityLabel => $"{OverlayOpacityPercent:0}%";
+
+    // ---- Tema visual (Fase 3: seletor em Configurações) ----
+    // Índice 0 = neptune, 1 = slate (ordem idêntica a ThemeOptions).
+    public IReadOnlyList<string> ThemeOptions { get; } =
+    [
+        "Neptune (visual original do Avalonia)",
+        "Slate (porta verbatim do visual do WPF)"
+    ];
+    public int ThemeIndex { get => _themeIndex; set => Set(ref _themeIndex, value); }
+    private int _themeIndex;
+
     public bool LogToCsv { get => _logToCsv; set => Set(ref _logToCsv, value); }
     public bool LogToJson { get => _logToJson; set => Set(ref _logToJson, value); }
     public bool LogToJsonJournal { get => _logToJsonJournal; set => Set(ref _logToJsonJournal, value); }
@@ -308,6 +319,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _logToCsv = _config.LogToCsv;
         _logToJson = _config.LogToJson;
         _logToJsonJournal = _config.LogToJsonJournal;
+        _themeIndex = _config.Theme == "slate" ? 1 : 0;
         _telemetryExportEnabled = _config.TelemetryExport.Enabled;
         _telemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);
         _telemetryExportListenAll = _config.TelemetryExport.ListenAll;
@@ -341,6 +353,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         UpdateOverlayRows(null);
         LoadDiagnosticEntries();
         ErrorLog.EntryWritten += OnDiagnosticEntryWritten;
+        App.ThemeChanged += OnThemeChanged;
         InitUpdateService();
     }
 
@@ -709,6 +722,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         if (_disposed) return;
         _disposed = true;
         ErrorLog.EntryWritten -= OnDiagnosticEntryWritten;
+        App.ThemeChanged -= OnThemeChanged;
         DetachSensorService(_sensorService);
         if (OperatingSystem.IsWindows()) _hotkeys?.Dispose();
         if (IsRunning)

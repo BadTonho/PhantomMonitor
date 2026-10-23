@@ -498,6 +498,17 @@
 
         <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="12">
+            <TextBlock Text="INTERFACE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <StackPanel Spacing="5">
+              <TextBlock Text="TEMA VISUAL" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <ComboBox SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}" ItemsSource="{Binding ThemeOptions}" MinWidth="260" HorizontalAlignment="Left" />
+            </StackPanel>
+            <TextBlock Text="Neptune = visual original do Avalonia; Slate = porta verbatim do visual do WPF. A escolha entra em vigor em &quot;Salvar e aplicar&quot;, trocando o dicionário de cores em runtime (não reinicia o app)." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="12">
             <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <CheckBox Content="Exportar CSV" IsChecked="{Binding LogToCsv, Mode=TwoWay}" />
             <CheckBox Content="Snapshot JSON mais recente" IsChecked="{Binding LogToJson, Mode=TwoWay}" />

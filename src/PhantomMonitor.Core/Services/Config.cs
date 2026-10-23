@@ -29,12 +29,31 @@ public sealed class AppConfig
     public string PauseMonitorHotkey { get; set; } = "Ctrl+Alt+P";
 
     /// <summary>
-    /// Tema visual builtin (F1.6/sistema de temas): <c>"neptune"</c> (visual Linux
-    /// original) ou <c>"slate"</c> (porta verbatim do WPF). Aplicado no boot —
-    /// a troca em runtime pela UI chega na Fase 3. A CLI <c>--ui-theme=&lt;nome&gt;</c>
-    /// sobrepõe o valor do arquivo (smoke/troubleshooting).
+    /// Tema visual builtin (F1.6/Fase 3 do sistema de temas): <c>"neptune"</c>
+    /// (visual original do Avalonia) ou <c>"slate"</c> (porta verbatim do visual
+    /// do WPF). Aplicado no boot — a CLI <c>--theme=&lt;nome&gt;</c> sobrepõe o
+    /// valor do arquivo (smoke/troubleshooting) e <c>--ui-theme=</c> segue aceito
+    /// como legado — e, desde a Fase 3, trocável em runtime pelo seletor na
+    /// página Configurações (App.ApplyTheme, sem reiniciar).
     /// </summary>
-    public string UiTheme { get; set; } = "neptune";
+    [JsonPropertyName("theme")]
+    public string Theme { get; set; } = "neptune";
+
+    // Builds da era F1.6 serializavam o tema como `uiTheme`. O campo é lido nessa
+    // grafia por compatibilidade, mas o texto documentado e escrito é `theme`
+    // acima. Regra de migração: o legado só vale enquanto o canônico estiver no
+    // valor default (`neptune`) — configs que só tinham `uiTheme` migram de valor.
+    [JsonPropertyName("uiTheme")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyUiTheme
+    {
+        get => null;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value)) return;
+            if (Theme == "neptune") Theme = value;
+        }
+    }
 
     public double OverlayOpacity { get; set; } = 0.85;
     public OverlayPositionConfig OverlayPosition { get; set; } = new();
@@ -127,10 +146,10 @@ public sealed class AppConfig
     {
         if (UpdateIntervalMs < 100) UpdateIntervalMs = 100;
 
-        // Tema de interface (F1.6): só os dois builtin existem; valor desconhecido
+        // Tema de interface (F1.6/Fase 3): só os dois builtin existem; valor desconhecido
         // volta ao Neptune em vez de deixar o app sem tokens.
-        UiTheme = (UiTheme ?? "").Trim().ToLowerInvariant();
-        if (UiTheme is not ("neptune" or "slate")) UiTheme = "neptune";
+        Theme = (Theme ?? "").Trim().ToLowerInvariant();
+        if (Theme is not ("neptune" or "slate")) Theme = "neptune";
 
         OverlayOpacity = Math.Clamp(OverlayOpacity, 0.1, 1.0);
         OverlayPosition ??= new();

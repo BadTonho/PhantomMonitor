@@ -67,6 +67,7 @@ public sealed partial class MainWindowViewModel
         }
 
         var oldInterval = _config.UpdateIntervalMs;
+        var oldTheme = _config.Theme;
         var oldCsv = _config.LogToCsv;
         var oldJson = _config.LogToJson;
         var oldJournal = _config.LogToJsonJournal;
@@ -112,6 +113,7 @@ public sealed partial class MainWindowViewModel
         var updateChanged = UpdateAutoCheck != oldUpdateAutoCheck
             || UpdateBetaChannel != oldUpdateBeta
             || updateRepository != oldUpdateRepository;
+        var themeChanged = (ThemeIndex == 1 ? "slate" : "neptune") != oldTheme;
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
             || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
         var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
@@ -129,7 +131,8 @@ public sealed partial class MainWindowViewModel
             || overlayVisualChanged
             || overlayAppearanceChanged;
 
-        if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged && !updateChanged)
+        if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged && !updateChanged
+            && !themeChanged)
         {
             ConfigureTelemetryExporter();
             SettingsMessage = "Nenhuma alteração para salvar.";
@@ -146,6 +149,7 @@ public sealed partial class MainWindowViewModel
         _config.Update.AutoCheck = UpdateAutoCheck;
         _config.Update.CheckBeta = UpdateBetaChannel;
         _config.Update.Repository = updateRepository;
+        _config.Theme = ThemeIndex == 1 ? "slate" : "neptune";
         _config.Overlay.ShowCpu = OverlayShowCpu;
         _config.Overlay.ShowGpu = OverlayShowGpu;
         _config.Overlay.ShowRam = OverlayShowRam;
@@ -173,6 +177,7 @@ public sealed partial class MainWindowViewModel
             _config.Update.AutoCheck = oldUpdateAutoCheck;
             _config.Update.CheckBeta = oldUpdateBeta;
             _config.Update.Repository = oldUpdateRepository;
+            _config.Theme = oldTheme;
             _config.Overlay.ShowCpu = oldOverlayCpu;
             _config.Overlay.ShowGpu = oldOverlayGpu;
             _config.Overlay.ShowRam = oldOverlayRam;
@@ -199,6 +204,20 @@ public sealed partial class MainWindowViewModel
             UpdateOverlayRows(_latestSensorData);
             LoadOverlaySeriesPatterns();
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
+            return;
+        }
+
+        // Fase 3 — troca de dicionário em runtime (isolada ou junto das demais
+        // alterações). As views reagem pelos DynamicResource e a VM repinta os
+        // pincéis resolvidos por token no evento ThemeChanged.
+        if (themeChanged)
+            App.ApplyTheme(_config.Theme);
+
+        // Tema mudou sozinho: nada mais a reconfigurar; mensagem dedicada.
+        if (themeChanged && !intervalChanged && !loggingChanged && !telemetryChanged
+            && !updateChanged && !overlayChanged)
+        {
+            SettingsMessage = "Tema salvo e aplicado sem reiniciar.";
             return;
         }
 
@@ -378,6 +397,19 @@ public sealed partial class MainWindowViewModel
         if (exporter is null) return;
         exporter.StateChanged -= OnTelemetryExporterStateChanged;
         exporter.Dispose();
+    }
+
+    // Fase 3 — disparado por App.ApplyTheme DEPOIS da troca do dicionário.
+    // Invalida o cache de pincéis da VM e repinta o que está visível na hora,
+    // sem depender do próximo tick (importante com a coleta parada/pausada).
+    private void OnThemeChanged()
+    {
+        if (_disposed) return;
+        DashboardBrushCache.Clear();
+        if (_latestSensorData is not null)
+            UpdateDashboardExtras(_latestSensorData);
+        ApplyOverlayProfile(_activeProfile);
+        UpdateOverlayRows(_latestSensorData);
     }
 
 }

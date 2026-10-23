@@ -2,11 +2,42 @@ using System.Globalization;
 using System.IO;
 using System.Security;
 using PhantomMonitor.Models;
+using GpuDevice = PhantomMonitor.Services.Linux.LinuxGpuSensorReader.GpuDevice;
+using HwmonAssociation = PhantomMonitor.Services.Linux.LinuxGpuSensorReader.HwmonAssociation;
+using ThermalZoneAssociation = PhantomMonitor.Services.Linux.LinuxGpuSensorReader.ThermalZoneAssociation;
 
 namespace PhantomMonitor.Services.Linux;
 
-internal sealed partial class LinuxGpuSensorReader
+internal sealed class LinuxGpuDeviceDiscovery
 {
+    private readonly string _drmRoot;
+    private readonly string _hwmonRoot;
+    private readonly string _thermalRoot;
+    private readonly Action<int, SensorType, string> _recordSourceIssue;
+    private List<GpuDevice> _devices = [];
+
+    public LinuxGpuDeviceDiscovery(
+        string drmRoot,
+        string hwmonRoot,
+        string thermalRoot,
+        Action<int, SensorType, string> recordSourceIssue)
+    {
+        _drmRoot = drmRoot;
+        _hwmonRoot = hwmonRoot;
+        _thermalRoot = thermalRoot;
+        _recordSourceIssue = recordSourceIssue;
+    }
+
+    public DiscoveryResult Discover()
+    {
+        _devices = EnumerateDevices();
+        return new DiscoveryResult(_devices, EnumerateHwmonAssociations(), EnumerateThermalZones());
+    }
+
+    public sealed record DiscoveryResult(
+        List<GpuDevice> Devices,
+        Dictionary<string, HwmonAssociation> HwmonAssociations,
+        List<ThermalZoneAssociation> ThermalZones);
     private List<GpuDevice> EnumerateDevices()
     {
         var devices = new List<GpuDevice>();
@@ -22,7 +53,7 @@ internal sealed partial class LinuxGpuSensorReader
             {
                 var cardName = Path.GetFileName(cardPaths[offset]);
                 var devicePath = Path.Combine(cardPaths[offset], "device");
-                var vendor = TryReadText(Path.Combine(devicePath, "vendor"), out var vendorText) ? vendorText : "não identificado";
+                var vendor = LinuxGpuSensorReader.TryReadText(Path.Combine(devicePath, "vendor"), out var vendorText) ? vendorText : "não identificado";
                 var driver = GetDriverName(devicePath) ?? "não identificado";
                 var pciBusId = ReadPciBusId(devicePath);
                 var label = BuildDeviceLabel(vendor, driver);
@@ -37,7 +68,7 @@ internal sealed partial class LinuxGpuSensorReader
                     label));
             }
         }
-        catch (Exception ex) when (IsExpectedSysfsFailure(ex))
+        catch (Exception ex) when (LinuxGpuSensorReader.IsExpectedSysfsFailure(ex))
         {
             ErrorLog.Write("LinuxGpuSensorReader.Enumerate", ex);
         }
@@ -53,13 +84,13 @@ internal sealed partial class LinuxGpuSensorReader
             if (!Directory.Exists(_hwmonRoot)) return result;
             foreach (var directory in Directory.GetDirectories(_hwmonRoot))
             {
-                var name = TryReadText(Path.Combine(directory, "name"), out var rawName) ? rawName : "hwmon";
+                var name = LinuxGpuSensorReader.TryReadText(Path.Combine(directory, "name"), out var rawName) ? rawName : "hwmon";
                 var device = FindGpuForHwmon(directory, name);
                 if (device is not null || IsGpuHwmonName(name))
                     result[directory] = new HwmonAssociation(name, device);
             }
         }
-        catch (Exception ex) when (IsExpectedSysfsFailure(ex))
+        catch (Exception ex) when (LinuxGpuSensorReader.IsExpectedSysfsFailure(ex))
         {
             ErrorLog.Write("LinuxGpuSensorReader.HwmonEnumeration", ex);
         }
@@ -93,7 +124,7 @@ internal sealed partial class LinuxGpuSensorReader
             foreach (var directory in Directory.GetDirectories(_thermalRoot))
             {
                 if (!Path.GetFileName(directory).StartsWith("thermal_zone", StringComparison.Ordinal)) continue;
-                var type = TryReadText(Path.Combine(directory, "type"), out var rawType) ? rawType : "";
+                var type = LinuxGpuSensorReader.TryReadText(Path.Combine(directory, "type"), out var rawType) ? rawType : "";
                 var zonePath = ResolvePath(directory);
                 var linkedDevicePath = ResolvePath(Path.Combine(directory, "device"));
                 var device = FindGpuForThermalZone(zonePath, linkedDevicePath, type);
@@ -101,10 +132,10 @@ internal sealed partial class LinuxGpuSensorReader
                     result.Add(new ThermalZoneAssociation(directory, type, device));
             }
         }
-        catch (Exception ex) when (IsExpectedSysfsFailure(ex))
+        catch (Exception ex) when (LinuxGpuSensorReader.IsExpectedSysfsFailure(ex))
         {
             foreach (var device in _devices)
-                RecordSourceIssue(device.Index, SensorType.GpuTemperature,
+                _recordSourceIssue(device.Index, SensorType.GpuTemperature,
                     $"/sys/class/thermal não pôde enumerar zonas associadas à GPU ({ex.GetType().Name})");
         }
 
@@ -137,7 +168,7 @@ internal sealed partial class LinuxGpuSensorReader
 
     private static string? ReadPciBusId(string devicePath)
     {
-        if (TryReadText(Path.Combine(devicePath, "uevent"), out var uevent))
+        if (LinuxGpuSensorReader.TryReadText(Path.Combine(devicePath, "uevent"), out var uevent))
         {
             var slot = uevent.Split('\n')
                 .FirstOrDefault(line => line.StartsWith("PCI_SLOT_NAME=", StringComparison.Ordinal));
@@ -159,7 +190,7 @@ internal sealed partial class LinuxGpuSensorReader
             return new DirectoryInfo(Path.Combine(devicePath, "driver"))
                 .ResolveLinkTarget(returnFinalTarget: true)?.Name;
         }
-        catch (Exception ex) when (IsExpectedSysfsFailure(ex))
+        catch (Exception ex) when (LinuxGpuSensorReader.IsExpectedSysfsFailure(ex))
         {
             return null;
         }
@@ -172,7 +203,7 @@ internal sealed partial class LinuxGpuSensorReader
             var target = new DirectoryInfo(path).ResolveLinkTarget(returnFinalTarget: true);
             return target?.FullName ?? Path.GetFullPath(path);
         }
-        catch (Exception ex) when (IsExpectedSysfsFailure(ex))
+        catch (Exception ex) when (LinuxGpuSensorReader.IsExpectedSysfsFailure(ex))
         {
             try { return Path.GetFullPath(path); }
             catch { return path; }
@@ -231,7 +262,7 @@ internal sealed partial class LinuxGpuSensorReader
             ? index
             : int.MaxValue;
 
-    private static string NormalizePciBusId(string value)
+    internal static string NormalizePciBusId(string value)
     {
         var components = value.Trim().ToLowerInvariant().Split(':');
         if (components.Length != 3) return value.Trim().ToLowerInvariant();

@@ -9,7 +9,7 @@ namespace PhantomMonitor.Services.Linux;
 /// Coleta sensores de GPU por dispositivo DRM, usando NVML, atributos DRM,
 /// hwmon vinculado ao dispositivo e estatísticas DRM fdinfo quando disponíveis.
 /// </summary>
-internal sealed partial class LinuxGpuSensorReader : IDisposable
+internal sealed class LinuxGpuSensorReader : IDisposable
 {
     private static readonly SensorType[] DiagnosticTypes =
     [
@@ -32,9 +32,7 @@ internal sealed partial class LinuxGpuSensorReader : IDisposable
         SensorType.GpuVramTemperature
     ];
 
-    private readonly string _drmRoot;
-    private readonly string _hwmonRoot;
-    private readonly string _thermalRoot;
+    private readonly LinuxGpuDeviceDiscovery _deviceDiscovery;
     private readonly NvidiaGpuSensorReader _nvidiaReader;
     private readonly DrmFdInfoGpuUsageReader _fdInfoReader;
     private readonly Dictionary<(int CardIndex, SensorType Type), HashSet<string>> _sources = [];
@@ -55,9 +53,7 @@ internal sealed partial class LinuxGpuSensorReader : IDisposable
         string drmDeviceRoot = "/dev/dri",
         string thermalRoot = "/sys/class/thermal")
     {
-        _drmRoot = drmRoot;
-        _hwmonRoot = hwmonRoot;
-        _thermalRoot = thermalRoot;
+        _deviceDiscovery = new LinuxGpuDeviceDiscovery(drmRoot, hwmonRoot, thermalRoot, RecordSourceIssue);
         _nvidiaReader = nvidiaReader ?? new NvidiaGpuSensorReader();
         _fdInfoReader = fdInfoReader ?? new DrmFdInfoGpuUsageReader(procRoot, drmDeviceRoot: drmDeviceRoot);
     }
@@ -68,9 +64,10 @@ internal sealed partial class LinuxGpuSensorReader : IDisposable
         _sourceIssues.Clear();
         _nvidiaStatuses.Clear();
         _unassociatedHwmonSources.Clear();
-        _devices = EnumerateDevices();
-        _hwmonAssociations = EnumerateHwmonAssociations();
-        _thermalZones = EnumerateThermalZones();
+        var discovery = _deviceDiscovery.Discover();
+        _devices = discovery.Devices;
+        _hwmonAssociations = discovery.HwmonAssociations;
+        _thermalZones = discovery.ThermalZones;
         _fdInfoUsage = _fdInfoReader.Sample(
             timestampUtc,
             _devices.Select(device => device.PciBusId).Where(id => id is not null).Cast<string>().ToArray());
@@ -185,7 +182,7 @@ internal sealed partial class LinuxGpuSensorReader : IDisposable
         foreach (var (pciBusId, usage) in _fdInfoUsage)
         {
             var device = _devices.FirstOrDefault(candidate =>
-                candidate.PciBusId is not null && NormalizePciBusId(candidate.PciBusId) == pciBusId);
+                candidate.PciBusId is not null && LinuxGpuDeviceDiscovery.NormalizePciBusId(candidate.PciBusId) == pciBusId);
             if (device is null) continue;
 
             PublishMetric(data, SensorType.GpuCore, device.Index, usage, device.Label,
@@ -467,7 +464,7 @@ internal sealed partial class LinuxGpuSensorReader : IDisposable
         issues.Add(issue);
     }
 
-    private static bool TryReadText(string path, out string text)
+    internal static bool TryReadText(string path, out string text)
     {
         try
         {
@@ -481,12 +478,12 @@ internal sealed partial class LinuxGpuSensorReader : IDisposable
         }
     }
 
-    private static bool IsExpectedSysfsFailure(Exception exception) =>
+    internal static bool IsExpectedSysfsFailure(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or SecurityException;
 
     public void Dispose() => _nvidiaReader.Dispose();
 
-    private sealed record GpuDevice(
+    internal sealed record GpuDevice(
         string CardName,
         int Index,
         string DevicePath,
@@ -496,9 +493,9 @@ internal sealed partial class LinuxGpuSensorReader : IDisposable
         string? PciBusId,
         string Label);
 
-    private sealed record HwmonAssociation(string Name, GpuDevice? Device);
+    internal sealed record HwmonAssociation(string Name, GpuDevice? Device);
 
-    private sealed record ThermalZoneAssociation(string Directory, string Type, GpuDevice Device);
+    internal sealed record ThermalZoneAssociation(string Directory, string Type, GpuDevice Device);
 
     private enum NumericFileStatus
     {

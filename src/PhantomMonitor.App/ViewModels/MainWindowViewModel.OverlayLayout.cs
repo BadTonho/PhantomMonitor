@@ -46,13 +46,6 @@ public sealed partial class MainWindowViewModel
         UpdateOverlayRows(_latestSensorData);
     }
 
-    public void SetOverlayBlockItems(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items)
-    {
-        block.Config.Items = items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList();
-        EnsureOverlayExtrasCurrent();
-        UpdateOverlayRows(_latestSensorData);
-    }
-
     public void SetOverlayBlockDefinition(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items,
         IEnumerable<OverlayGraph> graphs, IEnumerable<OverlayTemplate> templates)
     {
@@ -69,8 +62,6 @@ public sealed partial class MainWindowViewModel
         EnsureOverlayExtrasCurrent();
         UpdateOverlayRows(_latestSensorData);
     }
-
-    public void RefreshOverlayBlockContent() => UpdateOverlayRows(_latestSensorData);
 
     public void CancelOverlayLayoutDraft() => ReloadOverlayLayoutDraft();
 

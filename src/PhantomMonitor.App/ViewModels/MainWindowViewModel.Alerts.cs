@@ -115,7 +115,7 @@ public sealed partial class MainWindowViewModel
 
         // Reatribuir ItemsSource a cada snapshot (até 10x/s) re-renderizava cada
         // ComboBox de regra; só troca quando o conjunto de chaves mudar — mesmo
-        // guard usado por RefreshOverlaySeriesOptions/RefreshSensorTuningSeriesOptions.
+        // guard usado por RefreshSensorTuningSeriesOptions.
         var options = keys.OrderBy(key => key, StringComparer.Ordinal).ToArray();
         if (AlertSensorOptions is null || !AlertSensorOptions.SequenceEqual(options, StringComparer.Ordinal))
         {

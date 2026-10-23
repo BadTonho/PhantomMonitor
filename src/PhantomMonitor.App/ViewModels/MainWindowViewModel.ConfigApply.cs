@@ -81,7 +81,6 @@ public sealed partial class MainWindowViewModel
         var oldOverlayOpacity = _config.OverlayOpacity;
         var oldOverlayFontSize = _config.Overlay.FontSize;
         var oldOverlayCompactMode = _config.Overlay.CompactMode;
-        var oldOverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         var oldOverlayBlocks = (_config.Overlay.Blocks ?? []).Select(CloneOverlayBlock).ToList();
         var oldOverlayGraphs = _config.Overlay.Graphs.Select(CloneOverlayGraph).ToList();
         var oldOverlayTemplates = _config.Overlay.Templates.Select(CloneOverlayTemplate).ToList();
@@ -99,8 +98,7 @@ public sealed partial class MainWindowViewModel
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
             || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
         var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
-            || OverlayCompactModeSetting != oldOverlayCompactMode
-            || OverlayShowFrametimeGraph != oldOverlayShowFrametimeGraph;
+            || OverlayCompactModeSetting != oldOverlayCompactMode;
         var overlayLayoutChanged = OverlayLayoutHasChanges();
         var overlayChanged = overlayLayoutChanged
             || overlayVisualChanged
@@ -129,7 +127,6 @@ public sealed partial class MainWindowViewModel
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
         _config.Overlay.FontSize = overlayFontSize;
         _config.Overlay.CompactMode = OverlayCompactModeSetting;
-        _config.Overlay.ShowFrametimeGraph = OverlayShowFrametimeGraph;
         CopyOverlayLayoutToConfig();
 
         if (!_config.Save(ConfigPaths.ConfigFile))
@@ -149,7 +146,6 @@ public sealed partial class MainWindowViewModel
             _config.OverlayOpacity = oldOverlayOpacity;
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
-            _config.Overlay.ShowFrametimeGraph = oldOverlayShowFrametimeGraph;
             _config.Overlay.Blocks = oldOverlayBlocks;
             _config.Overlay.Graphs = oldOverlayGraphs;
             _config.Overlay.Templates = oldOverlayTemplates;
@@ -192,7 +188,6 @@ public sealed partial class MainWindowViewModel
         // em vigor sobre ela (perfis P3 — F1.3).
         OnOverlayBaseConfigChanged();
         UpdateOverlayRows(_latestSensorData);
-        OverlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
         OverlayFontSizeSlider = _config.Overlay.FontSize;

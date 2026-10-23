@@ -81,15 +81,6 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private bool _telemetryExportListenAll;
     private string _telemetryExportStatusText = "Desativado";
     private string _settingsMessage = "As alterações são aplicadas ao salvar.";
-    private bool _overlayShowCpu;
-    private bool _overlayShowGpu;
-    private bool _overlayShowRam;
-    private bool _overlayShowDisk;
-    private bool _overlayShowNetwork;
-    private bool _overlayShowFans;
-    private bool _overlayShowMotherboard;
-    private bool _overlayShowFps;
-    private bool _overlayShowFrametimeGraph;
     private string _overlayWidthText = "220";
     private double _overlayOpacityPercent = 85;
     private string _overlayFontSizeText = "11.5";
@@ -103,10 +94,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private readonly ObservableCollection<object> _overlayAppliedExtraRows = new();
     private double _overlayCanvasWidth = 960;
     private double _overlayCanvasHeight = 620;
-    private readonly ObservableCollection<OverlaySeriesPatternViewModel> _overlaySeriesPatterns = new();
     private IReadOnlyList<string> _overlaySeriesOptions = [];
-    private string? _selectedOverlaySeries;
-    private string _overlaySeriesPatternInput = "";
     private IReadOnlyList<double> _cpuSamples = [];
     private IReadOnlyList<double> _gpuSamples = [];
     private IReadOnlyList<double> _ramSamples = [];
@@ -333,10 +321,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public ObservableCollection<OverlayTemplate> OverlayTemplatesDraft => _overlayTemplatesDraft;
     public double OverlayCanvasWidth { get => _overlayCanvasWidth; private set => Set(ref _overlayCanvasWidth, value); }
     public double OverlayCanvasHeight { get => _overlayCanvasHeight; private set => Set(ref _overlayCanvasHeight, value); }
-    public ObservableCollection<OverlaySeriesPatternViewModel> OverlaySeriesPatterns => _overlaySeriesPatterns;
     public IReadOnlyList<string> OverlaySeriesOptions { get => _overlaySeriesOptions; private set => Set(ref _overlaySeriesOptions, value); }
-    public string? SelectedOverlaySeries { get => _selectedOverlaySeries; set => Set(ref _selectedOverlaySeries, value); }
-    public string OverlaySeriesPatternInput { get => _overlaySeriesPatternInput; set => Set(ref _overlaySeriesPatternInput, value); }
     public bool OverlayVisible => _config.ShowOverlay;
     public string OverlayButtonText => OverlayVisible ? "Ocultar overlay" : "Mostrar overlay";
     public double OverlayOpacity => _overlayOpacityEffective;
@@ -402,15 +387,6 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
             block.RefreshCanvasPosition();
     }
 
-    public bool OverlayShowCpu { get => _overlayShowCpu; set { if (Set(ref _overlayShowCpu, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowGpu { get => _overlayShowGpu; set { if (Set(ref _overlayShowGpu, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowRam { get => _overlayShowRam; set { if (Set(ref _overlayShowRam, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowDisk { get => _overlayShowDisk; set { if (Set(ref _overlayShowDisk, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowNetwork { get => _overlayShowNetwork; set { if (Set(ref _overlayShowNetwork, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowFans { get => _overlayShowFans; set { if (Set(ref _overlayShowFans, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowMotherboard { get => _overlayShowMotherboard; set { if (Set(ref _overlayShowMotherboard, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowFps { get => _overlayShowFps; set { if (Set(ref _overlayShowFps, value)) UpdateOverlayRows(_latestSensorData); } }
-    public bool OverlayShowFrametimeGraph { get => _overlayShowFrametimeGraph; set { if (Set(ref _overlayShowFrametimeGraph, value)) UpdateOverlayRows(_latestSensorData); } }
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
     public IReadOnlyList<double> GpuSamples { get => _gpuSamples; private set => Set(ref _gpuSamples, value); }
     public IReadOnlyList<double> RamSamples { get => _ramSamples; private set => Set(ref _ramSamples, value); }
@@ -448,21 +424,11 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _telemetryExportStatusText = _config.TelemetryExport.Enabled ? "Aguardando coleta" : "Desativado";
         _alertsCooldownText = _config.Alerts.CooldownSeconds.ToString(CultureInfo.CurrentCulture);
         _alertsEnabled = _config.Alerts.Enabled;
-        _overlayShowCpu = _config.Overlay.ShowCpu;
-        _overlayShowGpu = _config.Overlay.ShowGpu;
-        _overlayShowRam = _config.Overlay.ShowRam;
-        _overlayShowDisk = _config.Overlay.ShowDisk;
-        _overlayShowNetwork = _config.Overlay.ShowNetwork;
-        _overlayShowFans = _config.Overlay.ShowFans;
-        _overlayShowMotherboard = _config.Overlay.ShowMotherboard;
-        _overlayShowFps = _config.Overlay.ShowFps;
-        _overlayShowFrametimeGraph = _config.Overlay.ShowFrametimeGraph;
         _overlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         _overlayOpacityPercent = _config.OverlayOpacity * 100;
         _overlayFontSizeText = _config.Overlay.FontSize.ToString("0.#", CultureInfo.CurrentCulture);
         _overlayFontSizeSlider = _config.Overlay.FontSize;
         _overlayCompactModeSetting = _config.Overlay.CompactMode;
-        LoadOverlaySeriesPatterns();
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
         LoadCustomSensorEditors();
@@ -680,10 +646,10 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _latestSensorData = data;
         if (IsDiagnostics && (SelectedDiagnosticSection is "errors" or "sensors"))
             RefreshDiagnosticSensorState(data);
-        RefreshOverlaySeriesOptions();
         ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data, _inventoryAggregateStats));
         UpdateInventorySession(data);
         UpdateOverlayRows(data);
+        RefreshOverlaySeriesOptions();
         RefreshSensorTuningSeriesOptions();
         RefreshAlertEditor();
         HasInventorySnapshot = true;

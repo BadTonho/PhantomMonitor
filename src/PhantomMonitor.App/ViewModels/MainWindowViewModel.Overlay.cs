@@ -1,9 +1,5 @@
-using System.ComponentModel;
-using System.Globalization;
-using System.Runtime.CompilerServices;
-using System.Collections.ObjectModel;
-using System.Threading;
 using Avalonia.Threading;
+using System.Collections.ObjectModel;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
@@ -12,8 +8,7 @@ using PhantomMonitor.Services.Telemetry;
 
 namespace PhantomMonitor.App.ViewModels;
 
-// Overlay: alternância de janela, reconciliação de rows do overlay e do inventário,
-// padrões de séries e aparências.
+// Overlay: alternância de visibilidade, métricas e aparência.
 public sealed partial class MainWindowViewModel
 {
     public void ToggleOverlay()
@@ -121,7 +116,6 @@ public sealed partial class MainWindowViewModel
             groups.RemoveAt(groups.Count - 1);
         while (groups.Count < plan.Count)
             groups.Add(_inventoryOtherGroup ??= SensorInventoryBuilder.CreateOtherGroup());
-
         for (var index = 0; index < plan.Count; index++)
             ReconcileInventoryRows(groups[index], plan[index].Rows);
     }
@@ -136,7 +130,6 @@ public sealed partial class MainWindowViewModel
         {
             var entry = plan[p];
             InventoryRowViewModel row;
-
             if (position < rows.Count && rows[position].Key == entry.Key)
             {
                 row = rows[position];
@@ -161,17 +154,26 @@ public sealed partial class MainWindowViewModel
                     rows.Insert(position, row);
                 }
             }
-
             row.Apply(entry.Source, entry.Value, entry.Unit, entry.Available, entry.Min, entry.Max, entry.Avg);
             var children = entry.Children ?? [];
             ReconcileInventoryRows(row.Children, children);
             position++;
         }
-
         // Sobras: o plano encolheu (série deixou de ser publicada); a casca
         // do grupo permanece.
         while (rows.Count > position)
             rows.RemoveAt(rows.Count - 1);
+    }
+
+    private void RefreshOverlaySeriesOptions()
+    {
+        var options = _latestSensorData?.Series.Keys
+            .Select(key => key.ToString())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+        if (!OverlaySeriesOptions.SequenceEqual(options, StringComparer.OrdinalIgnoreCase))
+            OverlaySeriesOptions = options;
     }
 
     private void RaiseOverlayAppearanceProperties()
@@ -192,82 +194,6 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayHideButtonPadding));
         Raise(nameof(OverlayBlockPadding));
         Raise(nameof(OverlayFrametimeGraphHeight));
-    }
-
-    private void LoadOverlaySeriesPatterns()
-    {
-        _overlaySeriesPatterns.Clear();
-        foreach (var pattern in _config.Overlay.ShownSeries ?? ["Gpu*", "FanSpeed*", "Disk*"])
-            _overlaySeriesPatterns.Add(new OverlaySeriesPatternViewModel(pattern));
-    }
-
-    public void AddDetectedOverlaySeries()
-    {
-        if (!SensorKey.TryParse(SelectedOverlaySeries, out var key) || key.IsPrimary)
-        {
-            SettingsMessage = "Selecione uma série por instância detectada.";
-            return;
-        }
-        AddOverlaySeriesPattern(key.ToString());
-    }
-
-    public void AddManualOverlaySeriesPattern()
-    {
-        var pattern = OverlaySeriesPatternInput.Trim();
-        if (!IsValidOverlaySeriesPattern(pattern))
-        {
-            SettingsMessage = "Informe uma chave de sensor válida ou um padrão com * no início/fim (ex.: Gpu*).";
-            return;
-        }
-        AddOverlaySeriesPattern(pattern);
-        OverlaySeriesPatternInput = "";
-    }
-
-    private void AddOverlaySeriesPattern(string pattern)
-    {
-        if (_overlaySeriesPatterns.Any(item => string.Equals(item.Pattern, pattern, StringComparison.OrdinalIgnoreCase)))
-        {
-            SettingsMessage = "Esse padrão já está na lista.";
-            return;
-        }
-        _overlaySeriesPatterns.Add(new OverlaySeriesPatternViewModel(pattern));
-        SettingsMessage = "Padrão adicionado. Salve para aplicar ao overlay.";
-    }
-
-    public void RemoveOverlaySeriesPattern(OverlaySeriesPatternViewModel item)
-    {
-        _overlaySeriesPatterns.Remove(item);
-    }
-
-    public void RestoreDefaultOverlaySeriesPatterns()
-    {
-        _overlaySeriesPatterns.Clear();
-        foreach (var pattern in new[] { "Gpu*", "FanSpeed*", "Disk*" })
-            _overlaySeriesPatterns.Add(new OverlaySeriesPatternViewModel(pattern));
-        SettingsMessage = "Padrões do overlay restaurados. Salve para aplicar.";
-    }
-
-    private static bool IsValidOverlaySeriesPattern(string pattern)
-    {
-        if (pattern == "*") return true;
-        if (pattern.Count(character => character == '*') == 0)
-            return SensorKey.TryParse(pattern, out var key) && !key.IsPrimary && Enum.IsDefined(key.Type);
-        if (pattern.Count(character => character == '*') != 1) return false;
-        if (pattern.EndsWith('*')) return pattern.Length > 1;
-        return pattern.StartsWith('*') && pattern.Length > 1;
-    }
-
-    private void RefreshOverlaySeriesOptions()
-    {
-        var options = _latestSensorData?.Series.Keys
-            .Select(key => key.ToString())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
-            .ToArray() ?? [];
-        if (!OverlaySeriesOptions.SequenceEqual(options, StringComparer.OrdinalIgnoreCase))
-            OverlaySeriesOptions = options;
-        if (SelectedOverlaySeries is not null && !options.Contains(SelectedOverlaySeries, StringComparer.OrdinalIgnoreCase))
-            SelectedOverlaySeries = null;
     }
 
 }

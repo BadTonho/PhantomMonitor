@@ -176,10 +176,6 @@ public sealed partial class MainWindowViewModel
         return processName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Whitelist de séries por instância em vigor: perfil &gt; global.</summary>
-    public IReadOnlyList<string>? EffectiveOverlayShownSeries() =>
-        _activeProfile?.ShownSeries is { Count: > 0 } series ? series : _config.Overlay.ShownSeries;
-
     /// <summary>Aplica os overrides do perfil aos campos efetivos (nulo = aplica o base).</summary>
     public void ApplyOverlayProfile(OverlayProfile? profile)
     {

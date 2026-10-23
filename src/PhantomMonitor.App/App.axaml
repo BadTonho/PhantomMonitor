@@ -8,10 +8,11 @@
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
-        <!-- Tema ativo. Alternância manual (Fase 0): trocar a Source entre
-             Themes/Tokens.Neptune.axaml (visual Linux atual) e
-             Themes/Tokens.Slate.axaml (visual WPF). A troca em runtime via
-             config.json chega na Fase 3 — as views usam DynamicResource. -->
+        <!-- Tema builtin ativo, resolvido no boot por App.ApplyConfiguredUiTheme():
+             config.json "uiTheme" (neptune|slate) e, em segundo lugar, a CLI
+             ui-theme=<nome> (dois hífens como prefixo) sobrepõe (smoke/
+             troubleshooting). Os dois dicionários têm a MESMA lista de chaves; as
+             views usam DynamicResource. Troca em runtime pela UI chega na Fase 3. -->
         <ResourceInclude Source="avares://PhantomMonitor.App/Themes/Tokens.Neptune.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>

@@ -2,63 +2,82 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      Tema "Slate" — preserva o visual atual do WPF/Windows.
-      Fonte da verdade: src/PhantomMonitor/Resources/Styles.xaml (paleta de 254 linhas).
-      Tokens sem equivalente direto no WPF (overlay, chips, toast de update) usam
-      estimativas da mesma família slate — refinadas quando os controles
-      compartilhados forem portados (Fase 1).
+      Tema "Slate" — porta integral do visual atual do WPF/Windows (F1.6).
+      Fontes da verdade:
+        - src/PhantomMonitor/Resources/Styles.xaml      (paleta, CardBorder, PrimaryButton,
+                                                         RadioButton nav, CheckBox switch)
+        - src/PhantomMonitor/MainWindow.xaml           (banner admin #18EF4444/#35EF4444,
+                                                         badge de update #1810B981/#3510B981/#6EE7B7,
+                                                         StatusText TextSecondary)
+        - src/PhantomMonitor/Overlay/OverlayWindow.xaml(.cs)  (painel #CC070A0F, borda #25FFFFFF,
+                                                         labels #8E9AA8)
+        - src/PhantomMonitor/Overlay/AlertPopupWindow.xaml    (toast #F20F1117, borda/ícone #F59E0B)
+      Proveniência indicada por linha. Tokens sem equivalente no WPF (o Avalonia tem
+      estruturas a mais — chips CPU/GPU, botão × do overlay, rodapé dim) continuam
+      "estimate" na mesma família slate, marcados inline.
+      Nota F1.6: os botões de ação (Button.action) NÃO recebem token de fundo — seguem
+      o accent da plataforma (Fluent, dinâmico no Windows) nos dois temas por decisão
+      de preservação: nenhum visual atual do Neptune é perdido.
     -->
 
-    <!-- Superfícies (valores verbatim do Styles.xaml do WPF) -->
-    <SolidColorBrush x:Key="BgWindowBrush" Color="#0F1117" />
-    <SolidColorBrush x:Key="BgSidebarBrush" Color="#141720" />
-    <SolidColorBrush x:Key="BgSidebarBorderBrush" Color="#232734" />
-    <SolidColorBrush x:Key="BgSurfaceBrush" Color="#202431" />
-    <SolidColorBrush x:Key="BgCardBrush" Color="#181B24" />
-    <SolidColorBrush x:Key="BgCardBorderBrush" Color="#2D3243" />
-    <SolidColorBrush x:Key="BgChipBrush" Color="#1E293B" />
-    <SolidColorBrush x:Key="BgDividerBrush" Color="#232734" />
-    <SolidColorBrush x:Key="BgOverlayPanelBrush" Color="#E60F1117" />
-    <SolidColorBrush x:Key="BgOverlayButtonBrush" Color="#202431" />
-    <SolidColorBrush x:Key="BgToastUpdateBrush" Color="#15271F" />
+    <!-- Superfícies -->
+    <SolidColorBrush x:Key="BgWindowBrush" Color="#0F1117" />            <!-- Styles.xaml BgDark -->
+    <SolidColorBrush x:Key="BgSidebarBrush" Color="#141720" />           <!-- Styles.xaml BgSidebar -->
+    <SolidColorBrush x:Key="BgSidebarBorderBrush" Color="#232734" />    <!-- sidebar = BorderBrush(=Divider) -->
+    <SolidColorBrush x:Key="BgCardBrush" Color="#181B24" />             <!-- Styles.xaml BgCard -->
+    <SolidColorBrush x:Key="BgCardBorderBrush" Color="#232734" />       <!-- CardBorder usa BorderBrush(=Divider) -->
+    <SolidColorBrush x:Key="BgChipBrush" Color="#1E293B" />             <!-- estimate = AccentDim -->
+    <SolidColorBrush x:Key="BgDividerBrush" Color="#232734" />          <!-- Styles.xaml Divider -->
+    <SolidColorBrush x:Key="BgOverlayPanelBrush" Color="#CC070A0F" />   <!-- OverlayWindow MainBorder verbatim -->
+    <SolidColorBrush x:Key="BgOverlayButtonBrush" Color="#202431" />    <!-- estimate = BgSurface (WPF não tem botão no overlay) -->
+    <SolidColorBrush x:Key="BgToastUpdateBrush" Color="#1810B981" />    <!-- banner DO WPF no MainWindow.xaml verbatim -->
+    <SolidColorBrush x:Key="AlertToastBackgroundBrush" Color="#F20F1117" /> <!-- AlertPopupWindow verbatim -->
+    <SolidColorBrush x:Key="AlertToastBorderBrush" Color="#F59E0B" />   <!-- AlertPopupWindow borda verbatim -->
+    <SolidColorBrush x:Key="AlertToastHeaderBrush" Color="#F59E0B" />   <!-- AlertPopupWindow ícone de alerta verbatim -->
 
-    <!-- Texto (Primário/Secundário/Muted verbatim do Styles.xaml) -->
-    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F1F5F9" />
-    <SolidColorBrush x:Key="TextBrightBrush" Color="#F8FAFC" />
-    <SolidColorBrush x:Key="TextBodyBrush" Color="#E2E8F0" />
-    <SolidColorBrush x:Key="TextStatusBrush" Color="#D9E1EC" />
-    <SolidColorBrush x:Key="TextMonoBrush" Color="#A9B4C4" />
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8" />
-    <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B" />
-    <SolidColorBrush x:Key="TextOverlaySecondaryBrush" Color="#84A0BF" />
-    <SolidColorBrush x:Key="TextLabelBrush" Color="#64748B" />
-    <SolidColorBrush x:Key="TextDimBrush" Color="#475569" />
+    <!-- Texto (o WPF usa só 3 tons: TextPrimary/TextSecondary/TextMuted) -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F1F5F9" />        <!-- Styles.xaml TextPrimary -->
+    <SolidColorBrush x:Key="TextBrightBrush" Color="#F1F5F9" />         <!-- títulos = TextPrimaryBrush (PHANTOM) -->
+    <SolidColorBrush x:Key="TextBodyBrush" Color="#F1F5F9" />           <!-- corpo dos cards = TextPrimaryBrush -->
+    <SolidColorBrush x:Key="TextStatusBrush" Color="#94A3B8" />         <!-- StatusText "Parado" = TextSecondaryBrush -->
+    <SolidColorBrush x:Key="TextMonoBrush" Color="#94A3B8" />           <!-- linhas de detalhe = TextSecondaryBrush -->
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8" />      <!-- Styles.xaml TextSecondary -->
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B" />          <!-- Styles.xaml TextMuted -->
+    <SolidColorBrush x:Key="TextOverlaySecondaryBrush" Color="#8E9AA8" /> <!-- OverlayWindow.xaml.cs MutedBrush verbatim -->
+    <SolidColorBrush x:Key="TextLabelBrush" Color="#64748B" />          <!-- rótulos = TextMutedBrush -->
+    <SolidColorBrush x:Key="TextDimBrush" Color="#475569" />            <!-- estimate (WPF não tem rodapé dim) -->
 
-    <!-- Acentos (accent/accentLight/verdes/alaranjados verbatim; chips estimados) -->
-    <SolidColorBrush x:Key="AccentLightBrush" Color="#3B82F6" />
-    <SolidColorBrush x:Key="AccentSoftBrush" Color="#60A5FA" />
-    <SolidColorBrush x:Key="AccentChipCpuBrush" Color="#BFDBFE" />
-    <SolidColorBrush x:Key="AccentPurpleChipBrush" Color="#DDD6FE" />
-    <SolidColorBrush x:Key="AccentPurpleSoftBrush" Color="#818CF8" />
-    <SolidColorBrush x:Key="AccentGreenBrush" Color="#10B981" />
-    <SolidColorBrush x:Key="AccentGreenSoftBrush" Color="#34D399" />
-    <SolidColorBrush x:Key="AccentWarningBrush" Color="#F59E0B" />
+    <!-- Acentos e séries de gráfico -->
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#3B82F6" />        <!-- Styles.xaml AccentLight -->
+    <SolidColorBrush x:Key="AccentChipCpuBrush" Color="#BFDBFE" />      <!-- estimate (WPF não tem chip; família azul do Accent) -->
+    <SolidColorBrush x:Key="AccentPurpleChipBrush" Color="#DDD6FE" />   <!-- estimate (família roxa do AccentPurple) -->
+    <SolidColorBrush x:Key="AccentPurpleSoftBrush" Color="#6366F1" />   <!-- Styles.xaml AccentPurple verbatim (stroke GPU) -->
+    <SolidColorBrush x:Key="AccentGreenBrush" Color="#10B981" />        <!-- Styles.xaml Green -->
+    <SolidColorBrush x:Key="AccentGreenSoftBrush" Color="#6EE7B7" />    <!-- texto do badge/banner de update verbatim -->
+    <SolidColorBrush x:Key="AccentWarningBrush" Color="#F59E0B" />      <!-- Styles.xaml Yellow -->
 
-    <!-- Uso/temp quente (verbatim do WPF: GetTempColor/UsageHot/banner admin em MainWindow.xaml.cs). -->
-    <SolidColorBrush x:Key="AccentHotBrush" Color="#EF4444" />
-    <SolidColorBrush x:Key="AccentHotSoftBrush" Color="#FCA5A5" />
-    <SolidColorBrush x:Key="AccentHotBodyBrush" Color="#F87171" />
+    <!-- Uso/temp quente (verbatim: UsageHot/GetTempColor/banner admin em MainWindow.xaml.cs) -->
+    <SolidColorBrush x:Key="AccentHotBrush" Color="#EF4444" />          <!-- UsageHotBrush / Red -->
+    <SolidColorBrush x:Key="AccentHotSoftBrush" Color="#FCA5A5" />      <!-- título do banner admin -->
+    <SolidColorBrush x:Key="AccentHotBodyBrush" Color="#F87171" />      <!-- corpo do banner admin -->
 
-    <!-- Tints translúcidos verbatim (pílula normal compartilhados com o badge de update do WPF). -->
-    <SolidColorBrush x:Key="BgTintGreenBrush" Color="#1810B981" />
+    <!-- Tints translúcidos (bg/borda de pílula; banner admin e badge de update) -->
+    <SolidColorBrush x:Key="BgTintGreenBrush" Color="#1810B981" />      <!-- badge de update do WPF verbatim -->
     <SolidColorBrush x:Key="BorderTintGreenBrush" Color="#3510B981" />
-    <SolidColorBrush x:Key="BgTintWarmBrush" Color="#18F59E0B" />
+    <SolidColorBrush x:Key="BgTintWarmBrush" Color="#18F59E0B" />       <!-- pílula warm (faixa 65–80 °C) -->
     <SolidColorBrush x:Key="BorderTintWarmBrush" Color="#35F59E0B" />
-    <SolidColorBrush x:Key="BgTintHotBrush" Color="#18EF4444" />
+    <SolidColorBrush x:Key="BgTintHotBrush" Color="#18EF4444" />        <!-- AdminWarning verbatim -->
     <SolidColorBrush x:Key="BorderTintHotBrush" Color="#35EF4444" />
 
-    <!-- Borda translúcida do painel overlay (40% do acento #2563EB do WPF) -->
-    <SolidColorBrush x:Key="OverlayBorderBrush" Color="#662563EB" />
+    <!-- Navegação da sidebar (verbatim do RadioButton do Styles.xaml do WPF) -->
+    <SolidColorBrush x:Key="NavBrush" Color="Transparent" />            <!-- não selecionado -->
+    <SolidColorBrush x:Key="NavSelectedBrush" Color="#202431" />        <!-- checked = BgSurfaceBrush -->
+    <SolidColorBrush x:Key="NavSoftBrush" Color="#0FFFFFFF" />          <!-- hover ~6% branco -->
+    <SolidColorBrush x:Key="NavForegroundBrush" Color="#94A3B8" />      <!-- não selecionado = TextSecondaryBrush -->
+    <SolidColorBrush x:Key="NavForegroundSelectedBrush" Color="#F1F5F9" /> <!-- checked/hover = TextPrimaryBrush -->
+
+    <!-- Borda translúcida do painel overlay -->
+    <SolidColorBrush x:Key="OverlayBorderBrush" Color="#25FFFFFF" />    <!-- OverlayWindow MainBorder verbatim -->
 
     <!-- Guia tracejada de valor do overlay (60 FPS no frametime; ~12% branco, como o Minigraph do WPF) -->
     <SolidColorBrush x:Key="OverlayGuideBrush" Color="#1FFFFFFF" />

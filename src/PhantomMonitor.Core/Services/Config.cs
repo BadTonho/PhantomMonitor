@@ -28,6 +28,14 @@ public sealed class AppConfig
     /// </summary>
     public string PauseMonitorHotkey { get; set; } = "Ctrl+Alt+P";
 
+    /// <summary>
+    /// Tema visual builtin (F1.6/sistema de temas): <c>"neptune"</c> (visual Linux
+    /// original) ou <c>"slate"</c> (porta verbatim do WPF). Aplicado no boot —
+    /// a troca em runtime pela UI chega na Fase 3. A CLI <c>--ui-theme=&lt;nome&gt;</c>
+    /// sobrepõe o valor do arquivo (smoke/troubleshooting).
+    /// </summary>
+    public string UiTheme { get; set; } = "neptune";
+
     public double OverlayOpacity { get; set; } = 0.85;
     public OverlayPositionConfig OverlayPosition { get; set; } = new();
     public OverlayConfig Overlay { get; set; } = new();
@@ -118,6 +126,12 @@ public sealed class AppConfig
     public void Normalize()
     {
         if (UpdateIntervalMs < 100) UpdateIntervalMs = 100;
+
+        // Tema de interface (F1.6): só os dois builtin existem; valor desconhecido
+        // volta ao Neptune em vez de deixar o app sem tokens.
+        UiTheme = (UiTheme ?? "").Trim().ToLowerInvariant();
+        if (UiTheme is not ("neptune" or "slate")) UiTheme = "neptune";
+
         OverlayOpacity = Math.Clamp(OverlayOpacity, 0.1, 1.0);
         OverlayPosition ??= new();
         Overlay ??= new();

@@ -3,6 +3,7 @@
   "logToCsv": false,
   "logToJson": true,
   "logToJsonJournal": false,
+  "uiTheme": "neptune",
   "showOverlay": false,
   "toggleOverlayHotkey": "",
   "pauseMonitorHotkey": "Ctrl+Alt+P",

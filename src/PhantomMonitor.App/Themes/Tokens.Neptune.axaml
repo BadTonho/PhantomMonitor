@@ -6,16 +6,17 @@
       Fonte da verdade: src/PhantomMonitor.App/Views/MainWindow.axaml e OverlayWindow.axaml
       (hex inline de out/2026, drenado para cá na Fase 0 da unificação visual).
       Chaves espelham o dicionário do WPF (Resources/Styles.xaml) para que os temas
-      possam trocar por família de resource. Tokens de métricas (raios/paddings/tipografia)
-      entram na Fase 1, junto com a unificação dos controles.
-      Slates/ORIGEM do visual "Slate" ficam em Tokens.Slate.axaml.
+      possam trocar por família de resource; Tokens.Slate.axaml traz proveniência por
+      valor. F1.6: nav da sidebar com estado selecionado e toast de alerta viraram
+      tokens (valores abaixo = congelamento do look de hoje; o Slate usa os verbatim
+      do WPF). Métricas (raios/paddings/tipografia) ficam compartilhadas nas views —
+      não viraram tokens por decisão da F1.6 (o Avalonia tem métricas próprias).
     -->
 
     <!-- Superfícies -->
     <SolidColorBrush x:Key="BgWindowBrush" Color="#111827" />
     <SolidColorBrush x:Key="BgSidebarBrush" Color="#151E2B" />
     <SolidColorBrush x:Key="BgSidebarBorderBrush" Color="#263244" />
-    <SolidColorBrush x:Key="BgSurfaceBrush" Color="#202C3B" />
     <SolidColorBrush x:Key="BgCardBrush" Color="#1B2634" />
     <SolidColorBrush x:Key="BgCardBorderBrush" Color="#29374A" />
     <SolidColorBrush x:Key="BgChipBrush" Color="#243345" />
@@ -23,6 +24,10 @@
     <SolidColorBrush x:Key="BgOverlayPanelBrush" Color="#E6111824" />
     <SolidColorBrush x:Key="BgOverlayButtonBrush" Color="#263448" />
     <SolidColorBrush x:Key="BgToastUpdateBrush" Color="#1E2B25" />
+    <!-- Toast de alerta (F1.6): congelamento do look de hoje (chip + borda acento). -->
+    <SolidColorBrush x:Key="AlertToastBackgroundBrush" Color="#243345" />
+    <SolidColorBrush x:Key="AlertToastBorderBrush" Color="#38BDF8" />
+    <SolidColorBrush x:Key="AlertToastHeaderBrush" Color="#7DD3FC" />
 
     <!-- Texto -->
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F3F6FB" />
@@ -38,7 +43,6 @@
 
     <!-- Acentos e séries de gráfico -->
     <SolidColorBrush x:Key="AccentLightBrush" Color="#38BDF8" />
-    <SolidColorBrush x:Key="AccentSoftBrush" Color="#7DD3FC" />
     <SolidColorBrush x:Key="AccentChipCpuBrush" Color="#93C5FD" />
     <SolidColorBrush x:Key="AccentPurpleChipBrush" Color="#C4B5FD" />
     <SolidColorBrush x:Key="AccentPurpleSoftBrush" Color="#A78BFA" />
@@ -58,6 +62,14 @@
     <SolidColorBrush x:Key="BorderTintWarmBrush" Color="#35FBBF24" />
     <SolidColorBrush x:Key="BgTintHotBrush" Color="#18F87171" />
     <SolidColorBrush x:Key="BorderTintHotBrush" Color="#35F87171" />
+
+    <!-- Navegação da sidebar (F1.6): fundo/texto congelados no look de hoje; o estado
+         selecionado (fundo mais claro + indicador 3×14) é o recurso novo do par. -->
+    <SolidColorBrush x:Key="NavBrush" Color="#202C3B" />
+    <SolidColorBrush x:Key="NavSelectedBrush" Color="#263244" />
+    <SolidColorBrush x:Key="NavSoftBrush" Color="#14FFFFFF" /> <!-- estimate: hover ~8% branco -->
+    <SolidColorBrush x:Key="NavForegroundBrush" Color="#E6EDF6" />
+    <SolidColorBrush x:Key="NavForegroundSelectedBrush" Color="#F3F6FB" />
 
     <!-- Borda translúcida do painel overlay (40% do acento) -->
     <SolidColorBrush x:Key="OverlayBorderBrush" Color="#663B82F6" />

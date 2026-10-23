@@ -16,6 +16,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SyncNavPage("overview");
         Opened += (_, _) =>
         {
             EnsureOverlayWindow();
@@ -146,27 +147,87 @@ public sealed partial class MainWindow : Window
     private void RefreshWindowPresentationState() =>
         ViewModel.SetWindowPresentationState(IsActive, WindowState == Avalonia.Controls.WindowState.Minimized);
 
+    /// <summary>
+    /// Estado selecionado da nav (F1.6 — porta do <c>IsChecked</c> do RadioButton
+    /// do WPF): classe <c>.selected</c> acende NavSelectedBrush + indicador 3×14.
+    /// Chamada no boot (Visão geral) e a cada clique de nav.
+    /// </summary>
+    private Button?[]? _navButtons;
+    private static readonly string[] NavPageCodes =
+        ["overview", "inventory", "customsensors", "sensortuning", "alerts", "diagnostics", "settings"];
+
+    private void SyncNavPage(string page)
+    {
+        _navButtons ??=
+        [
+            this.FindControl<Button>("NavOverview"),
+            this.FindControl<Button>("NavInventory"),
+            this.FindControl<Button>("NavCustomSensors"),
+            this.FindControl<Button>("NavSensorTuning"),
+            this.FindControl<Button>("NavAlerts"),
+            this.FindControl<Button>("NavDiagnostics"),
+            this.FindControl<Button>("NavSettings"),
+        ];
+
+        for (var i = 0; i < NavPageCodes.Length; i++)
+        {
+            if (_navButtons[i] is not { } button) continue;
+            if (NavPageCodes[i] == page)
+                button.Classes.Add("selected");
+            else
+                button.Classes.Remove("selected");
+        }
+    }
+
     private void OnStartClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Start();
     private void OnPauseClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.TogglePause();
     private void OnResetStatsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ResetSessionStats();
     private void OnStopClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Stop();
     private void OnToggleOverlayClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ToggleOverlay();
-    private void OnOverviewClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowOverview();
-    private void OnInventoryClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowInventory();
-    private void OnCustomSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowCustomSensors();
-    private void OnSensorTuningClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSensorTuning();
-    private void OnSettingsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSettings();
+    private void OnOverviewClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SyncNavPage("overview");
+        ViewModel.ShowOverview();
+    }
+    private void OnInventoryClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SyncNavPage("inventory");
+        ViewModel.ShowInventory();
+    }
+    private void OnCustomSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SyncNavPage("customsensors");
+        ViewModel.ShowCustomSensors();
+    }
+    private void OnSensorTuningClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SyncNavPage("sensortuning");
+        ViewModel.ShowSensorTuning();
+    }
+    private void OnAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SyncNavPage("alerts");
+        ViewModel.ShowAlerts();
+    }
+    private void OnSettingsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SyncNavPage("settings");
+        ViewModel.ShowSettings();
+    }
     private void OnSaveSettingsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveSettings();
     private void OnAddDetectedOverlaySeriesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddDetectedOverlaySeries();
     private void OnAddOverlaySeriesPatternClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddManualOverlaySeriesPattern();
     private void OnRestoreOverlaySeriesDefaultsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestoreDefaultOverlaySeriesPatterns();
-    private void OnAlertsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowAlerts();
     private void OnRestartAsAdminClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestartAsAdmin();
     private void OnUpdateBadgeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSettings();
     private void OnCheckUpdatesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.CheckUpdatesNow();
     private void OnOpenReleasesPageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.OpenReleasesPage();
     private void OnApplyUpdateClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _ = ViewModel.ApplyUpdateAsync();
-    private void OnDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowDiagnostics();
+    private void OnDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SyncNavPage("diagnostics");
+        ViewModel.ShowDiagnostics();
+    }
     private void OnRefreshDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RefreshDiagnostics();
     private void OnOpenErrorLogClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

@@ -20,13 +20,47 @@
       <Setter Property="Padding" Value="14,9" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
+    <!-- Navegação da sidebar (porta do RadioButton do Styles.xaml do WPF): indicador
+         3×14 com AccentLightBrush no selecionado, fundo/texto por tokens Nav*.
+         Hover = NavSoftBrush, selecionado = NavSelectedBrush + SemiBold. -->
     <Style Selector="Button.nav">
       <Setter Property="CornerRadius" Value="7" />
       <Setter Property="Padding" Value="10,9" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="Background" Value="{DynamicResource BgSurfaceBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextBodyBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NavBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NavForegroundBrush}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+              <Border x:Name="Indicator" Width="3" Height="14" CornerRadius="1.5" Margin="-2,0,7,0"
+                      Background="{DynamicResource AccentLightBrush}" />
+              <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.nav /template/ Border#Indicator">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="Button.nav:pointerover">
+      <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NavForegroundSelectedBrush}" />
+    </Style>
+    <Style Selector="Button.nav:pointerover /template/ Border#Indicator">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <!-- Depois do :pointerover para o hover não sobrescrever o item selecionado. -->
+    <Style Selector="Button.nav.selected">
+      <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NavForegroundSelectedBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.nav.selected /template/ Border#Indicator">
+      <Setter Property="IsVisible" Value="True" />
     </Style>
     <!-- Badge de update (porta do chip verde do WPF na sidebar) -->
     <Style Selector="Button.update-badge">
@@ -54,13 +88,13 @@
 
         <StackPanel Grid.Row="1" Margin="0,38,0,0" Spacing="10">
           <TextBlock Text="MONITORAMENTO" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="Bold" Margin="8,0,0,4" />
-          <Button Classes="nav" Content="◉   Visão geral" Click="OnOverviewClick" />
-          <Button Classes="nav" Content="▦   Inventário" Click="OnInventoryClick" />
-          <Button Classes="nav" Content="ƒ   Sensores customizados" Click="OnCustomSensorsClick" />
-          <Button Classes="nav" Content="↻   Ajuste por série" Click="OnSensorTuningClick" />
-          <Button Classes="nav" Content="♧   Alertas" Click="OnAlertsClick" />
-          <Button Classes="nav" Content="ⓘ   Diagnóstico" Click="OnDiagnosticsClick" />
-          <Button Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
+          <Button x:Name="NavOverview" Classes="nav" Content="◉   Visão geral" Click="OnOverviewClick" />
+          <Button x:Name="NavInventory" Classes="nav" Content="▦   Inventário" Click="OnInventoryClick" />
+          <Button x:Name="NavCustomSensors" Classes="nav" Content="ƒ   Sensores customizados" Click="OnCustomSensorsClick" />
+          <Button x:Name="NavSensorTuning" Classes="nav" Content="↻   Ajuste por série" Click="OnSensorTuningClick" />
+          <Button x:Name="NavAlerts" Classes="nav" Content="♧   Alertas" Click="OnAlertsClick" />
+          <Button x:Name="NavDiagnostics" Classes="nav" Content="ⓘ   Diagnóstico" Click="OnDiagnosticsClick" />
+          <Button x:Name="NavSettings" Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
           <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="{DynamicResource TextDimBrush}" FontSize="9" Margin="8,13,0,0" />
         </StackPanel>
 
@@ -847,9 +881,10 @@
       </StackPanel>
     </ScrollViewer>
 
-    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource AccentLightBrush}" BorderThickness="1" CornerRadius="10" Padding="16">
+    <!-- Toast de alerta (paridade estrutural do AlertPopupWindow do WPF; cores via tokens AlertToast*). -->
+    <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="{DynamicResource AlertToastBackgroundBrush}" BorderBrush="{DynamicResource AlertToastBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16">
       <StackPanel Spacing="5">
-        <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="{DynamicResource AccentSoftBrush}" FontSize="9" FontWeight="Bold" />
+        <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="{DynamicResource AlertToastHeaderBrush}" FontSize="9" FontWeight="Bold" />
         <TextBlock Text="{Binding AlertToastMessage}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" />
       </StackPanel>
     </Border>

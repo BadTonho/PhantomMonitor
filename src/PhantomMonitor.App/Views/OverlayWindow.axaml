@@ -34,25 +34,29 @@
       <ItemsControl ItemsSource="{Binding OverlayRows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <StackPanel Spacing="2">
-              <Grid ColumnDefinitions="120,*"
-                    ColumnSpacing="{Binding $parent[Window].DataContext.OverlayColumnSpacing}"
-                    Margin="{Binding $parent[Window].DataContext.OverlayRowMargin}">
+            <!-- Blocos por hardware (mesma ideia do editor OSD): rótulo pequeno + valor
+                 monospace em destaque dentro de um bloco; séries por instância viram
+                 um bloco por série. -->
+            <Border CornerRadius="4" Background="{DynamicResource BgChipBrush}"
+                    BorderBrush="{DynamicResource BgDividerBrush}" BorderThickness="0.5"
+                    Margin="{Binding $parent[Window].DataContext.OverlayRowMargin}"
+                    Padding="{Binding $parent[Window].DataContext.OverlayBlockPadding}">
+              <StackPanel Spacing="2">
                 <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                            FontSize="{Binding $parent[Window].DataContext.OverlayMetricNameFontSize}"
                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
+                <TextBlock Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="{Binding $parent[Window].DataContext.OverlayMetricValueFontSize}"
-                           FontFamily="monospace" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
-              </Grid>
-              <!-- Frametime no estilo do Minigraph do WPF: eixo 0..33.3 ms com guia de 60 FPS -->
-              <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
-                                   Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
-                                   Stroke="{Binding $parent[Window].DataContext.OverlayAccentBrush}"
-                                   GuideBrush="{DynamicResource OverlayGuideBrush}"
-                                   MinY="0" MaxFloor="33.3" GuideAt="16.66"
-                                   Height="{Binding $parent[Window].DataContext.OverlayFrametimeGraphHeight}" />
-            </StackPanel>
+                           FontFamily="monospace" TextWrapping="WrapWithOverflow" />
+                <!-- Frametime no estilo do Minigraph do WPF: eixo 0..33.3 ms com guia de 60 FPS -->
+                <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
+                                     Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
+                                     Stroke="{Binding $parent[Window].DataContext.OverlayAccentBrush}"
+                                     GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                     MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                     Height="{Binding $parent[Window].DataContext.OverlayFrametimeGraphHeight}" />
+              </StackPanel>
+            </Border>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

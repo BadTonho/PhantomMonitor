@@ -230,7 +230,14 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     }
     public bool IsIntervalEdited => _intervalEdited;
     public bool IsLegacyIntervalOutOfRange => !IsIntervalEdited && _config.UpdateIntervalMs > 60_000;
-    public string OverlayWidthText { get => _overlayWidthText; set => Set(ref _overlayWidthText, value); }
+    public string OverlayWidthText
+    {
+        get => _overlayWidthText;
+        set
+        {
+            if (Set(ref _overlayWidthText, value)) RaiseOverlayPreviewProperties();
+        }
+    }
     public string OverlayFontSizeText
     {
         get => _overlayFontSizeText;
@@ -250,16 +257,28 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         {
             if (!Set(ref _overlayFontSizeSlider, value)) return;
             OverlayFontSizeText = value.ToString("0.#", CultureInfo.CurrentCulture);
+            RaiseOverlayPreviewProperties();
         }
     }
     public string OverlayFontSizeLabel => $"{OverlayFontSizeSlider:0.#} pt";
-    public bool OverlayCompactModeSetting { get => _overlayCompactModeSetting; set => Set(ref _overlayCompactModeSetting, value); }
+    public bool OverlayCompactModeSetting
+    {
+        get => _overlayCompactModeSetting;
+        set
+        {
+            if (Set(ref _overlayCompactModeSetting, value)) RaiseOverlayPreviewProperties();
+        }
+    }
     public double OverlayOpacityPercent
     {
         get => _overlayOpacityPercent;
         set
         {
-            if (Set(ref _overlayOpacityPercent, value)) Raise(nameof(OverlayOpacityLabel));
+            if (Set(ref _overlayOpacityPercent, value) is var changed && changed)
+            {
+                Raise(nameof(OverlayOpacityLabel));
+                RaiseOverlayPreviewProperties();
+            }
         }
     }
     public string OverlayOpacityLabel => $"{OverlayOpacityPercent:0}%";
@@ -320,20 +339,59 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public Avalonia.Thickness OverlayPadding => _config.Overlay.CompactMode ? new(6, 4) : new(12);
     public double OverlayContentSpacing => _config.Overlay.CompactMode ? 4 : 8;
     public double OverlayHeaderSpacing => _config.Overlay.CompactMode ? 1 : 2;
-    public double OverlayColumnSpacing => _config.Overlay.CompactMode ? 5 : 8;
     public Avalonia.Thickness OverlayRowMargin => _config.Overlay.CompactMode ? new(0, 0.5) : new(0, 2);
     public double OverlayHideButtonMinSize => _config.Overlay.CompactMode ? 20 : 24;
     public Avalonia.Thickness OverlayHideButtonPadding => _config.Overlay.CompactMode ? new(4, 0) : new(6, 0);
     public double OverlayFrametimeGraphHeight => _config.Overlay.CompactMode ? 18 : 24;
-    public bool OverlayShowCpu { get => _overlayShowCpu; set => Set(ref _overlayShowCpu, value); }
-    public bool OverlayShowGpu { get => _overlayShowGpu; set => Set(ref _overlayShowGpu, value); }
-    public bool OverlayShowRam { get => _overlayShowRam; set => Set(ref _overlayShowRam, value); }
-    public bool OverlayShowDisk { get => _overlayShowDisk; set => Set(ref _overlayShowDisk, value); }
-    public bool OverlayShowNetwork { get => _overlayShowNetwork; set => Set(ref _overlayShowNetwork, value); }
-    public bool OverlayShowFans { get => _overlayShowFans; set => Set(ref _overlayShowFans, value); }
-    public bool OverlayShowMotherboard { get => _overlayShowMotherboard; set => Set(ref _overlayShowMotherboard, value); }
-    public bool OverlayShowFps { get => _overlayShowFps; set => Set(ref _overlayShowFps, value); }
-    public bool OverlayShowFrametimeGraph { get => _overlayShowFrametimeGraph; set => Set(ref _overlayShowFrametimeGraph, value); }
+    public Avalonia.Thickness OverlayBlockPadding => _config.Overlay.CompactMode ? new(4, 2.5) : new(7, 4.5);
+
+    // ---- Prévia do overlay (Configurações → Overlay flutuante) ----
+    // A janela real só assume os valores ao "Salvar e aplicar"; a prévia deriva os
+    // mesmos cálculos dos campos de edição no ato, para avaliar o overlay antes de
+    // salvar. Perfis por aplicativo ativos continuam podendo sobrepor a janela real.
+    private double OverlayPreviewFont => Math.Clamp(_overlayFontSizeSlider, 8, 20);
+    private bool OverlayPreviewCompact => _overlayCompactModeSetting;
+    private bool TryParseOverlayPreviewWidth(out int width)
+        => int.TryParse(_overlayWidthText, NumberStyles.Integer, CultureInfo.CurrentCulture, out width)
+            && width >= 140 && width <= 700;
+    public double OverlayPreviewWidth => TryParseOverlayPreviewWidth(out var width) ? width : _overlayWidthEffective;
+    public bool OverlayPreviewWidthInvalid => !TryParseOverlayPreviewWidth(out _);
+    public double OverlayPreviewOpacity => Math.Clamp(_overlayOpacityPercent / 100.0, 0.1, 1.0);
+    public double OverlayPreviewNameFontSize => Math.Max(7, OverlayPreviewFont - 2);
+    public double OverlayPreviewValueFontSize => OverlayPreviewFont;
+    public double OverlayPreviewSecondaryFontSize => Math.Max(7, OverlayPreviewFont - 3.5);
+    public double OverlayPreviewProfileTagFontSize => Math.Max(7, OverlayPreviewFont - 2.5);
+    public double OverlayPreviewContentSpacing => OverlayPreviewCompact ? 4 : 8;
+    public Avalonia.Thickness OverlayPreviewRowMargin => OverlayPreviewCompact ? new(0, 0.5) : new(0, 2);
+    public Avalonia.Thickness OverlayPreviewPadding => OverlayPreviewCompact ? new(6, 4) : new(12);
+    public Avalonia.Thickness OverlayPreviewBlockPadding => OverlayPreviewCompact ? new(4, 2.5) : new(7, 4.5);
+    public double OverlayPreviewFrametimeGraphHeight => OverlayPreviewCompact ? 18 : 24;
+
+    private void RaiseOverlayPreviewProperties()
+    {
+        Raise(nameof(OverlayPreviewWidth));
+        Raise(nameof(OverlayPreviewWidthInvalid));
+        Raise(nameof(OverlayPreviewOpacity));
+        Raise(nameof(OverlayPreviewNameFontSize));
+        Raise(nameof(OverlayPreviewValueFontSize));
+        Raise(nameof(OverlayPreviewSecondaryFontSize));
+        Raise(nameof(OverlayPreviewProfileTagFontSize));
+        Raise(nameof(OverlayPreviewContentSpacing));
+        Raise(nameof(OverlayPreviewRowMargin));
+        Raise(nameof(OverlayPreviewPadding));
+        Raise(nameof(OverlayPreviewBlockPadding));
+        Raise(nameof(OverlayPreviewFrametimeGraphHeight));
+    }
+
+    public bool OverlayShowCpu { get => _overlayShowCpu; set { if (Set(ref _overlayShowCpu, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowGpu { get => _overlayShowGpu; set { if (Set(ref _overlayShowGpu, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowRam { get => _overlayShowRam; set { if (Set(ref _overlayShowRam, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowDisk { get => _overlayShowDisk; set { if (Set(ref _overlayShowDisk, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowNetwork { get => _overlayShowNetwork; set { if (Set(ref _overlayShowNetwork, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowFans { get => _overlayShowFans; set { if (Set(ref _overlayShowFans, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowMotherboard { get => _overlayShowMotherboard; set { if (Set(ref _overlayShowMotherboard, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowFps { get => _overlayShowFps; set { if (Set(ref _overlayShowFps, value)) UpdateOverlayRows(_latestSensorData); } }
+    public bool OverlayShowFrametimeGraph { get => _overlayShowFrametimeGraph; set { if (Set(ref _overlayShowFrametimeGraph, value)) UpdateOverlayRows(_latestSensorData); } }
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
     public IReadOnlyList<double> GpuSamples { get => _gpuSamples; private set => Set(ref _gpuSamples, value); }
     public IReadOnlyList<double> RamSamples { get => _ramSamples; private set => Set(ref _ramSamples, value); }

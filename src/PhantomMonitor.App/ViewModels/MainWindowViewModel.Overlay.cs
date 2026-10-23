@@ -189,10 +189,10 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayPadding));
         Raise(nameof(OverlayContentSpacing));
         Raise(nameof(OverlayHeaderSpacing));
-        Raise(nameof(OverlayColumnSpacing));
         Raise(nameof(OverlayRowMargin));
         Raise(nameof(OverlayHideButtonMinSize));
         Raise(nameof(OverlayHideButtonPadding));
+        Raise(nameof(OverlayBlockPadding));
         Raise(nameof(OverlayFrametimeGraphHeight));
     }
 

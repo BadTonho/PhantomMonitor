@@ -16,6 +16,8 @@ Converte a especificação textual do `config.json` (`toggleOverlayHotkey`) em m
 ## HotkeyService
 
 - Usa `RegisterHotKey` com `MOD_NOREPEAT` (sem repetição ao segurar a tecla) sobre o HWND da janela principal (WPF `HwndSource`).
+- No **app unificado Avalonia (Windows)** o mesmo comportamento é prestado pelo `GlobalHotkeyService` em `Core/Services/Windows/`: uma janela *message-only* numa thread dedicada recebe os `WM_HOTKEY` (o Avalonia não expõe o WndProc da janela principal) e as ações são publicadas no dispatcher da UI. Mesmos IDs do WPF: overlay (`0x5048`) e pausa (`0x5049`).
+- **Linux:** os atalhos globais ainda não são registrados no frontend Linux (X11/XWayland é o caminho futuro; Wayland puro não permite atalhos globais por design — quando houver suporte X11, a limitação do Wayland puro fica documentada).
 - Mensagens `WM_HOTKEY` chegam ao WndProc da janela e disparam o callback que alterna o toggle "Overlay" da janela principal (mesmo caminho do clique manual).
 - `Register()` retorna `false` (e grava em `logs/errors.log`) quando a especificação é inválida ou a combinação já está em uso por outro aplicativo.
 - Registro/remoção acontecem na carga do app, ao aplicar o Editor de Overlay e ao fechar a janela principal.

@@ -143,9 +143,25 @@ First task, before anything else: **map equivalences** between windows/flows.
       **Reset statistics** button with `ResetSeriesStats` +
       `CsvLogger.WriteMarker` + `JsonJournalLogger.WriteNote` and a transient
       confirmation; summary gains "N nodes · M monitor(s)" when present.
+- [x] **F1.5 — System**: tray on the unified app (`TrayIconService` — the
+      same WPF items/checks, left-click activation, runtime-drawn icon;
+      StatusNotifier on Linux) with profile pinning from the tray
+      (`SetPinnedProfile`, closes the F1.3 pending item); global hotkeys on
+      Windows (`GlobalHotkeyService` in Core, message-only window on a
+      dedicated thread, IDs `0x5048`/`0x5049` — Linux deferred: X11/XWayland in
+      the future, pure Wayland disallows them by design); startup with the
+      system per OS (`StartupManagerFactory` — Run registry on Windows, XDG
+      autostart on Linux) with the "Start with the system" checkbox; single
+      instance (`SingleInstanceGuard` — `Local\PhantomMonitor.SingleInstance`
+      mutex on Windows, file lock on Linux); per-OS alert actions extracted to
+      Core (`IAlertActions`/`AlertActionFactory` — Windows with
+      beep/script/shutdown + `allowShutdown` guard at WPF parity, Linux with
+      script + desktop notification); per-OS update applier (Windows zip /
+      Linux tarball). Admin elevation had no gap since F1.2. (`9f49ba0`)
 - [ ] Windows-specific features to verify in the port:
-      admin elevation, PresentMon (external process — stays as is, via Core),
-      global hotkey, tray, Windows startup, DebugWindow (keep or drop).
+      admin elevation ✅ (F1.2/F1.5), PresentMon (external process — stays as is, via Core),
+      global hotkey ✅ (F1.5, Windows), tray ✅ (F1.5), startup ✅ (F1.5),
+      DebugWindow (keep or drop).
 - [ ] Native sensor library (`PhantomSensorLib`) via P/Invoke delivering the
       same sensors on the Avalonia Windows binary.
 - [ ] Unify charts: `Controls/Minigraph.cs` (WPF) and `Controls/HistoryChart.cs`

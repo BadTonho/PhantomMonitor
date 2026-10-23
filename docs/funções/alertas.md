@@ -73,11 +73,11 @@ seguem o número do sensor no hardware). A mensagem usa o sensor com sufixo
 
 ## Ações
 
-- **popup**: toast no canto inferior direito (`AlertPopupWindow`) — topmost, não rouba foco, fecha em 6 s ou com um clique; um novo alerta substitui o anterior.
-- **sound**: bipe de aviso do sistema (`MessageBeep`, ícone de exclamação).
-- **script**: executa o arquivo configurado (`.exe`/`.bat`/`.cmd`/`.ps1` via associação padrão) com os argumentos informados; os placeholders `{value}` e `{sensor}` nos argumentos são substituídos com **cultura invariante** (ponto decimal — o `cmd` trata a vírgula como separador de argumentos).
-- **script no Avalonia/Linux**: arquivos `.sh` são executados por `/bin/sh` e não precisam de permissão de execução; outros arquivos são iniciados diretamente e precisam ter ao menos um bit de execução Unix. O caminho pode ser digitado ou escolhido pelo seletor de arquivos. Argumentos são separados por espaços; aspas simples/duplas agrupam um argumento e são removidas, e `\` escapa o caractere seguinte. `{value}` é substituído por valor com uma casa decimal e ponto decimal; `{sensor}` pelo nome da série. Os argumentos são passados sem shell, então pipes, redirecionamentos, expansões e encadeamento de comandos não são interpretados. Aspas não fechadas ou `\` final impedem a execução e são registrados.
-- **shutdown**: agenda `shutdown /s /t 60 /c "<mensagem>"` (60 s de carência; cancele com `shutdown /a`). **Só executa se `allowShutdown=true`** — caso contrário registra o motivo em `logs/errors.log` e ignora.
+- **popup**: toast no canto inferior direito — no WPF via `AlertPopupWindow` e no app unificado via toast interno do dashboard (`RecordAlert`), topmost, sem roubar foco, fechando em 6 s ou com um clique; um novo alerta substitui o anterior. No app unificado em Linux, quando a janela está **fora de foco**, o mesmo disparo vira notificação de desktop (DBus).
+- **sound**: bipe de aviso do sistema (`MessageBeep`, ícone de exclamação) — executado no WPF e no app unificado **no Windows** (Core `WindowsAlertActions`). No Linux não há bipe de sistema: o som fica por conta da própria notificação de desktop.
+- **script**: executa o arquivo configurado (`.exe`/`.bat`/`.cmd`/`.ps1` via associação padrão, `UseShellExecute`) com os argumentos informados; os placeholders `{value}` e `{sensor}` nos argumentos são substituídos com **cultura invariante** (ponto decimal — o `cmd` trata a vírgula como separador de argumentos). Válido no WPF e no app unificado no Windows.
+- **script no Linux (app unificado)**: arquivos `.sh` são executados por `/bin/sh` e não precisam de permissão de execução; outros arquivos são iniciados diretamente e precisam ter ao menos um bit de execução Unix (`LinuxAlertScriptRunner`, hoje no Core). O caminho pode ser digitado ou escolhido pelo seletor de arquivos. Argumentos são separados por espaços; aspas simples/duplas agrupam um argumento e são removidas, e `\` escapa o caractere seguinte. `{value}` é substituído por valor com uma casa decimal e ponto decimal; `{sensor}` pelo nome da série. Os argumentos são passados sem shell, então pipes, redirecionamentos, expansões e encadeamento de comandos não são interpretados. Aspas não fechadas ou `\` final impedem a execução e são registrados.
+- **shutdown**: agenda `shutdown /s /t 60 /c "<mensagem>"` (60 s de carência; cancele com `shutdown /a`). **Só executa se `allowShutdown=true`** — caso contrário registra a mesma mensagem de guarda em `logs/errors.log` (`defina alerts.allowShutdown=true`) e ignora. No Windows é executado pelo WPF e pelo app unificado (paridade integral); **no Linux não é executado** (ver Limites).
 
 ## Mensagem
 
@@ -86,12 +86,16 @@ seguem o número do sensor no hardware). A mensagem usa o sensor com sufixo
 
 ## Diagnóstico
 
-- Cada disparo é registrado em `logs/errors.log` (`[AlertService]`) com sensor, condição e valor.
+- Cada disparo é registrado em `logs/errors.log` (WPF: `[AlertService]`; app unificado: `[AlertActions]`) com sensor, condição e valor.
 - Script inexistente, arquivo não executável, argumentos malformados, falhas ao iniciar e ação `shutdown` bloqueada são registrados sem interromper o monitoramento.
 - O Editor de Overlay salva o `config.json` preservando o bloco `alerts`.
 
 ## Limites conhecidos
 
-- O Avalonia não executa ações de som e desligamento; essas configurações são preservadas para compatibilidade com o WPF.
+- **Som e desligamento no Linux (app unificado):** não são executados — o som fica
+  por conta da notificação de desktop (que carrega o próprio som) e o desligamento
+  por alerta é Windows-only; as configurações continuam honradas no config e são
+  preservadas. **No Windows** (WPF e app unificado, F1.5) som, script e desligamento
+  executam com paridade integral, incluindo o guard `allowShutdown`.
 - A avaliação usa o valor do snapshot no momento da atualização; picos entre amostras não são capturados.
 - O desligamento depende do `shutdown.exe` do Windows (políticas restritas podem impedi-lo; a falha fica no log).

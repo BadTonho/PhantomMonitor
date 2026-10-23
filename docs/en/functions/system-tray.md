@@ -26,4 +26,15 @@ The tray uses protocol version 4 (`NIM_SETVERSION`) for modern selection and con
 
 `IsEnabled()` accepts a stored path with or without surrounding quotes and compares it case-insensitively against the current executable path. `SetEnabled(bool)` reports failure when policy prevents a registry update; the UI then rereads the actual state rather than assuming the requested state succeeded.
 
-The sidebar and tray menu both expose the startup toggle. This feature is Windows-only; the Linux Avalonia frontend has no system tray or startup integration at this time.
+The sidebar and tray menu both expose the startup toggle.
+
+## Unified app (Avalonia, F1.5)
+
+The unified app ships the same tray through Avalonia's `TrayIcon` API (`src/PhantomMonitor.App/Services/TrayIconService.cs`), with the same menu and the same runtime-drawn icon (dark square with a cyan graph line; no external assets):
+
+- **Windows:** the same `Shell_NotifyIcon` protocol underneath the Avalonia API.
+- **Linux:** integration via **StatusNotifier/DBus** — it works on desktops with support (KDE, GNOME with the notification-area extension); on desktops without StatusNotifier the icon simply does not appear and the app stays functional.
+- **Menu:** the same WPF items (`Show Phantom Monitor`, `Game overlay`, `Start with the system`, `Reset statistics`, `Pause monitoring`, the dynamic OSD-profile section and `Exit`), with checks rebuilt when state changes (`InvalidateMenu`), left-click on the icon activating the window, and the profile item applying the P3 pin (`SetPinnedProfile` — session-only, not persisted to the config).
+- `Reset statistics` in the unified app zeroes min/max/average and writes the `#marker reset (inventory)` marker to the active CSV (plus the equivalent note in the active JSONL journal) — the same semantics documented for the inventory window.
+
+Startup is per-OS via `StartupManagerFactory` (Core): `WindowsStartupManager` keeps the HKCU Run entry described above, and on Linux `LinuxStartupManager` writes an XDG autostart entry at `~/.config/autostart/phantom-monitor.desktop` whose `Exec` points to the current executable; `IsEnabled()` validates the entry still matches it. The sidebar and tray menu share the real OS state (`Start with the system`).

@@ -9,7 +9,7 @@ Sensor alert rules are evaluated for each snapshot. The shared Core evaluator ha
 - **Avalonia/Linux:** The **Alerts** page can enable evaluation, set a global cooldown, and create, edit, enable, or remove rules. The sensor picker combines detected series with saved rule targets, including temporarily missing sensors. Rules include a series index, comparison, threshold, cooldown, message, script, and arguments. Changes take effect only after `config.json` is saved.
 - When `popup` is enabled, Avalonia shows an in-app toast for six seconds and keeps the 50 most recent alerts for the lifetime of the app. If the window is inactive or minimized, it also sends a desktop notification through `org.freedesktop.Notifications` on the session D-Bus. A new desktop alert replaces the previous one. Rules without `popup` still appear in history.
 - If D-Bus or the desktop notification service is unavailable, the error is logged; collection, in-app toasts, and history continue. `notify-send` is not required.
-- Linux preserves sound and shutdown settings but does not run those actions. Configured scripts run when a rule fires, independently of `popup`. WPF retains its current actions.
+- On Linux, sound and shutdown settings are preserved but not executed: the desktop notification carries its own sound, and shutdown is a Windows-only action (see Actions). Configured scripts run when a rule fires, independently of `popup`. On Windows, the WPF frontend and the unified Avalonia app (F1.5) both run sound, script, and shutdown actions with the same `allowShutdown` guard.
 
 ## Evaluation semantics
 
@@ -46,10 +46,10 @@ The global cooldown is 1–3600 seconds; per-rule `0` uses the global value. `se
 
 ## Actions
 
-- **`popup`:** WPF displays a topmost, non-activating alert window for six seconds or until clicked. Avalonia uses its in-app toast and, while the window is inactive or minimized, a native desktop notification.
-- **`sound`:** Windows system warning beep (`MessageBeep`). Avalonia preserves this setting but does not play it.
-- **`script`:** WPF starts the configured Windows file type with its default association. `{value}` and `{sensor}` are substituted in arguments using invariant decimal formatting. On Linux, `.sh` files run through `/bin/sh` and need not be executable; other files are started directly and need a Unix execute bit. The Avalonia picker accepts a path, and arguments are split into tokens with single/double quoting and backslash escaping. `{value}` uses a decimal point and one fractional digit; `{sensor}` is the series key. Arguments are passed without a shell, so pipes, redirects, expansions, and command chaining are not interpreted. Malformed quoting and launch errors are logged.
-- **`shutdown`:** WPF schedules `shutdown /s /t 60`; it runs only when `allowShutdown` is true. Avalonia does not execute shutdown actions.
+- **`popup`:** WPF displays a topmost, non-activating alert window for six seconds or until clicked. The unified Avalonia app uses its in-app toast and, while the window is inactive or minimized, a native desktop notification (D-Bus on Linux).
+- **`sound`:** Windows system warning beep (`MessageBeep`) — executed by the WPF frontend and, since F1.5, by the unified app on Windows (`WindowsAlertActions` in Core). On Linux there is no system beep: the desktop notification carries its own sound.
+- **`script`:** Windows frontends (WPF and the unified app) start the configured file type with its default association (`UseShellExecute`). `{value}` and `{sensor}` are substituted in arguments using invariant decimal formatting. On Linux, `.sh` files run through `/bin/sh` and need not be executable; other files are started directly and need a Unix execute bit (`LinuxAlertScriptRunner`, moved to Core). The Avalonia picker accepts a path, and arguments are split into tokens with single/double quoting and backslash escaping. `{value}` uses a decimal point and one fractional digit; `{sensor}` is the series key. Arguments are passed without a shell, so pipes, redirects, expansions, and command chaining are not interpreted. Malformed quoting and launch errors are logged.
+- **`shutdown`:** Windows frontends schedule `shutdown /s /t 60`; it runs only when `allowShutdown` is true, and the unified app uses the same guard message as the WPF when the action is blocked. On Linux (unified app) shutdown is not executed.
 
 Message placeholders are `{sensor}`, `{value}` (locale-formatted in WPF), and `{threshold}`. An empty message uses `Sensor {sensor}: {value} (limit: {threshold})`.
 
@@ -59,6 +59,6 @@ WPF's popup is topmost and does not take focus; a new alert replaces the current
 
 ## Diagnostics and limits
 
-Alert events and script launch failures are written to `logs/errors.log`; failures do not stop monitoring. The Avalonia editor preserves existing sound and shutdown fields when saving. Evaluation uses the value in each snapshot, so peaks between samples are not observed. WHEA is a Windows-only counter, and shutdown requires Windows `shutdown.exe`.
+Alert events and script launch failures are written to `logs/errors.log` (WPF tags `[AlertService]`; the unified app tags `[AlertActions]`); failures do not stop monitoring. The Avalonia editor preserves existing sound and shutdown fields when saving. Evaluation uses the value in each snapshot, so peaks between samples are not observed. `allowShutdown` guards schedule-shutdown on Windows in all frontends; on Linux shutdown is never executed, and WHEA is a Windows-only counter.
 
 In Avalonia, the toast lasts six seconds; a new native D-Bus notification replaces the previous desktop notification, while both alerts remain in the 50-entry in-memory history. Script parsing rejects an unmatched quote or a trailing escape character. Script paths that do not exist, non-executable non-`.sh` files, and process-start failures are logged without suppressing the history entry or ending collection.

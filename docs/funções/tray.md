@@ -26,16 +26,46 @@ Integração com a bandeja do Windows **sem WinForms**: usa `Shell_NotifyIcon` d
     avaliada a cada abertura do menu.
 - **Robustez:** falhas de criação são registradas em `logs/errors.log` (eventos `TrayIcon`) sem derrubar o app; o ícone é removido (`NIM_DELETE`) e o hook de janela é desfeito no `Dispose` (fechamento da janela principal).
 
-## StartupManager
+## App unificado (Avalonia, F1.5)
 
-- Escreve/remove a entrada `PhantomMonitor` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` com o caminho do executável atual entre aspas (sem exigir administrador).
-- `IsEnabled()` compara o valor do registro com o caminho do executável **atual** (aceita com/sem aspas, ignorando caixa) — se o app for movido, um registro antigo não é considerado ativo e o checkbox reflete isso.
-- `SetEnabled(bool)` retorna `false` (e registra erro) em caso de política restrita; a UI relê o estado real após a tentativa.
+O app único traz a mesma bandeja via API `TrayIcon` do Avalonia
+(`src/PhantomMonitor.App/Services/TrayIconService.cs`), com o mesmo menu e o mesmo
+ícone desenhado em runtime (quadrado escuro + gráfico ciano; sem assets externos):
+
+- **Windows:** o mesmo protocolo `Shell_NotifyIcon` (por baixo da API do Avalonia).
+- **Linux:** integração por **StatusNotifier/DBus** — funciona em desktops com
+  suporte (KDE, GNOME com a extensão/painel de área de notificação); em
+  *desktops* sem StatusNotifier o ícone simplesmente não aparece e o app segue
+  funcional (o estado de overlay/pausa continua pela sidebar/atalhos quando houver).
+- **Menu:** mesmos itens do WPF (`Mostrar Phantom Monitor`, `Overlay no Jogo`,
+  `Iniciar com o sistema`, `Resetar estatísticas`, `Pausar monitoramento`, seção
+  dinâmica de perfis e `Sair`), com checks reconstruídos quando o estado muda
+  (`InvalidateMenu`), clique esquerdo no ícone ativando a janela e o item de perfil
+  fixando o pin do P3 (`SetPinnedProfile` — sessão, não persiste no config).
+- `Resetar estatísticas` do app unificado zera min/máx/média e grava o marcador
+  `#marker reset (inventário)` no CSV ativo (mais a nota equivalente no journal
+  JSONL ativo) — mesma semântica da janela de inventário (ver
+  [inventário](inventário-hardware.md)).
+
+## StartupManager (Windows / XDG autostart no Linux)
+
+O `StartupManagerFactory` (Core) devolve a implementação do SO:
+
+- **Windows (`WindowsStartupManager`):** escreve/remove a entrada
+  `PhantomMonitor` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` com o
+  caminho do executável atual entre aspas (sem exigir administrador) — mesma
+  conduta do WPF.
+- **Linux (`LinuxStartupManager`):** entrada XDG autostart
+  `~/.config/autostart/phantom-monitor.desktop` com `Exec="<executável atual>"`;
+  `IsEnabled()` valida que a entrada ainda aponta para este executável.
+- Ambos: `SetEnabled(bool)` retorna `false` (e registra erro em
+  `logs/errors.log`) em caso de política restrita/falha; a UI relê o estado real
+  após a tentativa (checkbox volta ao estado vivo, como no WPF).
 
 ## Interface
 
-- **Sidebar:** checkbox `Iniciar com o Windows` (aplicado na hora, estado lido do registro na abertura).
-- **Menu da bandeja:** itens `Overlay no Jogo` e `Iniciar com o Windows` com marcação de check do estado atual.
+- **Sidebar:** checkbox `Iniciar com o sistema` (aplicado na hora, estado lido do registro/autostart na abertura).
+- **Menu da bandeja:** itens `Overlay no Jogo` e `Iniciar com o sistema` com marcação de check do estado atual (nos dois frontends).
 
 ## Observações
 

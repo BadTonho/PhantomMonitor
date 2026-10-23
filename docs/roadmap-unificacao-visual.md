@@ -142,9 +142,25 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       muda); botão **Resetar estatísticas** com `ResetSeriesStats` +
       `CsvLogger.WriteMarker` + `JsonJournalLogger.WriteNote` e confirmação
       transitória; resumo com "N nós · M monitor(es)" quando existirem.
+- [x] **F1.5 — Sistema**: bandeja no app unificado (`TrayIconService` —
+      mesmos itens/checks do WPF, clique esquerdo, ícone desenhado em runtime;
+      StatusNotifier no Linux) com pin de perfil pela bandeja (`SetPinnedProfile`,
+      fecha o pendente da F1.3); hotkeys globais no Windows
+      (`GlobalHotkeyService` no Core, janela message-only em thread dedicada,
+      IDs `0x5048`/`0x5049` — Linux adiado: X11/XWayland no futuro, Wayland puro
+      não permite por design); startup com o sistema por SO
+      (`StartupManagerFactory` — registro Run no Windows, XDG autostart no
+      Linux) com checkbox "Iniciar com o sistema"; instância única
+      (`SingleInstanceGuard` — mutex `Local\PhantomMonitor.SingleInstance` no
+      Windows, lock de arquivo no Linux); alertas por SO extraídos ao Core
+      (`IAlertActions`/`AlertActionFactory` — Windows com beep/script/shutdown
+      + guard `allowShutdown` na paridade do WPF, Linux com script + notificação
+      de desktop); applier de update por SO (Windows zip / Linux tarball). Elevação
+      admin sem gap desde a F1.2. (`9f49ba0`)
 - [ ] Funcionalidades Windows-specific a conferir no port:
-      elevação admin, PresentMon (processo externo — já orquestrado pelo Core),
-      hotkey global, tray, startup com Windows, DebugWindow (manter ou não).
+      elevação admin ✅ (F1.2/F1.5), PresentMon (processo externo — já orquestrado pelo Core),
+      hotkey global ✅ (F1.5, Windows), tray ✅ (F1.5), startup ✅ (F1.5),
+      DebugWindow (manter ou não).
 - [ ] Biblioteca nativa de sensores (`PhantomSensorLib`) via P/Invoke entregando
       igual no binário Avalonia do Windows.
 - [ ] Unificar gráficos: `Controls/Minigraph.cs` (WPF) e `Controls/HistoryChart.cs`

@@ -61,7 +61,7 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 - **Toggles persistentes:** os checkboxes da sidebar (`Overlay no Jogo`, `Exportar CSV`, `Exportar JSON`, `Journal JSON (jsonl)`) gravam o estado no `config.json` ao serem alternados — antes só mudavam o estado vivo entre sessões de monitoramento.
 - `overlay.showNetwork`, `overlay.showFans` e `overlay.showMotherboard` já são consumidos pelo overlay (linhas NET/FAN/MB, com auto-revelação no primeiro dado real) e editáveis pelo Editor Visual.
 - `overlay.compactMode`, `overlay.accentColor` e `overlay.fontSize` são aplicados ao overlay (espaçamento reduzido, cor de destaque e tamanho base da fonte) e editáveis no Editor Visual.
-- `toggleOverlayHotkey` registra um atalho global (Win32 `RegisterHotKey`) que alterna o OSD de qualquer aplicativo — ver [hotkey.md](hotkey.md). Editável na seção "ATALHO GLOBAL" do Editor Visual.
+- `toggleOverlayHotkey` registra um atalho global (Win32 `RegisterHotKey`) que alterna o OSD de qualquer aplicativo — ver [hotkey.md](hotkey.md). Editável na seção "ATALHO GLOBAL" do Editor Visual (WPF); o app unificado honra o valor do config no Windows (janela message-only) e ainda não tem editor próprio.
 - `sensors.*` está reservado no modelo, mas ainda não é consumido pela interface.
 - No Avalonia Linux, a página **Configurações** edita `updateIntervalMs` (100–60.000 ms), `logToCsv`, `logToJson` e `logToJsonJournal`. O diretório de logs é exibido como somente leitura.
 - No Avalonia Linux, a mesma página edita `telemetryExport.enabled`, `port` (1024–65.535) e `listenAll`; o estado e os endpoints ativos são exibidos. O listener funciona durante a coleta, permanece ativo na pausa e fecha ao parar. Acesso por `listenAll` não tem TLS nem autenticação.

@@ -81,15 +81,15 @@ solved, re-evaluate the editor alongside the system subphase).
 
 | Service | WPF (where) | Avalonia | Action |
 |---|---|---|---|
-| Tray + menu (overlay/startup/reset/pause/pin profile) | `TrayIconService` (369 ln) | ❌ | port (Avalonia TrayIcons; per-OS APIs) |
-| Global hotkeys (overlay + pause, P6.7) | `HotkeyService` (96 ln) + `HotkeyParser` (Core) | ❌ | port (X11/XWayland; plain Wayland: document the limitation) |
-| Start with Windows (`Run` registry) | `StartupManager` (56 ln) | ❌ | port (registry on Windows; desktop entry on Linux) |
-| Single instance | `App.xaml.cs` (mutex) | verify | verify/port |
-| Admin elevation | inline (`IsRunningAsAdmin`/`runas`) | ❌ | reuse on the single app |
+| Tray + menu (overlay/startup/reset/pause/pin profile) | `TrayIconService` (369 ln) | ✅ `TrayIconService` (App) | ✅ F1.5: Avalonia `TrayIcon` + rebuilt native menu; left-click activates; StatusNotifier on Linux |
+| Global hotkeys (overlay + pause, P6.7) | `HotkeyService` (96 ln) + `HotkeyParser` (Core) | ✅ Windows | ✅ F1.5 on Windows (`GlobalHotkeyService` in Core, message-only window); Linux: X11/XWayland deferred (pure Wayland disallows by design) |
+| Start with Windows (`Run` registry) | `StartupManager` (56 ln) | ✅ `StartupManagerFactory` | ✅ F1.5: HKCU `Run` on Windows + XDG autostart on Linux |
+| Single instance | `App.xaml.cs` (mutex) | ✅ `SingleInstanceGuard` | ✅ F1.5: `Local\PhantomMonitor.SingleInstance` mutex (Windows) + `logs/session.lock` file lock (Linux) |
+| Admin elevation | inline (`IsRunningAsAdmin`/`runas`) | ✅ (since F1.2) | nothing to do — banner + "Run as admin" already ported |
 | Alerts: evaluator | `AlertRuleEvaluator` **Core** ✅ | ✅ | same |
-| Alerts: actions | popup + `MessageBeep` + script + shutdown (with `allowShutdown` guard) | script + DBus (sound/shutdown not executed) | extract orchestration into Core with per-OS actions |
+| Alerts: actions | popup + `MessageBeep` + script + shutdown (with `allowShutdown` guard) | ✅ per OS (`IAlertActions`) | ✅ F1.5: orchestration extracted into Core — Windows at full parity (beep/script/shutdown+guard), Linux with script + notification (sound/shutdown not executed) |
 | Alert rules UI (editor) | ❌ (config.json) | ✅ | keep Avalonia |
-| Updates | ✅ (Core + Windows applier) | ✅ (Core + Linux applier) | no gap |
+| Updates | ✅ (Core + Windows applier) | ✅ (Core + per-OS applier) | ✅ F1.5: applier per OS in `InitUpdateService` (Windows zip / Linux tarball) |
 | Custom sensors / series tuning / HTTP exporter UIs | ❌ | ✅ | keep Avalonia |
 
 ### Sensor reading — the critical finding (F1.1 ✅ done)
@@ -138,6 +138,14 @@ solved, re-evaluate the editor alongside the system subphase).
    presented as cards on the Inventory page.
 5. **F1.5 — System** (tray, hotkeys, startup, single instance, admin) and
    alerts (per-OS action orchestration).
+   **✅ Done (`9f49ba0`):** tray on the unified app (`TrayIconService` — WPF
+   menu + profile pin via `SetPinnedProfile`, left-click activation), hotkeys on
+   Windows (`GlobalHotkeyService` — message-only window on a dedicated thread),
+   startup per OS (`StartupManagerFactory`: Run registry + XDG autostart) with
+   the "Start with the system" checkbox, single instance (`SingleInstanceGuard`),
+   per-OS alerts (`IAlertActions`/`AlertActionFactory`), and per-OS update
+   applier. Admin had no gap since F1.2. Linux: hotkeys deferred (X11/XWayland)
+   and the tray depends on the desktop's StatusNotifier support.
 6. **F1.6 — WPF visual ported entirely as the "Slate" theme** + Windows
    release build of the Avalonia binary (Phase 1 acceptance criteria on the
    roadmap).

@@ -80,15 +80,15 @@ editor de oferta é reavaliado junto da subfase de sistema).
 
 | Serviço | WPF (onde) | Avalonia | Ação |
 |---|---|---|---|
-| Bandeja + menu (overlay/startup/reset/pausa/pin de perfil) | `TrayIconService` (369 ln) | ❌ | portar (Avalonia TrayIcons; APIs por SO) |
-| Hotkeys globais (overlay + pausa, P6.7) | `HotkeyService` (96 ln) + `HotkeyParser` (Core) | ❌ | portar (X11/XWayland; Wayland puro: documentar a limitação) |
-| Iniciar com o Windows (registro `Run`) | `StartupManager` (56 ln) | ❌ | portar (registro no Windows; desktop entry no Linux) |
-| Instância única | `App.xaml.cs` (mutex) | conferir | conferir/portar |
-| Elevação admin | inline (`IsRunningAsAdmin`/`runas`) | ❌ | reaproveitar no app único |
+| Bandeja + menu (overlay/startup/reset/pausa/pin de perfil) | `TrayIconService` (369 ln) | ✅ `TrayIconService` (App) | ✅ F1.5: `TrayIcon` do Avalonia + menu nativo reconstruído; clique esquerdo ativa; StatusNotifier no Linux |
+| Hotkeys globais (overlay + pausa, P6.7) | `HotkeyService` (96 ln) + `HotkeyParser` (Core) | ✅ Windows | ✅ F1.5 no Windows (`GlobalHotkeyService` no Core, janela message-only); Linux: X11/XWayland adiado (Wayland puro não permite por design) |
+| Iniciar com o Windows (registro `Run`) | `StartupManager` (56 ln) | ✅ `StartupManagerFactory` | ✅ F1.5: `Run` do HKCU no Windows + XDG autostart no Linux |
+| Instância única | `App.xaml.cs` (mutex) | ✅ `SingleInstanceGuard` | ✅ F1.5: mutex `Local\PhantomMonitor.SingleInstance` (Windows) + lock `logs/session.lock` (Linux) |
+| Elevação admin | inline (`IsRunningAsAdmin`/`runas`) | ✅ (desde a F1.2) | nada a fazer — banner + "Executar como admin" já portados |
 | Alertas: avaliador | `AlertRuleEvaluator` **Core** ✅ | ✅ | igual |
-| Alertas: ações | popup + `MessageBeep` + script + shutdown (com guard `allowShutdown`) | script + DBus (som/shutdown não executados) | extrair a orquestração para o Core com ações por SO |
+| Alertas: ações | popup + `MessageBeep` + script + shutdown (com guard `allowShutdown`) | ✅ por SO (`IAlertActions`) | ✅ F1.5: orquestração extraída ao Core — Windows com paridade integral (beep/script/shutdown+guard), Linux com script + notificação (som/shutdown não executados) |
 | UI de regras de alerta | ❌ (config.json) | ✅ | manter Avalonia |
-| Atualizações | ✅ (Core + Windows applier) | ✅ (Core + Linux applier) | sem gap |
+| Atualizações | ✅ (Core + Windows applier) | ✅ (Core + applier por SO) | ✅ F1.5: applier por SO no `InitUpdateService` (Windows zip / Linux tarball) |
 | UI de custom sensors / ajuste por série / exportador HTTP | ❌ | ✅ | manter Avalonia |
 
 ### Leitura de sensores — o achado crítico (F1.1 ✅ concluída)
@@ -134,6 +134,14 @@ editor de oferta é reavaliado junto da subfase de sistema).
    consumia, apresentada em cards da página Inventário.
 5. **F1.5 — Sistema** (tray, hotkeys, startup, instância única, admin) e
    alertas (orquestração de ações por SO).
+   **✅ Feito (`9f49ba0`):** bandeja no app unificado (`TrayIconService` — menu do
+   WPF + pin de perfil via `SetPinnedProfile`, clique esquerdo), hotkeys no
+   Windows (`GlobalHotkeyService` — janela message-only em thread dedicada),
+   startup por SO (`StartupManagerFactory`: registro Run + XDG autostart) com
+   checkbox "Iniciar com o sistema", instância única (`SingleInstanceGuard`),
+   alertas por SO (`IAlertActions`/`AlertActionFactory`) e applier de update por
+   SO. Admin sem gap desde a F1.2. Linux: hotkeys adiado (X11/XWayland) e
+   bandeja sujeita ao suporte a StatusNotifier do desktop.
 6. **F1.6 — Visual WPF portado como tema "Slate"** integral + build/release no
    Windows do binário Avalonia (critérios de aceite da Fase 1 no roadmap).
 

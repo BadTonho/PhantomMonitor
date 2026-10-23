@@ -6,6 +6,8 @@
 
 ## Windows readings
 
+In Core, the service lives under `Services/Sensors/Windows/`; WMI fallbacks, monitor identification, and GPU process queries are grouped in partial files of the same class to retain coordination and shared state.
+
 The service collects CPU and GPU temperature, utilization, clocks, voltage, and power; GPU VRAM; RAM usage; disk activity and I/O; network throughput; fans; and motherboard sensors. CPU temperature falls back to ACPI thermal-zone sources only when LibreHardwareMonitor has no reading. RAM also has a WMI fallback. GPU-using processes are grouped by PID and cached briefly.
 
 GPU core temperature is preferred over other chip diodes. Memory junction is published separately as `GpuVramTemperature`; AMD VRM, liquid, and PLX diodes are excluded from GPU core temperature. Integrated GPUs are enumerated before dedicated GPUs, and the dedicated card is instance 1. Disk activity uses `Total Activity`, not used-space percentage. Physical memory excludes virtual memory.

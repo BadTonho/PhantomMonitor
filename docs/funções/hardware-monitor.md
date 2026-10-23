@@ -6,6 +6,8 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 
 ## Funcionalidades
 
+No Core, o serviço fica em `Services/Sensors/Windows/`; fallbacks WMI, identificação de monitores e consulta de processos da GPU estão em arquivos parciais da mesma classe para manter a coordenação e o estado compartilhado.
+
 - Leitura de temperatura, uso, clock, voltagem e potência da CPU
 - Leitura de temperatura, uso, clock e potência da GPU
 - **Temperaturas por diodo da GPU:** `GpuHotSpot` (Hot Spot) e `GpuVramTemperature` (junction da memória — NVIDIA `GPU Memory Temperature`/legado `Memory Junction`, AMD `GPU VRAM`); diodos `VRM`/`Liquid`/`PLX` da AMD não publicam série (`GpuTemperature` só aceita diodos do chip)

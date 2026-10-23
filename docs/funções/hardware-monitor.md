@@ -16,8 +16,8 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 - Fallback de temperatura da CPU via zona térmica ACPI (WMI `root\WMI`) e, em cascata, o contador térmico do sistema (`Win32_PerfFormattedData_Counters_ThermalZoneInformation`), **somente se o LibreHardwareMonitor não fornecer** a temperatura; consultado no máximo a cada 10 s e rotulado como aproximação
 - Fallback de RAM via WMI (`Win32_OperatingSystem`) e `PerformanceCounter` reutilizado entre ciclos
 - Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
-- **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo)
-- **Monitores (P8.4):** identidade dos painéis conectados via EDID/WMI (`WmiMonitorID` + `WmiMonitorBasicDisplayParams`, somente monitores ativos) — fabricante, modelo, serial, diagonal física, ano/semana de fabricação e flag de primário; cache de 60 s, lista ordenada pelo caminho de instância WMI (sem relato do WMI: lista vazia); modelo `MonitorInfo` em [modelos-dados.md](modelos-dados.md)
+- **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo). Classes ausentes são marcadas como indisponíveis durante a execução, sem erros repetidos; os outros provedores de bateria continuam como fallback.
+- **Monitores (P8.4):** identidade dos painéis conectados via EDID/WMI (`WmiMonitorID` + `WmiMonitorBasicDisplayParams`, somente monitores ativos) — fabricante, modelo, serial, diagonal física, ano/semana de fabricação e flag de primário; cache de 60 s, lista ordenada pelo caminho de instância WMI. Campos opcionais são tolerados; se a consulta WMI falhar, o app continua com a lista vazia e registra uma única ocorrência diagnóstica por execução. Sem monitores reportados também resulta em lista vazia, sem erro. Modelo `MonitorInfo` em [modelos-dados.md](modelos-dados.md)
 - **Erros de hardware WHEA:** série `WheaErrorCount` (Windows apenas) = eventos do provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão; `0` é leitura real (alerta `Above > 0` detecta que o contador ficou não zero; como ele é cumulativo, pode repetir após cooldown, mas não sinaliza cada incremento separadamente)
 
 ## Regras de mapeamento de sensores
@@ -81,6 +81,9 @@ gera nenhuma linha — nem no CSV, nem no JSON, nem no OSD:
 - Leitura WMI a cada **10 s** (carga/tensão mudam devagar; a consulta atravessa COM).
 - `SELECT *` com acesso tolerante às propriedades: drivers de bateria variam o que
   expõem (propriedade ausente devolve fallback em vez de derrubar o ciclo).
+- Classes opcionais inexistentes (`InvalidClass`) são lembradas pelo restante da
+  execução e deixam de ser consultadas; `Win32_Battery` e as demais classes
+  disponíveis continuam alimentando os fallbacks.
 - OSD: família `BAT` com cor lima própria (só aparece com `Battery*` na whitelist
   `overlay.shownSeries`).
 

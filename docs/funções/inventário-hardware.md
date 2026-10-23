@@ -29,7 +29,9 @@ A página também tem, desde a F1.4, os acréscimos do InventoryWindow do WPF:
   código, serial, diagonal e fabricação + indicador PRIMÁRIO (mesma fonte
   `WmiMonitorID`/`WmiMonitorBasicDisplayParams`); a lista só troca quando o
   conjunto de monitores muda. Sem monitor reportado (desktops/VMs/RDP), o card
-  fica oculto e o snapshot JSON publica `monitors: []`.
+  fica oculto e o snapshot JSON publica `monitors: []`. Se a consulta WMI falhar,
+  o app segue com a lista vazia e registra uma única ocorrência diagnóstica por
+  execução; uma consulta válida sem monitores não gera erro.
 - O resumo do topo mostra `N nós de hardware · M monitor(es)` quando existirem.
 
 Quando o serviço não publica nenhum valor de um tipo esperado, o inventário

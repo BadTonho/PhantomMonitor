@@ -20,7 +20,7 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 - **Comunicação no Windows:** o serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats --stop_existing_session --session_name PhantomMonitorFps --exclude PhantomMonitor.exe --no_track_input --no_track_gpu --exclude_dropped`) e analisa o CSV em tempo real. Os argumentos precisam existir no PresentMon 2.x (por exemplo, `--no_track_gpu_video` **não existe** e faz o processo encerrar imediatamente).
 - **Parse Dinâmico:** mapeia as colunas do PresentMon (`ProcessID`, `Application`; frametime por `msBetweenPresents`, com fallback em `FrameTime` e `msBetweenDisplayChange`) e trata campos CSV entre aspas
 - **Detecção de Foco:** `GetForegroundWindow` e `GetWindowThreadProcessId` via P/Invoke identificam o jogo ativo a cada 500ms
-- **Privilégios:** o PresentMon exige Administrador (ou o grupo "Performance Log Users"). Sem isso, `EtwDiag` mostra "Requer Administrador" e o motivo completo vai para `logs/errors.log`
+- **Privilégios:** o PresentMon exige Administrador ou associação ao grupo **Performance Log Users**. O app não solicita elevação automaticamente. Quando a sessão ETW é bloqueada por acesso negado, `EtwDiag` orienta sobre essas opções e `logs/errors.log` recebe um único registro acionável por sessão; linhas `warning` do PresentMon não são registradas como erros.
 
 ## Propriedades
 

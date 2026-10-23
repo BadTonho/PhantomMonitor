@@ -119,7 +119,7 @@ public sealed class GlobalHotkeyService : IDisposable
             EnsureWindowClass();
             // Parent HWND_MESSAGE: janela message-only — nunca aparece na tela,
             // não entra no Alt+Tab e só recebe mensagens despachadas.
-            _hwnd = CreateWindowExW(0, ClassName, ClassName, 0, 0, 0, 0, 0, HwndMessage, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+            _hwnd = CreateWindowExW(0, ClassName, ClassName, 0, 0, 0, 0, 0, new IntPtr(HwndMessage), IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
             if (_hwnd == IntPtr.Zero)
             {
                 ErrorLog.Write("GlobalHotkey", $"CreateWindowEx (message-only) falhou (Win32 {Marshal.GetLastWin32Error()}).");
@@ -216,7 +216,7 @@ public sealed class GlobalHotkeyService : IDisposable
 
     // ---------------- Win32 ----------------
 
-    private const int HwndMessage = unchecked((int)0xFFFFFFFA); // -3: parent message-only
+    private const int HwndMessage = -3; // HWND_MESSAGE: parent for message-only windows
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeMessage

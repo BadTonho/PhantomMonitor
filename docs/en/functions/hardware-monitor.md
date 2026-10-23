@@ -14,7 +14,7 @@ For CPU temperature, package/Tctl/Tdie/average sensors take priority, then maxim
 
 The CPU-temperature fallback checks ACPI thermal-zone data, then the system thermal-zone performance counter, only when LibreHardwareMonitor has no temperature. It is labeled as an estimate and queried at most every ten seconds. RAM can fall back to WMI (`Win32_OperatingSystem`), with a reused performance counter. GPU process usage is read through WMI `GPUEngine`, grouped by process ID, names resolved, and cached for three seconds.
 
-Windows also publishes battery readings when a battery exists and a session-scoped `WheaErrorCount` from the System event log. Desktop systems without a battery publish no `Battery*` keys. WHEA value zero is a valid reading. Monitor identities are decoded from EDID through WMI and cached for about 60 seconds.
+Windows also publishes battery readings when a battery exists and a session-scoped `WheaErrorCount` from the System event log. Desktop systems without a battery publish no `Battery*` keys. Missing optional battery classes are remembered for the rest of the app run and stop being queried, while other available battery providers remain as fallbacks. WHEA value zero is a valid reading. Monitor identities are decoded from EDID through WMI and cached for about 60 seconds; optional fields are read defensively. If a monitor WMI query fails, collection continues with an empty monitor list and one diagnostic entry is recorded per app run. A successful query that reports no monitors is a normal empty result.
 
 ## Per-instance series
 
@@ -38,7 +38,7 @@ The snapshot's series list is computed once per cycle, after the last write to v
 
 ## Battery and WHEA
 
-Windows battery series include `BatteryLevel` (%), `BatteryVoltage` (V), `BatteryPower` (W; positive while discharging, negative while charging), `BatteryWearLevel` (%), and `BatteryAcPower` (1/0). WMI queries are cached for about ten seconds; unavailable properties use fallbacks where possible.
+Windows battery series include `BatteryLevel` (%), `BatteryVoltage` (V), `BatteryPower` (W; positive while discharging, negative while charging), `BatteryWearLevel` (%), and `BatteryAcPower` (1/0). WMI queries are cached for about ten seconds; unavailable properties use fallbacks where possible. Classes that return `InvalidClass` are marked unavailable for the app run, preventing repeated queries and log entries; the remaining classes, including `Win32_Battery`, continue to provide fallbacks.
 
 Battery voltage uses the reported battery status value, with design voltage as a fallback. Power is derived from discharge/charge rates. Wear is calculated from full-charge versus design capacity. Missing WMI properties are tolerated because battery drivers expose different subsets. `BatteryAcPower` reflects `PowerOnline`; a desktop with no battery publishes no `Battery*` series.
 

@@ -6,7 +6,7 @@ FPS collection is platform-specific and does not inject a DLL into the game.
 
 ## Windows: PresentMon and ETW
 
-The unified app starts PresentMon 2.x on Windows and reads its CSV stream. It identifies the foreground game using Win32 APIs and consumes frametime and optional PresentMon metrics. PresentMon requires an elevated session or membership in **Performance Log Users**; otherwise diagnostics explain the permission issue in `logs/errors.log`. The app requests only options supported by the installed PresentMon version.
+The unified app starts PresentMon 2.x on Windows and reads its CSV stream. It identifies the foreground game using Win32 APIs and consumes frametime and optional PresentMon metrics. PresentMon requires an elevated session or membership in **Performance Log Users**. The app does not request elevation automatically. If ETW session startup is denied, `EtwDiag` gives this guidance and `logs/errors.log` receives one actionable entry for that PresentMon session; `warning` lines are not logged as errors. The app requests only options supported by the installed PresentMon version.
 
 ## Linux: Phantom Vulkan layer
 

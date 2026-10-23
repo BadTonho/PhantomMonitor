@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
+using System.Threading;
 using static PhantomMonitor.Services.Win32Interop;
 
 namespace PhantomMonitor.Services;
@@ -162,6 +163,7 @@ public sealed class FpsMonitor : IFpsMonitor
                 StandardErrorEncoding = Encoding.UTF8
             };
 
+            var permissionErrorLogged = 0;
             _presentMonProcess = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
             _presentMonProcess.OutputDataReceived += (s, e) =>
@@ -174,19 +176,27 @@ public sealed class FpsMonitor : IFpsMonitor
 
             _presentMonProcess.ErrorDataReceived += (s, e) =>
             {
-                if (!string.IsNullOrEmpty(e.Data))
+                if (string.IsNullOrWhiteSpace(e.Data)) return;
+
+                var line = e.Data.Trim();
+                if (line.Contains("warning", StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith("Use --session_name", StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                var permissionFailure = line.Contains("access denied", StringComparison.OrdinalIgnoreCase);
+                if (permissionFailure)
                 {
-                    if (e.Data.Contains("access denied", StringComparison.OrdinalIgnoreCase) ||
-                        e.Data.Contains("elevated privilege", StringComparison.OrdinalIgnoreCase))
+                    _etwDiag = "Requer Administrador ou membro do grupo Performance Log Users";
+                    if (Interlocked.Exchange(ref permissionErrorLogged, 1) == 0)
                     {
-                        _etwDiag = "Requer Administrador (execute como Admin)";
+                        ErrorLog.Write("PresentMon",
+                            "A captura de FPS via ETW foi bloqueada por permissão. Execute como Administrador ou adicione a conta ao grupo Performance Log Users.");
                     }
-                    else if (!e.Data.Contains("warning", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _etwDiag = $"PresentMon: {e.Data}";
-                    }
-                    ErrorLog.Write("PresentMon", e.Data);
+                    return;
                 }
+
+                _etwDiag = $"PresentMon: {line}";
+                ErrorLog.Write("PresentMon", line);
             };
 
             _presentMonProcess.Exited += (s, e) =>
@@ -199,11 +209,10 @@ public sealed class FpsMonitor : IFpsMonitor
             };
 
             _presentMonProcess.Start();
-            _presentMonProcess.BeginOutputReadLine();
-            _presentMonProcess.BeginErrorReadLine();
-
             _etwDiag = "PresentMon ativo";
             _debugInfo = "PresentMon aguardando frames...";
+            _presentMonProcess.BeginOutputReadLine();
+            _presentMonProcess.BeginErrorReadLine();
         }
         catch (Exception ex)
         {

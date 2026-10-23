@@ -60,6 +60,7 @@ public sealed class HardwareMonitorService : ISensorService
     private DateTime _lastGpuProcesses = DateTime.MinValue;
     private List<GpuProcessInfo> _cachedGpuProcesses = [];
     private readonly Dictionary<int, string> _pidNames = [];
+    private readonly HashSet<string> _unsupportedWmiClasses = new(StringComparer.OrdinalIgnoreCase);
 
     // Bateria (P6.4): leitura WMI a cada 10 s é mais que suficiente — carga/tensão
     // mudam devagar, e a consulta atravessa WMI COM, que custa mais que o ciclo.
@@ -86,6 +87,7 @@ public sealed class HardwareMonitorService : ISensorService
     private List<MonitorInfo> _cachedMonitors = [];
     private DateTime _lastMonitorsRead = DateTime.MinValue;
     private static readonly TimeSpan MonitorsInterval = TimeSpan.FromSeconds(60);
+    private bool _monitorWmiFailureLogged;
 
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
@@ -444,81 +446,102 @@ public sealed class HardwareMonitorService : ISensorService
         debugInfo.Add($"[WMI] Bateria: nível={b.Level:F0}% tensão={b.Voltage:F2} V potência={b.Power:F2} W desgaste={b.Wear:F1}% AC={b.AcPower:F0}");
     }
 
-    private static BatterySnapshot? ReadBatteryFromWmi()
+    private BatterySnapshot? ReadBatteryFromWmi()
     {
         double? level = null, voltage = null, power = null, wear = null;
         double acPower = 0;
 
-        // root\WMI BatteryStatus (MSBatteryClass): tensão, taxas e fonte AC por bateria.
-        try
-        {
-            using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM BatteryStatus");
-            using var results = searcher.Get();
-            foreach (var obj in results)
-            {
-                using (obj)
-                {
-                    var dischargeW = WmiProp(obj, "DischargeRate") / 1000.0;
-                    var chargeW = WmiProp(obj, "ChargeRate") / 1000.0;
-                    // Convenção: positivo = consumindo da bateria, negativo = carregando.
-                    power = dischargeW > 0 ? dischargeW : -chargeW;
-                    var mv = WmiProp(obj, "Voltage");
-                    if (mv > 0) voltage = mv / 1000.0;
-                    acPower = WmiProp(obj, "PowerOnline") != 0 ? 1 : 0;
-                }
-                break; // primeira bateria reportada
-            }
-        }
-        catch (Exception ex) { ErrorLog.Write("WMI.Battery.Status", ex); }
-
-        // Win32_Battery: nível estimado e fallback de tensão/desgaste (sem bateria no
-        // desktop esta classe simplesmente não devolve instâncias).
-        try
-        {
-            using var searcher = new ManagementObjectSearcher(
-                "SELECT * FROM Win32_Battery");
-            using var results = searcher.Get();
-            foreach (var obj in results)
-            {
-                using (obj)
-                {
-                    var pct = WmiProp(obj, "EstimatedChargeRemaining");
-                    if (pct > 0) level = pct;
-                    if (voltage is not > 0)
-                    {
-                        var mv = WmiProp(obj, "DesignVoltage"); // mV em Win32 também
-                        if (mv > 0) voltage = mv / 1000.0;
-                    }
-                    if (!wear.HasValue)
-                    {
-                        var full = WmiProp(obj, "FullChargeCapacity");  // mWh
-                        var design = WmiProp(obj, "DesignCapacity");    // mWh
-                        if (full > 0 && design > 0) wear = Math.Clamp((1 - full / design) * 100.0, 0, 100);
-                    }
-                }
-                break;
-            }
-        }
-        catch (Exception ex) { ErrorLog.Write("WMI.Battery.Win32", ex); }
-
-        // Desgaste autoritativo (root\WMI), se o driver de bateria expõe as classes.
-        if (!wear.HasValue)
+        const string batteryStatusClass = "BatteryStatus";
+        if (!IsWmiClassUnsupported(@"root\WMI", batteryStatusClass))
         {
             try
             {
-                var full = WmiFirstNumeric(@"root\WMI",
-                    "SELECT FullChargedCapacity FROM BatteryFullChargedCapacity", "FullChargedCapacity");
-                var design = WmiFirstNumeric(@"root\WMI",
-                    "SELECT DesignedCapacity FROM BatteryStaticData", "DesignedCapacity");
-                if (full > 0 && design > 0) wear = Math.Clamp((1 - full / design) * 100.0, 0, 100);
+                using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM BatteryStatus");
+                using var results = searcher.Get();
+                foreach (var obj in results)
+                {
+                    using (obj)
+                    {
+                        var dischargeW = WmiProp(obj, "DischargeRate") / 1000.0;
+                        var chargeW = WmiProp(obj, "ChargeRate") / 1000.0;
+                        power = dischargeW > 0 ? dischargeW : -chargeW;
+                        var mv = WmiProp(obj, "Voltage");
+                        if (mv > 0) voltage = mv / 1000.0;
+                        acPower = WmiProp(obj, "PowerOnline") != 0 ? 1 : 0;
+                    }
+                    break;
+                }
             }
-            catch (Exception ex) { ErrorLog.Write("WMI.Battery.Wear", ex); }
+            catch (Exception ex) { HandleOptionalWmiException(@"root\WMI", batteryStatusClass, "WMI.Battery.Status", ex); }
         }
 
-        // Sem bateria (desktop ou classe ausente): nada a publicar.
-        if (!level.HasValue && !voltage.HasValue && !power.HasValue) return null;
+        const string win32BatteryClass = "Win32_Battery";
+        if (!IsWmiClassUnsupported("root\\cimv2", win32BatteryClass))
+        {
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Battery");
+                using var results = searcher.Get();
+                foreach (var obj in results)
+                {
+                    using (obj)
+                    {
+                        var pct = WmiProp(obj, "EstimatedChargeRemaining");
+                        if (pct > 0) level = pct;
+                        if (voltage is not > 0)
+                        {
+                            var mv = WmiProp(obj, "DesignVoltage");
+                            if (mv > 0) voltage = mv / 1000.0;
+                        }
+                        if (!wear.HasValue)
+                        {
+                            var full = WmiProp(obj, "FullChargeCapacity");
+                            var design = WmiProp(obj, "DesignCapacity");
+                            if (full > 0 && design > 0) wear = Math.Clamp((1 - full / design) * 100.0, 0, 100);
+                        }
+                    }
+                    break;
+                }
+            }
+            catch (Exception ex) { HandleOptionalWmiException("root\\cimv2", win32BatteryClass, "WMI.Battery.Win32", ex); }
+        }
 
+        if (!wear.HasValue)
+        {
+            var full = ReadOptionalWmiFirstNumeric(@"root\WMI", "BatteryFullChargedCapacity",
+                "SELECT FullChargedCapacity FROM BatteryFullChargedCapacity", "FullChargedCapacity", "WMI.Battery.Wear");
+            var design = ReadOptionalWmiFirstNumeric(@"root\WMI", "BatteryStaticData",
+                "SELECT DesignedCapacity FROM BatteryStaticData", "DesignedCapacity", "WMI.Battery.Wear");
+            if (full > 0 && design > 0) wear = Math.Clamp((1 - full / design) * 100.0, 0, 100);
+        }
+
+        if (!level.HasValue && !voltage.HasValue && !power.HasValue) return null;
         return new BatterySnapshot(level ?? 0, voltage ?? 0, power ?? 0, wear ?? 0, acPower);
+    }
+
+    private bool IsWmiClassUnsupported(string scope, string className) =>
+        _unsupportedWmiClasses.Contains($"{scope}:{className}");
+
+    private void HandleOptionalWmiException(string scope, string className, string context, Exception exception)
+    {
+        if (exception is ManagementException { ErrorCode: ManagementStatus.InvalidClass })
+        {
+            _unsupportedWmiClasses.Add($"{scope}:{className}");
+            return;
+        }
+
+        ErrorLog.Write(context, exception);
+    }
+
+    private double ReadOptionalWmiFirstNumeric(string scope, string className, string query, string property, string context)
+    {
+        if (IsWmiClassUnsupported(scope, className)) return 0;
+        try { return WmiFirstNumeric(scope, query, property); }
+        catch (Exception ex)
+        {
+            HandleOptionalWmiException(scope, className, context, ex);
+            return 0;
+        }
     }
 
     /// <summary>Propriedade WMI tolerante: propriedade ausente do driver devolve fallback (não lança).</summary>
@@ -534,6 +557,12 @@ public sealed class HardwareMonitorService : ISensorService
             _ = ex; // driver não expõe a propriedade: segue com fallback
         }
         return fallback;
+    }
+
+    private static object? WmiValue(ManagementBaseObject obj, string name)
+    {
+        try { return obj.Properties[name]?.Value; }
+        catch { return null; }
     }
 
     /// <summary>Primeiro valor numérico de uma consulta WMI (0 se não houver resultado).</summary>
@@ -1028,14 +1057,14 @@ public sealed class HardwareMonitorService : ISensorService
             // 1) Tamanho físico e flag de primário por InstanceName.
             var sizes = new Dictionary<string, (double In, bool Primary)>(StringComparer.OrdinalIgnoreCase);
             using (var sizeSearcher = new ManagementObjectSearcher(@"root\wmi",
-                       "SELECT InstanceName, MaxHorizontalImageSize, MaxVerticalImageSize, VideoInputType FROM WmiMonitorBasicDisplayParams"))
+                       "SELECT * FROM WmiMonitorBasicDisplayParams"))
             using (var items = sizeSearcher.Get())
             {
                 foreach (var obj in items)
                 {
                     using (obj)
                     {
-                        var instance = obj["InstanceName"]?.ToString() ?? "";
+                        var instance = WmiValue(obj, "InstanceName")?.ToString() ?? "";
                         if (instance.Length == 0) continue;
 
                         var hCm = WmiProp(obj, "MaxHorizontalImageSize");
@@ -1051,23 +1080,23 @@ public sealed class HardwareMonitorService : ISensorService
 
             // 2) Identidade EDID por InstanceName (somente monitores ativos).
             using (var idSearcher = new ManagementObjectSearcher(@"root\wmi",
-                       "SELECT InstanceName, ManufacturerName, ProductCodeID, UserFriendlyName, UserFriendlyNameLength, SerialNumberID, SerialNumberIDLength, WeekOfManufacture, YearOfManufacture, Active FROM WmiMonitorID"))
+                       "SELECT * FROM WmiMonitorID"))
             using (var items = idSearcher.Get())
             {
                 foreach (var obj in items)
                 {
                     using (obj)
                     {
-                        if (Convert.ToInt32(obj["Active"] ?? 0) == 0) continue; // monitor "fantasma" no registro
+                        if (WmiProp(obj, "Active", 1) == 0) continue; // monitor "fantasma" no registro
 
-                        var instance = obj["InstanceName"]?.ToString() ?? "";
+                        var instance = WmiValue(obj, "InstanceName")?.ToString() ?? "";
                         var info = new MonitorInfo
                         {
                             InstanceName = instance,
-                            Manufacturer = DecodeEdidString(obj["ManufacturerName"]),
+                            Manufacturer = DecodeEdidString(WmiValue(obj, "ManufacturerName")),
                             Model = DecodeUserFriendlyName(obj),
-                            ProductCode = DecodeProductCode(obj["ProductCodeID"]),
-                            Serial = DecodeEdidString(obj["SerialNumberID"]),
+                            ProductCode = DecodeProductCode(WmiValue(obj, "ProductCodeID")),
+                            Serial = DecodeEdidString(WmiValue(obj, "SerialNumberID")),
                             DiagonalInches = sizes.TryGetValue(instance, out var size) ? size.In : 0.0,
                             Primary = sizes.TryGetValue(instance, out var size2) && size2.Primary,
                             WeekOfManufacture = (int)WmiProp(obj, "WeekOfManufacture"),
@@ -1083,7 +1112,11 @@ public sealed class HardwareMonitorService : ISensorService
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("WMI.MonitorId", ex);
+            if (!_monitorWmiFailureLogged)
+            {
+                _monitorWmiFailureLogged = true;
+                ErrorLog.Write("WMI.MonitorId", $"Aviso: consulta EDID indisponível nesta execução. {ex.Message}");
+            }
         }
 
         return _cachedMonitors = result;
@@ -1095,12 +1128,16 @@ public sealed class HardwareMonitorService : ISensorService
         if (raw is not IEnumerable codes) return "";
 
         var sb = new StringBuilder(8);
-        foreach (var code in codes)
+        try
         {
-            var v = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
-            if (v == 0) break; // terminador/padding
-            if (v is >= 32 and <= 126) sb.Append((char)v);
+            foreach (var code in codes)
+            {
+                var v = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
+                if (v == 0) break; // terminador/padding
+                if (v is >= 32 and <= 126) sb.Append((char)v);
+            }
         }
+        catch { return ""; }
         return sb.ToString();
     }
 
@@ -1109,7 +1146,7 @@ public sealed class HardwareMonitorService : ISensorService
     {
         try
         {
-            var name = obj["UserFriendlyName"] switch
+            var name = WmiValue(obj, "UserFriendlyName") switch
             {
                 char[] chars => (object?)chars,
                 string str => str,
@@ -1117,7 +1154,7 @@ public sealed class HardwareMonitorService : ISensorService
             };
             if (name is char[] array)
             {
-                var length = Convert.ToInt32(obj["UserFriendlyNameLength"] ?? 0);
+                var length = (int)WmiProp(obj, "UserFriendlyNameLength");
                 var sb = new StringBuilder(length > 0 && length <= array.Length ? length : array.Length);
                 foreach (var c in array)
                 {
@@ -1129,7 +1166,7 @@ public sealed class HardwareMonitorService : ISensorService
             }
 
             // Painel sem UserFriendlyName (alguns laptops/DUMY devices): usa o product code.
-            var code = DecodeProductCode(obj["ProductCodeID"]);
+            var code = DecodeProductCode(WmiValue(obj, "ProductCodeID"));
             return code.Length > 0 ? code : "";
         }
         catch
@@ -1143,30 +1180,33 @@ public sealed class HardwareMonitorService : ISensorService
     {
         if (raw is not IEnumerable codes) return "";
 
-        var sb = new StringBuilder(4);
-        var printable = false;
-        foreach (var code in codes)
+        try
         {
-            var v = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
-            if (v == 0) break;
-            if (v is >= 32 and <= 126)
+            var values = new List<ushort>();
+            foreach (var code in codes)
             {
-                sb.Append((char)v);
-                printable = true;
+                var value = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
+                if (value == 0) break;
+                values.Add(value);
             }
-        }
-        if (printable && sb.Length > 0) return sb.ToString();
 
-        // Código numérico cru (ex.: 5027): mostra asBuzzword os bytes como decimal concatenado.
-        sb.Clear();
-        foreach (var code in codes)
-        {
-            var v = Convert.ToUInt16(code, CultureInfo.InvariantCulture);
-            if (v == 0) break;
-            if (sb.Length > 0) sb.Append('-');
-            sb.Append(v.ToString(CultureInfo.InvariantCulture));
+            var printable = new StringBuilder(values.Count);
+            foreach (var value in values)
+            {
+                if (value is >= 32 and <= 126)
+                    printable.Append((char)value);
+            }
+            if (printable.Length > 0) return printable.ToString();
+
+            var numeric = new StringBuilder(values.Count * 5);
+            foreach (var value in values)
+            {
+                if (numeric.Length > 0) numeric.Append('-');
+                numeric.Append(value.ToString(CultureInfo.InvariantCulture));
+            }
+            return numeric.ToString();
         }
-        return sb.ToString();
+        catch { return ""; }
     }
 
     // ---------- Processos na GPU ----------

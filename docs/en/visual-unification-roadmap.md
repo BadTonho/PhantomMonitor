@@ -106,8 +106,13 @@ First task, before anything else: **map equivalences** between windows/flows.
       under `[SupportedOSPlatform("windows")]`; PresentMon now ships with the
       App binary. Smoke: Avalonia and WPF collecting Windows sensors through
       the same Core code.
-- [ ] Shared Avalonia controls: selected-state nav, cards, inputs, banners
-      (including the update banner), accent gradients.
+- [x] Shared Avalonia controls: selected-state nav (3×14 indicator + selected
+      background via `Nav*` tokens, F1.6), cards, inputs and tokenized banners
+      (the alert toast gained `AlertToast*` in F1.6, including the update
+      banner already token-driven). The WPF "gradient/accent" was dead code
+      (defined in Styles.xaml, never consumed) and was not ported; the CTAs
+      (`Button.action`) follow the platform accent (Fluent, dynamic on
+      Windows) in both themes — a deliberate Neptune-preservation decision.
 - [x] **F1.2 — Complete dashboard on Avalonia**: temperature pills with color
       by range (green/warm/hot/unknown) and painted usage metrics (<75
       primary, <90 warm, ≥90 hot — WPF parity); mono detail lines for CPU/GPU
@@ -165,10 +170,23 @@ First task, before anything else: **map equivalences** between windows/flows.
 - [ ] Native sensor library (`PhantomSensorLib`) via P/Invoke delivering the
       same sensors on the Avalonia Windows binary.
 - [ ] Unify charts: `Controls/Minigraph.cs` (WPF) and `Controls/HistoryChart.cs`
-      (Avalonia) become **one** control with token-driven colors.
-- [ ] Port the WPF look as `Themes/Tokens.Slate.axaml` (2nd factory theme).
-- [ ] Windows release build producing the Avalonia binary — full manual test
-      (admin elevation, fps, overlay, tray, updates) + docs.
+      (Avalonia) become **one** control with token-driven colors. F1.6 note:
+      the WPF does not consume the Minigraph in the dashboard — it dies with
+      the WPF retirement in Phase 2 (unifying equals retiring it).
+- [x] **F1.6 — WPF visual ported as the complete "Slate" theme + Windows
+      build/release** (`ae01a89`): `Tokens.Slate.axaml` rewritten with the WPF
+      verbatim values (Styles.xaml palette, banners/pills from `MainWindow.xaml`,
+      OSD panel `#CC070A0F`/`#25FFFFFF`, `AlertPopupWindow` toast — per-line
+      provenance in the dictionary itself), `Nav*` tokens + selected nav state
+      with the 3×14 indicator (port of the WPF RadioButton), `AlertToast*`
+      tokens for the alert toast, `uiTheme` (neptune|slate) in `config.json`
+      applied at boot — CLI `--ui-theme=<name>` overrides it for smoke; runtime
+      switching by UI arrives in Phase 3 — and a validated win-x64
+      self-contained single-file publish (`releases/win-x64/` with
+      PresentMon.exe + config.example.json; green build and live smoke in both
+      themes without `errors.log`). PhantomSensorLib P/Invoke remains its own
+      item below; coverage revalidated (46 homonymous keys in both
+      dictionaries, zero orphans).
 
 **Acceptance criteria:** 1:1 functional parity with today's WPF on Windows;
 green build; both built-in themes render the same views.

@@ -144,6 +144,24 @@ editor de oferta é reavaliado junto da subfase de sistema).
    bandeja sujeita ao suporte a StatusNotifier do desktop.
 6. **F1.6 — Visual WPF portado como tema "Slate"** integral + build/release no
    Windows do binário Avalonia (critérios de aceite da Fase 1 no roadmap).
+   **✅ Feito (`ae01a89`):** `Tokens.Slate.axaml` reescrito com os valores
+   verbatim do WPF (paleta do `Resources/Styles.xaml`, banner admin
+   `#18EF4444`/`#35EF4444` e badge `#1810B981`/`#6EE7B7` do `MainWindow.xaml`,
+   painel do OSD `#CC070A0F`/`#25FFFFFF` e label `#8E9AA8` do overlay, toast
+   `#F20F1117`/`#F59E0B` do `AlertPopupWindow`); tokens sem equivalente ficam
+   "estimate" marcados (chips, rodapé dim, botão do overlay). Toast de alerta e
+   nav da sidebar viraram tokens (`AlertToast*`, `Nav*` — Neptune congelado no
+   look de hoje, `AccentSoftBrush`/`BgSurfaceBrush` removidas por terem ficado
+   sem consumidor) e a nav ganhou o estado selecionado com indicador 3×14 (item
+   aberto da Fase 1 fechado). Tema escolhido no boot: `config.json` "uiTheme" (CLI
+   `--ui-theme=<nome>` sobrepõe para smoke; troca em runtime pela UI chega na
+   Fase 3). Release win-x64 validada: `dotnet publish -c Release -r win-x64
+   --self-contained -p:PublishSingleFile=true` em `releases/win-x64/` com
+   `PresentMon.exe` + `config.example.json`; smoke vivo do binário publicado nos
+   dois temas sem `errors.log`. CTAs (`Button.action`) seguem o accent da
+   plataforma (Fluent, dinâmico no Windows) nos dois temas — nada do Neptune se
+   perde. Sobram da Fase 1: unificar `Minigraph`/`HistoryChart` (resolve na
+   aposentadoria do WPF, Fase 2) e a biblioteca nativa `PhantomSensorLib`.
 
 ## 5. Tamanho da porta (referência)
 

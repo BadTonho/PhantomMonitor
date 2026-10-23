@@ -149,6 +149,25 @@ solved, re-evaluate the editor alongside the system subphase).
 6. **F1.6 — WPF visual ported entirely as the "Slate" theme** + Windows
    release build of the Avalonia binary (Phase 1 acceptance criteria on the
    roadmap).
+   **✅ Done (`ae01a89`):** `Tokens.Slate.axaml` rewritten with the WPF verbatim
+   values (`Resources/Styles.xaml` palette, admin banner `#18EF4444`/`#35EF4444`
+   and update badge `#1810B981`/`#6EE7B7` from `MainWindow.xaml`, OSD panel
+   `#CC070A0F`/`#25FFFFFF` + label `#8E9AA8`, `AlertPopupWindow` toast
+   `#F20F1117`/`#F59E0B`); tokens with no WPF counterpart stay flagged as
+   "estimate" (chips, dim footer, overlay button). The alert toast and the
+   sidebar nav became tokens (`AlertToast*`, `Nav*` — Neptune frozen on
+   today's look, with `AccentSoftBrush`/`BgSurfaceBrush` removed for losing
+   their last consumer) and the nav gained a selected state with the 3×14
+   indicator (closing the open Phase 1 item). Theme chosen at boot via
+   `config.json` "uiTheme" (CLI
+   `--ui-theme=<name>` overrides for smoke; runtime UI switching arrives in
+   Phase 3). win-x64 release validated: `dotnet publish -c Release -r win-x64
+   --self-contained -p:PublishSingleFile=true` into `releases/win-x64/` with
+   `PresentMon.exe` + `config.example.json`; live smoke of the published binary
+   in both themes without `errors.log`. CTAs (`Button.action`) follow the
+   platform accent (Fluent, dynamic on Windows) in both themes — nothing of
+   Neptune is lost. Still open in Phase 1: unifying `Minigraph`/`HistoryChart`
+   (resolved by retiring the WPF in Phase 2) and the native `PhantomSensorLib`.
 
 ## 5. Port size (reference)
 

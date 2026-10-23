@@ -12,6 +12,7 @@ Phantom Monitor uses JSON configuration. In a development checkout, `config.json
 | `logToCsv`, `logToJson`, `logToJsonJournal` | Enable CSV, latest-snapshot JSON, or append-only JSONL logging. See [logging](logging.md). |
 | `showOverlay` | Show the overlay at startup; Avalonia also uses it to control the floating Linux overlay from the dashboard. |
 | `toggleOverlayHotkey`, `pauseMonitorHotkey` | Global Windows hotkeys (RegisterHotKey) for overlay visibility and monitoring pause/resume — honored by the WPF frontend and, since F1.5, by the unified app on Windows. See [global hotkeys](global-hotkey.md). |
+| `uiTheme` | Built-in UI theme of the unified app: `"neptune"` (original Linux look) or `"slate"` (verbatim port of the WPF/Windows look), applied at boot (runtime switching by UI arrives in phase 3 of the visual unification); unknown values fall back to `neptune`, and the CLI `--ui-theme=<name>` overrides the file (handy to compare themes without editing the config). See [main interface](main-interface.md). |
 | `overlayOpacity`, `overlayPosition`, `overlay` | Global opacity, initial position, and overlay settings. |
 | `sensors` | Sensor categories enabled by the model; not all current frontends consume these switches. |
 | `alerts` | Alert rules and actions. Avalonia edits rules, cooldowns, internal notifications, and scripts; on Linux the notification carries the sound and shutdown is not executed, while on Windows (since F1.5) the unified app runs all actions at WPF parity. See [alerts](alerts.md). |

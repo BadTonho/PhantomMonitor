@@ -14,6 +14,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `showOverlay` - Mostrar overlay na inicialização; no Avalonia Linux, também controla sua visibilidade pelo dashboard
 - `toggleOverlayHotkey` - Atalho global para mostrar/ocultar o OSD (ex: "Ctrl+Shift+O"; vazio = desativado)
 - `pauseMonitorHotkey` - 2º atalho global (P6.7): pausa/retoma o monitoramento (padrão `Ctrl+Alt+P`; vazio = desativado; estado de pausa não persiste) — ver [hotkey.md](hotkey.md) e [hardware-monitor.md](hardware-monitor.md)
+- `uiTheme` - Tema visual builtin do app unificado: `"neptune"` (visual Linux original) ou `"slate"` (porta verbatim do visual WPF/Windows), aplicado no boot (a troca em runtime pela UI chega na Fase 3 da unificação); valor desconhecido volta a `neptune` e a CLI `--ui-theme=<nome>` sobrepõe o arquivo (útil para comparar os dois temas sem editar o config) — ver [interface-principal.md](interface-principal.md)
 - `overlayOpacity` - Opacidade do overlay (0-1)
 - `overlayPosition` - Posição inicial do overlay (X, Y)
 - `Overlay` - Configurações específicas do overlay

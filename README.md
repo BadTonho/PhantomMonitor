@@ -79,6 +79,22 @@ Run the WPF frontend:
 dotnet run --project src/PhantomMonitor
 ```
 
+The unified **Avalonia frontend** also runs on Windows (same Core and services; phase 1 of the [visual unification roadmap](docs/en/visual-unification-roadmap.md)):
+
+```powershell
+dotnet run --project src/PhantomMonitor.App
+```
+
+Pick its built-in theme with `uiTheme` in `config.json` (`neptune` = original Avalonia look, `slate` = verbatim WPF look) or run with `--ui-theme=<name>`.
+
+Local release build of the unified Windows binary:
+
+```powershell
+dotnet publish src/PhantomMonitor.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o releases/win-x64
+```
+
+The output carries `PresentMon.exe` and `config.example.json` alongside the executable.
+
 Some hardware readings may require elevated permissions. FPS collection uses PresentMon/ETW and may depend on the Windows version and available permissions.
 
 ## Releases and auto-update
@@ -106,9 +122,9 @@ On Linux, telemetry and error logs are stored in `~/.local/share/PhantomMonitor/
 
 ```text
 src/
-├── PhantomMonitor.App/   # Avalonia frontend for Linux
+├── PhantomMonitor.App/   # Avalonia frontend (Linux today; unified, runs on Windows since F1.1)
 ├── PhantomMonitor.Core/  # Shared .NET models and services
-├── PhantomMonitor/       # WPF frontend for Windows
+├── PhantomMonitor/       # WPF frontend for Windows (retired in Phase 2 of the unification)
 ├── PhantomVulkanLayer/   # Native Vulkan layer for Linux FPS telemetry
 └── PhantomSensorLib/     # Native C++ library reserved for future work
 ```

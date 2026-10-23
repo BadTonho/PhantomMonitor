@@ -105,8 +105,14 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       sob `[SupportedOSPlatform("windows")]`; PresentMon agora acompanha o
       binário do App. Smoke: Avalonia e WPF coletando sensores Windows pelo
       mesmo código Core.
-- [ ] Controles compartilhados em Avalonia: nav com estado selecionado, cards,
-      inputs, banners (incluindo banner de atualização), gradiente/acento.
+- [x] Controles compartilhados em Avalonia: nav com estado selecionado (indicador
+      3×14 + fundo/token selecionado via tokens `Nav*`, F1.6), cards, inputs e
+      banners tokenizados (toast de alerta ganhou `AlertToast*` na F1.6,
+      incluindo o banner de atualização já por tokens). O "gradiente/acento" do
+      WPF era recurso morto (definido no Styles.xaml, nunca consumido) e não
+      rendeu port; os CTAs (`Button.action`) seguem o accent da plataforma
+      (Fluent, dinâmico no Windows) nos dois temas, decisão de preservação do
+      Neptune.
 - [x] **F1.2 — Dashboard completo no Avalonia**: pílulas de temperatura com cor
       por faixa (verde/morno/quente/desconhecido) e métricas de uso pintadas
       (<75 primário, <90 morno, ≥90 quente — paridade do WPF); linhas de detalhe
@@ -164,10 +170,22 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
 - [ ] Biblioteca nativa de sensores (`PhantomSensorLib`) via P/Invoke entregando
       igual no binário Avalonia do Windows.
 - [ ] Unificar gráficos: `Controls/Minigraph.cs` (WPF) e `Controls/HistoryChart.cs`
-      (Avalonia) viram **um** controle com cores por token.
-- [ ] Portar o visual do WPF como `Themes/Tokens.Slate.axaml` (2º tema de fábrica).
-- [ ] Build de release no Windows publicando o binário Avalonia — teste manual
-      completo (acesso admin, fps, overlay, tray, update) e revisão dos docs.
+      (Avalonia) viram **um** controle com cores por token. Nota F1.6: o WPF não
+      consome o Minigraph no dashboard — ele morre com a aposentadoria do WPF na
+      Fase 2 (a unificação equivale a aposentá-lo).
+- [x] **F1.6 — Visual WPF portado como tema "Slate" integral + build/release no
+      Windows** (`ae01a89`): `Tokens.Slate.axaml` verbatim do WPF (paleta do
+      `Styles.xaml`, banners/pílulas do `MainWindow.xaml`, painel do OSD
+      `#CC070A0F`/`#25FFFFFF`, toast do `AlertPopupWindow` — proveniência por
+      linha no próprio dicionário), tokens `Nav*` + estado selecionado da nav com
+      indicador 3×14 (port do RadioButton do WPF), tokens `AlertToast*` no toast
+      de alerta, `uiTheme` (neptune|slate) em `config.json` aplicado no boot —
+      CLI `--ui-theme=<nome>` sobrepõe para smoke; troca em runtime pela UI
+      chega na Fase 3 — e publicação win-x64 self-contained single-file validada
+      (`releases/win-x64/` com PresentMon.exe + config.example.json; build 0/0 e
+      smoke vivo nos dois temas sem `errors.log`). PhantomSensorLib P/Invoke
+      segue item próprio abaixo; cobertura revalidada (46 chaves homônimas nos
+      dois dicionários, zero órfãs).
 
 **Critérios de aceite:** paridade funcional 1:1 com o WPF atual no Windows;
 build 0/0; os dois temas builtin renderizam as mesmas views.

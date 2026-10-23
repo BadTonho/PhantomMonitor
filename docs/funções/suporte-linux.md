@@ -44,6 +44,8 @@ PhantomMonitor.App (Windows)
 
 ## 2. Leitura Nativa de Sensores do Kernel (`LinuxSensorService`)
 
+O código fica em `Services/Sensors/Linux/`. `LinuxSensorService` coordena os ciclos e mantém a coleta de CPU/memória, hwmon/energia e disco/rede em arquivos parciais por responsabilidade. A enumeração e associação de GPUs a DRM, hwmon e zonas térmicas ficam separadas em `LinuxGpuSensorReader.Discovery.cs`.
+
 No Linux, todas as métricas são consumidas de forma não intrusiva a partir das interfaces padrão do kernel:
 
 * **CPU (Uso e Clock):**

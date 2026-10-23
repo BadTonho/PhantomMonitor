@@ -29,6 +29,8 @@ PhantomMonitor.App (Windows)
 
 ## Linux sensor sources
 
+The implementation lives under `Services/Sensors/Linux/`. `LinuxSensorService` coordinates collection cycles and keeps CPU/memory, hwmon/power, and disk/network readers in responsibility-focused partial files. GPU enumeration and association with DRM, hwmon, and thermal zones are separated into `LinuxGpuSensorReader.Discovery.cs`.
+
 The service reads standard kernel interfaces without injecting code into other processes:
 
 - **CPU usage:** deltas from `/proc/stat`, including one `CpuPerCore#i` series per core.

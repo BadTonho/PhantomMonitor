@@ -23,6 +23,7 @@ public partial class OverlayBlockContentDialog : Window
     }
 
     private void OnAddSeriesPatternClick(object? sender, RoutedEventArgs e) => ViewModel.AddSeriesPattern();
+    private void OnToggleSeriesCategoryClick(object? sender, RoutedEventArgs e) => ViewModel.ToggleVisibleSeriesSelection();
     private void OnNewGraphClick(object? sender, RoutedEventArgs e) => ViewModel.NewGraph();
     private void OnSaveGraphClick(object? sender, RoutedEventArgs e) => ViewModel.SaveGraph();
     private void OnRemoveGraphClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveGraph();

@@ -14,7 +14,7 @@ The **Frametime graph** item can be combined with other content in any block. Th
 
 ### Per-instance series
 
-In a block's content selector, choose a detected series or add a key/pattern such as `Gpu*`, `*Total`, or `CpuTemperature#*`. Unmatched patterns stay in the block and begin displaying data when the series appears. The legacy `overlay.shownSeries` setting is preserved for compatibility and migrates to series items in blocks on the first save.
+In a block's content selector, filter detected series by CPU, GPU, RAM, Disk, Network, Fans, Motherboard, Battery, FPS, or Other; **All** shows every series. **Select all visible series** selects or clears the current filter's series in bulk and indicates a partial selection. This affects individual series only and does not enable the category summary shortcut. You can also add a key or pattern such as `Gpu*`, `*Total`, or `CpuTemperature#*`; unmatched patterns stay in the block and begin displaying data when the series appears. Existing selections and manual patterns are preserved when changing the filter. The legacy `overlay.shownSeries` setting is preserved for compatibility and migrates to series items in blocks on the first save. Series are ordered by type and numeric index, include the key and hardware label, display zero when a reading is present, and are limited to 24 rows per block.
 
 Blocks can contain any combination of categories, series, graphs, and templates. The preview shows live values; each block's content and position are independent. Active per-application profiles can still override global appearance and filter per-instance series in the running overlay.
 

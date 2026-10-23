@@ -25,6 +25,16 @@
       <CheckBox Content="{Binding FrametimeChoice.Label}" IsChecked="{Binding FrametimeChoice.IsSelected}" />
 
       <TextBlock Text="SÉRIES" FontSize="10" FontWeight="Bold" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <ComboBox ItemsSource="{Binding SeriesCategories}"
+                  SelectedItem="{Binding SelectedSeriesCategory, Mode=TwoWay}"
+                  MinWidth="180" HorizontalAlignment="Stretch" />
+        <CheckBox Grid.Column="1" Content="Selecionar todas as séries exibidas"
+                  IsThreeState="True"
+                  IsChecked="{Binding SeriesCategorySelectionState, Mode=OneWay}"
+                  Click="OnToggleSeriesCategoryClick"
+                  VerticalAlignment="Center" />
+      </Grid>
       <ItemsControl ItemsSource="{Binding SeriesChoices}">
         <ItemsControl.ItemTemplate>
           <DataTemplate DataType="{x:Type vm:OverlayBlockContentChoiceViewModel}">
@@ -32,6 +42,9 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+      <TextBlock Text="Nenhuma série encontrada nesta categoria."
+                 Classes="muted"
+                 IsVisible="{Binding NoSeriesChoices}" />
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
         <TextBox PlaceholderText="Série ou padrão (ex.: Gpu* ou DiskRead#1)" Text="{Binding SeriesPatternInput, UpdateSourceTrigger=PropertyChanged}" />
         <Button Grid.Column="1" Content="Adicionar padrão" Click="OnAddSeriesPatternClick" />

@@ -43,6 +43,8 @@ public sealed class OverlayBlockContentChoiceViewModel : INotifyPropertyChanged
 /// <summary>Draft state and editing operations for one overlay block's content dialog.</summary>
 public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
 {
+    private const string AllSeriesCategories = "Todas";
+
     private static readonly (string Key, string Name)[] Categories =
     [
         ("cpu", "CPU"), ("gpu", "GPU"), ("ram", "RAM"), ("disk", "Disco"),
@@ -57,6 +59,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     private string? _editingGraphId;
     private string? _editingTemplateId;
     private string _seriesPatternInput = "";
+    private string _selectedSeriesCategory = AllSeriesCategories;
     private string _graphSeries = "";
     private string _graphHeight = "36";
     private string _graphWindow = "240";
@@ -82,12 +85,49 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
 
     public ObservableCollection<OverlayBlockContentChoiceViewModel> CategoriesChoices { get; } = [];
     public OverlayBlockContentChoiceViewModel FrametimeChoice { get; }
+    public IReadOnlyList<string> SeriesCategories { get; } =
+    [
+        AllSeriesCategories, "CPU", "GPU", "RAM", "Disco", "Rede", "Ventoinhas",
+        "Placa-mãe", "Bateria", "FPS", "Outros"
+    ];
     public ObservableCollection<OverlayBlockContentChoiceViewModel> SeriesChoices { get; } = [];
     public ObservableCollection<OverlayBlockContentChoiceViewModel> GraphChoices { get; } = [];
     public ObservableCollection<OverlayBlockContentChoiceViewModel> TemplateChoices { get; } = [];
     public IReadOnlyList<OverlayBlockItemConfig> Result { get; private set; } = [];
     public IReadOnlyList<OverlayGraph> ResultGraphs => _graphs;
     public IReadOnlyList<OverlayTemplate> ResultTemplates => _templates;
+
+    public string SelectedSeriesCategory
+    {
+        get => _selectedSeriesCategory;
+        set
+        {
+            if (!Set(ref _selectedSeriesCategory, value)) return;
+            RefreshSeriesChoices();
+        }
+    }
+
+    /// <summary>True when all visible series are selected, false when none, null when selection is partial.</summary>
+    public bool? SeriesCategorySelectionState
+    {
+        get
+        {
+            if (SeriesChoices.Count == 0) return false;
+            var selectedCount = SeriesChoices.Count(choice => choice.IsSelected);
+            return selectedCount == 0 ? false : selectedCount == SeriesChoices.Count ? true : null;
+        }
+    }
+
+    public void ToggleVisibleSeriesSelection()
+    {
+        var selectAll = SeriesCategorySelectionState != true;
+        foreach (var choice in SeriesChoices)
+            choice.IsSelected = selectAll;
+        Raise(nameof(SeriesCategorySelectionState));
+    }
+
+    public bool HasSeriesChoices => SeriesChoices.Count > 0;
+    public bool NoSeriesChoices => !HasSeriesChoices;
 
     public string SeriesPatternInput { get => _seriesPatternInput; set => Set(ref _seriesPatternInput, value); }
     public string GraphSeries { get => _graphSeries; set => Set(ref _graphSeries, value); }
@@ -114,14 +154,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
         CaptureSelection(GraphChoices);
         CaptureSelection(TemplateChoices);
 
-        SeriesChoices.Clear();
-        var series = _detectedSeries
-            .Concat(_block.Config.Items.Where(item => item.Kind == "series").Select(item => item.Value))
-            .Concat(_selected.Where(item => item.Kind == "series").Select(item => item.Value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase);
-        foreach (var value in series)
-            SeriesChoices.Add(CreateChoice("series", value, value));
+        RefreshSeriesChoices();
 
         GraphChoices.Clear();
         foreach (var graph in _graphs)
@@ -130,6 +163,23 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
         TemplateChoices.Clear();
         foreach (var template in _templates)
             TemplateChoices.Add(CreateChoice("template", template.Id, template.Text, () => _editingTemplateId = template.Id));
+    }
+
+    private void RefreshSeriesChoices()
+    {
+        SeriesChoices.Clear();
+        var series = _detectedSeries
+            .Concat(_block.Config.Items.Where(item => item.Kind == "series").Select(item => item.Value))
+            .Concat(_selected.Where(item => item.Kind == "series").Select(item => item.Value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(value => _selectedSeriesCategory == AllSeriesCategories
+                || string.Equals(SeriesCategory(value), _selectedSeriesCategory, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(value => value, SeriesValueComparer.Instance);
+        foreach (var value in series)
+            SeriesChoices.Add(CreateChoice("series", value, value, selectionChanged: _ => Raise(nameof(SeriesCategorySelectionState))));
+        Raise(nameof(HasSeriesChoices));
+        Raise(nameof(NoSeriesChoices));
+        Raise(nameof(SeriesCategorySelectionState));
     }
 
     public void EditGraph(string id)
@@ -254,12 +304,79 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private OverlayBlockContentChoiceViewModel CreateChoice(string kind, string value, string label, Action? selected = null)
+        => CreateChoice(kind, value, label, selected, null);
+
+    private OverlayBlockContentChoiceViewModel CreateChoice(string kind, string value, string label, Action<bool> selectionChanged)
+        => CreateChoice(kind, value, label, null, selectionChanged);
+
+    private OverlayBlockContentChoiceViewModel CreateChoice(string kind, string value, string label, Action? selected, Action<bool>? selectionChanged)
         => new(kind, value, label, _selected.Contains((kind, value)), isSelected =>
         {
             if (isSelected) _selected.Add((kind, value));
             else _selected.Remove((kind, value));
             if (isSelected) selected?.Invoke();
+            selectionChanged?.Invoke(isSelected);
         });
+
+    private static string SeriesCategory(string value)
+    {
+        if (SensorKey.TryParse(value, out var key))
+            return CategoryFor(key.Type);
+
+        var family = value.TrimEnd('*');
+        if (family.StartsWith("Cpu", StringComparison.OrdinalIgnoreCase)) return "CPU";
+        if (family.StartsWith("Gpu", StringComparison.OrdinalIgnoreCase)) return "GPU";
+        if (family.StartsWith("Ram", StringComparison.OrdinalIgnoreCase)) return "RAM";
+        if (family.StartsWith("Disk", StringComparison.OrdinalIgnoreCase)) return "Disco";
+        if (family.StartsWith("Network", StringComparison.OrdinalIgnoreCase)) return "Rede";
+        if (family.StartsWith("Fan", StringComparison.OrdinalIgnoreCase)) return "Ventoinhas";
+        if (family.StartsWith("Motherboard", StringComparison.OrdinalIgnoreCase)
+            || family.StartsWith("Vrm", StringComparison.OrdinalIgnoreCase)
+            || family.StartsWith("Rail", StringComparison.OrdinalIgnoreCase)) return "Placa-mãe";
+        if (family.StartsWith("Battery", StringComparison.OrdinalIgnoreCase)) return "Bateria";
+        if (family.StartsWith("Fps", StringComparison.OrdinalIgnoreCase)
+            || family.StartsWith("Frametime", StringComparison.OrdinalIgnoreCase)
+            || family.StartsWith("PresentLatency", StringComparison.OrdinalIgnoreCase)) return "FPS";
+        return "Outros";
+    }
+
+    private static string CategoryFor(SensorType type) => type switch
+    {
+        SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.CpuTemperature or SensorType.CpuPower
+            or SensorType.CpuClock or SensorType.CpuVoltage or SensorType.CpuBusy or SensorType.CpuWait => "CPU",
+        SensorType.GpuCore or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal
+            or SensorType.GpuTemperature or SensorType.GpuHotSpot or SensorType.GpuVramTemperature
+            or SensorType.GpuCoreClock or SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan
+            or SensorType.GpuPower or SensorType.GpuBusy => "GPU",
+        SensorType.RamUsage or SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal
+            or SensorType.RamTemperature => "RAM",
+        SensorType.DiskUsage or SensorType.DiskRead or SensorType.DiskWrite or SensorType.DiskTemperature
+            or SensorType.DiskHealth or SensorType.DiskTotalRead or SensorType.DiskTotalWritten => "Disco",
+        SensorType.NetworkUp or SensorType.NetworkDown or SensorType.NetworkUpTotal or SensorType.NetworkDownTotal => "Rede",
+        SensorType.FanSpeed => "Ventoinhas",
+        SensorType.MotherboardTemp or SensorType.RailVoltage or SensorType.VrmTemperature => "Placa-mãe",
+        SensorType.BatteryLevel or SensorType.BatteryVoltage or SensorType.BatteryPower
+            or SensorType.BatteryWearLevel or SensorType.BatteryAcPower => "Bateria",
+        SensorType.Fps or SensorType.FrametimeMs or SensorType.FpsAvg or SensorType.FpsMin or SensorType.Fps1Low
+            or SensorType.Fps01Low or SensorType.FpsMax or SensorType.PresentLatency or SensorType.FpsP1
+            or SensorType.FpsP99 or SensorType.FrametimeP1 or SensorType.FrametimeP99 => "FPS",
+        _ => "Outros"
+    };
+
+    private sealed class SeriesValueComparer : IComparer<string>
+    {
+        public static readonly SeriesValueComparer Instance = new();
+
+        public int Compare(string? left, string? right)
+        {
+            if (ReferenceEquals(left, right)) return 0;
+            if (left is null) return -1;
+            if (right is null) return 1;
+            if (SensorKey.TryParse(left, out var leftKey) && SensorKey.TryParse(right, out var rightKey))
+                return leftKey.CompareTo(rightKey);
+            return StringComparer.OrdinalIgnoreCase.Compare(left, right);
+        }
+    }
 
     private void CaptureSelection(IEnumerable<OverlayBlockContentChoiceViewModel> choices)
     {
@@ -299,4 +416,6 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         return true;
     }
+
+    private void Raise(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

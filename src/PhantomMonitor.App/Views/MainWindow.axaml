@@ -326,10 +326,10 @@
           <TextBlock Text="Aguardando a primeira leitura dos sensores…" Classes="muted" FontSize="12" />
         </Border>
 
-        <Border IsVisible="{Binding HasInventorySnapshot}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="8">
-          <StackPanel Spacing="0">
-            <Border Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,0,0,1" Padding="10,6">
-              <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8">
+        <Border IsVisible="{Binding HasInventorySnapshot}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="0" HorizontalAlignment="Stretch">
+            <Border Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,0,0,1" Padding="10,6" HorizontalAlignment="Stretch">
+              <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch">
                 <TextBlock Text="Sensor" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,2">
                   <TextBlock Text="Atual" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" TextAlignment="Right" />
@@ -339,22 +339,22 @@
                 <TextBlock Grid.Column="4" Text="Média" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
               </Grid>
             </Border>
-            <ItemsControl ItemsSource="{Binding InventoryGroups}">
+            <ItemsControl ItemsSource="{Binding InventoryGroups}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0">
-                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" HorizontalAlignment="Stretch">
+                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                       <Expander.Header>
-                        <Border Padding="10,5">
+                        <Border Padding="10,5" HorizontalAlignment="Stretch">
                           <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" FontWeight="SemiBold" />
                         </Border>
                       </Expander.Header>
                       <Expander.Content>
-                        <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl ItemsSource="{Binding Rows}" HorizontalAlignment="Stretch">
                           <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                              <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="10,2">
-                                <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8">
+                              <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="10,2" HorizontalAlignment="Stretch">
+                                <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch">
                                   <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
                                     <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />

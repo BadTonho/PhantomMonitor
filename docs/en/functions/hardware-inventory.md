@@ -4,7 +4,7 @@
 
 ## Avalonia inventory
 
-**Inventory** is a page in the Avalonia main window, accessible from the sidebar. It follows the active service snapshots and groups series into CPU, GPU, memory, disk, network, fans, battery, and FPS. Each category is an expandable group, open by default, with a compact table: Sensor, Current, Minimum, Maximum, and Average. The friendly source label is shown as the sensor name; the technical key (for example, `CpuPerCore#1`) is available in a tooltip. Units appear with the current value and session statistics. Per-core, per-device, per-interface, and other instance series are shown individually; statistics display `--` (NaN) before a sample is available.
+**Inventory** is a page in the Avalonia main window, accessible from the sidebar. It follows the active service snapshots and groups series into CPU, GPU, memory, disk, network, fans, battery, and FPS. Each category is an expandable group, open by default, with a compact table: Sensor, Current, Minimum, Maximum, and Average. The friendly source label is shown as the sensor name; the technical key (for example, `CpuPerCore#1`) is available in a tooltip. Units appear with the current value and session statistics. The table and its groups fill the available width, keeping columns aligned through the right edge. Per-core, per-device, per-interface, and other instance series are shown individually; statistics display `--` (NaN) before a sample is available.
 
 Since F1.4, the page also carries the WPF `InventoryWindow` additions:
 

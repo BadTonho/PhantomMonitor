@@ -10,9 +10,10 @@ em CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. Cada categoria é
 grupo expansível, aberto por padrão, com uma tabela compacta: Sensor, Atual,
 Mínimo, Máximo e Média. O nome amigável da origem é exibido como sensor; a chave
 técnica (por exemplo, `CpuPerCore#1`) fica no tooltip. A unidade acompanha o valor
-atual e as estatísticas de sessão. Séries por núcleo, dispositivo, interface e
-demais instâncias são exibidas individualmente; sem amostra, as estatísticas
-mostram `--` (NaN).
+atual e as estatísticas de sessão. A tabela e seus grupos ocupam toda a largura
+disponível, mantendo as colunas alinhadas até a margem direita. Séries por núcleo,
+dispositivo, interface e demais instâncias são exibidas individualmente; sem
+amostra, as estatísticas mostram `--` (NaN).
 
 A página também tem, desde a F1.4, os acréscimos do InventoryWindow do WPF:
 

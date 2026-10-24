@@ -11,7 +11,71 @@
       <TextBlock Text="CONTEÚDO DO BLOCO" FontSize="17" FontWeight="SemiBold" />
       <TextBlock Text="Marque vários itens para reuni-los neste bloco." FontSize="11" TextWrapping="Wrap" Classes="muted" />
 
-      <TextBlock Text="CATEGORIAS" FontSize="10" FontWeight="Bold" />
+      <TextBlock Text="ORDEM NO BLOCO" FontSize="10" FontWeight="Bold" />
+      <ListBox ItemsSource="{Binding OrderedContentItems}"
+               SelectedItem="{Binding SelectedContentItem, Mode=TwoWay}"
+               Height="150" MinHeight="70">
+        <ListBox.ItemTemplate>
+          <DataTemplate DataType="{x:Type vm:OverlayBlockItemChoiceViewModel}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2">
+              <TextBlock Text="{Binding Kind}" Classes="muted" FontSize="9" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Mover para cima" IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" />
+        <Button Content="Mover para baixo" IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" />
+        <Button Content="Remover da lista" Click="OnRemoveContentClick" />
+      </StackPanel>
+
+      <StackPanel IsVisible="{Binding CanEditSelectedContent}" Spacing="8">
+        <TextBlock Text="EDITAR LINHA DO SENSOR" FontSize="10" FontWeight="Bold" />
+        <ComboBox ItemsSource="{Binding MetricChoices}"
+                  SelectedItem="{Binding SelectedMetric, Mode=TwoWay}"
+                  IsVisible="{Binding HasMetricChoices}" />
+        <TextBlock Text="Nenhuma linha de sensor disponível para este item agora."
+                   Classes="muted" IsVisible="{Binding NoMetricChoices}" />
+        <StackPanel IsVisible="{Binding HasMetricChoices}" Spacing="8">
+          <TextBox PlaceholderText="Nome exibido (vazio usa o nome atual)"
+                   Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+            <StackPanel Spacing="3">
+              <TextBlock Text="CASAS DECIMAIS" FontSize="9" />
+              <ComboBox ItemsSource="{Binding MetricDecimalsOptions}"
+                        SelectedItem="{Binding MetricDecimals, Mode=TwoWay}"
+                        IsEnabled="{Binding CanEditMetricDecimals}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="3">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="COR DO TEXTO" FontSize="9" />
+                <Button Grid.Column="1" Content="Padrão" Padding="6,2" Click="OnResetMetricColorClick" />
+              </Grid>
+              <TextBox PlaceholderText="#RRGGBB" Text="{Binding MetricColor, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+          </Grid>
+          <ItemsControl ItemsSource="{Binding ColorSwatches}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Width="20" Height="20" MinWidth="20" Padding="0" Margin="2"
+                        Tag="{Binding Hex}" Background="{Binding Brush}"
+                        BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1"
+                        ToolTip.Tip="{Binding Hex}" Click="OnMetricColorSwatchClick" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" />
+          <Button Content="Aplicar ajuste à linha" HorizontalAlignment="Left" Click="OnSaveMetricOverrideClick" />
+        </StackPanel>
+      </StackPanel>
+
+      <TextBlock Text="ADICIONAR CONTEÚDO" FontSize="10" FontWeight="Bold" />
+      <TextBlock Text="Os itens marcados entram no final da lista acima. Você pode reorganizar a ordem depois."
+                 FontSize="11" TextWrapping="Wrap" Classes="muted" />
       <ItemsControl ItemsSource="{Binding CategoriesChoices}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>

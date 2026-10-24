@@ -19,12 +19,12 @@
                  PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll" />
       <ItemsControl ItemsSource="{Binding Content}">
         <ItemsControl.DataTemplates>
-          <DataTemplate DataType="vm:OverlayMetricViewModel">
+          <DataTemplate DataType="vm:OverlayBlockMetricViewModel">
             <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.Owner.OverlayRowMargin}">
-              <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+              <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{Binding NameForeground}"
                          FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayMetricNameFontFamily}"
                          FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricNameFontSize}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
+              <TextBlock Text="{Binding Value}" Foreground="{Binding ValueForeground}"
                          FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontSize}"
                          FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontFamily}" TextWrapping="WrapWithOverflow" />
               <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"

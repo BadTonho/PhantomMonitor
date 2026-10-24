@@ -9,7 +9,10 @@ internal static class OverlayMetricsBuilder
 
     /// <summary>Plano declarativo de uma row por tick: identidade estável para a
     /// reconciliação + textos do tick. A instância do VM persiste; o plano só descreve.</summary>
-    public readonly record struct OverlayRowPlan(string Identity, string Name, string Value, bool ShowFrametimeGraph);
+    public readonly record struct OverlayRowPlan(
+        string Identity, string Name, string Value, bool ShowFrametimeGraph,
+        string? OverrideIdentity = null, SensorKey? SeriesKey = null, double? NumericValue = null,
+        bool? ShowNameOverride = null, bool IsIndividualSeries = false);
 
     public static IReadOnlyList<OverlayRowPlan> Plan(
         SensorData? data,
@@ -90,10 +93,11 @@ internal static class OverlayMetricsBuilder
                 {
                     var fanName = fan.Type == SensorType.GpuFan ? "GPU FAN" : fan.Index > 0 ? $"FAN {fan.Index}" : "FAN";
                     rows.Add(new OverlayRowPlan(
-                        fanName,
+                        fan.ToString(),
                         fanName,
                         fan.Type == SensorType.GpuFan ? $"{data!.GetValue(fan):F0}%" : $"{data!.GetValue(fan):F0} RPM",
-                        false));
+                        false,
+                        fan.ToString(), fan, data!.GetValue(fan), false));
                 }
         }
 
@@ -137,7 +141,8 @@ internal static class OverlayMetricsBuilder
                     ? formatted
                     : $"{formatted} · {label}";
                 var identity = key.ToString();
-                rows.Add(new OverlayRowPlan(identity, identity, description, false));
+                rows.Add(new OverlayRowPlan(identity, identity, description, false, identity, key, data.Series[key],
+                    IsIndividualSeries: true));
             }
         }
 

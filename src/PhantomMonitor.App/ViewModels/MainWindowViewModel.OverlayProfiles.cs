@@ -214,6 +214,8 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayAccentBrush));
         Raise(nameof(OverlayPanelBorderBrush));
         Raise(nameof(OverlayBorderThickness));
+        foreach (var block in _overlayBlocks.Concat(_overlayAppliedBlocks))
+            block.RefreshMetricThemes();
         Raise(nameof(OverlayBackgroundBrush));
         Raise(nameof(OverlayWidth));
         Raise(nameof(OverlayOpacity));

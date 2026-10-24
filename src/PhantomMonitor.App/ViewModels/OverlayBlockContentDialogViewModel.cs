@@ -7,41 +7,8 @@ using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.ViewModels;
 
-public sealed class OverlayBlockContentChoiceViewModel : INotifyPropertyChanged
-{
-    private bool _isSelected;
-    private readonly Action<bool>? _selectionChanged;
-
-    public OverlayBlockContentChoiceViewModel(string kind, string value, string label, bool isSelected,
-        Action<bool>? selectionChanged = null)
-    {
-        Kind = kind;
-        Value = value;
-        Label = label;
-        _isSelected = isSelected;
-        _selectionChanged = selectionChanged;
-    }
-
-    public string Kind { get; }
-    public string Value { get; }
-    public string Label { get; }
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set
-        {
-            if (_isSelected == value) return;
-            _isSelected = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
-            _selectionChanged?.Invoke(value);
-        }
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-}
-
 /// <summary>Draft state and editing operations for one overlay block's content dialog.</summary>
-public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
+public sealed partial class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
 {
     private const string AllSeriesCategories = "Todas";
 
@@ -52,6 +19,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     ];
 
     private readonly OverlayCanvasBlockViewModel _block;
+    private readonly MainWindowViewModel _owner;
     private readonly IReadOnlyList<string> _detectedSeries;
     private readonly HashSet<(string Kind, string Value)> _selected;
     private readonly List<OverlayGraph> _graphs;
@@ -68,14 +36,22 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     private string _graphColor = "";
     private string _templateText = "";
     private string _templateColor = "";
+    private OverlayBlockItemChoiceViewModel? _selectedContentItem;
 
     public OverlayBlockContentDialogViewModel(MainWindowViewModel viewModel, OverlayCanvasBlockViewModel block)
     {
+        _owner = viewModel;
         _block = block;
         _detectedSeries = viewModel.OverlaySeriesOptions.ToArray();
         _graphs = viewModel.OverlayGraphsDraft.Select(Clone).ToList();
         _templates = viewModel.OverlayTemplatesDraft.Select(Clone).ToList();
         _selected = block.Config.Items.Select(item => (item.Kind, item.Value)).ToHashSet();
+        var addedItems = new HashSet<(string Kind, string Value)>();
+        foreach (var item in block.Config.Items)
+            if (addedItems.Add((item.Kind, item.Value)))
+                OrderedContentItems.Add(new OverlayBlockItemChoiceViewModel(item.Kind, item.Value, GetItemLabel(item.Kind, item.Value)));
+        foreach (var metricOverride in block.Config.MetricOverrides ?? [])
+            _metricOverrides[metricOverride.Identity] = Clone(metricOverride);
 
         foreach (var (key, name) in Categories)
             CategoriesChoices.Add(CreateChoice("category", key, name));
@@ -93,9 +69,28 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     public ObservableCollection<OverlayBlockContentChoiceViewModel> SeriesChoices { get; } = [];
     public ObservableCollection<OverlayBlockContentChoiceViewModel> GraphChoices { get; } = [];
     public ObservableCollection<OverlayBlockContentChoiceViewModel> TemplateChoices { get; } = [];
+    public ObservableCollection<OverlayBlockItemChoiceViewModel> OrderedContentItems { get; } = [];
     public IReadOnlyList<OverlayBlockItemConfig> Result { get; private set; } = [];
     public IReadOnlyList<OverlayGraph> ResultGraphs => _graphs;
     public IReadOnlyList<OverlayTemplate> ResultTemplates => _templates;
+    public OverlayBlockItemChoiceViewModel? SelectedContentItem
+    {
+        get => _selectedContentItem;
+        set
+        {
+            if (!Set(ref _selectedContentItem, value)) return;
+            Raise(nameof(CanMoveContentUp));
+            Raise(nameof(CanMoveContentDown));
+            Raise(nameof(CanEditSelectedContent));
+            RefreshMetricChoices();
+        }
+    }
+
+    public bool CanEditSelectedContent => SelectedContentItem is { Kind: "category" or "series" };
+    public bool CanMoveContentUp => SelectedContentItem is not null && OrderedContentItems.IndexOf(SelectedContentItem) > 0;
+    public bool CanMoveContentDown => SelectedContentItem is not null
+        && OrderedContentItems.IndexOf(SelectedContentItem) >= 0
+        && OrderedContentItems.IndexOf(SelectedContentItem) < OrderedContentItems.Count - 1;
 
     public string SelectedSeriesCategory
     {
@@ -143,9 +138,30 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     {
         var value = SeriesPatternInput.Trim();
         if (!IsValidPattern(value) || _selected.Contains(("series", value))) return;
-        _selected.Add(("series", value));
+        SetSelected("series", value, true);
         SeriesPatternInput = "";
         RefreshDynamicChoices();
+    }
+
+    public void MoveSelectedContent(int offset)
+    {
+        if (SelectedContentItem is null) return;
+        var current = OrderedContentItems.IndexOf(SelectedContentItem);
+        var target = current + offset;
+        if (current < 0 || target < 0 || target >= OrderedContentItems.Count) return;
+        OrderedContentItems.Move(current, target);
+        Raise(nameof(CanMoveContentUp));
+        Raise(nameof(CanMoveContentDown));
+    }
+
+    public void RemoveSelectedContent()
+    {
+        if (SelectedContentItem is not { } item) return;
+        var choice = FindChoice(item.Kind, item.Value);
+        if (choice is not null)
+            choice.IsSelected = false;
+        else
+            SetSelected(item.Kind, item.Value, false);
     }
 
     public void RefreshDynamicChoices()
@@ -163,6 +179,8 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
         TemplateChoices.Clear();
         foreach (var template in _templates)
             TemplateChoices.Add(CreateChoice("template", template.Id, template.Text, () => _editingTemplateId = template.Id));
+        foreach (var item in OrderedContentItems)
+            item.UpdateLabel(GetItemLabel(item.Kind, item.Value));
     }
 
     private void RefreshSeriesChoices()
@@ -225,7 +243,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
         graph.Min = min;
         graph.Max = max;
         graph.Color = EmptyToNull(GraphColor);
-        _selected.Add(("graph", graph.Id));
+        SetSelected("graph", graph.Id, true);
         _editingGraphId = graph.Id;
         RefreshDynamicChoices();
     }
@@ -234,7 +252,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     {
         if (_editingGraphId is null) return;
         _graphs.RemoveAll(item => item.Id == _editingGraphId);
-        _selected.Remove(("graph", _editingGraphId));
+        SetSelected("graph", _editingGraphId, false);
         NewGraph();
         RefreshDynamicChoices();
     }
@@ -267,7 +285,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
         }
         template.Text = text;
         template.Color = EmptyToNull(TemplateColor);
-        _selected.Add(("template", template.Id));
+        SetSelected("template", template.Id, true);
         _editingTemplateId = template.Id;
         RefreshDynamicChoices();
     }
@@ -276,7 +294,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     {
         if (_editingTemplateId is null) return;
         _templates.RemoveAll(item => item.Id == _editingTemplateId);
-        _selected.Remove(("template", _editingTemplateId));
+        SetSelected("template", _editingTemplateId, false);
         NewTemplate();
         RefreshDynamicChoices();
     }
@@ -288,17 +306,10 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
         CaptureSelection(SeriesChoices);
         CaptureSelection(GraphChoices);
         CaptureSelection(TemplateChoices);
-        Result = Categories.Select(item => ("category", item.Key))
-            .Append(("frametime", "frametime"))
-            .Concat(_detectedSeries.Concat(_block.Config.Items.Where(item => item.Kind == "series").Select(item => item.Value))
-                .Concat(_selected.Where(item => item.Kind == "series").Select(item => item.Value))
-                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
-                .Select(value => ("series", value)))
-            .Concat(_graphs.Select(graph => ("graph", graph.Id)))
-            .Concat(_templates.Select(template => ("template", template.Id)))
-            .Where(_selected.Contains)
-            .Select(item => new OverlayBlockItemConfig { Kind = item.Item1, Value = item.Item2 })
+        Result = OrderedContentItems
+            .Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value })
             .ToList();
+        ResultMetricOverrides = _metricOverrides.Values.Select(Clone).ToArray();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -312,11 +323,53 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     private OverlayBlockContentChoiceViewModel CreateChoice(string kind, string value, string label, Action? selected, Action<bool>? selectionChanged)
         => new(kind, value, label, _selected.Contains((kind, value)), isSelected =>
         {
-            if (isSelected) _selected.Add((kind, value));
-            else _selected.Remove((kind, value));
+            SetSelected(kind, value, isSelected);
             if (isSelected) selected?.Invoke();
             selectionChanged?.Invoke(isSelected);
         });
+
+    private void SetSelected(string kind, string value, bool isSelected)
+    {
+        var key = (kind, value);
+        if (isSelected)
+        {
+            if (!_selected.Add(key)) return;
+            var added = new OverlayBlockItemChoiceViewModel(kind, value, GetItemLabel(kind, value));
+            OrderedContentItems.Add(added);
+            SelectedContentItem = added;
+        }
+        else
+        {
+            if (!_selected.Remove(key)) return;
+            var item = OrderedContentItems.FirstOrDefault(candidate => candidate.Kind == kind
+                && candidate.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
+            if (item is not null)
+            {
+                OrderedContentItems.Remove(item);
+                if (ReferenceEquals(SelectedContentItem, item)) SelectedContentItem = null;
+            }
+        }
+        Raise(nameof(CanMoveContentUp));
+        Raise(nameof(CanMoveContentDown));
+    }
+
+    private OverlayBlockContentChoiceViewModel? FindChoice(string kind, string value)
+    {
+        IEnumerable<OverlayBlockContentChoiceViewModel> choices = CategoriesChoices
+            .Concat([FrametimeChoice]).Concat(SeriesChoices).Concat(GraphChoices).Concat(TemplateChoices);
+        return choices.FirstOrDefault(choice => choice.Kind == kind
+            && choice.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string GetItemLabel(string kind, string value) => kind switch
+    {
+        "category" => Categories.FirstOrDefault(item => item.Key == value).Name ?? value,
+        "frametime" => "Gráfico de frametime",
+        "series" => value,
+        "graph" => _graphs.FirstOrDefault(item => item.Id == value)?.Series ?? "Gráfico",
+        "template" => _templates.FirstOrDefault(item => item.Id == value)?.Text ?? "Template",
+        _ => value
+    };
 
     private static string SeriesCategory(string value)
     {
@@ -381,10 +434,7 @@ public sealed class OverlayBlockContentDialogViewModel : INotifyPropertyChanged
     private void CaptureSelection(IEnumerable<OverlayBlockContentChoiceViewModel> choices)
     {
         foreach (var choice in choices)
-        {
-            if (choice.IsSelected) _selected.Add((choice.Kind, choice.Value));
-            else _selected.Remove((choice.Kind, choice.Value));
-        }
+            SetSelected(choice.Kind, choice.Value, choice.IsSelected);
     }
 
     private static bool IsValidPattern(string value)

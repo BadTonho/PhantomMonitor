@@ -8,6 +8,7 @@ The Avalonia dashboard offers a floating overlay controlled by `showOverlay` and
 
 Under **Settings → Floating overlay**, **Open overlay editor** opens a live preview on a gridded canvas. Right-click an empty area to create a block; left-drag to move it with 20 px grid snapping and edge alignment to nearby blocks (or freely while holding Shift), constrained by the rendered block size and canvas edges. Double-click to choose multiple categories, individual series or patterns, graphs, and templates. Right-click a block to edit or remove it. Graphs and templates can be created and edited in the content selector. **Settings**, at the editor's lower-right corner, opens a panel on the right with a left-to-right slide animation; the window expands to make room without covering or shrinking the canvas. The panel contains width, overall opacity, background color and opacity, font family and size, compact mode, and border. Toggle the border and choose a color from the palette or enter HEX; clearing the color restores the theme border. Overall opacity affects the whole block; background opacity combines with it and changes only the fill. Choose a color from the palette or enter HEX; clearing the color restores the theme. Choose an installed font or type a family name; leaving it blank preserves the current typography. Changes remain a draft: **Save and apply** writes them and updates the running overlay; closing the editor discards unsaved appearance, content, and position changes.
 
+Under **Block order**, selected content appears in a list; moving an item up or down changes its order in the overlay. Categories remain groups. Select a category or series and choose a row to edit its name and color; individual series also support automatic precision or 0 to 3 decimal places.
 Positions in `overlay.blocks` are normalized from 0 to 1 relative to the monitored window on Windows or the available screen area on Linux. Configurations without `blocks` are migrated while preserving enabled categories, per-instance series, graphs, templates, and existing positions; when no positions exist, blocks start in a vertical column. New installations also start with the current default blocks. Width (140–700 px), overall opacity (10–100%), background color (#RRGGBB), background opacity (0–100%), font family and size (8–20 pt), compact mode, border visibility, and border color are global settings on **Settings → Floating overlay** and in the editor's settings panel. Editor changes are persisted when **Save and apply** is clicked.
 
 The **Frametime graph** item can be combined with other content in any block. The gold sparkline appears once at least two samples exist, is 24 px high normally and 18 px in compact mode, and stops advancing while paused.
@@ -57,12 +58,12 @@ Current block composition is stored in `overlay.blocks`; global appearance is ed
 
 - `width`, `fontSize`, `fontFamily`, `compactMode`, `accentColor`, and global `overlayOpacity`.
 - `blocks`: `{ id, x, y, items: [{ kind, value }] }`; `kind` is `category`, `series`, `graph`, `template`, or `frametime`. A block can contain multiple items.
+- `overlay.blocks[].metricOverrides`: per-block sensor presentation overrides with `identity`, `displayName`, `decimals` (0–3), and `color`.
 - `showCpu`, `showGpu`, `showRam`, `showDisk`, `showNetwork`, `showFans`, `showMotherboard`, `showFps`, `showFrametimeGraph`, `shownSeries`, and `layout` are read when migrating an older config without `blocks`.
 - `backgroundColor`: `#RRGGBB`; `null` follows the active theme.
 - `backgroundOpacity`: additional fill opacity from 0 to 1 (default 1).
 - `borderEnabled`: border visibility (default `true`).
 - `borderColor`: `#RRGGBB`; `null` uses the theme/accent border color.
-ull uses the theme/accent border color.
 - `overlayPosition`: screen coordinates.
 - `toggleOverlayHotkey` and `pauseMonitorHotkey` on Windows.
 

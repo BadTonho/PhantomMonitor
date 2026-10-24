@@ -86,7 +86,7 @@ public sealed partial class MainWindowViewModel
                 }
                 else
                 {
-                    row = new OverlayMetricViewModel(entry.Identity, entry.Name);
+                    row = new OverlayMetricViewModel(entry.Identity, entry.Name, entry.OverrideIdentity, entry.SeriesKey, entry.NumericValue);
                     rows.Insert(position, row);
                 }
             }
@@ -94,6 +94,8 @@ public sealed partial class MainWindowViewModel
             row.Name = entry.Name;
             row.Value = entry.Value;
             row.ShowFrametimeGraph = entry.ShowFrametimeGraph;
+            row.UpdateSensorFormatting(entry.OverrideIdentity, entry.SeriesKey, entry.NumericValue,
+                entry.ShowNameOverride, entry.IsIndividualSeries);
             position++;
         }
 

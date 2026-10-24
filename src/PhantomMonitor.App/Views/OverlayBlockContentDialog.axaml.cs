@@ -11,6 +11,7 @@ public partial class OverlayBlockContentDialog : Window
     private OverlayBlockContentDialogViewModel ViewModel => (OverlayBlockContentDialogViewModel)DataContext!;
 
     public IReadOnlyList<OverlayBlockItemConfig> Result => ViewModel.Result;
+    public IReadOnlyList<OverlayMetricOverrideConfig> ResultMetricOverrides => ViewModel.ResultMetricOverrides;
     public IReadOnlyList<OverlayGraph> ResultGraphs => ViewModel.ResultGraphs;
     public IReadOnlyList<OverlayTemplate> ResultTemplates => ViewModel.ResultTemplates;
 
@@ -24,6 +25,15 @@ public partial class OverlayBlockContentDialog : Window
 
     private void OnAddSeriesPatternClick(object? sender, RoutedEventArgs e) => ViewModel.AddSeriesPattern();
     private void OnToggleSeriesCategoryClick(object? sender, RoutedEventArgs e) => ViewModel.ToggleVisibleSeriesSelection();
+    private void OnMoveContentUpClick(object? sender, RoutedEventArgs e) => ViewModel.MoveSelectedContent(-1);
+    private void OnMoveContentDownClick(object? sender, RoutedEventArgs e) => ViewModel.MoveSelectedContent(1);
+    private void OnRemoveContentClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveSelectedContent();
+    private void OnSaveMetricOverrideClick(object? sender, RoutedEventArgs e) => ViewModel.SaveMetricOverride();
+    private void OnMetricColorSwatchClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string hex }) ViewModel.SetMetricColor(hex);
+    }
+    private void OnResetMetricColorClick(object? sender, RoutedEventArgs e) => ViewModel.ResetMetricColor();
     private void OnNewGraphClick(object? sender, RoutedEventArgs e) => ViewModel.NewGraph();
     private void OnSaveGraphClick(object? sender, RoutedEventArgs e) => ViewModel.SaveGraph();
     private void OnRemoveGraphClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveGraph();

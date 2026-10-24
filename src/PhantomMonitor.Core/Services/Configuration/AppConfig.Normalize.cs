@@ -93,6 +93,27 @@ public sealed partial class AppConfig
                     item.Kind = "invalid";
             }
             block.Items.RemoveAll(item => item.Kind == "invalid");
+            block.MetricOverrides ??= [];
+            block.MetricOverrides.RemoveAll(item => item is null);
+            foreach (var metricOverride in block.MetricOverrides)
+            {
+                metricOverride.Identity = (metricOverride.Identity ?? "").Trim();
+                metricOverride.DisplayName = string.IsNullOrWhiteSpace(metricOverride.DisplayName)
+                    ? null
+                    : metricOverride.DisplayName.Trim();
+                if (metricOverride.DisplayName is { Length: > 128 } || metricOverride.DisplayName?.Any(char.IsControl) == true)
+                    metricOverride.DisplayName = null;
+                if (metricOverride.Decimals is < 0 or > 3)
+                    metricOverride.Decimals = null;
+                if (metricOverride.Color is { } metricColor && !HexRgbColorRegex.IsMatch(metricColor))
+                    metricOverride.Color = null;
+            }
+            block.MetricOverrides.RemoveAll(item => item.Identity.Length == 0
+                || item.DisplayName is null && item.Decimals is null && item.Color is null);
+            block.MetricOverrides = block.MetricOverrides
+                .GroupBy(item => item.Identity, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.Last())
+                .ToList();
         }
 
         Overlay.Width = Math.Clamp(Overlay.Width, 140, 700);

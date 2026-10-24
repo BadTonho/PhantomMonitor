@@ -9,6 +9,8 @@ public sealed partial class MainWindowViewModel
 
     private void InitializeOverlayBlocks()
     {
+        foreach (var block in _overlayBlocks.Concat(_overlayAppliedBlocks))
+            block.DisposeMetrics();
         _overlayBlocks.Clear();
         _overlayAppliedBlocks.Clear();
         foreach (var config in _config.Overlay.Blocks ?? [])
@@ -43,13 +45,16 @@ public sealed partial class MainWindowViewModel
     public void RemoveOverlayBlock(OverlayCanvasBlockViewModel block)
     {
         if (!_overlayBlocks.Remove(block)) return;
+        block.DisposeMetrics();
         UpdateOverlayRows(_latestSensorData);
     }
 
     public void SetOverlayBlockDefinition(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items,
-        IEnumerable<OverlayGraph> graphs, IEnumerable<OverlayTemplate> templates)
+        IEnumerable<OverlayGraph> graphs, IEnumerable<OverlayTemplate> templates,
+        IEnumerable<OverlayMetricOverrideConfig> metricOverrides)
     {
         block.Config.Items = items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList();
+        block.Config.MetricOverrides = metricOverrides.Select(CloneOverlayMetricOverride).ToList();
         _overlayGraphsDraft.Clear();
         foreach (var graph in graphs) _overlayGraphsDraft.Add(CloneOverlayGraph(graph));
         _overlayTemplatesDraft.Clear();
@@ -82,7 +87,8 @@ public sealed partial class MainWindowViewModel
             var current = _overlayBlocks[index].Config;
             var previous = saved[index];
             if (current.Id != previous.Id || Math.Abs(current.X - previous.X) > 0.0001
-                || Math.Abs(current.Y - previous.Y) > 0.0001 || current.Items.Count != previous.Items.Count)
+                || Math.Abs(current.Y - previous.Y) > 0.0001 || current.Items.Count != previous.Items.Count
+                || !OverlayDefinitionsEqual(current.MetricOverrides, previous.MetricOverrides))
                 return true;
             for (var itemIndex = 0; itemIndex < current.Items.Count; itemIndex++)
                 if (current.Items[itemIndex].Kind != previous.Items[itemIndex].Kind
@@ -121,6 +127,8 @@ public sealed partial class MainWindowViewModel
     private void ApplyOverlayLayoutDraft()
     {
         BuildOverlayAppliedExtraRows();
+        foreach (var block in _overlayAppliedBlocks)
+            block.DisposeMetrics();
         _overlayAppliedBlocks.Clear();
         foreach (var config in _overlayBlocks.Select(block => CloneOverlayBlock(block.Config)))
         {
@@ -168,7 +176,7 @@ public sealed partial class MainWindowViewModel
                 if (item.Kind == "category")
                 {
                     foreach (var plan in categoryPlans.Where(plan => OverlayBlockKeys.ForIdentity(plan.Identity) == item.Value))
-                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(row);
+                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(block.GetMetricViewModel(row));
                 }
                 else if (item.Kind == "series")
                 {
@@ -177,7 +185,7 @@ public sealed partial class MainWindowViewModel
                             ? !item.Value.Contains('*') && key.MatchesPattern(item.Value)
                             : key.MatchesPattern(item.Value)
                                 && (profileSeries is null || profileSeries.Count == 0 || profileSeries.Any(key.MatchesPattern)))))
-                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(row);
+                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(block.GetMetricViewModel(row));
                 }
                 else if (item.Kind == "frametime") desired.Add(GetFrametimeGraphItem(block.Key + ":" + item.Value));
                 else if (extras.TryGetValue((item.Kind, item.Value), out var extra)) desired.Add(extra);
@@ -209,7 +217,16 @@ public sealed partial class MainWindowViewModel
         Id = block.Id,
         X = block.X,
         Y = block.Y,
-        Items = block.Items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList()
+        Items = block.Items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList(),
+        MetricOverrides = (block.MetricOverrides ?? []).Select(CloneOverlayMetricOverride).ToList()
+    };
+
+    private static OverlayMetricOverrideConfig CloneOverlayMetricOverride(OverlayMetricOverrideConfig metricOverride) => new()
+    {
+        Identity = metricOverride.Identity,
+        DisplayName = metricOverride.DisplayName,
+        Decimals = metricOverride.Decimals,
+        Color = metricOverride.Color
     };
 
     private static OverlayGraph CloneOverlayGraph(OverlayGraph graph) => new()

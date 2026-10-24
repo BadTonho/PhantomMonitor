@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using PhantomMonitor.Models;
 
 namespace PhantomMonitor.App.ViewModels;
 
@@ -15,10 +16,19 @@ public sealed class OverlayMetricViewModel : INotifyPropertyChanged
     private string _name;
     private string _value;
     private bool _showFrametimeGraph;
+    private string _overrideIdentity;
+    private SensorKey? _seriesKey;
+    private double? _numericValue;
+    private bool? _showNameOverride;
+    private bool _isIndividualSeries;
 
-    public OverlayMetricViewModel(string identity, string name)
+    public OverlayMetricViewModel(string identity, string name, string? overrideIdentity = null,
+        SensorKey? seriesKey = null, double? numericValue = null)
     {
         Identity = identity;
+        _overrideIdentity = string.IsNullOrWhiteSpace(overrideIdentity) ? identity : overrideIdentity;
+        _seriesKey = seriesKey;
+        _numericValue = numericValue;
         _name = name;
         _value = "—";
     }
@@ -26,8 +36,13 @@ public sealed class OverlayMetricViewModel : INotifyPropertyChanged
     /// <summary>Chave estável da row: rótulo das linhas fixas ("CPU", "JOGO") ou
     /// a chave da série ("GpuCore#1") para as por instância.</summary>
     public string Identity { get; }
+    public string OverrideIdentity => _overrideIdentity;
+    public SensorKey? SeriesKey => _seriesKey;
+    public double? NumericValue => _numericValue;
+    public bool IsIndividualSeries => _isIndividualSeries;
 
-    public bool ShowName => Identity.ToUpperInvariant() is not ("CPU" or "GPU" or "RAM" or "DISCO" or "REDE" or "PLACA" or "JOGO" or "VENTOINHA");
+    public bool ShowName => _showNameOverride
+        ?? (Identity.ToUpperInvariant() is not ("CPU" or "GPU" or "RAM" or "DISCO" or "REDE" or "PLACA" or "JOGO" or "VENTOINHA"));
 
     public string Name
     {
@@ -60,6 +75,24 @@ public sealed class OverlayMetricViewModel : INotifyPropertyChanged
             _showFrametimeGraph = value;
             Raise();
         }
+    }
+
+    public void UpdateSensorFormatting(string? overrideIdentity, SensorKey? seriesKey, double? numericValue,
+        bool? showNameOverride, bool isIndividualSeries)
+    {
+        var newIdentity = string.IsNullOrWhiteSpace(overrideIdentity) ? Identity : overrideIdentity;
+        if (_overrideIdentity == newIdentity && _seriesKey == seriesKey && _numericValue == numericValue
+            && _showNameOverride == showNameOverride && _isIndividualSeries == isIndividualSeries) return;
+        _overrideIdentity = newIdentity;
+        _seriesKey = seriesKey;
+        _numericValue = numericValue;
+        _showNameOverride = showNameOverride;
+        _isIndividualSeries = isIndividualSeries;
+        Raise(nameof(OverrideIdentity));
+        Raise(nameof(SeriesKey));
+        Raise(nameof(NumericValue));
+        Raise(nameof(ShowName));
+        Raise(nameof(IsIndividualSeries));
     }
 
     private void Raise([CallerMemberName] string? propertyName = null) =>

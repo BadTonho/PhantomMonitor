@@ -9,6 +9,7 @@ namespace PhantomMonitor.App.ViewModels;
 public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
 {
     private readonly Action<string, double, double> _move;
+    private readonly Dictionary<string, OverlayBlockMetricViewModel> _metricViewModels = new(StringComparer.OrdinalIgnoreCase);
     private double _canvasWidth = 960;
     private double _canvasHeight = 760;
 
@@ -26,7 +27,7 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         get
         {
             if (Content.Count == 0) return "Novo bloco · duplo clique para configurar";
-            var labels = Content.OfType<OverlayMetricViewModel>().Select(row => row.Name)
+            var labels = Content.OfType<OverlayBlockMetricViewModel>().Select(row => row.Name)
                 .Concat(Content.OfType<OverlayGraphRowViewModel>().Select(_ => "Gráfico"))
                 .Concat(Content.OfType<OverlayFrametimeGraphViewModel>().Select(_ => "Frametime"))
                 .Concat(Content.OfType<OverlayTemplateRowViewModel>().Select(_ => "Template"))
@@ -72,6 +73,35 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         Raise(nameof(IsRenderable));
     }
 
+    public OverlayBlockMetricViewModel GetMetricViewModel(OverlayMetricViewModel source)
+    {
+        var identity = source.OverrideIdentity;
+        var metricOverride = Config.MetricOverrides.FirstOrDefault(item =>
+            item.Identity.Equals(identity, StringComparison.OrdinalIgnoreCase));
+        if (_metricViewModels.TryGetValue(identity, out var existing))
+        {
+            existing.UpdateOverride(metricOverride);
+            return existing;
+        }
+
+        var created = new OverlayBlockMetricViewModel(source, metricOverride);
+        _metricViewModels[identity] = created;
+        return created;
+    }
+
+    public void RefreshMetricThemes()
+    {
+        foreach (var metric in _metricViewModels.Values)
+            metric.RefreshTheme();
+    }
+
+    public void DisposeMetrics()
+    {
+        foreach (var metric in _metricViewModels.Values)
+            metric.Dispose();
+        _metricViewModels.Clear();
+    }
+
     public void ReconcileContent(IReadOnlyList<object> desired)
     {
         var position = 0;
@@ -91,7 +121,15 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
             else Content.Insert(position, item);
             position++;
         }
-        while (Content.Count > position) Content.RemoveAt(Content.Count - 1);
+        while (Content.Count > position)
+        {
+            if (Content[^1] is OverlayBlockMetricViewModel metric)
+            {
+                metric.Dispose();
+                _metricViewModels.Remove(metric.Identity);
+            }
+            Content.RemoveAt(Content.Count - 1);
+        }
         NotifyContentChanged();
     }
 

@@ -20,7 +20,7 @@ public sealed partial class MainWindowViewModel
 {
     private static readonly Dictionary<string, IBrush> DashboardBrushCache = new();
 
-    private static IBrush ResolveBrush(string tokenKey)
+    internal static IBrush ResolveBrush(string tokenKey)
     {
         if (DashboardBrushCache.TryGetValue(tokenKey, out var cached)) return cached;
         var brush = Application.Current?.TryGetResource(tokenKey, null, out var value) == true

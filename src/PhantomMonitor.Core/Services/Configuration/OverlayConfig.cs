@@ -76,12 +76,21 @@ public sealed class OverlayBlockConfig
     public double X { get; set; }
     public double Y { get; set; }
     public List<OverlayBlockItemConfig> Items { get; set; } = [];
+    public List<OverlayMetricOverrideConfig> MetricOverrides { get; set; } = [];
 }
 
 public sealed class OverlayBlockItemConfig
 {
     public string Kind { get; set; } = "category";
     public string Value { get; set; } = "cpu";
+}
+
+public sealed class OverlayMetricOverrideConfig
+{
+    public string Identity { get; set; } = "";
+    public string? DisplayName { get; set; }
+    public int? Decimals { get; set; }
+    public string? Color { get; set; }
 }
 
 /// <summary>

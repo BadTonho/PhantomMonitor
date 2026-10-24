@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using PhantomMonitor.App.ViewModels;
 using System.Diagnostics;
 
@@ -11,6 +12,7 @@ namespace PhantomMonitor.App.Views;
 public partial class OverlayEditorWindow : Window
 {
     private const double AppearancePanelWidth = 360;
+    private const double BlockSnapTolerance = 8;
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     private OverlayCanvasBlockViewModel? _dragBlock;
     private Point _dragOffset;
@@ -131,8 +133,11 @@ public partial class OverlayEditorWindow : Window
         var gridSpacing = EditorGrid.GridSpacing;
         if ((e.KeyModifiers & KeyModifiers.Shift) == 0 && gridSpacing > 0)
         {
-            x = SnapWithinBounds(x, maxX, gridSpacing);
-            y = SnapWithinBounds(y, maxY, gridSpacing);
+            var otherBlocks = GetOtherBlockControls(_dragBlock).ToArray();
+            x = SnapToBlockEdges(x, maxX, gridSpacing, control.Bounds.Width,
+                otherBlocks.Select(other => (other.Block.CanvasX, other.Control.Bounds.Width)));
+            y = SnapToBlockEdges(y, maxY, gridSpacing, control.Bounds.Height,
+                otherBlocks.Select(other => (other.Block.CanvasY, other.Control.Bounds.Height)));
         }
         else
         {
@@ -154,6 +159,49 @@ public partial class OverlayEditorWindow : Window
         var lastGridPosition = Math.Floor(max / spacing) * spacing;
         var snapped = Math.Round(value / spacing, MidpointRounding.AwayFromZero) * spacing;
         return Math.Clamp(snapped, 0, lastGridPosition);
+    }
+
+    private IEnumerable<(OverlayCanvasBlockViewModel Block, Control Control)> GetOtherBlockControls(
+        OverlayCanvasBlockViewModel movingBlock)
+    {
+        foreach (var control in EditorBlockCanvas.GetVisualDescendants().OfType<Control>())
+        {
+            if (control.DataContext is OverlayCanvasBlockViewModel block
+                && !ReferenceEquals(block, movingBlock)
+                && control.IsVisible
+                && control.Bounds.Width > 0
+                && control.Bounds.Height > 0)
+                yield return (block, control);
+        }
+    }
+
+    private static double SnapToBlockEdges(double value, double max, double gridSpacing, double movingSize,
+        IEnumerable<(double Start, double Size)> otherEdges)
+    {
+        var nearest = double.NaN;
+        var nearestDistance = BlockSnapTolerance;
+        foreach (var (start, size) in otherEdges)
+        {
+            for (var index = 0; index < 4; index++)
+            {
+                var candidate = index switch
+                {
+                    0 => start,
+                    1 => start + size,
+                    2 => start - movingSize,
+                    _ => start + size - movingSize
+                };
+                if (candidate < 0 || candidate > max) continue;
+                var distance = Math.Abs(value - candidate);
+                if (distance > nearestDistance) continue;
+                nearest = candidate;
+                nearestDistance = distance;
+            }
+        }
+
+        return double.IsNaN(nearest)
+            ? SnapWithinBounds(value, max, gridSpacing)
+            : nearest;
     }
 
     private void OnBlockPointerReleased(object? sender, PointerReleasedEventArgs e)

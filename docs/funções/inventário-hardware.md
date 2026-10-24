@@ -6,7 +6,8 @@
 
 No dashboard Avalonia, **Inventário** é uma página da janela principal, acessível
 pela barra lateral. Ela acompanha os snapshots do serviço ativo e agrupa as séries
-em CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. GPU reúne todas as
+em CPU, GPU, memória, disco, rede, ventoinhas, bateria e FPS. CPU inclui a
+potência do pacote e dos núcleos. GPU reúne todas as
 métricas da placa, incluindo clocks, memória, tensão, potência, carga e ventoinha;
 Ventoinhas fica com as ventoinhas do sistema. Cada categoria é um
 grupo expansível, aberto por padrão, com uma tabela compacta: Sensor, Atual,

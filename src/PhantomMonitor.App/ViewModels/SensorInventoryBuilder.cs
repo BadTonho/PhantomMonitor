@@ -52,7 +52,8 @@ internal static class SensorInventoryBuilder
 
     private static readonly GroupDefinition[] Groups =
     [
-        new("CPU", [SensorType.CpuTotal, SensorType.CpuPerCore, SensorType.CpuTemperature, SensorType.CpuClock]),
+        new("CPU", [SensorType.CpuTotal, SensorType.CpuPerCore, SensorType.CpuTemperature,
+            SensorType.CpuClock, SensorType.CpuPower]),
         new("GPU", [SensorType.GpuCore, SensorType.GpuMemory, SensorType.GpuMemoryUsed, SensorType.GpuMemoryTotal,
             SensorType.GpuTemperature, SensorType.GpuHotSpot, SensorType.GpuVramTemperature,
             SensorType.GpuCoreClock, SensorType.GpuMemoryClock, SensorType.GpuVoltage, SensorType.GpuFan,

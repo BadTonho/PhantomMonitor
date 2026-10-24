@@ -8,6 +8,7 @@ public sealed partial class MainWindowViewModel
     private readonly Dictionary<string, OverlayFrametimeGraphViewModel> _frametimeGraphItems = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _overlayHiddenMetricsDraft = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _overlayHiddenMetricsApplied = new(StringComparer.OrdinalIgnoreCase);
+    private bool _hasOverlayReferenceArea;
 
     public IReadOnlyList<string> OverlayHiddenMetricsDraft
         => _overlayHiddenMetricsDraft.OrderBy(identity => identity, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -164,6 +165,7 @@ public sealed partial class MainWindowViewModel
     {
         width = Math.Clamp(width, 240, 10000);
         height = Math.Clamp(height, 120, 10000);
+        _hasOverlayReferenceArea = true;
         if (Math.Abs(OverlayCanvasWidth - width) < 0.5 && Math.Abs(OverlayCanvasHeight - height) < 0.5) return;
         OverlayCanvasWidth = width;
         OverlayCanvasHeight = height;
@@ -171,6 +173,12 @@ public sealed partial class MainWindowViewModel
             block.SetCanvasSize(width, height);
         foreach (var block in _overlayBlocks)
             block.RefreshCanvasPosition();
+    }
+
+    public void SetOverlayCanvasSizeIfMissing(double width, double height)
+    {
+        if (_hasOverlayReferenceArea) return;
+        SetOverlayCanvasSize(width, height);
     }
 
     public void SetOverlayEditorCanvasSize(double width, double height)

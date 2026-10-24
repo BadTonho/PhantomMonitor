@@ -128,8 +128,8 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayPreviewProfileTagFontSize));
         Raise(nameof(OverlayPreviewContentSpacing));
         Raise(nameof(OverlayPreviewRowMargin));
+        Raise(nameof(OverlayPreviewOuterMargin));
         Raise(nameof(OverlayPreviewPadding));
-        Raise(nameof(OverlayPreviewBlockPadding));
         Raise(nameof(OverlayPreviewFrametimeGraphHeight));
         Raise(nameof(OverlayEditorCanvasWidth));
         Raise(nameof(OverlayEditorCanvasHeight));

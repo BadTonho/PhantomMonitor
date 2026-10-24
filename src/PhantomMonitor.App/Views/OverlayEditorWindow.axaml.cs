@@ -26,7 +26,13 @@ public partial class OverlayEditorWindow : Window
     public OverlayEditorWindow()
     {
         InitializeComponent();
-        Opened += (_, _) => UpdateEditorCanvasSize(EditorCanvasViewport.Bounds.Size);
+        Opened += (_, _) =>
+        {
+            if (Screens.Primary is { } screen)
+                ViewModel.SetOverlayCanvasSizeIfMissing(
+                    screen.Bounds.Width / screen.Scaling, screen.Bounds.Height / screen.Scaling);
+            UpdateEditorCanvasSize(EditorCanvasViewport.Bounds.Size);
+        };
     }
 
     private void OnEditorCanvasViewportSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -103,10 +109,10 @@ public partial class OverlayEditorWindow : Window
         _pendingBlockPlacements[block] = point;
         Dispatcher.UIThread.Post(() =>
         {
-            var control = EditorBlockCanvas.GetVisualDescendants().OfType<Border>()
+            var control = EditorBlockCanvas.GetVisualDescendants().OfType<Viewbox>()
                 .FirstOrDefault(candidate => ReferenceEquals(candidate.DataContext, block));
             if (control is not null)
-                ApplyPendingBlockPlacement(block, control.Bounds.Size);
+                ApplyPendingBlockPlacement(block);
         });
         e.Handled = true;
     }
@@ -115,19 +121,19 @@ public partial class OverlayEditorWindow : Window
     {
         if (sender is not Control { DataContext: OverlayCanvasBlockViewModel block }) return;
         block.SetEditorPreviewSize(e.NewSize.Width, e.NewSize.Height);
-        ApplyPendingBlockPlacement(block, e.NewSize);
+        ApplyPendingBlockPlacement(block);
     }
 
-    private void ApplyPendingBlockPlacement(OverlayCanvasBlockViewModel block, Size blockSize)
+    private void ApplyPendingBlockPlacement(OverlayCanvasBlockViewModel block)
     {
         if (!_pendingBlockPlacements.TryGetValue(block, out var point)
-            || blockSize.Width <= 0 || blockSize.Height <= 0) return;
+            || block.PreviewBlockWidth <= 0 || block.PreviewBlockHeight <= 0) return;
         _pendingBlockPlacements.Remove(block);
 
         ViewModel.ApplyOverlayBlockPosition(block.Key,
-            OverlayPositionMath.ToNormalizedFromDisplay(point.X, EditorBlockCanvas.Bounds.Width, blockSize.Width,
+            OverlayPositionMath.ToNormalizedFromDisplay(point.X, EditorBlockCanvas.Bounds.Width, block.PreviewBlockWidth,
                 OverlayPositionMath.ReferenceWidth, block.PreviewOriginOffsetXReference),
-            OverlayPositionMath.ToNormalizedFromDisplay(point.Y, EditorBlockCanvas.Bounds.Height, blockSize.Height,
+            OverlayPositionMath.ToNormalizedFromDisplay(point.Y, EditorBlockCanvas.Bounds.Height, block.PreviewBlockHeight,
                 OverlayPositionMath.ReferenceHeight, block.PreviewOriginOffsetYReference));
     }
 
@@ -192,7 +198,7 @@ public partial class OverlayEditorWindow : Window
     private IEnumerable<(OverlayCanvasBlockViewModel Block, Control Control)> GetOtherBlockControls(
         OverlayCanvasBlockViewModel movingBlock)
     {
-        foreach (var control in EditorBlockCanvas.GetVisualDescendants().OfType<Control>())
+        foreach (var control in EditorBlockCanvas.GetVisualDescendants().OfType<Viewbox>())
         {
             if (control.DataContext is OverlayCanvasBlockViewModel block
                 && !ReferenceEquals(block, movingBlock)

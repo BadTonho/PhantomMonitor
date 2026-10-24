@@ -234,6 +234,7 @@ public sealed partial class MainWindowViewModel
 
         // Whitelist vigente pode mudar o conjunto de séries por instância.
         UpdateOverlayRows(_latestSensorData);
+        RaiseOverlayPreviewProperties();
     }
 
     /// <summary>Base do config mudou (SaveSettings): reanula effettivos quando não há perfil ativo.</summary>

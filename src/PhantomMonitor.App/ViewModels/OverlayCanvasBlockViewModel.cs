@@ -44,13 +44,17 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     public bool IsRenderable => HasContent && Owner.OverlayPanelVisible;
     public double X => Config.X;
     public double Y => Config.Y;
+    public double PreviewBlockWidth => ScalePreviewSize(_editorPreviewWidth,
+        Owner.OverlayCanvasWidth, _canvasWidth, OverlayPositionMath.ReferenceWidth);
+    public double PreviewBlockHeight => ScalePreviewSize(_editorPreviewHeight,
+        Owner.OverlayCanvasHeight, _canvasHeight, OverlayPositionMath.ReferenceHeight);
     public double PreviewOriginOffsetXReference => GetPreviewOriginOffsetInReference(Owner.FollowOffsetX,
         Owner.OverlayCanvasWidth, OverlayPositionMath.ReferenceWidth);
     public double PreviewOriginOffsetYReference => GetPreviewOriginOffsetInReference(Owner.FollowOffsetY,
         Owner.OverlayCanvasHeight, OverlayPositionMath.ReferenceHeight);
-    public double CanvasX => OverlayPositionMath.ToDisplayPosition(X, _canvasWidth, _editorPreviewWidth,
+    public double CanvasX => OverlayPositionMath.ToDisplayPosition(X, _canvasWidth, PreviewBlockWidth,
         OverlayPositionMath.ReferenceWidth, PreviewOriginOffsetXReference);
-    public double CanvasY => OverlayPositionMath.ToDisplayPosition(Y, _canvasHeight, _editorPreviewHeight,
+    public double CanvasY => OverlayPositionMath.ToDisplayPosition(Y, _canvasHeight, PreviewBlockHeight,
         OverlayPositionMath.ReferenceHeight, PreviewOriginOffsetYReference);
 
     public void SetCanvasSize(double width, double height)
@@ -61,6 +65,13 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     }
 
     public void RefreshCanvasPosition() => RaisePosition();
+
+    private static double ScalePreviewSize(double size, double sourceAreaSize, double displayAreaSize,
+        double referenceAreaSize)
+    {
+        var referenceSize = OverlayPositionMath.ScaleOffset(size, sourceAreaSize, referenceAreaSize);
+        return OverlayPositionMath.FromReference(referenceSize, referenceAreaSize, displayAreaSize);
+    }
 
     private static double GetPreviewOriginOffsetInReference(double offset, double referenceSize, double previewSize)
         => OperatingSystem.IsWindows()
@@ -75,8 +86,7 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
 
         _editorPreviewWidth = width;
         _editorPreviewHeight = height;
-        Raise(nameof(CanvasX));
-        Raise(nameof(CanvasY));
+        RaisePosition();
     }
 
     public void SetNormalizedPosition(double x, double y)
@@ -162,6 +172,8 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     {
         Raise(nameof(X));
         Raise(nameof(Y));
+        Raise(nameof(PreviewBlockWidth));
+        Raise(nameof(PreviewBlockHeight));
         Raise(nameof(CanvasX));
         Raise(nameof(CanvasY));
     }

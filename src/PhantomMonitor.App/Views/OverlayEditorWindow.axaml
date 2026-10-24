@@ -27,65 +27,71 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Width="{Binding $parent[Window].DataContext.OverlayPreviewWidth}"
-                        IsVisible="{Binding IsEditorVisible}" CornerRadius="5"
-                        Opacity="{Binding $parent[Window].DataContext.OverlayPreviewOpacity}"
-                        Background="{Binding $parent[Window].DataContext.OverlayPreviewBackgroundBrush}"
-                        BorderBrush="{Binding $parent[Window].DataContext.OverlayPreviewBorderBrush}"
-                        BorderThickness="{Binding $parent[Window].DataContext.OverlayPreviewBorderThickness}"
-                        Padding="{Binding $parent[Window].DataContext.OverlayPreviewBlockPadding}"
-                        SizeChanged="OnBlockPreviewSizeChanged"
-                        PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"
-                        PointerReleased="OnBlockPointerReleased" PointerCaptureLost="OnBlockPointerCaptureLost"
-                        DoubleTapped="OnBlockDoubleTapped" Cursor="SizeAll">
-                  <Border.ContextMenu>
+                <Viewbox Width="{Binding PreviewBlockWidth}" Height="{Binding PreviewBlockHeight}"
+                         IsVisible="{Binding IsEditorVisible}" Stretch="Fill"
+                         Opacity="{Binding $parent[Window].DataContext.OverlayPreviewOpacity}"
+                         PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"
+                         PointerReleased="OnBlockPointerReleased" PointerCaptureLost="OnBlockPointerCaptureLost"
+                         DoubleTapped="OnBlockDoubleTapped" Cursor="SizeAll">
+                  <Viewbox.ContextMenu>
                     <ContextMenu DataContext="{Binding}">
                       <MenuItem Header="Editar conteúdo" Click="OnEditBlockContentClick" />
                       <MenuItem Header="Remover bloco" Click="OnRemoveBlockClick" />
                     </ContextMenu>
-                  </Border.ContextMenu>
-                  <StackPanel Spacing="3">
-                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
-                               FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewNameFontFamily}"
-                               FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" FontWeight="SemiBold" />
-                    <ItemsControl ItemsSource="{Binding Content}">
-                      <ItemsControl.DataTemplates>
-                        <DataTemplate DataType="vm:OverlayBlockMetricViewModel">
-                          <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}">
-                            <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{Binding NameForeground}"
-                                       FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewNameFontFamily}"
-                                       FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Value}" Foreground="{Binding ValueForeground}"
-                                       FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
-                                       FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewValueFontFamily}" TextWrapping="WrapWithOverflow" />
-                            <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
-                                                 Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
-                                                 Stroke="{Binding $parent[Window].DataContext.OverlayAccentBrush}"
-                                                 GuideBrush="{DynamicResource OverlayGuideBrush}"
-                                                 MinY="0" MaxFloor="33.3" GuideAt="16.66"
-                                                 Height="{Binding $parent[Window].DataContext.OverlayPreviewFrametimeGraphHeight}" />
-                          </StackPanel>
-                        </DataTemplate>
-                        <DataTemplate DataType="vm:OverlayGraphRowViewModel">
-                          <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
-                                               MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
-                        </DataTemplate>
-                        <DataTemplate DataType="vm:OverlayFrametimeGraphViewModel">
-                          <charts:HistoryChart Values="{Binding Owner.FrametimeSamples}"
-                                               Stroke="{Binding Owner.OverlayAccentBrush}"
-                                               GuideBrush="{DynamicResource OverlayGuideBrush}"
-                                               MinY="0" MaxFloor="33.3" GuideAt="16.66"
-                                               Height="{Binding Owner.OverlayPreviewFrametimeGraphHeight}" />
-                        </DataTemplate>
-                        <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
-                          <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
-                                     FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
-                                     FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewValueFontFamily}" TextTrimming="CharacterEllipsis" />
-                        </DataTemplate>
-                      </ItemsControl.DataTemplates>
-                    </ItemsControl>
-                  </StackPanel>
-                </Border>
+                  </Viewbox.ContextMenu>
+                  <Grid Width="{Binding $parent[Window].DataContext.OverlayPreviewWidth}"
+                        SizeChanged="OnBlockPreviewSizeChanged">
+                    <Border Margin="{Binding $parent[Window].DataContext.OverlayPreviewOuterMargin}"
+                            CornerRadius="6"
+                            Background="{Binding $parent[Window].DataContext.OverlayPreviewBackgroundBrush}"
+                            BorderBrush="{Binding $parent[Window].DataContext.OverlayPreviewBorderBrush}"
+                            BorderThickness="{Binding $parent[Window].DataContext.OverlayPreviewBorderThickness}"
+                            Padding="{Binding $parent[Window].DataContext.OverlayPreviewPadding}">
+                      <StackPanel Spacing="{Binding $parent[Window].DataContext.OverlayPreviewContentSpacing}">
+                        <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                                   FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewNameFontFamily}"
+                                   FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" FontWeight="SemiBold" />
+                        <ItemsControl ItemsSource="{Binding Content}">
+                          <ItemsControl.DataTemplates>
+                            <DataTemplate DataType="vm:OverlayBlockMetricViewModel">
+                              <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}">
+                                <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{Binding NameForeground}"
+                                           FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewNameFontFamily}"
+                                           FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Value}" Foreground="{Binding ValueForeground}"
+                                           FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
+                                           FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewValueFontFamily}" TextWrapping="WrapWithOverflow" />
+                                <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
+                                                     Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
+                                                     Stroke="{Binding $parent[Window].DataContext.OverlayAccentBrush}"
+                                                     GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                                     MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                                     Height="{Binding $parent[Window].DataContext.OverlayPreviewFrametimeGraphHeight}" />
+                              </StackPanel>
+                            </DataTemplate>
+                            <DataTemplate DataType="vm:OverlayGraphRowViewModel">
+                              <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
+                                                   MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
+                            </DataTemplate>
+                            <DataTemplate DataType="vm:OverlayFrametimeGraphViewModel">
+                              <charts:HistoryChart Values="{Binding Owner.FrametimeSamples}"
+                                                   Stroke="{Binding Owner.OverlayAccentBrush}"
+                                                   GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                                   MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                                   Height="{Binding Owner.OverlayPreviewFrametimeGraphHeight}" />
+                            </DataTemplate>
+                            <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
+                              <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
+                                         FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
+                                         FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewValueFontFamily}" TextTrimming="CharacterEllipsis"
+                                         Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}" />
+                            </DataTemplate>
+                          </ItemsControl.DataTemplates>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </Grid>
+                </Viewbox>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

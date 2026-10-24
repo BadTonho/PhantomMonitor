@@ -50,7 +50,7 @@ The device accents are orange for GPU, cyan for CPU, purple for RAM, blue for di
 
 ## Visual overlay editor
 
-Positions remain stored only as normalized `x`/`y` fractions. Editor calculations use a virtual 1920×1080 reference while the visible canvas stretches to fill the window and blocks keep their current visual size. Resizing the canvas does not change the saved layout; dragging or creating a block converts each axis using the current scale and measured block size. On Windows, the preview also represents the origin set by `overlayPosition` or the active profile, projected into this reference; the overlay applies the fractions to the current monitored window or screen area, using each block's actual dimensions.
+Positions remain stored only as normalized `x`/`y` fractions. The preview uses the same reference area as the overlay: on Windows, the last external window it follows (or the primary screen until one is available); on Linux, the primary screen. The canvas stretches to fill the window, and cards, content, and typography scale to represent the effective block dimensions. Active profiles take precedence for values they override; other fields continue to reflect the editor draft. Resizing the preview does not change the saved layout. Transparency is still composited over the canvas's dark background, which can differ from the background behind the live overlay.
 
 On Windows, while Phantom Monitor or Explorer is focused, overlay positions continue to use the last valid external window as their reference. Before an external window is available, the primary screen is used.
 

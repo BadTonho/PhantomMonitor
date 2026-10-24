@@ -61,7 +61,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
 
 ## Editor visual do overlay
 
-As posições continuam armazenadas apenas como frações normalizadas `x`/`y`. Os cálculos do editor usam uma referência virtual 1920×1080, enquanto o canvas visível estica para preencher a janela e os blocos mantêm o tamanho visual atual. Redimensionar o canvas não altera o layout salvo; ao arrastar ou criar um bloco, a conversão considera a escala de cada eixo e o tamanho medido do bloco. No Windows, a prévia também representa a origem definida por `overlayPosition` ou pelo perfil ativo, projetada nessa referência; o overlay aplica as frações à área atual da janela monitorada ou da tela, usando as dimensões reais de cada bloco.
+As posições continuam armazenadas apenas como frações normalizadas `x`/`y`. A prévia usa a mesma área de referência do overlay: no Windows, a última janela externa seguida (ou a tela primária até existir uma); no Linux, a tela primária. O canvas estica para preencher a janela e os cartões, incluindo conteúdo e tipografia, são escalados para representar as dimensões efetivas dos blocos. Perfis ativos prevalecem nos valores que sobrescrevem; os demais campos continuam refletindo o rascunho do editor. Redimensionar a prévia não altera o layout salvo. A transparência ainda se compõe sobre o fundo escuro do canvas, que pode diferir do fundo atrás do overlay real.
 
 No Windows, enquanto o Phantom Monitor ou o Explorer estiver em foco, as posições do overlay continuam usando a última janela externa válida como referência. Antes de haver uma janela externa, a tela primária é usada.
 

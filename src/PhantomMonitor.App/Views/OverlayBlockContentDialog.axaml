@@ -8,9 +8,6 @@
         Background="{DynamicResource BgWindowBrush}">
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="18" Spacing="12">
-      <TextBlock Text="CONTEÚDO DO BLOCO" FontSize="17" FontWeight="SemiBold" />
-      <TextBlock Text="Organize a ordem e personalize os sensores deste bloco." FontSize="11" TextWrapping="Wrap" Classes="muted" />
-
       <Grid ColumnDefinitions="1*,1.35*" ColumnSpacing="16">
         <StackPanel Grid.Column="0" Spacing="8">
           <TextBlock Text="ORDEM NO BLOCO" FontSize="10" FontWeight="Bold" />

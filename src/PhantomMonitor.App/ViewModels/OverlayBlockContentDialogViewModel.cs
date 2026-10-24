@@ -59,8 +59,40 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         RefreshDynamicChoices();
     }
 
+    private OverlayBlockContentDialogViewModel(OverlayBlockContentDialogViewModel source)
+    {
+        _owner = source._owner;
+        _block = source._block;
+        _detectedSeries = source._detectedSeries;
+        _selected = new HashSet<(string Kind, string Value)>(source._selected);
+        _graphs = source._graphs.Select(Clone).ToList();
+        _templates = source._templates.Select(Clone).ToList();
+        _selectedSeriesCategory = source._selectedSeriesCategory;
+        _seriesPatternInput = source._seriesPatternInput;
+        _graphSeries = source._graphSeries;
+        _graphHeight = source._graphHeight;
+        _graphWindow = source._graphWindow;
+        _graphMin = source._graphMin;
+        _graphMax = source._graphMax;
+        _graphColor = source._graphColor;
+        _templateText = source._templateText;
+        _templateColor = source._templateColor;
+        _editingGraphId = source._editingGraphId;
+        _editingTemplateId = source._editingTemplateId;
+
+        foreach (var item in source.OrderedContentItems)
+            OrderedContentItems.Add(new OverlayBlockItemChoiceViewModel(item.Kind, item.Value, item.Label));
+        foreach (var (key, name) in Categories)
+            CategoriesChoices.Add(CreateChoice("category", key, name));
+        FrametimeChoice = CreateChoice("frametime", "frametime", "Gráfico de frametime");
+        if (source.SelectedContentItem is { } selected)
+            SelectedContentItem = OrderedContentItems.FirstOrDefault(item => item.Kind == selected.Kind
+                && item.Value.Equals(selected.Value, StringComparison.OrdinalIgnoreCase));
+        RefreshDynamicChoices();
+    }
+
     public ObservableCollection<OverlayBlockContentChoiceViewModel> CategoriesChoices { get; } = [];
-    public OverlayBlockContentChoiceViewModel FrametimeChoice { get; }
+    public OverlayBlockContentChoiceViewModel FrametimeChoice { get; private set; }
     public IReadOnlyList<string> SeriesCategories { get; } =
     [
         AllSeriesCategories, "CPU", "GPU", "RAM", "Disco", "Rede", "Ventoinhas",
@@ -133,6 +165,53 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     public string GraphColor { get => _graphColor; set => Set(ref _graphColor, value); }
     public string TemplateText { get => _templateText; set => Set(ref _templateText, value); }
     public string TemplateColor { get => _templateColor; set => Set(ref _templateColor, value); }
+
+    public OverlayBlockContentDialogViewModel CreateContentPickerDraft() => new(this);
+
+    public void CommitContentPickerDraft(OverlayBlockContentDialogViewModel pickerDraft)
+    {
+        var selectedItem = pickerDraft.SelectedContentItem;
+        SelectedContentItem = null;
+        _selected.Clear();
+        _selected.UnionWith(pickerDraft._selected);
+
+        _graphs.Clear();
+        _graphs.AddRange(pickerDraft._graphs.Select(Clone));
+        _templates.Clear();
+        _templates.AddRange(pickerDraft._templates.Select(Clone));
+
+        OrderedContentItems.Clear();
+        foreach (var item in pickerDraft.OrderedContentItems)
+            OrderedContentItems.Add(new OverlayBlockItemChoiceViewModel(item.Kind, item.Value, GetItemLabel(item.Kind, item.Value)));
+
+        CategoriesChoices.Clear();
+        foreach (var (key, name) in Categories)
+            CategoriesChoices.Add(CreateChoice("category", key, name));
+        FrametimeChoice = CreateChoice("frametime", "frametime", "Gráfico de frametime");
+        Raise(nameof(FrametimeChoice));
+
+        SelectedSeriesCategory = pickerDraft.SelectedSeriesCategory;
+        SeriesPatternInput = pickerDraft.SeriesPatternInput;
+        GraphSeries = pickerDraft.GraphSeries;
+        GraphHeight = pickerDraft.GraphHeight;
+        GraphWindow = pickerDraft.GraphWindow;
+        GraphMin = pickerDraft.GraphMin;
+        GraphMax = pickerDraft.GraphMax;
+        GraphColor = pickerDraft.GraphColor;
+        TemplateText = pickerDraft.TemplateText;
+        TemplateColor = pickerDraft.TemplateColor;
+        _editingGraphId = pickerDraft._editingGraphId;
+        _editingTemplateId = pickerDraft._editingTemplateId;
+
+        SeriesChoices.Clear();
+        GraphChoices.Clear();
+        TemplateChoices.Clear();
+        RefreshDynamicChoices();
+        SelectedContentItem = selectedItem is null
+            ? null
+            : OrderedContentItems.FirstOrDefault(item => item.Kind == selectedItem.Kind
+                && item.Value.Equals(selectedItem.Value, StringComparison.OrdinalIgnoreCase));
+    }
 
     public void AddSeriesPattern()
     {

@@ -34,23 +34,12 @@ public partial class OverlayBlockContentDialog : Window
         if (sender is Button { Tag: string hex }) ViewModel.SetMetricColor(hex);
     }
     private void OnResetMetricColorClick(object? sender, RoutedEventArgs e) => ViewModel.ResetMetricColor();
-    private void OnNewGraphClick(object? sender, RoutedEventArgs e) => ViewModel.NewGraph();
-    private void OnSaveGraphClick(object? sender, RoutedEventArgs e) => ViewModel.SaveGraph();
-    private void OnRemoveGraphClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveGraph();
-    private void OnNewTemplateClick(object? sender, RoutedEventArgs e) => ViewModel.NewTemplate();
-    private void OnSaveTemplateClick(object? sender, RoutedEventArgs e) => ViewModel.SaveTemplate();
-    private void OnRemoveTemplateClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveTemplate();
-
-    private void OnEditGraphClick(object? sender, RoutedEventArgs e)
+    private async void OnOpenContentPickerClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { DataContext: OverlayBlockContentChoiceViewModel choice })
-            ViewModel.EditGraph(choice.Value);
-    }
-
-    private void OnEditTemplateClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Button { DataContext: OverlayBlockContentChoiceViewModel choice })
-            ViewModel.EditTemplate(choice.Value);
+        var pickerViewModel = ViewModel.CreateContentPickerDraft();
+        var picker = new OverlayBlockContentPickerDialog(pickerViewModel);
+        if (await picker.ShowDialog<bool>(this))
+            ViewModel.CommitContentPickerDraft(pickerViewModel);
     }
 
     private void OnApplyClick(object? sender, RoutedEventArgs e)

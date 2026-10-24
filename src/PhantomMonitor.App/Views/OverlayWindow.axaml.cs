@@ -120,6 +120,32 @@ public sealed partial class OverlayWindow : IDisposable
 
     private void OnBlocksChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            var oldWindows = _windows.Values.ToArray();
+            foreach (var window in oldWindows)
+            {
+                if (window.DataContext is OverlayCanvasBlockViewModel block)
+                    block.PropertyChanged -= OnBlockPropertyChanged;
+                window.Hide();
+            }
+
+            // Clear the map before closing windows so their Closed handlers
+            // cannot mistake this rebuild for a user closing the overlay.
+            _windows.Clear();
+            foreach (var window in oldWindows)
+                window.Close();
+
+            foreach (var block in _viewModel.OverlayAppliedBlocks)
+            {
+                block.PropertyChanged += OnBlockPropertyChanged;
+                _windows[block.Key] = CreateBlockWindow(block);
+            }
+
+            Refresh();
+            return;
+        }
+
         if (e.OldItems is not null)
         {
             foreach (OverlayCanvasBlockViewModel block in e.OldItems)

@@ -8,7 +8,7 @@
             <TextBlock Text="Alertas" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Configure limites e acompanhe os disparos durante a coleta." Classes="muted" FontSize="11" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
             <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
             <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
@@ -32,7 +32,7 @@
             <TextBlock Text="REGRAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="A notificação aparece quando a condição é atendida; regras sem notificação continuam no histórico." Classes="muted" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
-          <Button Classes="action" Content="Adicionar regra" Click="OnAddAlertRuleClick" />
+          <Button Grid.Column="1" Classes="action" Content="Adicionar regra" Click="OnAddAlertRuleClick" />
         </Grid>
 
         <ItemsControl ItemsSource="{Binding AlertRules}">
@@ -42,7 +42,7 @@
                 <StackPanel Spacing="11">
                   <Grid ColumnDefinitions="*,Auto,Auto">
                     <CheckBox Content="Regra ativa" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center" />
-                    <CheckBox Content="Notificação" IsChecked="{Binding Popup, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <CheckBox Grid.Column="1" Content="Notificação" IsChecked="{Binding Popup, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,12,0" />
                     <Button Grid.Column="2" Content="Remover" Click="OnRemoveAlertRuleClick" />
                   </Grid>
                   <Grid ColumnDefinitions="1.4*,*,*,*" ColumnSpacing="10">
@@ -51,7 +51,7 @@
                       <ComboBox ItemsSource="{Binding SensorOptions}" SelectedItem="{Binding SensorKey, Mode=TwoWay}" />
                       <TextBlock Text="{Binding SensorUnit}" Classes="muted" FontSize="9" />
                     </StackPanel>
-                    <StackPanel Spacing="5">
+                    <StackPanel Grid.Column="1" Spacing="5">
                       <TextBlock Text="COMPARAÇÃO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                       <ComboBox ItemsSource="{Binding Comparisons}" SelectedItem="{Binding Comparison, Mode=TwoWay}" />
                     </StackPanel>
@@ -73,7 +73,7 @@
                     <TextBlock Text="SCRIPT (OPCIONAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                       <TextBox Text="{Binding Script, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="/caminho/para/script.sh" />
-                      <Button Content="Escolher arquivo…" Click="OnSelectAlertScriptClick" />
+                      <Button Grid.Column="1" Content="Escolher arquivo…" Click="OnSelectAlertScriptClick" />
                     </Grid>
                     <TextBlock Text="Scripts .sh usam /bin/sh; outros arquivos precisam ser executáveis." Classes="muted" FontSize="10" TextWrapping="Wrap" />
                   </StackPanel>
@@ -98,7 +98,7 @@
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
                       <TextBlock Text="{Binding Time}" Classes="muted" FontSize="10" VerticalAlignment="Center" />
-                      <TextBlock Text="{Binding Sensor}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="10" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Sensor}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="10" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="3" Text="{Binding Value}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" VerticalAlignment="Center" />
                     </Grid>
@@ -111,7 +111,7 @@
 
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
           <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveAlertsClick" />
-          <TextBlock Text="{Binding AlertsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock Grid.Column="1" Text="{Binding AlertsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
 
         <TextBlock Text="No Avalonia, scripts configurados são executados quando a regra dispara. Som e desligamento são preservados no arquivo, mas não executados." Classes="muted" FontSize="10" TextWrapping="Wrap" />

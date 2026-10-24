@@ -27,10 +27,10 @@
                 <TextBlock Text="LARGURA (140–700 PX)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                 <TextBox Text="{Binding OverlayWidthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
               </StackPanel>
-              <StackPanel Spacing="5">
+              <StackPanel Grid.Column="1" Spacing="5">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="OPACIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Text="{Binding OverlayOpacityLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
+                  <TextBlock Grid.Column="1" Text="{Binding OverlayOpacityLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
                 </Grid>
                 <Slider Minimum="10" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
                         Value="{Binding OverlayOpacityPercent, Mode=TwoWay}" />
@@ -41,7 +41,7 @@
                 <TextBlock Text="FONTE (8–20 PT)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                 <TextBox Text="{Binding OverlayFontSizeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
               </StackPanel>
-              <TextBlock Text="{Binding OverlayFontSizeLabel}" Foreground="{DynamicResource TextMonoBrush}"
+              <TextBlock Grid.Column="1" Text="{Binding OverlayFontSizeLabel}" Foreground="{DynamicResource TextMonoBrush}"
                          FontSize="10" VerticalAlignment="Bottom" Margin="0,0,0,8" />
             </Grid>
             <Slider Minimum="8" Maximum="20" TickFrequency="0.5" IsSnapToTickEnabled="True"
@@ -87,7 +87,7 @@
                 <TextBlock Text="PORTA (1024–65535)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                 <TextBox Text="{Binding TelemetryExportPortText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="7317" />
               </StackPanel>
-              <StackPanel Spacing="5">
+              <StackPanel Grid.Column="1" Spacing="5">
                 <TextBlock Text="ENDPOINTS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
                 <TextBlock Text="{Binding TelemetryExportEndpointText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
               </StackPanel>
@@ -128,7 +128,7 @@
 
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
           <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
-          <TextBlock Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock Grid.Column="1" Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
       </StackPanel>
     </ScrollViewer>

@@ -8,12 +8,8 @@
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
   <Grid Margin="20" RowDefinitions="*,Auto" RowSpacing="12">
-    <Grid RowDefinitions="Auto,*" RowSpacing="8">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="PRÉVIA AO VIVO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-        <TextBlock Grid.Column="1" Text="GRADE · BOTÃO DIREITO ADICIONA" Foreground="{DynamicResource TextDimBrush}" FontSize="9" />
-      </Grid>
-      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+    <Grid>
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
         <Grid x:Name="EditorCanvasSurface" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
               Background="Transparent" PointerPressed="OnCanvasPointerPressed">
           <Border CornerRadius="6" Background="{DynamicResource BgOverlayPanelBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1" />

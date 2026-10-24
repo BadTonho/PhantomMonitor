@@ -54,4 +54,4 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
 
 ## Elevação de privilégio
 
-Se o aplicativo não estiver rodando como Administrador, exibe um banner com botão para reiniciar com privilégios elevados (necessário para a leitura irrestrita da CPU e rastreamento via PresentMon).
+Se o aplicativo não estiver rodando como Administrador, exibe um banner com botão para reiniciar com privilégios elevados (necessário para a leitura irrestrita da CPU e rastreamento via PresentMon). O processo elevado aguarda a instância atual liberar o bloqueio de instância única antes de abrir a janela, evitando que o próprio reinício seja encerrado como duplicado.

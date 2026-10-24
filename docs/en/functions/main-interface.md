@@ -10,7 +10,7 @@ In the implementation, the main window owns the sidebar, navigation, and global 
 
 The sidebar shows monitor status, uptime, sensor count, page navigation (overview, inventory, custom sensors, series tuning, alerts, settings and diagnostics), overlay visibility, CSV/JSON/JSONL toggles, and the Windows startup option. A system-tray menu provides window visibility, overlay, startup, statistics reset, monitoring pause, OSD profiles, and exit (tray ported from the WPF in F1.5).
 
-Metric cards cover CPU, GPU, FPS, RAM, disk, network, motherboard, and fans. CPU/GPU detail lines include available clocks, power, voltage, VRAM, hotspot, and VRAM temperature. A process list shows applications using the GPU. The in-app diagnostics view displays detected sensors, and a banner can indicate when elevated permissions are needed for some readings.
+Metric cards cover CPU, GPU, FPS, RAM, disk, network, motherboard, and fans. CPU/GPU detail lines include available clocks, power, voltage, VRAM, hotspot, and VRAM temperature. A process list shows applications using the GPU. The in-app diagnostics view displays detected sensors, and a banner can indicate when elevated permissions are needed for some readings. When the user chooses to restart as administrator, the elevated process waits for the current instance to release the single-instance lock before opening its window.
 
 The cards use restrained horizontal progress bars and outlined badges rather than large gauges. CPU/GPU details appear only for values provided by the hardware; otherwise the interface reports that no matching sensor is available. Network cards show download/upload, and the motherboard/fan card summarizes the highest board temperature and GPU/system fans.
 

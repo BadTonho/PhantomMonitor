@@ -10,7 +10,9 @@ namespace PhantomMonitor.Services;
 /// </summary>
 public static class SingleInstanceGuard
 {
-    /// <summary>Adquire a posse única; <c>null</c> = outra instância está em execução (o chamador encerra).</summary>
-    public static IDisposable? TryAcquire() =>
-        OperatingSystem.IsWindows() ? WindowsSingleInstanceGuard.TryAcquire() : LinuxSingleInstanceGuard.TryAcquire();
+    /// <summary>Adquire a posse única; opcionalmente aguarda a instância atual liberar o mutex no Windows.</summary>
+    public static IDisposable? TryAcquire(bool waitForExisting = false) =>
+        OperatingSystem.IsWindows()
+            ? WindowsSingleInstanceGuard.TryAcquire(waitForExisting)
+            : LinuxSingleInstanceGuard.TryAcquire();
 }

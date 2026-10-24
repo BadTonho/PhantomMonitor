@@ -5,6 +5,7 @@ namespace PhantomMonitor.App;
 
 internal static class Program
 {
+    internal const string WaitForSingleInstanceArgument = "--wait-for-single-instance";
     private static IDisposable? _singleInstanceLock;
 
     [STAThread]
@@ -14,13 +15,15 @@ internal static class Program
         // MessageBox informativo) e lock de arquivo no Linux (silencioso). Segunda
         // cópia encerra antes de qualquer arranque — protege a sessão ETW do
         // PresentMon e o sensors_latest.json compartilhados.
-        _singleInstanceLock = SingleInstanceGuard.TryAcquire();
+        var waitForSingleInstance = args.Contains(WaitForSingleInstanceArgument, StringComparer.Ordinal);
+        _singleInstanceLock = SingleInstanceGuard.TryAcquire(waitForSingleInstance);
         if (_singleInstanceLock is null)
             return 0;
 
         try
         {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            var appArgs = args.Where(argument => !string.Equals(argument, WaitForSingleInstanceArgument, StringComparison.Ordinal)).ToArray();
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(appArgs);
         }
         finally
         {

@@ -116,12 +116,21 @@ public sealed partial class MainWindowViewModel
                 ErrorLog.Write("RestartAsAdmin", new InvalidOperationException("Caminho do executável indisponível."));
                 return;
             }
-            using var elevated = Process.Start(new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 FileName = exePath,
                 UseShellExecute = true,
                 Verb = "runas"
-            });
+            };
+            foreach (var argument in Environment.GetCommandLineArgs().Skip(1))
+            {
+                if (!string.Equals(argument, PhantomMonitor.App.Program.WaitForSingleInstanceArgument, StringComparison.Ordinal))
+                    startInfo.ArgumentList.Add(argument);
+            }
+            startInfo.ArgumentList.Add(PhantomMonitor.App.Program.WaitForSingleInstanceArgument);
+
+            using var elevated = Process.Start(startInfo)
+                ?? throw new InvalidOperationException("O processo elevado não foi iniciado.");
             Shutdown();
         }
         catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)

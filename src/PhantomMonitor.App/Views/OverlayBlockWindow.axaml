@@ -10,10 +10,11 @@
         TransparencyLevelHint="Transparent" Background="Transparent">
   <Border Margin="{Binding Owner.OverlayOuterMargin}"
           Padding="{Binding Owner.OverlayPadding}"
-          CornerRadius="6" Background="{DynamicResource BgOverlayPanelBrush}"
+          CornerRadius="6" Background="{Binding Owner.OverlayBackgroundBrush}"
           BorderBrush="{Binding Owner.OverlayPanelBorderBrush}" BorderThickness="1">
     <StackPanel Spacing="{Binding Owner.OverlayContentSpacing}">
       <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                 FontFamily="{Binding Owner.OverlayMetricNameFontFamily}"
                  FontSize="{Binding Owner.OverlayMetricNameFontSize}" FontWeight="SemiBold"
                  PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll" />
       <ItemsControl ItemsSource="{Binding Content}">
@@ -21,10 +22,11 @@
           <DataTemplate DataType="vm:OverlayMetricViewModel">
             <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.Owner.OverlayRowMargin}">
               <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                         FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayMetricNameFontFamily}"
                          FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricNameFontSize}" TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontSize}"
-                         FontFamily="monospace" TextWrapping="WrapWithOverflow" />
+                         FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontFamily}" TextWrapping="WrapWithOverflow" />
               <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
                                    Values="{Binding $parent[Window].DataContext.Owner.FrametimeSamples}"
                                    Stroke="{Binding $parent[Window].DataContext.Owner.OverlayAccentBrush}"
@@ -47,7 +49,7 @@
           <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
             <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
                        FontSize="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontSize}"
-                       FontFamily="monospace" TextTrimming="CharacterEllipsis"
+                       FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayMetricValueFontFamily}" TextTrimming="CharacterEllipsis"
                        Margin="{Binding $parent[Window].DataContext.Owner.OverlayRowMargin}" />
           </DataTemplate>
         </ItemsControl.DataTemplates>

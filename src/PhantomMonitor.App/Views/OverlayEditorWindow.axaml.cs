@@ -246,7 +246,10 @@ public partial class OverlayEditorWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         if (DataContext is MainWindowViewModel viewModel)
+        {
             viewModel.CancelOverlayLayoutDraft();
+            viewModel.DiscardOverlayAppearanceDraft();
+        }
         base.OnClosed(e);
     }
 }

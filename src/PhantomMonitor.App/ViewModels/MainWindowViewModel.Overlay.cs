@@ -116,6 +116,8 @@ public sealed partial class MainWindowViewModel
     private void RaiseOverlayAppearanceProperties()
     {
         Raise(nameof(OverlayFontSize));
+        Raise(nameof(OverlayMetricNameFontFamily));
+        Raise(nameof(OverlayMetricValueFontFamily));
         Raise(nameof(OverlayCompactMode));
         Raise(nameof(OverlayMetricNameFontSize));
         Raise(nameof(OverlayMetricValueFontSize));

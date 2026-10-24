@@ -30,7 +30,7 @@
                 <Border Width="{Binding $parent[Window].DataContext.OverlayPreviewWidth}"
                         IsVisible="{Binding IsEditorVisible}" CornerRadius="5"
                         Opacity="{Binding $parent[Window].DataContext.OverlayPreviewOpacity}"
-                        Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}"
+                        Background="{Binding $parent[Window].DataContext.OverlayPreviewBackgroundBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}"
                         BorderThickness="1" Padding="{Binding $parent[Window].DataContext.OverlayPreviewBlockPadding}"
                         PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"
                         PointerReleased="OnBlockPointerReleased" PointerCaptureLost="OnBlockPointerCaptureLost"
@@ -43,16 +43,18 @@
                   </Border.ContextMenu>
                   <StackPanel Spacing="3">
                     <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                               FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewNameFontFamily}"
                                FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" FontWeight="SemiBold" />
                     <ItemsControl ItemsSource="{Binding Content}">
                       <ItemsControl.DataTemplates>
                         <DataTemplate DataType="vm:OverlayMetricViewModel">
                           <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.OverlayPreviewRowMargin}">
                             <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                                       FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewNameFontFamily}"
                                        FontSize="{Binding $parent[Window].DataContext.OverlayPreviewNameFontSize}" TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding Value}" Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
-                                       FontFamily="monospace" TextWrapping="WrapWithOverflow" />
+                                       FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewValueFontFamily}" TextWrapping="WrapWithOverflow" />
                             <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
                                                  Values="{Binding $parent[Window].DataContext.FrametimeSamples}"
                                                  Stroke="{Binding $parent[Window].DataContext.OverlayAccentBrush}"
@@ -75,7 +77,7 @@
                         <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
                           <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
                                      FontSize="{Binding $parent[Window].DataContext.OverlayPreviewValueFontSize}"
-                                     FontFamily="monospace" TextTrimming="CharacterEllipsis" />
+                                     FontFamily="{Binding $parent[Window].DataContext.OverlayPreviewValueFontFamily}" TextTrimming="CharacterEllipsis" />
                         </DataTemplate>
                       </ItemsControl.DataTemplates>
                     </ItemsControl>

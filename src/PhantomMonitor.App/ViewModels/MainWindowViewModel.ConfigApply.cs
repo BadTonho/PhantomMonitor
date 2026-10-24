@@ -31,6 +31,27 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        if (!double.IsFinite(OverlayBackgroundOpacityPercent) || OverlayBackgroundOpacityPercent is < 0 or > 100)
+        {
+            SettingsMessage = "A opacidade do fundo deve ficar entre 0% e 100%.";
+            return;
+        }
+
+        var backgroundColor = OverlayBackgroundColorText.Trim();
+        if (backgroundColor.Length > 0
+            && (backgroundColor.Length != 7 || !OverlayBrushHelper.TryParseColor(backgroundColor, out _)))
+        {
+            SettingsMessage = "A cor do fundo deve usar o formato hexadecimal #RRGGBB.";
+            return;
+        }
+
+        var fontFamily = OverlayFontFamilyDraftValue;
+        if (fontFamily.Length > 128 || fontFamily.Any(char.IsControl))
+        {
+            SettingsMessage = "O nome da fonte deve ter até 128 caracteres.";
+            return;
+        }
+
         int? newInterval = null;
         if (IsIntervalEdited)
         {
@@ -71,6 +92,9 @@ public sealed partial class MainWindowViewModel
         var oldUpdateRepository = _config.Update.Repository;
         var oldOverlayWidth = _config.Overlay.Width;
         var oldOverlayOpacity = _config.OverlayOpacity;
+        var oldOverlayBackgroundColor = _config.Overlay.BackgroundColor;
+        var oldOverlayBackgroundOpacity = _config.Overlay.BackgroundOpacity;
+        var oldOverlayFontFamily = _config.Overlay.FontFamily;
         var oldOverlayFontSize = _config.Overlay.FontSize;
         var oldOverlayCompactMode = _config.Overlay.CompactMode;
         var oldOverlayBlocks = (_config.Overlay.Blocks ?? []).Select(CloneOverlayBlock).ToList();
@@ -88,8 +112,11 @@ public sealed partial class MainWindowViewModel
             || updateRepository != oldUpdateRepository;
         var themeChanged = (ThemeIndex == 1 ? "slate" : "neptune") != oldTheme;
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
-            || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001;
+            || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001
+            || Math.Abs(OverlayBackgroundOpacityPercent / 100.0 - oldOverlayBackgroundOpacity) > 0.000001
+            || !string.Equals(backgroundColor, oldOverlayBackgroundColor ?? "", StringComparison.OrdinalIgnoreCase);
         var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
+            || !string.Equals(fontFamily, oldOverlayFontFamily ?? "", StringComparison.Ordinal)
             || OverlayCompactModeSetting != oldOverlayCompactMode;
         var overlayLayoutChanged = OverlayLayoutHasChanges();
         var overlayChanged = overlayLayoutChanged
@@ -117,6 +144,9 @@ public sealed partial class MainWindowViewModel
         _config.Theme = ThemeIndex == 1 ? "slate" : "neptune";
         _config.Overlay.Width = overlayWidth;
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
+        _config.Overlay.BackgroundColor = backgroundColor.Length == 0 ? null : backgroundColor.ToUpperInvariant();
+        _config.Overlay.BackgroundOpacity = OverlayBackgroundOpacityPercent / 100.0;
+        _config.Overlay.FontFamily = fontFamily;
         _config.Overlay.FontSize = overlayFontSize;
         _config.Overlay.CompactMode = OverlayCompactModeSetting;
         CopyOverlayLayoutToConfig();
@@ -136,6 +166,9 @@ public sealed partial class MainWindowViewModel
             _config.Theme = oldTheme;
             _config.Overlay.Width = oldOverlayWidth;
             _config.OverlayOpacity = oldOverlayOpacity;
+            _config.Overlay.BackgroundColor = oldOverlayBackgroundColor;
+            _config.Overlay.BackgroundOpacity = oldOverlayBackgroundOpacity;
+            _config.Overlay.FontFamily = oldOverlayFontFamily ?? "";
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
             _config.Overlay.Blocks = oldOverlayBlocks;
@@ -182,6 +215,8 @@ public sealed partial class MainWindowViewModel
         UpdateOverlayRows(_latestSensorData);
         OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
+        OverlayBackgroundOpacityPercent = _config.Overlay.BackgroundOpacity * 100;
+        OverlayBackgroundColorText = _config.Overlay.BackgroundColor ?? "";
         OverlayFontSizeSlider = _config.Overlay.FontSize;
         OverlayCompactModeSetting = _config.Overlay.CompactMode;
         if (overlayVisualChanged)

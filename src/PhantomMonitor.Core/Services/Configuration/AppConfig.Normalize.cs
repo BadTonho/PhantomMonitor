@@ -7,6 +7,8 @@ public sealed partial class AppConfig
 {
     private static readonly Regex HexColorRegex =
         new("^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", RegexOptions.Compiled);
+    private static readonly Regex HexRgbColorRegex =
+        new("^#[0-9a-fA-F]{6}$", RegexOptions.Compiled);
 
     /// <summary>Corrige valores inválidos vindos de um config editado à mão.</summary>
     public void Normalize()
@@ -96,6 +98,14 @@ public sealed partial class AppConfig
         Overlay.Width = Math.Clamp(Overlay.Width, 140, 700);
         Overlay.FontSize = Math.Clamp(Overlay.FontSize, 8, 20);
         if (!IsValidHexColor(Overlay.AccentColor)) Overlay.AccentColor = "#1E90FF";
+        if (Overlay.BackgroundColor is { } backgroundColor && !HexRgbColorRegex.IsMatch(backgroundColor))
+            Overlay.BackgroundColor = null;
+        Overlay.BackgroundOpacity = double.IsFinite(Overlay.BackgroundOpacity)
+            ? Math.Clamp(Overlay.BackgroundOpacity, 0, 1)
+            : 1;
+        Overlay.FontFamily = (Overlay.FontFamily ?? "").Trim();
+        if (Overlay.FontFamily.Length > 128 || Overlay.FontFamily.Any(char.IsControl))
+            Overlay.FontFamily = "";
 
         // Offset do overlay relativo à janela em foco: extremos digitados à mão no editor
         // deixavam o overlay nascendo fora da área de trabalho, invisível e irrecuperável.

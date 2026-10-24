@@ -84,6 +84,7 @@ public sealed partial class MainWindowViewModel
     private double _overlayFontEffective = 11.5;
     private double _overlayWidthEffective = 220;
     private double _overlayOpacityEffective = 0.85;
+    private string? _overlayFontFamilyNameEffective;
 
     public IBrush OverlayAccentBrush { get => _overlayAccentBrush; private set => Set(ref _overlayAccentBrush, value); }
     private IBrush _overlayAccentBrush = ResolveBrush("AccentLightBrush");
@@ -184,9 +185,13 @@ public sealed partial class MainWindowViewModel
         var width = profile?.Width is int w && w > 0 ? w : config.Overlay.Width;
         var font = Math.Clamp(profile?.FontSize is { } fontOverride ? fontOverride : config.Overlay.FontSize, 8, 20);
         var fontChanged = Math.Abs(font - _overlayFontEffective) > 0.05;
+        var fontFamily = ParseOverlayFontFamily(config.Overlay.FontFamily);
+        var fontFamilyChanged = !string.Equals(_overlayFontFamilyNameEffective, fontFamily?.Name, StringComparison.OrdinalIgnoreCase);
 
         _overlayWidthEffective = width;
         _overlayFontEffective = font;
+        _overlayFontFamilyEffective = fontFamily;
+        _overlayFontFamilyNameEffective = fontFamily?.Name;
         _overlayOpacityEffective = profile?.Opacity is { } opacity
             ? Math.Clamp(opacity, 0.1, 1.0)
             : Math.Clamp(config.OverlayOpacity <= 0 ? 0.85 : config.OverlayOpacity, 0.1, 1.0);
@@ -200,16 +205,18 @@ public sealed partial class MainWindowViewModel
         _overlayAccentBrush = OverlayBrushHelper.Resolve(accentHex, _overlayAccentBrush);
         if (OverlayBrushHelper.TryParseColor(accentHex, out var accentColor))
             _overlayPanelBorderBrush = OverlayBrushHelper.Tint(accentColor);
+        _overlayBackgroundBrush = CreateOverlayBackgroundBrush(config.Overlay.BackgroundColor, config.Overlay.BackgroundOpacity);
 
         OverlayProfileTagText = string.IsNullOrWhiteSpace(profile?.Name) ? "" : $"◉ perfil: {profile!.Name}";
         HasOverlayProfileTag = OverlayProfileTagText.Length > 0;
 
         Raise(nameof(OverlayAccentBrush));
         Raise(nameof(OverlayPanelBorderBrush));
+        Raise(nameof(OverlayBackgroundBrush));
         Raise(nameof(OverlayWidth));
         Raise(nameof(OverlayOpacity));
         RefreshOverlayGraphStrokes();
-        if (fontChanged) RaiseOverlayAppearanceProperties();
+        if (fontChanged || fontFamilyChanged) RaiseOverlayAppearanceProperties();
 
         // Whitelist vigente pode mudar o conjunto de séries por instância.
         UpdateOverlayRows(_latestSensorData);
@@ -218,4 +225,27 @@ public sealed partial class MainWindowViewModel
     /// <summary>Base do config mudou (SaveSettings): reanula effettivos quando não há perfil ativo.</summary>
     public void OnOverlayBaseConfigChanged() =>
         ApplyOverlayProfile(_activeProfile);
+
+    private static FontFamily? ParseOverlayFontFamily(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        try { return new FontFamily(name.Trim()); }
+        catch { return null; }
+    }
+
+    private static IBrush CreateOverlayBackgroundBrush(string? colorHex, double opacity)
+    {
+        Color color;
+        var normalized = colorHex?.Trim();
+        if (normalized is { Length: 7 } && OverlayBrushHelper.TryParseColor(normalized, out var customColor))
+            color = Color.FromRgb(customColor.R, customColor.G, customColor.B);
+        else if (ResolveBrush("BgOverlayPanelBrush") is ISolidColorBrush themeBrush)
+            color = themeBrush.Color;
+        else
+            color = Colors.Gray;
+
+        opacity = double.IsFinite(opacity) ? Math.Clamp(opacity, 0, 1) : 1;
+        var alpha = (byte)Math.Clamp(Math.Round(color.A * opacity), 0, 255);
+        return new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
+    }
 }

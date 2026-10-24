@@ -279,7 +279,6 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         }
     }
     public string OverlayOpacityLabel => $"{OverlayOpacityPercent:0}%";
-
     // ---- Tema visual (Fase 3: seletor em Configurações) ----
     // Índice 0 = neptune, 1 = slate (ordem idêntica a ThemeOptions).
     public IReadOnlyList<string> ThemeOptions { get; } =
@@ -369,26 +368,6 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public double OverlayEditorCanvasWidth { get => _overlayEditorCanvasWidth; private set => Set(ref _overlayEditorCanvasWidth, value); }
     public double OverlayEditorCanvasHeight { get => _overlayEditorCanvasHeight; private set => Set(ref _overlayEditorCanvasHeight, value); }
 
-    private void RaiseOverlayPreviewProperties()
-    {
-        Raise(nameof(OverlayPreviewWidth));
-        Raise(nameof(OverlayPreviewWidthInvalid));
-        Raise(nameof(OverlayPreviewOpacity));
-        Raise(nameof(OverlayPreviewNameFontSize));
-        Raise(nameof(OverlayPreviewValueFontSize));
-        Raise(nameof(OverlayPreviewSecondaryFontSize));
-        Raise(nameof(OverlayPreviewProfileTagFontSize));
-        Raise(nameof(OverlayPreviewContentSpacing));
-        Raise(nameof(OverlayPreviewRowMargin));
-        Raise(nameof(OverlayPreviewPadding));
-        Raise(nameof(OverlayPreviewBlockPadding));
-        Raise(nameof(OverlayPreviewFrametimeGraphHeight));
-        Raise(nameof(OverlayEditorCanvasWidth));
-        Raise(nameof(OverlayEditorCanvasHeight));
-        foreach (var block in _overlayBlocks)
-            block.RefreshCanvasPosition();
-    }
-
     public IReadOnlyList<double> CpuSamples { get => _cpuSamples; private set => Set(ref _cpuSamples, value); }
     public IReadOnlyList<double> GpuSamples { get => _gpuSamples; private set => Set(ref _gpuSamples, value); }
     public IReadOnlyList<double> RamSamples { get => _ramSamples; private set => Set(ref _ramSamples, value); }
@@ -428,6 +407,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _alertsEnabled = _config.Alerts.Enabled;
         _overlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         _overlayOpacityPercent = _config.OverlayOpacity * 100;
+        OverlayFontFamilyOptions = LoadOverlayFontFamilyOptions();
+        LoadOverlayAppearanceDraft();
         _overlayFontSizeText = _config.Overlay.FontSize.ToString("0.#", CultureInfo.CurrentCulture);
         _overlayFontSizeSlider = _config.Overlay.FontSize;
         _overlayCompactModeSetting = _config.Overlay.CompactMode;

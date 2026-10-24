@@ -24,6 +24,9 @@ public sealed class OverlayConfig
     public bool CompactMode { get; set; } = false;
     public string AccentColor { get; set; } = "#1E90FF";
     public double FontSize { get; set; } = 11.5;
+    public string? BackgroundColor { get; set; }
+    public double BackgroundOpacity { get; set; } = 1.0;
+    public string FontFamily { get; set; } = "";
 
     /// <summary>
     /// Posições normalizadas dos blocos do OSD (0–1) em relação à área da janela

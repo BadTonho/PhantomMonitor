@@ -11,16 +11,13 @@
       <Grid ColumnDefinitions="1*,1.35*" ColumnSpacing="16">
         <StackPanel Grid.Column="0" Spacing="8">
           <TextBlock Text="ORDEM NO BLOCO" FontSize="10" FontWeight="Bold" />
-          <ListBox ItemsSource="{Binding OrderedContentItems}"
+          <ListBox x:Name="ContentItemsList"
+                   ItemsSource="{Binding OrderedContentItems}"
                    SelectedItem="{Binding SelectedContentItem, Mode=TwoWay}"
                    Height="340" MinHeight="120">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="{x:Type vm:OverlayBlockItemChoiceViewModel}">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2"
-                      PointerPressed="OnContentItemPointerPressed"
-                      DragDrop.AllowDrop="True"
-                      DragDrop.DragOver="OnContentItemDragOver"
-                      DragDrop.Drop="OnContentItemDrop">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2">
                   <TextBlock Text="{Binding Kind}" Classes="muted" FontSize="9" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                 </Grid>

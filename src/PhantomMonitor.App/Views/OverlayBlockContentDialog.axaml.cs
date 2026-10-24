@@ -1,17 +1,22 @@
-using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
+using Avalonia.VisualTree;
 
 namespace PhantomMonitor.App.Views;
 
 /// <summary>View for choosing and editing the content of one overlay block.</summary>
 public partial class OverlayBlockContentDialog : Window
 {
-    private static readonly DataFormat<string> ContentIndexDataFormat =
-        DataFormat.CreateInProcessFormat<string>("PhantomMonitor.OverlayContentIndex");
+    private const double ReorderStartThreshold = 5;
+
+    private IPointer? _reorderPointer;
+    private OverlayBlockItemChoiceViewModel? _reorderItem;
+    private Point _reorderStart;
+    private bool _isReordering;
 
     private OverlayBlockContentDialogViewModel ViewModel => (OverlayBlockContentDialogViewModel)DataContext!;
 
@@ -20,11 +25,16 @@ public partial class OverlayBlockContentDialog : Window
     public IReadOnlyList<OverlayGraph> ResultGraphs => ViewModel.ResultGraphs;
     public IReadOnlyList<OverlayTemplate> ResultTemplates => ViewModel.ResultTemplates;
 
-    public OverlayBlockContentDialog() => InitializeComponent();
+    public OverlayBlockContentDialog()
+    {
+        InitializeComponent();
+        InitializeContentReordering();
+    }
 
     public OverlayBlockContentDialog(MainWindowViewModel viewModel, OverlayCanvasBlockViewModel block)
     {
         InitializeComponent();
+        InitializeContentReordering();
         DataContext = new OverlayBlockContentDialogViewModel(viewModel, block);
     }
 
@@ -34,48 +44,96 @@ public partial class OverlayBlockContentDialog : Window
     private void OnMoveContentDownClick(object? sender, RoutedEventArgs e) => ViewModel.MoveSelectedContent(1);
     private void OnRemoveContentClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveSelectedContent();
 
-    private async void OnContentItemPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void InitializeContentReordering()
     {
-        if (sender is not Control { DataContext: OverlayBlockItemChoiceViewModel item } row
-            || !e.GetCurrentPoint(row).Properties.IsLeftButtonPressed)
-            return;
+        var list = this.FindControl<ListBox>("ContentItemsList");
+        if (list is null) return;
+        list.AddHandler(InputElement.PointerPressedEvent, OnContentListPointerPressed,
+            RoutingStrategies.Tunnel, handledEventsToo: true);
+        list.AddHandler(InputElement.PointerMovedEvent, OnContentListPointerMoved,
+            RoutingStrategies.Bubble, handledEventsToo: true);
+        list.AddHandler(InputElement.PointerReleasedEvent, OnContentListPointerReleased,
+            RoutingStrategies.Bubble, handledEventsToo: true);
+        list.AddHandler(InputElement.PointerCaptureLostEvent, OnContentListPointerCaptureLost,
+            RoutingStrategies.Bubble, handledEventsToo: true);
+    }
 
-        var sourceIndex = ViewModel.OrderedContentItems.IndexOf(item);
-        if (sourceIndex < 0) return;
+    private void OnContentListPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not ListBox list
+            || !e.GetCurrentPoint(list).Properties.IsLeftButtonPressed
+            || e.Source is not Control { DataContext: OverlayBlockItemChoiceViewModel item })
+            return;
 
         ViewModel.SelectedContentItem = item;
-        var transfer = new DataTransfer();
-        transfer.Add(DataTransferItem.Create(ContentIndexDataFormat, sourceIndex.ToString(CultureInfo.InvariantCulture)));
-        await DragDrop.DoDragDropAsync(e, transfer, DragDropEffects.Move);
+        _reorderPointer = e.Pointer;
+        _reorderItem = item;
+        _reorderStart = e.GetPosition(list);
+        _isReordering = false;
+        e.Pointer.Capture(list);
     }
 
-    private void OnContentItemDragOver(object? sender, DragEventArgs e)
+    private void OnContentListPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!TryGetDraggedIndex(e, out _)) return;
-        e.DragEffects = DragDropEffects.Move;
-        e.Handled = true;
-    }
-
-    private void OnContentItemDrop(object? sender, DragEventArgs e)
-    {
-        if (sender is not Control { DataContext: OverlayBlockItemChoiceViewModel targetItem } target
-            || !TryGetDraggedIndex(e, out var sourceIndex))
+        if (sender is not ListBox list || _reorderPointer != e.Pointer || _reorderItem is null)
             return;
 
-        var targetIndex = ViewModel.OrderedContentItems.IndexOf(targetItem);
-        if (targetIndex < 0) return;
+        var currentPosition = e.GetPosition(list);
+        if (!_isReordering)
+        {
+            var deltaX = currentPosition.X - _reorderStart.X;
+            var deltaY = currentPosition.Y - _reorderStart.Y;
+            if (!e.GetCurrentPoint(list).Properties.IsLeftButtonPressed
+                || Math.Sqrt(deltaX * deltaX + deltaY * deltaY) < ReorderStartThreshold)
+                return;
+            _isReordering = true;
+        }
 
-        var insertIndex = targetIndex + (e.GetPosition(target).Y >= target.Bounds.Height / 2 ? 1 : 0);
-        if (sourceIndex < insertIndex) insertIndex--;
-        insertIndex = Math.Clamp(insertIndex, 0, ViewModel.OrderedContentItems.Count - 1);
-        ViewModel.MoveContent(sourceIndex, insertIndex);
-        e.DragEffects = DragDropEffects.Move;
-        e.Handled = true;
+        if (currentPosition.X < 0 || currentPosition.X > list.Bounds.Width
+            || currentPosition.Y < 0 || currentPosition.Y > list.Bounds.Height)
+            return;
+
+        var insertionIndex = FindInsertionIndex(list, currentPosition.Y);
+        var sourceIndex = ViewModel.OrderedContentItems.IndexOf(_reorderItem);
+        if (sourceIndex < 0 || insertionIndex < 0) return;
+        if (sourceIndex < insertionIndex) insertionIndex--;
+        var targetIndex = Math.Clamp(insertionIndex, 0, ViewModel.OrderedContentItems.Count - 1);
+        ViewModel.MoveContent(sourceIndex, targetIndex);
     }
 
-    private static bool TryGetDraggedIndex(DragEventArgs e, out int index)
-        => int.TryParse(e.DataTransfer.TryGetValue(ContentIndexDataFormat), NumberStyles.None,
-            CultureInfo.InvariantCulture, out index);
+    private static int FindInsertionIndex(ListBox list, double pointerY)
+    {
+        var insertionIndex = -1;
+        for (var index = 0; index < list.ItemCount; index++)
+        {
+            if (list.ContainerFromIndex(index) is not Control container) continue;
+            var position = container.TranslatePoint(new Point(0, 0), list);
+            if (position is null) continue;
+            insertionIndex = index + 1;
+            if (pointerY < position.Value.Y + container.Bounds.Height / 2)
+                return index;
+        }
+        return insertionIndex;
+    }
+
+    private void OnContentListPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_reorderPointer == e.Pointer)
+            ClearContentReordering(releaseCapture: true);
+    }
+
+    private void OnContentListPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+        => ClearContentReordering(releaseCapture: false);
+
+    private void ClearContentReordering(bool releaseCapture)
+    {
+        var pointer = _reorderPointer;
+        _reorderPointer = null;
+        _reorderItem = null;
+        _isReordering = false;
+        if (releaseCapture && pointer is not null)
+            pointer.Capture(null);
+    }
 
     private void OnSaveMetricOverrideClick(object? sender, RoutedEventArgs e) => ViewModel.SaveMetricOverride();
     private void OnMetricColorSwatchClick(object? sender, RoutedEventArgs e)

@@ -15,7 +15,8 @@ disponível, mantendo as colunas alinhadas até a margem direita. Cada família
 com instâncias mostra uma linha-resumo e seus itens indentados abaixo. Uma seta
 na linha-resumo recolhe ou expande somente as instâncias daquela família; o
 resumo e suas métricas continuam visíveis. A seta aparece em qualquer categoria
-que tenha subitens, e somente ela alterna esse estado. CPU Total mantém
+que tenha pelo menos dois subitens, e somente ela alterna esse estado. Com um
+único subitem, a linha permanece visível sem seta. CPU Total mantém
 a linha do total e lista os núcleos abaixo; se não houver um agregado
 publicado, a linha-resumo usa a média das instâncias compatíveis. Fórmulas
 personalizadas e sensores sem instâncias continuam como linhas próprias.

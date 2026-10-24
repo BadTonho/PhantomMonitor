@@ -360,7 +360,7 @@
                                     <Grid>
                                       <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                       <Button Content="{Binding ExpansionGlyph}"
-                                              IsVisible="{Binding HasChildren}"
+                                              IsVisible="{Binding CanCollapseChildren}"
                                               Click="OnInventoryRowToggleClick"
                                               Width="10" Height="16" Padding="0" BorderThickness="0"
                                               Background="Transparent" Foreground="{DynamicResource TextBodyBrush}"
@@ -375,7 +375,7 @@
                                   <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   </Grid>
-                                  <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding IsExpanded}" HorizontalAlignment="Stretch">
+                                  <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding ShowChildren}" HorizontalAlignment="Stretch">
                                     <ItemsControl.ItemTemplate>
                                       <DataTemplate>
                                         <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch" Margin="0,1,0,0">

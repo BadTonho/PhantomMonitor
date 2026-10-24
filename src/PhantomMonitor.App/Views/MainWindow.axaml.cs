@@ -188,7 +188,7 @@ public sealed partial class MainWindow : Window
     }
     private void OnInventoryRowToggleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is Button { DataContext: InventoryRowViewModel row } && row.HasChildren)
+        if (sender is Button { DataContext: InventoryRowViewModel row } && row.CanCollapseChildren)
             row.IsExpanded = !row.IsExpanded;
     }
     private void OnCustomSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

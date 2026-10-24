@@ -58,12 +58,17 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
         _min = "--";
         _max = "--";
         _avg = "--";
-        Children.CollectionChanged += (_, _) => Raise(nameof(HasChildren));
+        Children.CollectionChanged += (_, _) =>
+        {
+            Raise(nameof(CanCollapseChildren));
+            Raise(nameof(ShowChildren));
+        };
     }
 
     public string Key { get; }
     public ObservableCollection<InventoryRowViewModel> Children { get; } = new();
-    public bool HasChildren => Children.Count > 0;
+    public bool CanCollapseChildren => Children.Count > 1;
+    public bool ShowChildren => !CanCollapseChildren || IsExpanded;
 
     /// <summary>Expansion state for this row's instance children, preserved while the row is reused.</summary>
     public bool IsExpanded
@@ -75,6 +80,7 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
             _isExpanded = value;
             Raise();
             Raise(nameof(ExpansionGlyph));
+            Raise(nameof(ShowChildren));
         }
     }
 

@@ -61,7 +61,7 @@ public sealed class OverlayBlockItemChoiceViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-public sealed class OverlayMetricEditChoiceViewModel : INotifyPropertyChanged
+public sealed class OverlayMetricEditChoiceViewModel : INotifyPropertyChanged, IDisposable
 {
     public OverlayMetricEditChoiceViewModel(OverlayMetricViewModel source)
     {
@@ -81,4 +81,6 @@ public sealed class OverlayMetricEditChoiceViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void Dispose() => Source.PropertyChanged -= OnSourcePropertyChanged;
 }

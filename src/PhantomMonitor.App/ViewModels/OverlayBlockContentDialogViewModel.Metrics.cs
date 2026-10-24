@@ -79,6 +79,8 @@ public sealed partial class OverlayBlockContentDialogViewModel
                 Decimals = decimals,
                 Color = color
             };
+        RefreshBlockPreview();
+        Raise(nameof(PreviewTitle));
         LoadMetricOverrideDraft();
     }
 
@@ -117,7 +119,16 @@ public sealed partial class OverlayBlockContentDialogViewModel
                     : key.MatchesPattern(item.Value))),
             _ => []
         };
-        return rows.Select(row => new OverlayMetricEditChoiceViewModel(row));
+        return rows.Select(row =>
+        {
+            if (_metricEditChoices.TryGetValue(row.OverrideIdentity, out var existing)
+                && ReferenceEquals(existing.Source, row))
+                return existing;
+            existing?.Dispose();
+            var choice = new OverlayMetricEditChoiceViewModel(row);
+            _metricEditChoices[row.OverrideIdentity] = choice;
+            return choice;
+        });
     }
 
     private void LoadMetricOverrideDraft()

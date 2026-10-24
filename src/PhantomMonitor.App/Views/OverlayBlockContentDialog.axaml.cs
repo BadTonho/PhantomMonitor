@@ -61,9 +61,8 @@ public partial class OverlayBlockContentDialog : Window
 
     private void OnContentListPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not ListBox list
-            || !e.GetCurrentPoint(list).Properties.IsLeftButtonPressed
-            || e.Source is not Control { DataContext: OverlayBlockOrderRowViewModel item })
+        if (sender is not ListBox list || !e.GetCurrentPoint(list).Properties.IsLeftButtonPressed
+            || FindOrderRow(e.Source, list) is not { } item)
             return;
 
         ViewModel.SelectedOrderRow = item;
@@ -72,12 +71,20 @@ public partial class OverlayBlockContentDialog : Window
         _reorderStart = e.GetPosition(list);
         _isReordering = false;
         e.Pointer.Capture(list);
+        e.Handled = true;
     }
 
     private void OnContentListPointerMoved(object? sender, PointerEventArgs e)
     {
         if (sender is not ListBox list || _reorderPointer != e.Pointer || _reorderItem is null)
             return;
+
+        _reorderItem = ViewModel.FindCurrentOrderRow(_reorderItem);
+        if (_reorderItem is null)
+        {
+            ClearContentReordering(releaseCapture: true);
+            return;
+        }
 
         var currentPosition = e.GetPosition(list);
         if (!_isReordering)
@@ -100,6 +107,21 @@ public partial class OverlayBlockContentDialog : Window
         if (sourceIndex < insertionIndex) insertionIndex--;
         var targetIndex = Math.Clamp(insertionIndex, 0, ViewModel.OrderRows.Count - 1);
         ViewModel.MoveOrderRow(sourceIndex, targetIndex);
+        _reorderItem = ViewModel.FindCurrentOrderRow(_reorderItem);
+    }
+
+    private static OverlayBlockOrderRowViewModel? FindOrderRow(object? source, Control boundary)
+    {
+        if (source is not Control currentControl) return null;
+        Control? current = currentControl;
+        while (current is not null)
+        {
+            if (current.DataContext is OverlayBlockOrderRowViewModel row)
+                return row;
+            if (ReferenceEquals(current, boundary)) break;
+            current = current.Parent as Control;
+        }
+        return null;
     }
 
     private static int FindInsertionIndex(ListBox list, double pointerY)

@@ -45,4 +45,11 @@ public partial class OverlayBlockContentPickerDialog : Window
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(false);
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (DataContext is OverlayBlockContentDialogViewModel viewModel)
+            viewModel.Dispose();
+        base.OnClosed(e);
+    }
 }

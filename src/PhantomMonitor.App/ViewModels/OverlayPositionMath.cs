@@ -7,18 +7,35 @@ internal static class OverlayPositionMath
     public const double ReferenceHeight = 1080;
 
     public static double AvailableRange(double areaSize, double blockSize)
-        => Math.Max(0, areaSize - blockSize);
+        => double.IsFinite(areaSize) && double.IsFinite(blockSize)
+            ? Math.Max(0, areaSize - blockSize)
+            : 0;
 
     public static double ToNormalized(double position, double areaSize, double blockSize, double originOffset = 0)
     {
         var range = AvailableRange(areaSize, blockSize);
-        return range <= 0 || !double.IsFinite(position) ? 0 : Math.Clamp((position - originOffset) / range, 0, 1);
+        if (range <= 0 || !double.IsFinite(position)) return 0;
+
+        var offset = double.IsFinite(originOffset) ? originOffset : 0;
+        var normalized = (position - offset) / range;
+        if (double.IsFinite(normalized)) return normalized;
+        return normalized < 0 ? -double.MaxValue : double.MaxValue;
     }
 
     public static double ToPosition(double normalized, double areaSize, double blockSize, double originOffset = 0)
-        => (double.IsFinite(originOffset) ? originOffset : 0)
-            + (double.IsFinite(normalized) ? Math.Clamp(normalized, 0, 1) : 0)
-                * AvailableRange(areaSize, blockSize);
+    {
+        var range = AvailableRange(areaSize, blockSize);
+        if (range <= 0) return 0;
+
+        var offset = double.IsFinite(originOffset) ? originOffset : 0;
+        var fraction = double.IsFinite(normalized) ? normalized : 0;
+        var position = offset + (fraction * range);
+
+        // Offsets and signed fractions may cross the area edge; clamp the final
+        // visible coordinate so the block stays inside the followed area.
+        if (double.IsNaN(position) || position <= 0) return 0;
+        return position >= range ? range : position;
+    }
 
     public static double ScaleOffset(double offset, double sourceAreaSize, double destinationAreaSize)
         => !double.IsFinite(offset) || !double.IsFinite(sourceAreaSize) || sourceAreaSize <= 0
@@ -42,6 +59,10 @@ internal static class OverlayPositionMath
         double displayBlockSize, double referenceAreaSize, double originOffset = 0)
     {
         if (!double.IsFinite(displayAreaSize) || displayAreaSize <= 0) return 0;
+        var displayRange = AvailableRange(displayAreaSize, displayBlockSize);
+        displayPosition = double.IsFinite(displayPosition)
+            ? Math.Clamp(displayPosition, 0, displayRange)
+            : 0;
         var referencePosition = ToReference(displayPosition, displayAreaSize, referenceAreaSize);
         var referenceBlockSize = ToReference(displayBlockSize, displayAreaSize, referenceAreaSize);
         return ToNormalized(referencePosition, referenceAreaSize, referenceBlockSize, originOffset);

@@ -80,7 +80,12 @@ public sealed partial class MainWindowViewModel
 
     public OverlayCanvasBlockViewModel AddOverlayBlock(double x, double y)
     {
-        var config = new OverlayBlockConfig { Id = Guid.NewGuid().ToString("N"), X = Math.Clamp(x, 0, 1), Y = Math.Clamp(y, 0, 1) };
+        var config = new OverlayBlockConfig
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            X = double.IsFinite(x) ? x : 0,
+            Y = double.IsFinite(y) ? y : 0
+        };
         var block = new OverlayCanvasBlockViewModel(config, this, SetOverlayBlockPosition);
         block.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
         _overlayBlocks.Add(block);

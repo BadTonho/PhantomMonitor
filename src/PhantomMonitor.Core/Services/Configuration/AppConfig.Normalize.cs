@@ -120,8 +120,10 @@ public sealed partial class AppConfig
             block.Id = string.IsNullOrWhiteSpace(block.Id) || !blockIds.Add(block.Id)
                 ? Guid.NewGuid().ToString("N")
                 : block.Id.Trim();
-            block.X = double.IsFinite(block.X) ? Math.Clamp(block.X, 0, 1) : 0;
-            block.Y = double.IsFinite(block.Y) ? Math.Clamp(block.Y, 0, 1) : 0;
+            // Signed normalized offsets let the visual editor compensate for
+            // overlay/profile origins while keeping the visible block in bounds.
+            block.X = double.IsFinite(block.X) ? block.X : 0;
+            block.Y = double.IsFinite(block.Y) ? block.Y : 0;
             block.Items ??= [];
             block.Items.RemoveAll(item => item is null);
             foreach (var item in block.Items)

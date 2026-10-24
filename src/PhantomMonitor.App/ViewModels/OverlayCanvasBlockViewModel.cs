@@ -91,15 +91,16 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
 
     public void SetNormalizedPosition(double x, double y)
     {
-        x = Math.Clamp(x, 0, 1);
-        y = Math.Clamp(y, 0, 1);
+        x = double.IsFinite(x) ? x : 0;
+        y = double.IsFinite(y) ? y : 0;
         if (Math.Abs(Config.X - x) < 0.0001 && Math.Abs(Config.Y - y) < 0.0001) return;
         Config.X = x;
         Config.Y = y;
         RaisePosition();
     }
 
-    public void MoveTo(double x, double y) => _move(Key, Math.Clamp(x, 0, 1), Math.Clamp(y, 0, 1));
+    public void MoveTo(double x, double y) => _move(Key,
+        double.IsFinite(x) ? x : 0, double.IsFinite(y) ? y : 0);
 
     public void NotifyContentChanged()
     {

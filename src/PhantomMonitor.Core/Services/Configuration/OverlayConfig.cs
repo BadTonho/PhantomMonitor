@@ -31,8 +31,9 @@ public sealed class OverlayConfig
     public string? BorderColor { get; set; }
 
     /// <summary>
-    /// Posições normalizadas dos blocos do OSD (0–1) em relação à área da janela
-    /// acompanhada no Windows ou à área disponível no Linux.
+    /// Posições normalizadas dos blocos do OSD em relação à área da janela
+    /// acompanhada no Windows ou à área disponível no Linux. Valores fora de 0–1
+    /// compensam offsets globais/de perfil; a coordenada visível é limitada à área.
     /// </summary>
     public Dictionary<string, OverlayBlockPosition> Layout { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 

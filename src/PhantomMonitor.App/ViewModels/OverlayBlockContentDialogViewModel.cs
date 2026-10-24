@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using PhantomMonitor.Models;
@@ -37,14 +38,21 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     private string _templateText = "";
     private string _templateColor = "";
     private OverlayBlockItemChoiceViewModel? _selectedContentItem;
+    private OverlayBlockOrderRowViewModel? _selectedOrderRow;
+    private readonly Dictionary<string, List<string>> _metricOrder;
+    private readonly HashSet<string> _customMetricOrderGroups = new(StringComparer.OrdinalIgnoreCase);
 
     public OverlayBlockContentDialogViewModel(MainWindowViewModel viewModel, OverlayCanvasBlockViewModel block)
     {
         _owner = viewModel;
+        _owner.OverlayRows.CollectionChanged += OnOverlayRowsChanged;
         _block = block;
         _detectedSeries = viewModel.OverlaySeriesOptions.ToArray();
         _graphs = viewModel.OverlayGraphsDraft.Select(Clone).ToList();
         _templates = viewModel.OverlayTemplatesDraft.Select(Clone).ToList();
+        _metricOrder = (block.Config.MetricOrder ?? []).ToDictionary(entry => entry.Key,
+            entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase);
+        _customMetricOrderGroups.UnionWith(_metricOrder.Keys);
         _selected = block.Config.Items.Select(item => (item.Kind, item.Value)).ToHashSet();
         var addedItems = new HashSet<(string Kind, string Value)>();
         foreach (var item in block.Config.Items)
@@ -57,6 +65,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             CategoriesChoices.Add(CreateChoice("category", key, name));
         FrametimeChoice = CreateChoice("frametime", "frametime", "Gráfico de frametime");
         RefreshDynamicChoices();
+        RebuildOrderRows();
     }
 
     private OverlayBlockContentDialogViewModel(OverlayBlockContentDialogViewModel source)
@@ -67,6 +76,8 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         _selected = new HashSet<(string Kind, string Value)>(source._selected);
         _graphs = source._graphs.Select(Clone).ToList();
         _templates = source._templates.Select(Clone).ToList();
+        _metricOrder = source._metricOrder.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase);
+        _customMetricOrderGroups.UnionWith(source._customMetricOrderGroups);
         _selectedSeriesCategory = source._selectedSeriesCategory;
         _seriesPatternInput = source._seriesPatternInput;
         _graphSeries = source._graphSeries;
@@ -89,6 +100,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             SelectedContentItem = OrderedContentItems.FirstOrDefault(item => item.Kind == selected.Kind
                 && item.Value.Equals(selected.Value, StringComparison.OrdinalIgnoreCase));
         RefreshDynamicChoices();
+        RebuildOrderRows();
     }
 
     public ObservableCollection<OverlayBlockContentChoiceViewModel> CategoriesChoices { get; } = [];
@@ -102,6 +114,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     public ObservableCollection<OverlayBlockContentChoiceViewModel> GraphChoices { get; } = [];
     public ObservableCollection<OverlayBlockContentChoiceViewModel> TemplateChoices { get; } = [];
     public ObservableCollection<OverlayBlockItemChoiceViewModel> OrderedContentItems { get; } = [];
+    public ObservableCollection<OverlayBlockOrderRowViewModel> OrderRows { get; } = [];
     public IReadOnlyList<OverlayBlockItemConfig> Result { get; private set; } = [];
     public IReadOnlyList<OverlayGraph> ResultGraphs => _graphs;
     public IReadOnlyList<OverlayTemplate> ResultTemplates => _templates;
@@ -113,18 +126,38 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             if (!Set(ref _selectedContentItem, value)) return;
             Raise(nameof(CanMoveContentUp));
             Raise(nameof(CanMoveContentDown));
-            Raise(nameof(CanEditSelectedContent));
             Raise(nameof(ShowMetricEditorHint));
             RefreshMetricChoices();
         }
     }
 
-    public bool CanEditSelectedContent => SelectedContentItem is { Kind: "category" or "series" };
-    public bool ShowMetricEditorHint => !CanEditSelectedContent;
-    public bool CanMoveContentUp => SelectedContentItem is not null && OrderedContentItems.IndexOf(SelectedContentItem) > 0;
-    public bool CanMoveContentDown => SelectedContentItem is not null
-        && OrderedContentItems.IndexOf(SelectedContentItem) >= 0
-        && OrderedContentItems.IndexOf(SelectedContentItem) < OrderedContentItems.Count - 1;
+    public OverlayBlockOrderRowViewModel? SelectedOrderRow
+    {
+        get => _selectedOrderRow;
+        set
+        {
+            if (!Set(ref _selectedOrderRow, value)) return;
+            SelectedContentItem = value?.Group;
+            if (value?.Metric is { } metric)
+            {
+                if (!MetricChoices.Any(choice => choice.Identity.Equals(metric.Identity, StringComparison.OrdinalIgnoreCase)))
+                    RefreshMetricChoicesFor(value.Group);
+                SelectedMetric = MetricChoices.FirstOrDefault(choice => choice.Identity.Equals(metric.Identity, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+                SelectedMetric = null;
+            Raise(nameof(CanMoveContentUp));
+            Raise(nameof(CanMoveContentDown));
+            Raise(nameof(CanRemoveSelectedContent));
+            Raise(nameof(HasSelectedMetric));
+        }
+    }
+
+    public bool HasSelectedMetric => SelectedOrderRow?.Metric is not null;
+    public bool ShowMetricEditorHint => !HasSelectedMetric;
+    public bool CanRemoveSelectedContent => SelectedOrderRow is { IsMetric: false };
+    public bool CanMoveContentUp => CanMoveSelectedOrderRow(-1);
+    public bool CanMoveContentDown => CanMoveSelectedOrderRow(1);
 
     public string SelectedSeriesCategory
     {
@@ -170,6 +203,13 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
 
     public OverlayBlockContentDialogViewModel CreateContentPickerDraft() => new(this);
 
+    public void Dispose() => _owner.OverlayRows.CollectionChanged -= OnOverlayRowsChanged;
+
+    private void OnOverlayRowsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        RefreshDynamicChoices();
+    }
+
     public void CommitContentPickerDraft(OverlayBlockContentDialogViewModel pickerDraft)
     {
         var selectedItem = pickerDraft.SelectedContentItem;
@@ -185,6 +225,10 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         OrderedContentItems.Clear();
         foreach (var item in pickerDraft.OrderedContentItems)
             OrderedContentItems.Add(new OverlayBlockItemChoiceViewModel(item.Kind, item.Value, GetItemLabel(item.Kind, item.Value)));
+        _metricOrder.Clear();
+        foreach (var entry in pickerDraft._metricOrder) _metricOrder[entry.Key] = entry.Value.ToList();
+        _customMetricOrderGroups.Clear();
+        _customMetricOrderGroups.UnionWith(pickerDraft._customMetricOrderGroups);
 
         CategoriesChoices.Clear();
         foreach (var (key, name) in Categories)
@@ -213,6 +257,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             ? null
             : OrderedContentItems.FirstOrDefault(item => item.Kind == selectedItem.Kind
                 && item.Value.Equals(selectedItem.Value, StringComparison.OrdinalIgnoreCase));
+        RebuildOrderRows();
     }
 
     public void AddSeriesPattern()
@@ -226,9 +271,16 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
 
     public void MoveSelectedContent(int offset)
     {
-        if (SelectedContentItem is null) return;
-        var current = OrderedContentItems.IndexOf(SelectedContentItem);
-        MoveContent(current, current + offset);
+        if (SelectedOrderRow is null) return;
+        if (!SelectedOrderRow.IsMetric)
+        {
+            var currentGroup = OrderedContentItems.IndexOf(SelectedOrderRow.Group);
+            MoveContent(currentGroup, currentGroup + offset);
+            SelectedOrderRow = OrderRows.FirstOrDefault(row => !row.IsMetric && ReferenceEquals(row.Group, SelectedContentItem));
+            return;
+        }
+        var index = OrderRows.IndexOf(SelectedOrderRow);
+        MoveOrderRow(index, index + offset);
     }
 
     public void MoveContent(int sourceIndex, int targetIndex)
@@ -241,6 +293,56 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         SelectedContentItem = item;
         Raise(nameof(CanMoveContentUp));
         Raise(nameof(CanMoveContentDown));
+        RebuildOrderRows();
+    }
+
+    public void MoveOrderRow(int sourceIndex, int targetIndex)
+    {
+        if (sourceIndex < 0 || sourceIndex >= OrderRows.Count || targetIndex < 0 || targetIndex >= OrderRows.Count
+            || sourceIndex == targetIndex) return;
+        var row = OrderRows[sourceIndex];
+        if (!row.IsMetric)
+        {
+            var sourceGroupIndex = OrderedContentItems.IndexOf(row.Group);
+            var targetGroupIndex = OrderedContentItems.IndexOf(OrderRows[targetIndex].Group);
+            if (sourceGroupIndex < 0 || targetGroupIndex < 0) return;
+            MoveContent(sourceGroupIndex, targetGroupIndex);
+            SelectedOrderRow = OrderRows.FirstOrDefault(candidate => !candidate.IsMetric && ReferenceEquals(candidate.Group, row.Group));
+            return;
+        }
+
+        var targetRow = OrderRows[targetIndex];
+        if (!targetRow.IsMetric || !targetRow.Group.Kind.Equals(row.Group.Kind, StringComparison.OrdinalIgnoreCase)
+            || !targetRow.Group.Value.Equals(row.Group.Value, StringComparison.OrdinalIgnoreCase)) return;
+        var groupKey = row.GroupKey;
+        var siblings = OrderRows.Where(candidate => candidate.IsMetric && candidate.GroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase)).ToList();
+        var from = siblings.IndexOf(row);
+        var to = siblings.IndexOf(targetRow);
+        if (from < 0 || to < 0) return;
+        siblings.RemoveAt(from);
+        siblings.Insert(to, row);
+        _metricOrder[groupKey] = siblings.Select(candidate => candidate.Identity).ToList();
+        _customMetricOrderGroups.Add(groupKey);
+        RebuildOrderRows();
+        SelectedOrderRow = OrderRows.FirstOrDefault(candidate => candidate.IsMetric
+            && candidate.GroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase)
+            && candidate.Identity.Equals(row.Identity, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool CanMoveSelectedOrderRow(int offset)
+    {
+        if (SelectedOrderRow is null) return false;
+        if (!SelectedOrderRow.IsMetric)
+        {
+            var groupIndex = OrderedContentItems.IndexOf(SelectedOrderRow.Group);
+            return groupIndex + offset >= 0 && groupIndex + offset < OrderedContentItems.Count;
+        }
+        var current = OrderRows.IndexOf(SelectedOrderRow);
+        var target = current + offset;
+        if (target < 0 || target >= OrderRows.Count) return false;
+        var targetRow = OrderRows[target];
+        return !SelectedOrderRow.IsMetric || targetRow.IsMetric
+            && targetRow.GroupKey.Equals(SelectedOrderRow.GroupKey, StringComparison.OrdinalIgnoreCase);
     }
 
     public void RemoveSelectedContent()
@@ -270,6 +372,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             TemplateChoices.Add(CreateChoice("template", template.Id, template.Text, () => _editingTemplateId = template.Id));
         foreach (var item in OrderedContentItems)
             item.UpdateLabel(GetItemLabel(item.Kind, item.Value));
+        RebuildOrderRows();
     }
 
     private void RefreshSeriesChoices()
@@ -399,6 +502,41 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             .Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value })
             .ToList();
         ResultMetricOverrides = _metricOverrides.Values.Select(Clone).ToArray();
+        ResultMetricOrder = _customMetricOrderGroups.ToDictionary(key => key,
+            key => _metricOrder.TryGetValue(key, out var identities) ? identities.ToList() : [], StringComparer.OrdinalIgnoreCase);
+    }
+
+    public IReadOnlyDictionary<string, List<string>> ResultMetricOrder { get; private set; } =
+        new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+    public static string GetMetricOrderKey(string kind, string value) => $"{kind.ToLowerInvariant()}:{value}";
+
+    private void RebuildOrderRows()
+    {
+        var selected = _selectedOrderRow;
+        OrderRows.Clear();
+        var seenMetrics = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in OrderedContentItems)
+        {
+            OrderRows.Add(new OverlayBlockOrderRowViewModel(group));
+            var metrics = GetMetricsForItem(group).ToList();
+            if (_metricOrder.TryGetValue(GetMetricOrderKey(group.Kind, group.Value), out var order))
+            {
+                var positions = order.Select((identity, index) => (identity, index))
+                    .ToDictionary(pair => pair.identity, pair => pair.index, StringComparer.OrdinalIgnoreCase);
+                metrics = metrics.OrderBy(metric => positions.TryGetValue(metric.Identity, out var index) ? index : int.MaxValue).ToList();
+            }
+            foreach (var metric in metrics)
+                if (seenMetrics.Add(metric.Identity))
+                    OrderRows.Add(new OverlayBlockOrderRowViewModel(group, metric));
+        }
+        if (selected is not null)
+            SelectedOrderRow = OrderRows.FirstOrDefault(row => row.IsMetric == selected.IsMetric
+                && row.GroupKey.Equals(selected.GroupKey, StringComparison.OrdinalIgnoreCase)
+                && row.Identity.Equals(selected.Identity, StringComparison.OrdinalIgnoreCase));
+        Raise(nameof(CanMoveContentUp));
+        Raise(nameof(CanMoveContentDown));
+        Raise(nameof(CanRemoveSelectedContent));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

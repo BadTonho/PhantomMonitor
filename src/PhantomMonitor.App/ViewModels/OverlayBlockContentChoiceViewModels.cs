@@ -61,16 +61,24 @@ public sealed class OverlayBlockItemChoiceViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-public sealed class OverlayMetricEditChoiceViewModel
+public sealed class OverlayMetricEditChoiceViewModel : INotifyPropertyChanged
 {
     public OverlayMetricEditChoiceViewModel(OverlayMetricViewModel source)
     {
         Source = source;
-        Label = $"{source.Name} · {source.Value}";
+        Source.PropertyChanged += OnSourcePropertyChanged;
     }
 
     public OverlayMetricViewModel Source { get; }
-    public string Label { get; }
+    public string Label => $"{Source.Name} · {Source.Value}";
     public string Identity => Source.OverrideIdentity;
     public bool SupportsPrecision => Source.SeriesKey.HasValue;
+
+    private void OnSourcePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(OverlayMetricViewModel.Name) or nameof(OverlayMetricViewModel.Value))
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }

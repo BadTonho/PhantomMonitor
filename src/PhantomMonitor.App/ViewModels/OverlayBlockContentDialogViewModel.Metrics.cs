@@ -19,7 +19,7 @@ public sealed partial class OverlayBlockContentDialogViewModel
     public IReadOnlyList<string> MetricDecimalsOptions { get; } = ["Automática", "0", "1", "2", "3"];
     public bool CanEditMetricDecimals => SelectedMetric?.SupportsPrecision == true;
     public bool HasMetricChoices => MetricChoices.Count > 0;
-    public bool NoMetricChoices => !HasMetricChoices;
+    public bool NoMetricChoices => SelectedContentItem is { Kind: "category" or "series" } && !HasMetricChoices;
 
     public OverlayMetricEditChoiceViewModel? SelectedMetric
     {
@@ -87,20 +87,37 @@ public sealed partial class OverlayBlockContentDialogViewModel
 
     private void RefreshMetricChoices()
     {
-        MetricChoices.Clear();
         if (SelectedContentItem is { Kind: "category" or "series" } item)
-        {
-            var rows = _owner.OverlayRows.Where(row => item.Kind == "category"
-                ? !row.IsIndividualSeries && OverlayBlockKeys.ForIdentity(row.Identity).Equals(item.Value, StringComparison.OrdinalIgnoreCase)
-                : row.IsIndividualSeries && row.SeriesKey is { } key && key.MatchesPattern(item.Value));
-            foreach (var row in rows)
-                MetricChoices.Add(new OverlayMetricEditChoiceViewModel(row));
-        }
+            RefreshMetricChoicesFor(item);
+        else
+            MetricChoices.Clear();
         Raise(nameof(HasMetricChoices));
         Raise(nameof(NoMetricChoices));
-        SelectedMetric = MetricChoices.FirstOrDefault(choice =>
-            string.Equals(choice.Identity, SelectedMetric?.Identity, StringComparison.OrdinalIgnoreCase))
-            ?? MetricChoices.FirstOrDefault();
+        SelectedMetric = null;
+    }
+
+    private void RefreshMetricChoicesFor(OverlayBlockItemChoiceViewModel item)
+    {
+        MetricChoices.Clear();
+        foreach (var choice in GetMetricsForItem(item))
+            MetricChoices.Add(choice);
+        Raise(nameof(HasMetricChoices));
+        Raise(nameof(NoMetricChoices));
+    }
+
+    private IEnumerable<OverlayMetricEditChoiceViewModel> GetMetricsForItem(OverlayBlockItemChoiceViewModel item)
+    {
+        IEnumerable<OverlayMetricViewModel> rows = item.Kind switch
+        {
+            "category" => _owner.OverlayRows.Where(row => !row.IsIndividualSeries
+                && OverlayBlockKeys.ForIdentity(row.Identity).Equals(item.Value, StringComparison.OrdinalIgnoreCase)),
+            "series" => _owner.OverlayRows.Where(row => row.IsIndividualSeries && row.SeriesKey is { } key
+                && (key.IsPrimary
+                    ? !item.Value.Contains('*') && key.MatchesPattern(item.Value)
+                    : key.MatchesPattern(item.Value))),
+            _ => []
+        };
+        return rows.Select(row => new OverlayMetricEditChoiceViewModel(row));
     }
 
     private void LoadMetricOverrideDraft()

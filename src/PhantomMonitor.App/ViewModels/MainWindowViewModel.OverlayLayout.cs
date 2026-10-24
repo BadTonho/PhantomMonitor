@@ -51,10 +51,13 @@ public sealed partial class MainWindowViewModel
 
     public void SetOverlayBlockDefinition(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items,
         IEnumerable<OverlayGraph> graphs, IEnumerable<OverlayTemplate> templates,
-        IEnumerable<OverlayMetricOverrideConfig> metricOverrides)
+        IEnumerable<OverlayMetricOverrideConfig> metricOverrides,
+        IReadOnlyDictionary<string, List<string>> metricOrder)
     {
         block.Config.Items = items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList();
         block.Config.MetricOverrides = metricOverrides.Select(CloneOverlayMetricOverride).ToList();
+        block.Config.MetricOrder = metricOrder.Count == 0 ? null
+            : metricOrder.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase);
         _overlayGraphsDraft.Clear();
         foreach (var graph in graphs) _overlayGraphsDraft.Add(CloneOverlayGraph(graph));
         _overlayTemplatesDraft.Clear();
@@ -88,7 +91,8 @@ public sealed partial class MainWindowViewModel
             var previous = saved[index];
             if (current.Id != previous.Id || Math.Abs(current.X - previous.X) > 0.0001
                 || Math.Abs(current.Y - previous.Y) > 0.0001 || current.Items.Count != previous.Items.Count
-                || !OverlayDefinitionsEqual(current.MetricOverrides, previous.MetricOverrides))
+                || !OverlayDefinitionsEqual(current.MetricOverrides, previous.MetricOverrides)
+                || !MetricOrdersEqual(current.MetricOrder, previous.MetricOrder))
                 return true;
             for (var itemIndex = 0; itemIndex < current.Items.Count; itemIndex++)
                 if (current.Items[itemIndex].Kind != previous.Items[itemIndex].Kind
@@ -101,6 +105,15 @@ public sealed partial class MainWindowViewModel
 
     private static bool OverlayDefinitionsEqual<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)
         => System.Text.Json.JsonSerializer.Serialize(left) == System.Text.Json.JsonSerializer.Serialize(right);
+
+    private static bool MetricOrdersEqual(Dictionary<string, List<string>>? left, Dictionary<string, List<string>>? right)
+    {
+        left ??= new Dictionary<string, List<string>>();
+        right ??= new Dictionary<string, List<string>>();
+        if (left.Count != right.Count) return false;
+        return left.All(entry => right.TryGetValue(entry.Key, out var identities)
+            && entry.Value.SequenceEqual(identities, StringComparer.OrdinalIgnoreCase));
+    }
 
     public void SetOverlayCanvasSize(double width, double height)
     {
@@ -171,27 +184,49 @@ public sealed partial class MainWindowViewModel
         foreach (var block in blocks)
         {
             var desired = new List<object>();
+            var seenMetricIdentities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in block.Config.Items)
             {
                 if (item.Kind == "category")
                 {
-                    foreach (var plan in categoryPlans.Where(plan => OverlayBlockKeys.ForIdentity(plan.Identity) == item.Value))
-                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(block.GetMetricViewModel(row));
+                    var rows = categoryPlans.Where(plan => OverlayBlockKeys.ForIdentity(plan.Identity) == item.Value)
+                        .Select(plan => categoryRows.TryGetValue(plan.Identity, out var row) ? row : null)
+                        .Where(row => row is not null).Cast<OverlayMetricViewModel>();
+                    AppendOrderedMetricRows(block, item, rows, desired, seenMetricIdentities);
                 }
                 else if (item.Kind == "series")
                 {
-                    foreach (var plan in instancePlans.Where(plan => SensorKey.TryParse(plan.Identity, out var key)
+                    var rows = instancePlans.Where(plan => SensorKey.TryParse(plan.Identity, out var key)
                         && (key.IsPrimary
                             ? !item.Value.Contains('*') && key.MatchesPattern(item.Value)
                             : key.MatchesPattern(item.Value)
-                                && (profileSeries is null || profileSeries.Count == 0 || profileSeries.Any(key.MatchesPattern)))))
-                        if (categoryRows.TryGetValue(plan.Identity, out var row)) desired.Add(block.GetMetricViewModel(row));
+                                && (profileSeries is null || profileSeries.Count == 0 || profileSeries.Any(key.MatchesPattern))))
+                        .Select(plan => categoryRows.TryGetValue(plan.Identity, out var row) ? row : null)
+                        .Where(row => row is not null).Cast<OverlayMetricViewModel>();
+                    AppendOrderedMetricRows(block, item, rows, desired, seenMetricIdentities);
                 }
                 else if (item.Kind == "frametime") desired.Add(GetFrametimeGraphItem(block.Key + ":" + item.Value));
                 else if (extras.TryGetValue((item.Kind, item.Value), out var extra)) desired.Add(extra);
             }
             block.ReconcileContent(desired.Distinct(ReferenceEqualityComparer.Instance).ToArray());
         }
+    }
+
+    private static void AppendOrderedMetricRows(OverlayCanvasBlockViewModel block, OverlayBlockItemConfig item,
+        IEnumerable<OverlayMetricViewModel> rows, ICollection<object> desired, ISet<string> seenIdentities)
+    {
+        var groupKey = $"{item.Kind.ToLowerInvariant()}:{item.Value}";
+        var order = block.Config.MetricOrder is { } metricOrder && metricOrder.TryGetValue(groupKey, out var savedOrder)
+            ? savedOrder : [];
+        var positions = order.Select((identity, index) => (identity, index))
+            .ToDictionary(pair => pair.identity, pair => pair.index, StringComparer.OrdinalIgnoreCase);
+        var ordered = rows.Select((row, index) => (row, index))
+            .OrderBy(pair => positions.TryGetValue(pair.row.OverrideIdentity, out var position) ? position : int.MaxValue)
+            .ThenBy(pair => pair.index)
+            .Select(pair => pair.row);
+        foreach (var row in ordered)
+            if (seenIdentities.Add(row.OverrideIdentity))
+                desired.Add(block.GetMetricViewModel(row));
     }
 
     private void CopyOverlayLayoutToConfig()
@@ -218,7 +253,10 @@ public sealed partial class MainWindowViewModel
         X = block.X,
         Y = block.Y,
         Items = block.Items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList(),
-        MetricOverrides = (block.MetricOverrides ?? []).Select(CloneOverlayMetricOverride).ToList()
+        MetricOverrides = (block.MetricOverrides ?? []).Select(CloneOverlayMetricOverride).ToList(),
+        MetricOrder = block.MetricOrder is { Count: > 0 } metricOrder
+            ? metricOrder.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase)
+            : null
     };
 
     private static OverlayMetricOverrideConfig CloneOverlayMetricOverride(OverlayMetricOverrideConfig metricOverride) => new()

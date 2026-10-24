@@ -93,6 +93,19 @@ public sealed partial class AppConfig
                     item.Kind = "invalid";
             }
             block.Items.RemoveAll(item => item.Kind == "invalid");
+            var normalizedMetricOrder = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in block.MetricOrder ?? [])
+            {
+                var identities = entry.Value ?? [];
+                normalizedMetricOrder[entry.Key.Trim()] = identities.Where(identity => !string.IsNullOrWhiteSpace(identity))
+                    .Select(identity => identity.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            foreach (var key in normalizedMetricOrder.Where(entry => entry.Key.Length == 0 || entry.Value.Count == 0)
+                         .Select(entry => entry.Key).ToArray())
+                normalizedMetricOrder.Remove(key);
+            block.MetricOrder = normalizedMetricOrder.Count == 0 ? null : normalizedMetricOrder;
             block.MetricOverrides ??= [];
             block.MetricOverrides.RemoveAll(item => item is null);
             foreach (var metricOverride in block.MetricOverrides)

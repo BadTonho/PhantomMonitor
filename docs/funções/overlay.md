@@ -61,7 +61,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
 
 ## Editor visual do overlay
 
-O editor usa um canvas com grade e prévia ao vivo. Clique direito em uma área vazia cria um bloco; botão esquerdo arrasta com snap de 20 px e encaixe nas bordas dos blocos próximos (ou livremente segurando Shift), respeitando o tamanho do bloco e os limites do canvas; duplo clique abre o seletor multi-item; botão direito sobre um bloco abre as ações de edição e remoção. As posições normalizadas `x`/`y` vão de 0 a 1 e usam a janela monitorada como referência no Windows e a área disponível no Linux. Conteúdo e posição ficam em rascunho até **Salvar e aplicar**. Configurações antigas são migradas de `layout` e demais opções legadas para `blocks`; sem posições salvas, os blocos começam na ordem vertical padrão.
+O editor usa um canvas com grade e prévia ao vivo. Clique direito em uma área vazia cria um bloco; botão esquerdo arrasta com snap de 20 px e encaixe nas bordas dos blocos próximos (ou livremente segurando Shift), respeitando o tamanho do bloco e os limites do canvas; duplo clique abre o seletor multi-item; botão direito sobre um bloco abre as ações de edição e remoção. No diálogo do bloco, categorias e padrões são cabeçalhos expansíveis na lista **Ordem no bloco**, com as métricas atualmente exibidas como sublinhas. Selecione uma métrica para editá-la diretamente; arraste as métricas dentro do grupo para mudar sua ordem. Regras sobrepostas mostram cada métrica uma vez, no primeiro grupo correspondente. A ordem personalizada é salva em `metricOrder`; novas métricas aparecem no fim do grupo e configurações sem essa propriedade mantêm a ordem padrão. As posições normalizadas `x`/`y` vão de 0 a 1 e usam a janela monitorada como referência no Windows e a área disponível no Linux. Conteúdo e posição ficam em rascunho até **Salvar e aplicar**. Configurações antigas são migradas de `layout` e demais opções legadas para `blocks`; sem posições salvas, os blocos começam na ordem vertical padrão.
 
 ## Configuração
 
@@ -75,6 +75,7 @@ Configuração atual por `overlay.blocks` e aparência global na página **Confi
 - `layout` - Mapa de posições normalizadas dos blocos (`cpu`, `gpu`, `ram`, `disk`, `network`, `fans`, `motherboard`, `fps`, `extras`), cada uma com `x` e `y` entre 0 e 1.
 - `blocks` - Blocos com `{ id, x, y, items: [{ kind, value }] }`; `kind` aceita categoria, série, gráfico, template ou frametime. Vários itens podem ser reunidos em cada bloco.
 - `overlay.blocks[].metricOverrides` - Ajustes opcionais por sensor e específicos de cada bloco: `identity`, `displayName`, `decimals` (0–3) e `color`.
+- `overlay.blocks[].metricOrder` - Ordem opcional das linhas de métricas por regra do bloco (`category:<categoria>` ou `series:<padrão>`); métricas detectadas depois são acrescentadas ao fim do grupo.
 - `compactMode` - Modo compacto: reduz paddings, espaçamento das linhas e a altura do gráfico de frametime
 - `accentColor` - Cor de destaque (hex) aplicada à linha do gráfico de frametime e ao contorno do painel
 - `fontSize` - Tamanho base da fonte do OSD em pt (8–20; sublinhas de detalhes/estatísticas usam fonte −2 pt)

@@ -77,6 +77,9 @@ public sealed class OverlayBlockConfig
     public double Y { get; set; }
     public List<OverlayBlockItemConfig> Items { get; set; } = [];
     public List<OverlayMetricOverrideConfig> MetricOverrides { get; set; } = [];
+    /// <summary>Optional metric row order per content rule, keyed by "kind:value".</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, List<string>>? MetricOrder { get; set; }
 }
 
 public sealed class OverlayBlockItemConfig

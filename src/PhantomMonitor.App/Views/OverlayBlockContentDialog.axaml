@@ -11,14 +11,17 @@
       <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="8">
         <TextBlock Text="ORDEM NO BLOCO" FontSize="10" FontWeight="Bold" />
         <ListBox Grid.Row="1" x:Name="ContentItemsList"
-                 ItemsSource="{Binding OrderedContentItems}"
-                 SelectedItem="{Binding SelectedContentItem, Mode=TwoWay}"
+                 ItemsSource="{Binding OrderRows}"
+                 SelectedItem="{Binding SelectedOrderRow, Mode=TwoWay}"
                  MinHeight="120" VerticalAlignment="Stretch">
           <ListBox.ItemTemplate>
-            <DataTemplate DataType="{x:Type vm:OverlayBlockItemChoiceViewModel}">
+            <DataTemplate DataType="{x:Type vm:OverlayBlockOrderRowViewModel}">
               <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2">
                 <TextBlock Text="{Binding Kind}" Classes="muted" FontSize="9" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" IsVisible="{Binding IsGroup}" />
+                <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" Margin="14,0,0,0" IsVisible="{Binding IsMetric}" />
               </Grid>
             </DataTemplate>
           </ListBox.ItemTemplate>
@@ -26,22 +29,19 @@
         <WrapPanel Grid.Row="2" Orientation="Horizontal">
           <Button Content="Mover para cima" IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" Margin="0,0,8,8" />
           <Button Content="Mover para baixo" IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" Margin="0,0,8,8" />
-          <Button Content="Remover da lista" Click="OnRemoveContentClick" Margin="0,0,8,8" />
+          <Button Content="Remover da lista" IsEnabled="{Binding CanRemoveSelectedContent}" Click="OnRemoveContentClick" Margin="0,0,8,8" />
         </WrapPanel>
       </Grid>
 
       <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="8">
           <TextBlock Text="EDITAR LINHA DO SENSOR" FontSize="10" FontWeight="Bold"
-                     IsVisible="{Binding CanEditSelectedContent}" />
+                     IsVisible="{Binding HasSelectedMetric}" />
           <TextBlock Text="Selecione uma categoria ou série na lista para editar sua apresentação."
                      Classes="muted" TextWrapping="Wrap" IsVisible="{Binding ShowMetricEditorHint}" />
-          <ComboBox ItemsSource="{Binding MetricChoices}"
-                    SelectedItem="{Binding SelectedMetric, Mode=TwoWay}"
-                    IsVisible="{Binding HasMetricChoices}" />
           <TextBlock Text="Nenhuma linha de sensor disponível para este item agora."
                      Classes="muted" IsVisible="{Binding NoMetricChoices}" />
-          <StackPanel IsVisible="{Binding HasMetricChoices}" Spacing="8">
+          <StackPanel IsVisible="{Binding HasSelectedMetric}" Spacing="8">
             <TextBox PlaceholderText="Nome exibido (vazio usa o nome atual)"
                      Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">

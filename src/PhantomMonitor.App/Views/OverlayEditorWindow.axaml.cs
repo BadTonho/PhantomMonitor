@@ -232,7 +232,7 @@ public partial class OverlayEditorWindow : Window
         var dialog = new OverlayBlockContentDialog(ViewModel, block);
         if (await dialog.ShowDialog<bool>(this))
             ViewModel.SetOverlayBlockDefinition(block, dialog.Result, dialog.ResultGraphs, dialog.ResultTemplates,
-                dialog.ResultMetricOverrides);
+                dialog.ResultMetricOverrides, dialog.ResultMetricOrder);
     }
 
     private void OnRemoveBlockClick(object? sender, RoutedEventArgs e)

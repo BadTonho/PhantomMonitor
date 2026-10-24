@@ -14,7 +14,7 @@ public partial class OverlayBlockContentDialog : Window
     private const double ReorderStartThreshold = 5;
 
     private IPointer? _reorderPointer;
-    private OverlayBlockItemChoiceViewModel? _reorderItem;
+    private OverlayBlockOrderRowViewModel? _reorderItem;
     private Point _reorderStart;
     private bool _isReordering;
 
@@ -22,6 +22,7 @@ public partial class OverlayBlockContentDialog : Window
 
     public IReadOnlyList<OverlayBlockItemConfig> Result => ViewModel.Result;
     public IReadOnlyList<OverlayMetricOverrideConfig> ResultMetricOverrides => ViewModel.ResultMetricOverrides;
+    public IReadOnlyDictionary<string, List<string>> ResultMetricOrder => ViewModel.ResultMetricOrder;
     public IReadOnlyList<OverlayGraph> ResultGraphs => ViewModel.ResultGraphs;
     public IReadOnlyList<OverlayTemplate> ResultTemplates => ViewModel.ResultTemplates;
 
@@ -62,10 +63,10 @@ public partial class OverlayBlockContentDialog : Window
     {
         if (sender is not ListBox list
             || !e.GetCurrentPoint(list).Properties.IsLeftButtonPressed
-            || e.Source is not Control { DataContext: OverlayBlockItemChoiceViewModel item })
+            || e.Source is not Control { DataContext: OverlayBlockOrderRowViewModel item })
             return;
 
-        ViewModel.SelectedContentItem = item;
+        ViewModel.SelectedOrderRow = item;
         _reorderPointer = e.Pointer;
         _reorderItem = item;
         _reorderStart = e.GetPosition(list);
@@ -94,11 +95,11 @@ public partial class OverlayBlockContentDialog : Window
             return;
 
         var insertionIndex = FindInsertionIndex(list, currentPosition.Y);
-        var sourceIndex = ViewModel.OrderedContentItems.IndexOf(_reorderItem);
+        var sourceIndex = ViewModel.OrderRows.IndexOf(_reorderItem);
         if (sourceIndex < 0 || insertionIndex < 0) return;
         if (sourceIndex < insertionIndex) insertionIndex--;
-        var targetIndex = Math.Clamp(insertionIndex, 0, ViewModel.OrderedContentItems.Count - 1);
-        ViewModel.MoveContent(sourceIndex, targetIndex);
+        var targetIndex = Math.Clamp(insertionIndex, 0, ViewModel.OrderRows.Count - 1);
+        ViewModel.MoveOrderRow(sourceIndex, targetIndex);
     }
 
     private static int FindInsertionIndex(ListBox list, double pointerY)
@@ -156,4 +157,11 @@ public partial class OverlayBlockContentDialog : Window
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(false);
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (DataContext is OverlayBlockContentDialogViewModel viewModel)
+            viewModel.Dispose();
+        base.OnClosed(e);
+    }
 }

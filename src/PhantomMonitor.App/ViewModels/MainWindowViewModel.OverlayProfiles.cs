@@ -195,8 +195,11 @@ public sealed partial class MainWindowViewModel
         _overlayOpacityEffective = profile?.Opacity is { } opacity
             ? Math.Clamp(opacity, 0.1, 1.0)
             : Math.Clamp(config.OverlayOpacity <= 0 ? 0.85 : config.OverlayOpacity, 0.1, 1.0);
-        FollowOffsetX = profile?.OffsetX ?? config.OverlayPosition.X;
-        FollowOffsetY = profile?.OffsetY ?? config.OverlayPosition.Y;
+        var followOffsetX = profile?.OffsetX ?? config.OverlayPosition.X;
+        var followOffsetY = profile?.OffsetY ?? config.OverlayPosition.Y;
+        var followOffsetChanged = FollowOffsetX != followOffsetX || FollowOffsetY != followOffsetY;
+        FollowOffsetX = followOffsetX;
+        FollowOffsetY = followOffsetY;
         OverlayPanelVisible = profile?.Visible != false;
 
         var accentHex = string.IsNullOrWhiteSpace(profile?.AccentColor)
@@ -219,6 +222,13 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayBackgroundBrush));
         Raise(nameof(OverlayWidth));
         Raise(nameof(OverlayOpacity));
+        if (followOffsetChanged)
+        {
+            Raise(nameof(FollowOffsetX));
+            Raise(nameof(FollowOffsetY));
+            foreach (var block in _overlayBlocks)
+                block.RefreshCanvasPosition();
+        }
         RefreshOverlayGraphStrokes();
         if (fontChanged || fontFamilyChanged) RaiseOverlayAppearanceProperties();
 

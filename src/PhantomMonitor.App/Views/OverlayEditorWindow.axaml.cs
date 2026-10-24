@@ -125,8 +125,8 @@ public partial class OverlayEditorWindow : Window
         _pendingBlockPlacements.Remove(block);
 
         ViewModel.ApplyOverlayBlockPosition(block.Key,
-            OverlayPositionMath.ToNormalized(point.X, EditorBlockCanvas.Bounds.Width, blockSize.Width),
-            OverlayPositionMath.ToNormalized(point.Y, EditorBlockCanvas.Bounds.Height, blockSize.Height));
+            OverlayPositionMath.ToNormalized(point.X, EditorBlockCanvas.Bounds.Width, blockSize.Width, block.PreviewOriginOffsetX),
+            OverlayPositionMath.ToNormalized(point.Y, EditorBlockCanvas.Bounds.Height, blockSize.Height, block.PreviewOriginOffsetY));
     }
 
     private void OnBlockPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -173,8 +173,8 @@ public partial class OverlayEditorWindow : Window
 
         ViewModel.ApplyOverlayBlockPosition(
             _dragBlock.Key,
-            OverlayPositionMath.ToNormalized(x, canvasWidth, control.Bounds.Width),
-            OverlayPositionMath.ToNormalized(y, canvasHeight, control.Bounds.Height));
+            OverlayPositionMath.ToNormalized(x, canvasWidth, control.Bounds.Width, _dragBlock.PreviewOriginOffsetX),
+            OverlayPositionMath.ToNormalized(y, canvasHeight, control.Bounds.Height, _dragBlock.PreviewOriginOffsetY));
         e.Handled = true;
     }
 

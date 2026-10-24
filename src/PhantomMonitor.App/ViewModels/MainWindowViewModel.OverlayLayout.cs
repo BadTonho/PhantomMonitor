@@ -169,6 +169,8 @@ public sealed partial class MainWindowViewModel
         OverlayCanvasHeight = height;
         foreach (var block in _overlayAppliedBlocks)
             block.SetCanvasSize(width, height);
+        foreach (var block in _overlayBlocks)
+            block.RefreshCanvasPosition();
     }
 
     public void SetOverlayEditorCanvasSize(double width, double height)

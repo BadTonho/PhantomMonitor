@@ -61,7 +61,7 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
 
 ## Editor visual do overlay
 
-As posições continuam armazenadas apenas como frações normalizadas `x`/`y`. Redimensionar o canvas não altera o layout salvo; ao arrastar, a conversão usa o espaço útil após descontar o tamanho renderizado do bloco. O overlay aplica essas mesmas frações à área atual da janela monitorada ou da tela, usando a largura e a altura reais de cada bloco.
+As posições continuam armazenadas apenas como frações normalizadas `x`/`y`. Redimensionar o canvas não altera o layout salvo; ao arrastar, a conversão usa o espaço útil após descontar o tamanho renderizado do bloco. No Windows, a prévia também representa a origem definida por `overlayPosition` ou pelo perfil ativo, escalada pela área de referência atual; o arraste desconta essa origem antes de atualizar as frações. O overlay aplica essas mesmas frações à área atual da janela monitorada ou da tela, usando a largura e a altura reais de cada bloco.
 
 No Windows, enquanto o Phantom Monitor ou o Explorer estiver em foco, as posições do overlay continuam usando a última janela externa válida como referência. Antes de haver uma janela externa, a tela primária é usada.
 

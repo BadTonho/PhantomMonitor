@@ -50,7 +50,7 @@ The device accents are orange for GPU, cyan for CPU, purple for RAM, blue for di
 
 ## Visual overlay editor
 
-Positions remain stored only as normalized `x`/`y` fractions. Resizing the canvas does not change the saved layout; dragging converts through the available area after subtracting the rendered block size. The overlay applies those same fractions to the current monitored window or screen area, using each block's actual width and height.
+Positions remain stored only as normalized `x`/`y` fractions. Resizing the canvas does not change the saved layout; dragging converts through the available area after subtracting the rendered block size. On Windows, the preview also represents the origin set by `overlayPosition` or the active profile, scaled to the current reference area; dragging subtracts that origin before updating the fractions. The overlay applies those same fractions to the current monitored window or screen area, using each block's actual width and height.
 
 On Windows, while Phantom Monitor or Explorer is focused, overlay positions continue to use the last valid external window as their reference. Before an external window is available, the primary screen is used.
 

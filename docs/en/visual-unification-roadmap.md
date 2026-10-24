@@ -112,8 +112,9 @@ First task, before anything else: **map equivalences** between windows/flows.
       (the alert toast gained `AlertToast*` in F1.6, including the update
       banner already token-driven). The WPF "gradient/accent" was dead code
       (defined in Styles.xaml, never consumed) and was not ported; the CTAs
-      (`Button.action`) follow the platform accent (Fluent, dynamic on
-      Windows) in both themes — a deliberate Neptune-preservation decision.
+      (`Button.action`) use the platform accent (Fluent, dynamic on Windows) by
+      default. The Phase 3 custom palette can override it and the selected nav
+      indicator.
 - [x] **F1.2 — Complete dashboard on Avalonia**: temperature pills with color
       by range (green/warm/hot/unknown) and painted usage metrics (<75
       primary, <90 warm, ≥90 hot — WPF parity); mono detail lines for CPU/GPU
@@ -186,7 +187,7 @@ First task, before anything else: **map equivalences** between windows/flows.
       self-contained single-file publish (`releases/win-x64/` with
       PresentMon.exe + config.example.json; green build and live smoke in both
       themes without `errors.log`). PhantomSensorLib P/Invoke remains its own
-      item below; coverage revalidated (46 homonymous keys in both
+      item below; coverage revalidated (49 homonymous keys in both
       dictionaries, zero orphans).
 
 **Acceptance criteria:** 1:1 functional parity with today's WPF on Windows;
@@ -256,6 +257,14 @@ Linux). Both themes smoke-tested without `errors.log`.
 - [x] Persistence in `config.json` (via `AppConfig.Save()`) and re-load at boot
       (`ApplyConfiguredTheme` — dictionary swapped before creating the views).
       Canonical CLI `--theme=<name>`; legacy `--ui-theme=` is still accepted.
+- [x] Per-theme custom palettes in `themePalettes`: five base colors (surfaces,
+      text, accents/states, navigation, overlay) recolor their token families;
+      exact overrides for all 49 keys take precedence and survive family edits.
+      The dedicated editor uses a spectrum and HEX ColorView, keeps edits as a
+      draft after **Done**, and leaves persistence/application to **Save and
+      apply**. The primary accent updates action buttons and selected states;
+      failed saves leave the applied palette intact. Older configs keep builtin
+      colors; invalid HEX values and unknown keys are discarded.
 - [ ] (Future, out of scope now) extra themes: Light mode, custom via external
       file, import/export.
 

@@ -15,9 +15,9 @@
       Proveniência indicada por linha. Tokens sem equivalente no WPF (o Avalonia tem
       estruturas a mais — chips CPU/GPU, botão × do overlay, rodapé dim) continuam
       "estimate" na mesma família slate, marcados inline.
-      Nota F1.6: os botões de ação (Button.action) NÃO recebem token de fundo — seguem
-      o accent da plataforma (Fluent, dinâmico no Windows) nos dois temas por decisão
-      de preservação: nenhum visual atual do Neptune é perdido.
+      Nota F1.6: os botões de ação (Button.action accent) usam o accent da plataforma
+      (Fluent, dinâmico no Windows) por padrão. A paleta personalizada da Fase 3 pode
+      substituir esse accent em runtime.
     -->
 
     <!-- Superfícies -->

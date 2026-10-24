@@ -39,6 +39,10 @@ public sealed partial class AppConfig
     [JsonPropertyName("theme")]
     public string Theme { get; set; } = "neptune";
 
+    /// <summary>Personalizações opcionais, separadas por tema builtin.</summary>
+    [JsonPropertyName("themePalettes")]
+    public Dictionary<string, ThemePaletteConfig> ThemePalettes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     // Builds da era F1.6 serializavam o tema como `uiTheme`. O campo é lido nessa
     // grafia por compatibilidade, mas o texto documentado e escrito é `theme`
     // acima. Regra de migração: o legado só vale enquanto o canônico estiver no

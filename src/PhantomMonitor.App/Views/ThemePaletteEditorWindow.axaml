@@ -1,0 +1,95 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:color="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.ColorPicker"
+        x:Class="PhantomMonitor.App.Views.ThemePaletteEditorWindow"
+        Title="Personalizar paleta"
+        Width="940" Height="720" MinWidth="760" MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgWindowBrush}">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="22" RowSpacing="14">
+    <StackPanel Spacing="4">
+      <TextBlock Text="PERSONALIZAR PALETA" Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="16" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding ThemeName}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" />
+      <TextBlock Text="As cores ficam como rascunho até você clicar em Salvar e aplicar nas Configurações."
+                 Classes="muted" FontSize="10" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <TabControl Grid.Row="1">
+      <TabItem Header="Cores por grupo">
+        <Grid ColumnDefinitions="250,*" ColumnSpacing="16" Margin="4,12,4,4">
+          <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
+                   Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
+                   BorderThickness="1">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Spacing="2" Margin="4">
+                  <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBodyBrush}"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Hex}" Foreground="{DynamicResource TextMonoBrush}"
+                             FontSize="10" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding SelectedGroupName}" Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="A cor-base recolore os tons do grupo e mantém a transparência de cada item."
+                         Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <color:ColorView Color="{Binding SelectedBaseColor, Mode=TwoWay}"
+                               IsAlphaEnabled="False" IsAlphaVisible="False"
+                               IsHexInputVisible="True" IsColorSpectrumVisible="True"
+                               IsVisible="{Binding HasSelectedGroup}" />
+            </ScrollViewer>
+            <Button Grid.Row="2" Content="Restaurar grupo ao tema" Click="OnResetGroupClick"
+                    HorizontalAlignment="Left" IsEnabled="{Binding HasSelectedGroup}" />
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Avançado · 49 cores">
+        <Grid ColumnDefinitions="270,*" ColumnSpacing="16" Margin="4,12,4,4">
+          <ListBox ItemsSource="{Binding Tokens}" SelectedItem="{Binding SelectedToken, Mode=TwoWay}"
+                   Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
+                   BorderThickness="1">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Spacing="2" Margin="4">
+                  <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextBodyBrush}"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Hex}" Foreground="{DynamicResource TextMonoBrush}"
+                             FontSize="10" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding SelectedTokenName}" Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{Binding SelectedToken.Key}" Classes="muted" FontSize="10" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <color:ColorView Color="{Binding SelectedTokenColor, Mode=TwoWay}"
+                               IsAlphaEnabled="True" IsAlphaVisible="True"
+                               IsHexInputVisible="True" IsColorSpectrumVisible="True"
+                               IsVisible="{Binding HasSelectedToken}" />
+            </ScrollViewer>
+            <Button Grid.Row="2" Content="Voltar à cor do grupo" Click="OnResetTokenClick"
+                    HorizontalAlignment="Left" IsEnabled="{Binding HasSelectedToken}" />
+          </Grid>
+        </Grid>
+      </TabItem>
+    </TabControl>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Restaurar paleta" Click="OnResetAllClick" HorizontalAlignment="Left" />
+      <Button Content="Cancelar" Click="OnCancelClick" />
+      <Button Classes="action accent" Content="Concluído" Click="OnDoneClick" />
+    </StackPanel>
+  </Grid>
+</Window>

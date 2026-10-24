@@ -89,6 +89,7 @@ public sealed partial class MainWindowViewModel
 
         var oldInterval = _config.UpdateIntervalMs;
         var oldTheme = _config.Theme;
+        var oldThemePalettes = CloneThemePalettes(_config.ThemePalettes);
         var oldCsv = _config.LogToCsv;
         var oldJson = _config.LogToJson;
         var oldJournal = _config.LogToJsonJournal;
@@ -121,6 +122,8 @@ public sealed partial class MainWindowViewModel
             || UpdateBetaChannel != oldUpdateBeta
             || updateRepository != oldUpdateRepository;
         var themeChanged = (ThemeIndex == 1 ? "slate" : "neptune") != oldTheme;
+        var themePalettesChanged = ThemePalettesDraftChanged;
+        var themeAppearanceChanged = themeChanged || themePalettesChanged;
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
             || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001
             || Math.Abs(OverlayBackgroundOpacityPercent / 100.0 - oldOverlayBackgroundOpacity) > 0.000001
@@ -136,7 +139,7 @@ public sealed partial class MainWindowViewModel
             || overlayAppearanceChanged;
 
         if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged && !updateChanged
-            && !themeChanged)
+            && !themeAppearanceChanged)
         {
             ConfigureTelemetryExporter();
             SettingsMessage = "Nenhuma alteração para salvar.";
@@ -154,6 +157,7 @@ public sealed partial class MainWindowViewModel
         _config.Update.CheckBeta = UpdateBetaChannel;
         _config.Update.Repository = updateRepository;
         _config.Theme = ThemeIndex == 1 ? "slate" : "neptune";
+        _config.ThemePalettes = CloneThemePalettesDraft();
         _config.Overlay.Width = overlayWidth;
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
         _config.Overlay.BackgroundColor = backgroundColor.Length == 0 ? null : backgroundColor.ToUpperInvariant();
@@ -178,6 +182,7 @@ public sealed partial class MainWindowViewModel
             _config.Update.CheckBeta = oldUpdateBeta;
             _config.Update.Repository = oldUpdateRepository;
             _config.Theme = oldTheme;
+            _config.ThemePalettes = oldThemePalettes;
             _config.Overlay.Width = oldOverlayWidth;
             _config.OverlayOpacity = oldOverlayOpacity;
             _config.Overlay.BackgroundColor = oldOverlayBackgroundColor;
@@ -202,14 +207,19 @@ public sealed partial class MainWindowViewModel
         // Fase 3 — troca de dicionário em runtime (isolada ou junto das demais
         // alterações). As views reagem pelos DynamicResource e a VM repinta os
         // pincéis resolvidos por token no evento ThemeChanged.
-        if (themeChanged)
-            App.ApplyTheme(_config.Theme);
+        if (themeAppearanceChanged)
+        {
+            _config.ThemePalettes.TryGetValue(_config.Theme, out var activePalette);
+            App.ApplyTheme(_config.Theme, activePalette);
+        }
 
         // Tema mudou sozinho: nada mais a reconfigurar; mensagem dedicada.
-        if (themeChanged && !intervalChanged && !loggingChanged && !telemetryChanged
+        if (themeAppearanceChanged && !intervalChanged && !loggingChanged && !telemetryChanged
             && !updateChanged && !overlayChanged)
         {
-            SettingsMessage = "Tema salvo e aplicado sem reiniciar.";
+            SettingsMessage = themePalettesChanged && !themeChanged
+                ? "Paleta salva e aplicada sem reiniciar."
+                : "Tema e paleta salvos e aplicados sem reiniciar.";
             return;
         }
 
@@ -267,7 +277,8 @@ public sealed partial class MainWindowViewModel
                         ? "Logs atualizados sem reiniciar a coleta."
                         : "Opções de log salvas para a próxima coleta.";
 
-        if (updateChanged && !intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged)
+        if (updateChanged && !intervalChanged && !loggingChanged && !telemetryChanged
+            && !overlayChanged && !themeAppearanceChanged)
         {
             SettingsMessage = "Preferências de atualização salvas.";
         }

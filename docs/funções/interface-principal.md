@@ -33,7 +33,7 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
   - Temperatura: Pílulas discretas com tons esmeralda (≤ 65°C), âmbar (≤ 80°C) ou coral (> 80°C).
 - **Tokens de tema:** no app único, as cores e os acentos das
   views moram em dicionários de tema (`src/PhantomMonitor.App/Themes/Tokens.*.axaml`,
-  46 chaves espelhadas entre os dois temas) e são consumidas via `{DynamicResource}`
+  49 chaves espelhadas entre os dois temas) e são consumidas via `{DynamicResource}`
   (as faixas dinâmicas usam brushes resolvidos por chave no ViewModel — mesmo
   catálogo). A F1.6 fecha os dois temas builtin: `Neptune` preserva o visual
   original do Avalonia e `Slate` porta verbatim o visual do WPF aposentado
@@ -49,8 +49,13 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
   F1.6: nav da sidebar com estado selecionado (fundo + indicador 3×14) via
   tokens `Nav*`, toasts de alerta com tokens `AlertToast*` (borda/título âmbar
   no Slate, como o popup do WPF) e publicação win-x64 do binário unificado.
-  Os botões de ação primários não têm token: seguem o accent do tema da
-  plataforma (Fluent — no Windows, o acento do próprio sistema) nos dois temas.
+  O card **INTERFACE** permite personalizar cinco cores-base por tema e, no modo
+  avançado, substituir qualquer uma das 49 chaves. As paletas ficam separadas
+  para Neptune e Slate; as substituições individuais prevalecem sobre as cores
+  da família. **Concluído** mantém o rascunho e **Salvar e aplicar** persiste e
+  aplica a seleção somente depois que o config for salvo. O accent principal
+  também atualiza os botões de ação e o indicador de navegação selecionada,
+  independentemente do accent do Windows.
 
 ## Elevação de privilégio
 

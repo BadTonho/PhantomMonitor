@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.App.ViewModels;
+using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.Views;
@@ -10,6 +11,7 @@ public sealed partial class MainWindow : Window
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     private OverlayWindow? _overlayWindow;
     private OverlayEditorWindow? _overlayEditorWindow;
+    private ThemePaletteEditorWindow? _themePaletteEditorWindow;
     private HardwareInventoryWindow? _hardwareInventoryWindow;
     private TrayIconService? _tray;
 
@@ -238,6 +240,23 @@ public sealed partial class MainWindow : Window
         }
 
         _overlayEditorWindow.Activate();
+    }
+
+    private async void OnOpenThemePaletteEditorRequested(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_themePaletteEditorWindow is { } current)
+        {
+            current.Activate();
+            return;
+        }
+
+        var selectedTheme = ViewModel.SelectedThemeKey;
+        var editor = new ThemePaletteEditorWindow(ViewModel.CreateThemePaletteEditor());
+        _themePaletteEditorWindow = editor;
+        editor.Closed += (_, _) => _themePaletteEditorWindow = null;
+        var palette = await editor.ShowDialog<ThemePaletteConfig?>(this);
+        if (palette is not null)
+            ViewModel.SetThemePaletteDraft(selectedTheme, palette);
     }
     private void OnRestartAsAdminClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestartAsAdmin();
     private void OnUpdateBadgeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSettings();

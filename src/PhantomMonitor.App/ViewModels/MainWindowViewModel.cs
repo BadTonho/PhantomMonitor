@@ -286,7 +286,14 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         "Neptune (visual original do Avalonia)",
         "Slate (porta verbatim do visual do WPF)"
     ];
-    public int ThemeIndex { get => _themeIndex; set => Set(ref _themeIndex, value); }
+    public int ThemeIndex
+    {
+        get => _themeIndex;
+        set
+        {
+            if (Set(ref _themeIndex, value)) Raise(nameof(SelectedThemeKey));
+        }
+    }
     private int _themeIndex;
 
     public bool LogToCsv { get => _logToCsv; set => Set(ref _logToCsv, value); }
@@ -383,6 +390,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     {
         _config = AppConfig.Load(ConfigPaths.ConfigFile);
         _config.Normalize();
+        _themePalettesDraft = CloneThemePalettes(_config.ThemePalettes);
         _overlayFontEffective = _config.Overlay.FontSize;
         _overlayWidthEffective = _config.Overlay.Width;
         _overlayOpacityEffective = Math.Clamp(_config.OverlayOpacity <= 0 ? 0.85 : _config.OverlayOpacity, 0.1, 1.0);

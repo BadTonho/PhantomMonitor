@@ -165,8 +165,8 @@ solved, re-evaluate the editor alongside the system subphase).
    --self-contained -p:PublishSingleFile=true` into `releases/win-x64/` with
    `PresentMon.exe` + `config.example.json`; live smoke of the published binary
    in both themes without `errors.log`. CTAs (`Button.action`) follow the
-   platform accent (Fluent, dynamic on Windows) in both themes — nothing of
-   Neptune is lost. Still open in Phase 1: unifying `Minigraph`/`HistoryChart`
+   platform accent (Fluent, dynamic on Windows) by default; the Phase 3 custom
+   palette can replace it. Still open in Phase 1: unifying `Minigraph`/`HistoryChart`
    (resolved by retiring the WPF in Phase 2) and the native `PhantomSensorLib`.
 
 ## 5. Port size (reference)

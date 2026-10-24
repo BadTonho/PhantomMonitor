@@ -8,8 +8,8 @@
             <TextBlock Text="Diagnóstico" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Resumo, erros e fontes de sensores detectadas neste sistema." Classes="muted" FontSize="11" />
           </StackPanel>
-          <Button Grid.Column="1" Classes="action" Content="Atualizar" Click="OnRefreshDiagnosticsClick" VerticalAlignment="Center" />
-          <Button Grid.Column="2" Classes="action" Content="Abrir arquivo de erros" Click="OnOpenErrorLogClick" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="action accent" Content="Atualizar" Click="OnRefreshDiagnosticsClick" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="action accent" Content="Abrir arquivo de erros" Click="OnOpenErrorLogClick" VerticalAlignment="Center" />
         </Grid>
 
         <StackPanel Orientation="Horizontal" Spacing="8">

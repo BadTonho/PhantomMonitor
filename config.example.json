@@ -4,6 +4,7 @@
   "logToJson": true,
   "logToJsonJournal": false,
   "theme": "neptune",
+  "themePalettes": {},
   "showOverlay": false,
   "toggleOverlayHotkey": "",
   "pauseMonitorHotkey": "Ctrl+Alt+P",

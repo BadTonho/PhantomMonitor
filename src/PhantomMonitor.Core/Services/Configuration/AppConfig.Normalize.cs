@@ -20,6 +20,40 @@ public sealed partial class AppConfig
         Theme = (Theme ?? "").Trim().ToLowerInvariant();
         if (Theme is not ("neptune" or "slate")) Theme = "neptune";
 
+        var normalizedPalettes = new Dictionary<string, ThemePaletteConfig>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (themeKey, palette) in ThemePalettes ?? [])
+        {
+            var key = (themeKey ?? "").Trim().ToLowerInvariant();
+            if (key is not ("neptune" or "slate") || palette is null) continue;
+
+            var bases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (groupKey, color) in palette.BaseColors ?? [])
+            {
+                var normalizedGroup = (groupKey ?? "").Trim();
+                if (ThemePaletteCatalog.GroupKeys.Contains(normalizedGroup)
+                    && color is not null
+                    && HexRgbColorRegex.IsMatch(color))
+                    bases[normalizedGroup] = color.ToUpperInvariant();
+            }
+
+            var overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (tokenKey, color) in palette.TokenOverrides ?? [])
+            {
+                var normalizedToken = (tokenKey ?? "").Trim();
+                if (ThemePaletteCatalog.TokenKeys.Contains(normalizedToken)
+                    && IsValidHexColor(color))
+                    overrides[normalizedToken] = color.ToUpperInvariant();
+            }
+
+            if (bases.Count > 0 || overrides.Count > 0)
+                normalizedPalettes[key] = new ThemePaletteConfig
+                {
+                    BaseColors = bases,
+                    TokenOverrides = overrides
+                };
+        }
+        ThemePalettes = normalizedPalettes;
+
         OverlayOpacity = Math.Clamp(OverlayOpacity, 0.1, 1.0);
         OverlayPosition ??= new();
         Overlay ??= new();

@@ -111,8 +111,8 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       incluindo o banner de atualização já por tokens). O "gradiente/acento" do
       WPF era recurso morto (definido no Styles.xaml, nunca consumido) e não
       rendeu port; os CTAs (`Button.action`) seguem o accent da plataforma
-      (Fluent, dinâmico no Windows) nos dois temas, decisão de preservação do
-      Neptune.
+      (Fluent, dinâmico no Windows) por padrão. A paleta personalizada da Fase 3
+      pode substituir esse accent e o indicador de navegação selecionada.
 - [x] **F1.2 — Dashboard completo no Avalonia**: pílulas de temperatura com cor
       por faixa (verde/morno/quente/desconhecido) e métricas de uso pintadas
       (<75 primário, <90 morno, ≥90 quente — paridade do WPF); linhas de detalhe
@@ -184,7 +184,7 @@ Primeira tarefa, antes de tudo: **auditar equivalências** entre as janelas e os
       chega na Fase 3 — e publicação win-x64 self-contained single-file validada
       (`releases/win-x64/` com PresentMon.exe + config.example.json; build 0/0 e
       smoke vivo nos dois temas sem `errors.log`). PhantomSensorLib P/Invoke
-      segue item próprio abaixo; cobertura revalidada (46 chaves homônimas nos
+      segue item próprio abaixo; cobertura revalidada (49 chaves homônimas nos
       dois dicionários, zero órfãs).
 
 **Critérios de aceite:** paridade funcional 1:1 com o WPF atual no Windows;
@@ -253,6 +253,15 @@ Linux). Smoke dos dois temas sem `errors.log`.
 - [x] Persistência no `config.json` (via `AppConfig.Save()`) e re-load no boot
       (`ApplyConfiguredTheme` — dicionário trocado antes de criar as views).
       CLI canônica `--theme=<nome>`; `--ui-theme=` segue aceito como legado.
+- [x] Paletas personalizadas por tema em `themePalettes`: cinco cores-base
+      (superfícies, texto, destaques/estados, navegação e overlay) recolorem as
+      famílias preservando as variações dos tokens; substituições individuais
+      para as 49 chaves têm precedência e sobrevivem às mudanças de família.
+      O editor dedicado oferece ColorView com espectro e HEX, mantém o rascunho
+      ao concluir e deixa a persistência/aplicação para **Salvar e aplicar**.
+      Accent principal atualiza botões de ação e estados selecionados; falha no
+      save não altera a paleta em runtime. Configs sem `themePalettes` conservam
+      as cores builtin; HEX inválido e chaves desconhecidas são descartados.
 - [ ] (Futuro, fora de escopo agora) temas extras: Light mode, HDR, custom via
       arquivo externo, import/export.
 

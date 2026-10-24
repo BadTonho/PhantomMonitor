@@ -22,7 +22,7 @@
           <StackPanel Spacing="12">
             <TextBlock Text="OVERLAY FLUTUANTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="A aparência e a composição do overlay são ajustadas no editor visual." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <Button Classes="action" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
+            <Button Classes="action accent" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
           </StackPanel>
         </Border>
 
@@ -31,9 +31,12 @@
             <TextBlock Text="INTERFACE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <StackPanel Spacing="5">
               <TextBlock Text="TEMA VISUAL" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-              <ComboBox SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}" ItemsSource="{Binding ThemeOptions}" MinWidth="260" HorizontalAlignment="Left" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <ComboBox SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}" ItemsSource="{Binding ThemeOptions}" MinWidth="260" HorizontalAlignment="Left" />
+                <Button Content="Personalizar paleta" Click="OnOpenThemePaletteEditorClick" />
+              </StackPanel>
             </StackPanel>
-            <TextBlock Text="Neptune = visual original do Avalonia; Slate = porta verbatim do visual do WPF. A escolha entra em vigor em &quot;Salvar e aplicar&quot;, trocando o dicionário de cores em runtime (não reinicia o app)." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Neptune = visual original do Avalonia; Slate = porta verbatim do visual do WPF. Escolha um tema e personalize suas cores; as alterações entram em vigor em &quot;Salvar e aplicar&quot;, sem reiniciar o app." Classes="muted" FontSize="10" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
@@ -89,7 +92,7 @@
               <TextBlock Text="{Binding UpdateStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Classes="action" Content="Buscar agora" Click="OnCheckUpdatesClick" />
+              <Button Classes="action accent" Content="Buscar agora" Click="OnCheckUpdatesClick" />
               <Button Content="Abrir página de releases" Click="OnOpenReleasesPageClick" />
               <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"
                       IsVisible="{Binding CanApplyUpdate}" IsEnabled="{Binding CanApplyUpdateEnabled}" />
@@ -99,7 +102,7 @@
         </Border>
 
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
-          <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
+          <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
           <TextBlock Grid.Column="1" Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
       </StackPanel>

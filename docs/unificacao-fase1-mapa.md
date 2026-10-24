@@ -159,8 +159,8 @@ editor de oferta é reavaliado junto da subfase de sistema).
    --self-contained -p:PublishSingleFile=true` em `releases/win-x64/` com
    `PresentMon.exe` + `config.example.json`; smoke vivo do binário publicado nos
    dois temas sem `errors.log`. CTAs (`Button.action`) seguem o accent da
-   plataforma (Fluent, dinâmico no Windows) nos dois temas — nada do Neptune se
-   perde. Sobram da Fase 1: unificar `Minigraph`/`HistoryChart` (resolve na
+   plataforma (Fluent, dinâmico no Windows) por padrão; a paleta personalizada
+   da Fase 3 pode substituí-lo. Sobram da Fase 1: unificar `Minigraph`/`HistoryChart` (resolve na
    aposentadoria do WPF, Fase 2) e a biblioteca nativa `PhantomSensorLib`.
 
 ## 5. Tamanho da porta (referência)

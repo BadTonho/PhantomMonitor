@@ -117,8 +117,8 @@
             BorderThickness="1" CornerRadius="8" Padding="8">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="Fechar" Click="OnCloseClick" />
-        <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
-        <Button x:Name="AppearanceSettingsButton" Classes="action" Content="Configurações"
+        <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
+        <Button x:Name="AppearanceSettingsButton" Classes="action accent" Content="Configurações"
                 Click="OnAppearanceSettingsClick" />
       </StackPanel>
     </Border>

@@ -141,10 +141,10 @@
             <TextBlock Text="{Binding LastUpdateText}" Classes="muted" FontSize="11" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action" Content="{Binding OverlayButtonText}" Click="OnToggleOverlayClick" />
-            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+            <Button Classes="action accent" Content="{Binding OverlayButtonText}" Click="OnToggleOverlayClick" />
+            <Button Classes="action accent" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action accent" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action accent" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
           </StackPanel>
         </Grid>
 
@@ -155,7 +155,7 @@
               <TextBlock Text="Privilégios administrativos necessários" Foreground="{DynamicResource AccentHotSoftBrush}" FontSize="12" FontWeight="SemiBold" />
               <TextBlock Text="Leituras de temperatura e clock por núcleo da CPU e FPS via PresentMon podem exigir elevação. Sem ela, o clock geral pode ser aproximado pelo Windows." Foreground="{DynamicResource AccentHotBodyBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" />
             </StackPanel>
-            <Button Grid.Column="1" Classes="action" Content="Executar como admin" Click="OnRestartAsAdminClick" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="action accent" Content="Executar como admin" Click="OnRestartAsAdminClick" VerticalAlignment="Center" />
           </Grid>
         </Border>
 
@@ -315,10 +315,10 @@
             <TextBlock IsVisible="{Binding HasInventoryActionStatus}" Text="{Binding InventoryActionStatusText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
-            <Button Classes="action" Content="Resetar estatísticas" Click="OnResetStatsClick"
+            <Button Classes="action accent" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action accent" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action accent" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+            <Button Classes="action accent" Content="Resetar estatísticas" Click="OnResetStatsClick"
                     ToolTip.Tip="Zera as colunas Mín/Máx/Média da sessão e grava um marcador no CSV/journal ativo (#marker), como no WPF." />
           </StackPanel>
         </Grid>
@@ -443,7 +443,8 @@
       </StackPanel>
     </ScrollViewer>
 
-    <pages:SettingsPage OpenOverlayEditorRequested="OnOpenOverlayEditorRequested" Grid.Column="1" />
+    <pages:SettingsPage OpenOverlayEditorRequested="OnOpenOverlayEditorRequested"
+                        OpenThemePaletteEditorRequested="OnOpenThemePaletteEditorRequested" Grid.Column="1" />
 
     <pages:CustomSensorsPage Grid.Column="1" />
 
@@ -455,9 +456,9 @@
             <TextBlock Text="Configure a cadência de publicação e a suavização das leituras." Classes="muted" FontSize="11" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+            <Button Classes="action accent" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action accent" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action accent" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
           </StackPanel>
         </Grid>
 
@@ -475,7 +476,7 @@
             <TextBlock Text="REGRAS DE AJUSTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Até 64 regras. Selecione uma série detectada/salva ou digite uma série/padrão." Classes="muted" FontSize="10" />
           </StackPanel>
-          <Button Grid.Column="1" Classes="action" Content="Adicionar regra" Click="OnAddSensorTuningClick" />
+          <Button Grid.Column="1" Classes="action accent" Content="Adicionar regra" Click="OnAddSensorTuningClick" />
         </Grid>
 
         <ItemsControl ItemsSource="{Binding SensorTuningEditors}">
@@ -516,7 +517,7 @@
         </ItemsControl>
 
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
-          <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSensorTuningsClick" />
+          <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSensorTuningsClick" />
           <TextBlock Grid.Column="1" Text="{Binding SensorTuningMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
       </StackPanel>

@@ -11,9 +11,11 @@ grupo expansível, aberto por padrão, com uma tabela compacta: Sensor, Atual,
 Mínimo, Máximo e Média. O nome amigável da origem é exibido como sensor; a chave
 técnica (por exemplo, `CpuPerCore#1`) fica no tooltip. A unidade acompanha o valor
 atual e as estatísticas de sessão. A tabela e seus grupos ocupam toda a largura
-disponível, mantendo as colunas alinhadas até a margem direita. a família em linha própria, e as instâncias (por núcleo, dispositivo, interface
-ou outra origem) ficam sempre visíveis logo abaixo, indentadas — sem seta
-própria por linha. A única expansão da página é a do grupo. CPU Total mantém
+disponível, mantendo as colunas alinhadas até a margem direita. Cada família
+com instâncias mostra uma linha-resumo e seus itens indentados abaixo. Uma seta
+na linha-resumo recolhe ou expande somente as instâncias daquela família; o
+resumo e suas métricas continuam visíveis. A seta aparece em qualquer categoria
+que tenha subitens, e somente ela alterna esse estado. CPU Total mantém
 a linha do total e lista os núcleos abaixo; se não houver um agregado
 publicado, a linha-resumo usa a média das instâncias compatíveis. Fórmulas
 personalizadas e sensores sem instâncias continuam como linhas próprias.

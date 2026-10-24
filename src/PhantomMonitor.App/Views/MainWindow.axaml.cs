@@ -186,6 +186,11 @@ public sealed partial class MainWindow : Window
         SyncNavPage("inventory");
         ViewModel.ShowInventory();
     }
+    private void OnInventoryRowToggleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: InventoryRowViewModel row } && row.HasChildren)
+            row.IsExpanded = !row.IsExpanded;
+    }
     private void OnCustomSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         SyncNavPage("customsensors");

@@ -46,6 +46,7 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
     private string _min;
     private string _max;
     private string _avg;
+    private bool _isExpanded = true;
 
     public InventoryRowViewModel(string key)
     {
@@ -57,10 +58,27 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
         _min = "--";
         _max = "--";
         _avg = "--";
+        Children.CollectionChanged += (_, _) => Raise(nameof(HasChildren));
     }
 
     public string Key { get; }
     public ObservableCollection<InventoryRowViewModel> Children { get; } = new();
+    public bool HasChildren => Children.Count > 0;
+
+    /// <summary>Expansion state for this row's instance children, preserved while the row is reused.</summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded == value) return;
+            _isExpanded = value;
+            Raise();
+            Raise(nameof(ExpansionGlyph));
+        }
+    }
+
+    public string ExpansionGlyph => IsExpanded ? "⌃" : "⌄";
 
     /// <summary>Nome legível da origem; para séries indisponíveis, usa a chave da categoria.</summary>
     public string SensorName => IsAvailable && !string.IsNullOrWhiteSpace(Source) && Source != "—" ? Source : Key;

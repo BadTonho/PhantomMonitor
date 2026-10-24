@@ -50,6 +50,8 @@ The device accents are orange for GPU, cyan for CPU, purple for RAM, blue for di
 
 ## Visual overlay editor
 
+Positions remain stored only as normalized `x`/`y` fractions. Resizing the canvas does not change the saved layout; dragging converts through the available area after subtracting the rendered block size. The overlay applies those same fractions to the current monitored window or screen area, using each block's actual width and height.
+
 On Windows, while Phantom Monitor or Explorer is focused, overlay positions continue to use the last valid external window as their reference. Before an external window is available, the primary screen is used.
 
 In the block dialog, **Remove from list** on a group header removes that rule from the block; on a metric row, **Hide from all blocks** hides that identity from sensor rows in every block. This does not change sensor collection or the dashboard. Use **Hidden rows…** to restore one metric or all of them. Identities for temporarily unavailable sensors remain saved until restored. Hiding and restoring updates the preview as a draft; the running overlay changes only after **Save and apply**.

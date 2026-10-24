@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using PhantomMonitor.App.ViewModels;
 using System.Diagnostics;
@@ -20,6 +21,7 @@ public partial class OverlayEditorWindow : Window
     private bool _appearanceSettingsTransitioning;
     private double _windowWidthBeforeAppearanceSettings;
     private TranslateTransform AppearancePanelTransform => (TranslateTransform)AppearanceSettingsPanel.RenderTransform!;
+    private readonly Dictionary<OverlayCanvasBlockViewModel, Point> _pendingBlockPlacements = [];
 
     public OverlayEditorWindow()
     {
@@ -97,10 +99,34 @@ public partial class OverlayEditorWindow : Window
     {
         if (!e.GetCurrentPoint(EditorBlockCanvas).Properties.IsRightButtonPressed) return;
         var point = e.GetPosition(EditorBlockCanvas);
-        var maxX = Math.Max(1, EditorBlockCanvas.Width - ViewModel.OverlayPreviewWidth);
-        var maxY = Math.Max(1, EditorBlockCanvas.Height - 90);
-        ViewModel.AddOverlayBlock(point.X / maxX, point.Y / maxY);
+        var block = ViewModel.AddOverlayBlock(0, 0);
+        _pendingBlockPlacements[block] = point;
+        Dispatcher.UIThread.Post(() =>
+        {
+            var control = EditorBlockCanvas.GetVisualDescendants().OfType<Border>()
+                .FirstOrDefault(candidate => ReferenceEquals(candidate.DataContext, block));
+            if (control is not null)
+                ApplyPendingBlockPlacement(block, control.Bounds.Size);
+        });
         e.Handled = true;
+    }
+
+    private void OnBlockPreviewSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (sender is not Control { DataContext: OverlayCanvasBlockViewModel block }) return;
+        block.SetEditorPreviewSize(e.NewSize.Width, e.NewSize.Height);
+        ApplyPendingBlockPlacement(block, e.NewSize);
+    }
+
+    private void ApplyPendingBlockPlacement(OverlayCanvasBlockViewModel block, Size blockSize)
+    {
+        if (!_pendingBlockPlacements.TryGetValue(block, out var point)
+            || blockSize.Width <= 0 || blockSize.Height <= 0) return;
+        _pendingBlockPlacements.Remove(block);
+
+        ViewModel.ApplyOverlayBlockPosition(block.Key,
+            OverlayPositionMath.ToNormalized(point.X, EditorBlockCanvas.Bounds.Width, blockSize.Width),
+            OverlayPositionMath.ToNormalized(point.Y, EditorBlockCanvas.Bounds.Height, blockSize.Height));
     }
 
     private void OnBlockPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -145,12 +171,10 @@ public partial class OverlayEditorWindow : Window
             y = Math.Clamp(y, 0, maxY);
         }
 
-        var normalizedXRange = Math.Max(0, canvasWidth - ViewModel.OverlayPreviewWidth);
-        var normalizedYRange = Math.Max(0, canvasHeight - 90);
         ViewModel.ApplyOverlayBlockPosition(
             _dragBlock.Key,
-            normalizedXRange > 0 ? x / normalizedXRange : 0,
-            normalizedYRange > 0 ? y / normalizedYRange : 0);
+            OverlayPositionMath.ToNormalized(x, canvasWidth, control.Bounds.Width),
+            OverlayPositionMath.ToNormalized(y, canvasHeight, control.Bounds.Height));
         e.Handled = true;
     }
 
@@ -236,7 +260,10 @@ public partial class OverlayEditorWindow : Window
     private void OnRemoveBlockClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: OverlayCanvasBlockViewModel block })
+        {
+            _pendingBlockPlacements.Remove(block);
             ViewModel.RemoveOverlayBlock(block);
+        }
     }
 
     private void OnSaveSettingsClick(object? sender, RoutedEventArgs e) => ViewModel.SaveSettings();

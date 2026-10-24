@@ -61,6 +61,8 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
 
 ## Editor visual do overlay
 
+As posições continuam armazenadas apenas como frações normalizadas `x`/`y`. Redimensionar o canvas não altera o layout salvo; ao arrastar, a conversão usa o espaço útil após descontar o tamanho renderizado do bloco. O overlay aplica essas mesmas frações à área atual da janela monitorada ou da tela, usando a largura e a altura reais de cada bloco.
+
 No Windows, enquanto o Phantom Monitor ou o Explorer estiver em foco, as posições do overlay continuam usando a última janela externa válida como referência. Antes de haver uma janela externa, a tela primária é usada.
 
 No diálogo do bloco, **Remover da lista** em um cabeçalho remove a regra daquele bloco; em uma métrica, **Ocultar em todos os blocos** oculta essa identidade nas linhas de sensor de todos os blocos. Isso não altera a coleta de sensores nem o dashboard. Use **Linhas ocultadas…** para restaurar uma métrica ou todas. Identidades de sensores temporariamente indisponíveis permanecem salvas até serem restauradas. Ocultar e restaurar atualiza a prévia como rascunho; o overlay em execução só muda depois de **Salvar e aplicar**.

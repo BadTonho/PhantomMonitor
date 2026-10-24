@@ -21,8 +21,8 @@ public sealed partial class OverlayWindow
         {
             if (!window.IsVisible) continue;
             var block = (OverlayCanvasBlockViewModel)window.DataContext!;
-            var left = bounds.X + block.X * Math.Max(0, bounds.Width - window.Width * scale);
-            var top = bounds.Y + block.Y * Math.Max(0, bounds.Height - window.Height * scale);
+            var left = bounds.X + (int)OverlayPositionMath.ToPosition(block.X, bounds.Width, window.Width * scale);
+            var top = bounds.Y + (int)OverlayPositionMath.ToPosition(block.Y, bounds.Height, window.Height * scale);
             window.Position = new PixelPoint((int)left, (int)top);
         }
     }

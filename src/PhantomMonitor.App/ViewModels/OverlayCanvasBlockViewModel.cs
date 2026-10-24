@@ -12,6 +12,8 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     private readonly Dictionary<string, OverlayBlockMetricViewModel> _metricViewModels = new(StringComparer.OrdinalIgnoreCase);
     private double _canvasWidth = 960;
     private double _canvasHeight = 760;
+    private double _editorPreviewWidth;
+    private double _editorPreviewHeight;
 
     public OverlayCanvasBlockViewModel(OverlayBlockConfig config, MainWindowViewModel owner, Action<string, double, double> move)
     {
@@ -42,8 +44,8 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     public bool IsRenderable => HasContent && Owner.OverlayPanelVisible;
     public double X => Config.X;
     public double Y => Config.Y;
-    public double CanvasX => X * Math.Max(0, _canvasWidth - Owner.OverlayPreviewWidth);
-    public double CanvasY => Y * Math.Max(0, _canvasHeight - 90);
+    public double CanvasX => OverlayPositionMath.ToPosition(X, _canvasWidth, _editorPreviewWidth);
+    public double CanvasY => OverlayPositionMath.ToPosition(Y, _canvasHeight, _editorPreviewHeight);
 
     public void SetCanvasSize(double width, double height)
     {
@@ -53,6 +55,18 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     }
 
     public void RefreshCanvasPosition() => RaisePosition();
+
+    public void SetEditorPreviewSize(double width, double height)
+    {
+        if (width <= 0 || height <= 0
+            || Math.Abs(_editorPreviewWidth - width) < 0.1 && Math.Abs(_editorPreviewHeight - height) < 0.1)
+            return;
+
+        _editorPreviewWidth = width;
+        _editorPreviewHeight = height;
+        Raise(nameof(CanvasX));
+        Raise(nameof(CanvasY));
+    }
 
     public void SetNormalizedPosition(double x, double y)
     {

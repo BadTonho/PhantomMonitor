@@ -92,8 +92,10 @@ public sealed partial class OverlayWindow
         {
             if (!window.IsVisible) continue;
             var block = (OverlayCanvasBlockViewModel)window.DataContext!;
-            var left = rect.Left / scale + _viewModel.FollowOffsetX + block.X * Math.Max(0, width - window.Width);
-            var top = rect.Top / scale + _viewModel.FollowOffsetY + block.Y * Math.Max(0, height - window.Height);
+            var left = rect.Left / scale + _viewModel.FollowOffsetX
+                + OverlayPositionMath.ToPosition(block.X, width, window.Width);
+            var top = rect.Top / scale + _viewModel.FollowOffsetY
+                + OverlayPositionMath.ToPosition(block.Y, height, window.Height);
             window.Position = new PixelPoint((int)(left * scale), (int)(top * scale));
         }
     }

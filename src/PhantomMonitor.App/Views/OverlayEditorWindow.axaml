@@ -34,6 +34,7 @@
                         BorderBrush="{Binding $parent[Window].DataContext.OverlayPreviewBorderBrush}"
                         BorderThickness="{Binding $parent[Window].DataContext.OverlayPreviewBorderThickness}"
                         Padding="{Binding $parent[Window].DataContext.OverlayPreviewBlockPadding}"
+                        SizeChanged="OnBlockPreviewSizeChanged"
                         PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"
                         PointerReleased="OnBlockPointerReleased" PointerCaptureLost="OnBlockPointerCaptureLost"
                         DoubleTapped="OnBlockDoubleTapped" Cursor="SizeAll">

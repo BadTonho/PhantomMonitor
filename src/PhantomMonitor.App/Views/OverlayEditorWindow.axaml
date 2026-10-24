@@ -29,6 +29,7 @@
               <DataTemplate>
                 <Border Width="{Binding $parent[Window].DataContext.OverlayPreviewWidth}"
                         IsVisible="{Binding IsEditorVisible}" CornerRadius="5"
+                        Opacity="{Binding $parent[Window].DataContext.OverlayPreviewOpacity}"
                         Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}"
                         BorderThickness="1" Padding="{Binding $parent[Window].DataContext.OverlayPreviewBlockPadding}"
                         PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"

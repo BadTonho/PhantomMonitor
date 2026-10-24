@@ -124,10 +124,20 @@ public partial class OverlayEditorWindow : Window
         var point = e.GetPosition(EditorBlockCanvas);
         var maxX = Math.Max(1, EditorBlockCanvas.Width - ViewModel.OverlayPreviewWidth);
         var maxY = Math.Max(1, EditorBlockCanvas.Height - 90);
+        var x = Math.Clamp(point.X - _dragOffset.X, 0, maxX);
+        var y = Math.Clamp(point.Y - _dragOffset.Y, 0, maxY);
+        var gridSpacing = EditorGrid.GridSpacing;
+        if ((e.KeyModifiers & KeyModifiers.Shift) == 0 && gridSpacing > 0)
+        {
+            x = Math.Round(x / gridSpacing, MidpointRounding.AwayFromZero) * gridSpacing;
+            y = Math.Round(y / gridSpacing, MidpointRounding.AwayFromZero) * gridSpacing;
+            x = Math.Clamp(x, 0, maxX);
+            y = Math.Clamp(y, 0, maxY);
+        }
         ViewModel.ApplyOverlayBlockPosition(
             _dragBlock.Key,
-            (point.X - _dragOffset.X) / maxX,
-            (point.Y - _dragOffset.Y) / maxY);
+            x / maxX,
+            y / maxY);
         e.Handled = true;
     }
 

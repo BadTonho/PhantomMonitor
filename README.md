@@ -34,10 +34,10 @@ The project runs a **single Avalonia desktop app** on Windows and Linux. Earlier
 | --- | --- | --- |
 | Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors via LibreHardwareMonitor | Sensors from `sysfs`, `procfs` (including DRM `fdinfo`), `hwmon`, Linux thermal zones, DRM, and optional NVIDIA NVML; GPU metrics vary by driver |
 | FPS and frametime | PresentMon through ETW | Phantom Vulkan layer for Vulkan games |
-| Overlay | Advanced OSD, click-through, and profiles (editing via config.json) | Configurable floating window; the compositor controls position and fullscreen behavior |
+| Overlay | Advanced OSD, click-through, and profiles (editing via config.json) | Separate draggable windows; Diagnostics compares requested and observed position and size; the compositor may limit absolute placement |
 | Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |
 | Alerts | Notifications, sound, scripts, and configurable shutdown action | In-app toast, desktop notifications, and scripts |
-| Diagnostics | Sensor sources, current GPU warnings, and application error log | Per-GPU driver/source status, current GPU warnings, recent errors, and NVIDIA NVML details |
+| Diagnostics | Sensor sources, current GPU warnings, and application error log | Per-GPU source status, overlay window geometry, current GPU warnings, recent errors, and NVIDIA NVML details |
 | Formulas and per-series tuning | Compatible with the existing configuration format | Visual editors for custom sensors and sampling/smoothing rules |
 | Telemetry | CSV, JSON, JSONL, and optional HTTP exporter | CSV, JSON, JSONL, and optional HTTP exporter |
 
@@ -69,7 +69,7 @@ Then add this to the game's launch options, for example in Steam:
 ENABLE_PHANTOM_OVERLAY=1 %command%
 ```
 
-The dashboard and Linux overlay work without the layer when FPS is not needed. On Wayland, the compositor controls the overlay's initial position and whether it appears above fullscreen applications.
+The dashboard and Linux overlay work without the layer when FPS is not needed. On a Wayland desktop, check **Diagnostics → Summary** for the Avalonia backend: this project's default uses X11/XWayland, while a native Wayland compositor may ignore absolute window positions.
 
 ### Windows
 

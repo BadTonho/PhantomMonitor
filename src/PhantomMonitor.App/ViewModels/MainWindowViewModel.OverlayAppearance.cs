@@ -134,7 +134,10 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayEditorCanvasWidth));
         Raise(nameof(OverlayEditorCanvasHeight));
         foreach (var block in _overlayBlocks)
+        {
+            block.RefreshPresentation();
             block.RefreshCanvasPosition();
+        }
     }
 
     private FontFamily? ResolvePreviewFontFamily()

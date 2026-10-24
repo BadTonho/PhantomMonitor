@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using Avalonia;
+using Avalonia.Media;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 
@@ -15,7 +17,8 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     private double _editorPreviewWidth;
     private double _editorPreviewHeight;
 
-    public OverlayCanvasBlockViewModel(OverlayBlockConfig config, MainWindowViewModel owner, Action<string, double, double> move)
+    public OverlayCanvasBlockViewModel(OverlayBlockConfig config, MainWindowViewModel owner,
+        Action<string, double, double> move)
     {
         Config = config;
         Owner = owner;
@@ -38,6 +41,7 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         }
     }
     public MainWindowViewModel Owner { get; }
+    internal bool IsPreview { get; private set; }
     public ObservableCollection<object> Content { get; } = [];
     public bool HasContent => Config.Items.Count > 0 && Content.Count > 0;
     public bool IsEditorVisible => true;
@@ -56,6 +60,20 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         OverlayPositionMath.ReferenceWidth, PreviewOriginOffsetXReference);
     public double CanvasY => OverlayPositionMath.ToDisplayPosition(Y, _canvasHeight, PreviewBlockHeight,
         OverlayPositionMath.ReferenceHeight, PreviewOriginOffsetYReference);
+    public double PresentationWidth => IsPreview ? Owner.OverlayPreviewWidth : Owner.OverlayWidth;
+    public IBrush PresentationBackgroundBrush => IsPreview ? Owner.OverlayPreviewBackgroundBrush : Owner.OverlayBackgroundBrush;
+    public IBrush PresentationBorderBrush => IsPreview ? Owner.OverlayPreviewBorderBrush : Owner.OverlayPanelBorderBrush;
+    public Thickness PresentationBorderThickness => IsPreview ? Owner.OverlayPreviewBorderThickness : Owner.OverlayBorderThickness;
+    public FontFamily PresentationNameFontFamily => IsPreview ? Owner.OverlayPreviewNameFontFamily : Owner.OverlayMetricNameFontFamily;
+    public FontFamily PresentationValueFontFamily => IsPreview ? Owner.OverlayPreviewValueFontFamily : Owner.OverlayMetricValueFontFamily;
+    public double PresentationNameFontSize => IsPreview ? Owner.OverlayPreviewNameFontSize : Owner.OverlayMetricNameFontSize;
+    public double PresentationValueFontSize => IsPreview ? Owner.OverlayPreviewValueFontSize : Owner.OverlayMetricValueFontSize;
+    public Thickness PresentationOuterMargin => IsPreview ? Owner.OverlayPreviewOuterMargin : Owner.OverlayOuterMargin;
+    public Thickness PresentationPadding => IsPreview ? Owner.OverlayPreviewPadding : Owner.OverlayPadding;
+    public double PresentationContentSpacing => IsPreview ? Owner.OverlayPreviewContentSpacing : Owner.OverlayContentSpacing;
+    public Thickness PresentationRowMargin => IsPreview ? Owner.OverlayPreviewRowMargin : Owner.OverlayRowMargin;
+    public double PresentationFrametimeGraphHeight => IsPreview ? Owner.OverlayPreviewFrametimeGraphHeight : Owner.OverlayFrametimeGraphHeight;
+    public IBrush PresentationAccentBrush => Owner.OverlayAccentBrush;
 
     public void SetCanvasSize(double width, double height)
     {
@@ -63,6 +81,8 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         _canvasHeight = Math.Max(120, height);
         RaisePosition();
     }
+
+    internal void MarkAsPreview() => IsPreview = true;
 
     public void RefreshCanvasPosition() => RaisePosition();
 
@@ -129,6 +149,24 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     {
         foreach (var metric in _metricViewModels.Values)
             metric.RefreshTheme();
+    }
+
+    public void RefreshPresentation()
+    {
+        Raise(nameof(PresentationWidth));
+        Raise(nameof(PresentationBackgroundBrush));
+        Raise(nameof(PresentationBorderBrush));
+        Raise(nameof(PresentationBorderThickness));
+        Raise(nameof(PresentationNameFontFamily));
+        Raise(nameof(PresentationValueFontFamily));
+        Raise(nameof(PresentationNameFontSize));
+        Raise(nameof(PresentationValueFontSize));
+        Raise(nameof(PresentationOuterMargin));
+        Raise(nameof(PresentationPadding));
+        Raise(nameof(PresentationContentSpacing));
+        Raise(nameof(PresentationRowMargin));
+        Raise(nameof(PresentationFrametimeGraphHeight));
+        Raise(nameof(PresentationAccentBrush));
     }
 
     public void DisposeMetrics()

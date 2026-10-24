@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:charts="using:PhantomMonitor.App.Controls"
+             xmlns:vm="using:PhantomMonitor.App.ViewModels"
+             x:Class="PhantomMonitor.App.Views.OverlayBlockContentView"
+             Width="{Binding PresentationWidth}">
+  <Border Margin="{Binding PresentationOuterMargin}"
+          CornerRadius="6"
+          Background="{Binding PresentationBackgroundBrush}"
+          BorderBrush="{Binding PresentationBorderBrush}"
+          BorderThickness="{Binding PresentationBorderThickness}"
+          Padding="{Binding PresentationPadding}">
+    <StackPanel Spacing="{Binding PresentationContentSpacing}">
+      <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+                 FontFamily="{Binding PresentationNameFontFamily}"
+                 FontSize="{Binding PresentationNameFontSize}" FontWeight="SemiBold"
+                 PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll" />
+      <ItemsControl ItemsSource="{Binding Content}">
+        <ItemsControl.DataTemplates>
+          <DataTemplate DataType="vm:OverlayBlockMetricViewModel">
+            <StackPanel Spacing="2" Margin="{Binding $parent[UserControl].DataContext.PresentationRowMargin}">
+              <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{Binding NameForeground}"
+                         FontFamily="{Binding $parent[UserControl].DataContext.PresentationNameFontFamily}"
+                         FontSize="{Binding $parent[UserControl].DataContext.PresentationNameFontSize}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding Value}" Foreground="{Binding ValueForeground}"
+                         FontSize="{Binding $parent[UserControl].DataContext.PresentationValueFontSize}"
+                         FontFamily="{Binding $parent[UserControl].DataContext.PresentationValueFontFamily}" TextWrapping="WrapWithOverflow" />
+              <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
+                                   Values="{Binding $parent[UserControl].DataContext.Owner.FrametimeSamples}"
+                                   Stroke="{Binding $parent[UserControl].DataContext.PresentationAccentBrush}"
+                                   GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                   MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                   Height="{Binding $parent[UserControl].DataContext.PresentationFrametimeGraphHeight}" />
+            </StackPanel>
+          </DataTemplate>
+          <DataTemplate DataType="vm:OverlayGraphRowViewModel">
+            <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
+                                 MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
+          </DataTemplate>
+          <DataTemplate DataType="vm:OverlayFrametimeGraphViewModel">
+            <charts:HistoryChart Values="{Binding Owner.FrametimeSamples}"
+                                 Stroke="{Binding Owner.OverlayAccentBrush}"
+                                 GuideBrush="{DynamicResource OverlayGuideBrush}"
+                                 MinY="0" MaxFloor="33.3" GuideAt="16.66"
+                                 Height="{Binding Block.PresentationFrametimeGraphHeight}" />
+          </DataTemplate>
+          <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
+            <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
+                       FontSize="{Binding $parent[UserControl].DataContext.PresentationValueFontSize}"
+                       FontFamily="{Binding $parent[UserControl].DataContext.PresentationValueFontFamily}" TextTrimming="CharacterEllipsis"
+                       Margin="{Binding $parent[UserControl].DataContext.PresentationRowMargin}" />
+          </DataTemplate>
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</UserControl>

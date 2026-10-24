@@ -1,4 +1,3 @@
-using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.ViewModels;
@@ -62,6 +61,7 @@ public sealed partial class MainWindowViewModel
         {
             var blockConfig = CloneOverlayBlock(config);
             var block = new OverlayCanvasBlockViewModel(blockConfig, this, SetOverlayBlockPosition);
+            block.MarkAsPreview();
             block.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
             _overlayBlocks.Add(block);
             var applied = new OverlayCanvasBlockViewModel(CloneOverlayBlock(blockConfig), this, static (_, _, _) => { });
@@ -87,6 +87,7 @@ public sealed partial class MainWindowViewModel
             Y = double.IsFinite(y) ? y : 0
         };
         var block = new OverlayCanvasBlockViewModel(config, this, SetOverlayBlockPosition);
+        block.MarkAsPreview();
         block.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
         _overlayBlocks.Add(block);
         return block;
@@ -123,10 +124,10 @@ public sealed partial class MainWindowViewModel
 
     public void CancelOverlayLayoutDraft() => ReloadOverlayLayoutDraft();
 
-    private OverlayFrametimeGraphViewModel GetFrametimeGraphItem(string key)
+    private OverlayFrametimeGraphViewModel GetFrametimeGraphItem(OverlayCanvasBlockViewModel block, string key)
     {
         if (!_frametimeGraphItems.TryGetValue(key, out var item))
-            _frametimeGraphItems[key] = item = new OverlayFrametimeGraphViewModel(this);
+            _frametimeGraphItems[key] = item = new OverlayFrametimeGraphViewModel(this, block);
         return item;
     }
 
@@ -231,9 +232,9 @@ public sealed partial class MainWindowViewModel
             _ => ("", "")
         });
 
-        ReconcileOverlayBlocks(_overlayBlocks, categoryRows, draftExtras, categoryPlans, instancePlans, null,
-            _overlayHiddenMetricsDraft);
         var profileSeries = _activeProfile?.ShownSeries is { Count: > 0 } series ? series : null;
+        ReconcileOverlayBlocks(_overlayBlocks, categoryRows, draftExtras, categoryPlans, instancePlans, profileSeries,
+            _overlayHiddenMetricsDraft);
         ReconcileOverlayBlocks(_overlayAppliedBlocks, categoryRows, appliedExtras, categoryPlans, instancePlans, profileSeries,
             _overlayHiddenMetricsApplied);
     }
@@ -261,16 +262,15 @@ public sealed partial class MainWindowViewModel
                 }
                 else if (item.Kind == "series")
                 {
-                    var rows = instancePlans.Where(plan => SensorKey.TryParse(plan.Identity, out var key)
-                        && (key.IsPrimary
-                            ? !item.Value.Contains('*') && key.MatchesPattern(item.Value)
-                            : key.MatchesPattern(item.Value)
-                                && (profileSeries is null || profileSeries.Count == 0 || profileSeries.Any(key.MatchesPattern))))
+                    var rows = instancePlans.Where(plan => OverlayBlockContentRules.IsSeriesSelected(
+                            plan.Identity, item.Value, profileSeries))
                         .Select(plan => categoryRows.TryGetValue(plan.Identity, out var row) ? row : null)
                         .Where(row => row is not null).Cast<OverlayMetricViewModel>();
                     AppendOrderedMetricRows(block, item, rows, desired, seenMetricIdentities, hiddenMetrics);
                 }
-                else if (item.Kind == "frametime") desired.Add(GetFrametimeGraphItem(block.Key + ":" + item.Value));
+                else if (item.Kind == "frametime")
+                    desired.Add(GetFrametimeGraphItem(block,
+                        block.Key + (block.IsPreview ? ":draft:" : ":applied:") + item.Value));
                 else if (extras.TryGetValue((item.Kind, item.Value), out var extra)) desired.Add(extra);
             }
             block.ReconcileContent(desired.Distinct(ReferenceEqualityComparer.Instance).ToArray());
@@ -314,7 +314,7 @@ public sealed partial class MainWindowViewModel
         UpdateOverlayRows(_latestSensorData);
     }
 
-    private static OverlayBlockConfig CloneOverlayBlock(OverlayBlockConfig block) => new()
+    internal static OverlayBlockConfig CloneOverlayBlock(OverlayBlockConfig block) => new()
     {
         Id = block.Id,
         X = block.X,

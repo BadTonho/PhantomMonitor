@@ -37,6 +37,18 @@ internal static class OverlayPositionMath
         return position >= range ? range : position;
     }
 
+    public static int ToPixelCoordinate(double normalized, int areaOrigin, int areaSizePixels,
+        double blockSizeDip, double scaling)
+    {
+        if (areaSizePixels <= 0) return areaOrigin;
+        scaling = double.IsFinite(scaling) && scaling > 0 ? scaling : 1;
+        var blockSizePixels = double.IsFinite(blockSizeDip) && blockSizeDip > 0
+            ? blockSizeDip * scaling
+            : 0;
+        var localPosition = ToPosition(normalized, areaSizePixels, blockSizePixels);
+        return areaOrigin + (int)Math.Round(localPosition, MidpointRounding.AwayFromZero);
+    }
+
     public static double ScaleOffset(double offset, double sourceAreaSize, double destinationAreaSize)
         => !double.IsFinite(offset) || !double.IsFinite(sourceAreaSize) || sourceAreaSize <= 0
             || !double.IsFinite(destinationAreaSize)

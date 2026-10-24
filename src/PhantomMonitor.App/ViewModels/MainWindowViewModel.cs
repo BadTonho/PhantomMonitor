@@ -68,6 +68,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private string _selectedDiagnosticSection = "summary";
     private readonly ObservableCollection<ErrorLogEntry> _diagnosticEntries = new();
     private IReadOnlyList<string> _diagnosticSensorLines = ["Aguardando a primeira leitura dos sensores."];
+    private IReadOnlyList<string> _linuxOverlayDiagnosticLines = [];
     private IReadOnlyList<DiagnosticSensorWarningViewModel> _diagnosticSensorWarnings = [];
     private bool _hasDiagnosticSensorSnapshot;
     private string _diagnosticsMessage = "Os diagnósticos ficam somente neste computador.";
@@ -161,6 +162,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public bool IsDiagnosticSensors => SelectedDiagnosticSection == "sensors";
     public ObservableCollection<ErrorLogEntry> DiagnosticEntries => _diagnosticEntries;
     public IReadOnlyList<string> DiagnosticSensorLines { get => _diagnosticSensorLines; private set => Set(ref _diagnosticSensorLines, value); }
+    public IReadOnlyList<string> LinuxOverlayDiagnosticLines { get => _linuxOverlayDiagnosticLines; private set => Set(ref _linuxOverlayDiagnosticLines, value); }
+    public bool IsLinuxOverlayDiagnosticsVisible => OperatingSystem.IsLinux() && LinuxOverlayDiagnosticLines.Count > 0;
     public IReadOnlyList<DiagnosticSensorWarningViewModel> DiagnosticSensorWarnings
     {
         get => _diagnosticSensorWarnings;

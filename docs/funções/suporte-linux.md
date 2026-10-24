@@ -123,9 +123,17 @@ A camada é **implícita**: todo processo Vulkan a carrega, mas a telemetria só
 
 ## 5. Overlay flutuante
 
-O overlay segue `showOverlay` e os campos de `OverlayConfig`. Em Wayland, o
-compositor controla a posição inicial e a pilha sobre tela cheia; a
-transparência também depende do compositor. No **Windows**, o overlay do
+O overlay segue `showOverlay` e os campos de `OverlayConfig`. Cada bloco é uma
+janela Topmost independente. Depois de abrir ou mudar de tamanho, o app mede a
+janela e recalcula sua posição em pixels físicos de acordo com a escala da tela.
+A aba **Diagnóstico → Resumo** registra a sessão do desktop, o backend Avalonia,
+a posição solicitada e a observada e o tamanho de cada janela. Se houver
+diferença, o diagnóstico a apresenta sem repetir mensagens idênticas; quando o
+backend Wayland nativo estiver identificado, também explica que o compositor
+pode ignorar a posição absoluta. A sessão Wayland do desktop não indica por si
+só que o app usa esse backend: a configuração padrão deste projeto usa
+X11/XWayland. Transparência e sobreposição em tela cheia também dependem do
+compositor. No **Windows**, o overlay do
 Avalonia (F1.3) é um OSD clique-through real (`WS_EX_TRANSPARENT`) que segue o
 app em foco a cada 30 ms com reforço de Topmost a cada 500 ms — igual ao comportamento herdado do WPF:
 não recebe cliques e não é arrastável, e o posicionamento fica com
@@ -138,7 +146,7 @@ consumidos do `config.json` no arranque da app — ver
 
 Os arquivos CSV/JSON/JSONL e o `errors.log` ficam em
 `~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`. A página
-**Diagnóstico** mostra os registros recentes, avisos atuais para métricas GPU indisponíveis na aba **Erros** e o estado detalhado das fontes na aba **Sensores**;
+**Diagnóstico** mostra os registros recentes, as posições e dimensões do overlay Linux na aba **Resumo**, avisos atuais para métricas GPU indisponíveis na aba **Erros** e o estado detalhado das fontes na aba **Sensores**;
 para NVIDIA, inclui driver, NVML, hwmon e métricas publicadas. O exportador HTTP
 é opcional, desativado por padrão e restrito ao loopback; ativar `listenAll`
 expõe os endpoints na rede sem TLS ou autenticação.

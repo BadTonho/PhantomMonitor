@@ -135,6 +135,8 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayHideButtonPadding));
         Raise(nameof(OverlayBlockPadding));
         Raise(nameof(OverlayFrametimeGraphHeight));
+        foreach (var block in _overlayAppliedBlocks)
+            block.RefreshPresentation();
     }
 
 }

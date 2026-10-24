@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Collections.Specialized;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using PhantomMonitor.App.ViewModels;
@@ -15,10 +16,17 @@ public sealed partial class OverlayWindow : IDisposable
     private bool _requestedVisible;
     private bool _closing;
     private bool _disposed;
+    private bool _linuxGeometryNeedsPosition;
+    private DispatcherTimer? _linuxGeometryTimer;
 
     public OverlayWindow(MainWindowViewModel viewModel)
     {
         _viewModel = viewModel;
+        if (!OperatingSystem.IsWindows())
+        {
+            _linuxGeometryTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+            _linuxGeometryTimer.Tick += OnLinuxGeometryTimerTick;
+        }
         foreach (var block in viewModel.OverlayAppliedBlocks)
         {
             block.PropertyChanged += OnBlockPropertyChanged;
@@ -47,12 +55,15 @@ public sealed partial class OverlayWindow : IDisposable
         SyncBlockVisibility();
         if (OperatingSystem.IsWindows()) StartWindowsTimers();
         PositionWindows();
+        ScheduleLinuxGeometryCheck();
     }
 
     public void Hide()
     {
         _requestedVisible = false;
         StopWindowsTimers();
+        _linuxGeometryTimer?.Stop();
+        _linuxGeometryNeedsPosition = false;
         foreach (var window in _windows.Values)
             if (window.IsVisible) window.Hide();
     }
@@ -61,6 +72,7 @@ public sealed partial class OverlayWindow : IDisposable
     {
         SyncBlockVisibility();
         PositionWindows();
+        ScheduleLinuxGeometryCheck();
     }
 
     public void Dispose()
@@ -69,6 +81,7 @@ public sealed partial class OverlayWindow : IDisposable
         _disposed = true;
         _closing = true;
         StopWindowsTimers();
+        _linuxGeometryTimer?.Stop();
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         _viewModel.OverlayAppliedBlocks.CollectionChanged -= OnBlocksChanged;
         foreach (var block in _viewModel.OverlayAppliedBlocks)
@@ -90,7 +103,9 @@ public sealed partial class OverlayWindow : IDisposable
         window.Opened += (_, _) =>
         {
             if (OperatingSystem.IsWindows()) MakeClickThrough(window);
+            else ScheduleLinuxGeometryCheck(repositionAfterMeasure: true);
         };
+        window.SizeChanged += (_, _) => ScheduleLinuxGeometryCheck(repositionAfterMeasure: true);
         window.Closed += (_, _) =>
         {
             if (_closing || _disposed || !_windows.TryGetValue(block.Key, out var current)
@@ -122,6 +137,8 @@ public sealed partial class OverlayWindow : IDisposable
     {
         if (e.Action == NotifyCollectionChangedAction.Reset)
         {
+            _viewModel.ClearLinuxOverlayGeometry();
+            _linuxRequestedPositions.Clear();
             var oldWindows = _windows.Values.ToArray();
             foreach (var window in oldWindows)
             {
@@ -150,6 +167,8 @@ public sealed partial class OverlayWindow : IDisposable
         {
             foreach (OverlayCanvasBlockViewModel block in e.OldItems)
             {
+                _viewModel.RemoveLinuxOverlayGeometry(block.Key);
+                _linuxRequestedPositions.Remove(block.Key);
                 block.PropertyChanged -= OnBlockPropertyChanged;
                 if (!_windows.Remove(block.Key, out var window)) continue;
                 window.Hide();
@@ -198,6 +217,40 @@ public sealed partial class OverlayWindow : IDisposable
             {
                 window.Hide();
             }
+        }
+    }
+
+    private void ScheduleLinuxGeometryCheck(bool repositionAfterMeasure = false)
+    {
+        if (OperatingSystem.IsWindows() || _disposed || _linuxGeometryTimer is null)
+            return;
+
+        _linuxGeometryNeedsPosition |= repositionAfterMeasure;
+        if (!_linuxGeometryTimer.IsEnabled) _linuxGeometryTimer.Start();
+    }
+
+    private void OnLinuxGeometryTimerTick(object? sender, EventArgs e)
+    {
+        _linuxGeometryTimer?.Stop();
+        if (_disposed || !_requestedVisible) return;
+
+        if (_linuxGeometryNeedsPosition)
+        {
+            _linuxGeometryNeedsPosition = false;
+            PositionWindows();
+            ScheduleLinuxGeometryCheck();
+            return;
+        }
+
+        foreach (var (key, window) in _windows)
+        {
+            if (!window.IsVisible || window.DataContext is not OverlayCanvasBlockViewModel block) continue;
+
+            var requested = GetLinuxRequestedPosition(key) ?? window.Position;
+            _viewModel.RecordLinuxOverlayGeometry(key, block.Title, requested, window.Position,
+                window.Bounds.Width > 0 ? window.Bounds.Width : window.Width,
+                window.Bounds.Height > 0 ? window.Bounds.Height : window.Height,
+                window.RenderScaling);
         }
     }
 

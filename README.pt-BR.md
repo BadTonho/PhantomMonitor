@@ -34,10 +34,10 @@ O projeto roda um **único app desktop Avalonia** no Windows e no Linux. Release
 | --- | --- | --- |
 | Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe via LibreHardwareMonitor | Sensores de `sysfs`, `procfs` (incluindo `fdinfo` DRM), `hwmon`, zonas térmicas Linux, DRM e NVML opcional da NVIDIA; métricas de GPU variam conforme o driver |
 | FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
-| Overlay | OSD avançado, click-through e perfis (edição via config.json) | Janela flutuante configurável; o compositor controla a posição e o fullscreen |
+| Overlay | OSD avançado, click-through e perfis (edição via config.json) | Janelas separadas e arrastáveis; Diagnóstico compara posição e tamanho solicitados e observados; o compositor pode limitar posições absolutas |
 | Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |
 | Alertas | Notificação, som, scripts e desligamento configurável | Toast interno, notificações do desktop e execução de scripts |
-| Diagnóstico | Fontes de sensores, avisos atuais de GPU e log de erros | Driver/fonte por placa/métrica, avisos atuais de GPU, erros recentes e detalhes da NVML NVIDIA |
+| Diagnóstico | Fontes de sensores, avisos atuais de GPU e log de erros | Fontes por placa, geometria das janelas do overlay, avisos atuais de GPU, erros recentes e detalhes da NVML NVIDIA |
 | Fórmulas e ajuste por série | Compatibilidade com as configurações existentes | Editores visuais de sensores customizados e ajuste de cadência/suavização |
 | Telemetria | CSV, JSON, JSONL e exportador HTTP opcional | CSV, JSON, JSONL e exportador HTTP opcional |
 
@@ -69,7 +69,7 @@ Depois, nas opções de inicialização do jogo — por exemplo, na Steam — us
 ENABLE_PHANTOM_OVERLAY=1 %command%
 ```
 
-O dashboard e o overlay Linux funcionam sem a camada quando você não precisa de FPS. Em Wayland, o compositor decide a posição inicial do overlay e sua presença sobre aplicativos em fullscreen.
+O dashboard e o overlay Linux funcionam sem a camada quando você não precisa de FPS. Em um desktop Wayland, confira **Diagnóstico → Resumo** para ver o backend Avalonia: a configuração padrão do projeto usa X11/XWayland, enquanto um compositor Wayland nativo pode ignorar posições absolutas das janelas.
 
 ### Windows
 

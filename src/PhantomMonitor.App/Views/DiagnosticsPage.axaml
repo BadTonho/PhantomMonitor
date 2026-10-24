@@ -19,6 +19,22 @@
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsDiagnosticSummary}" Spacing="12">
+          <Border IsVisible="{Binding IsLinuxOverlayDiagnosticsVisible}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+            <StackPanel Spacing="8">
+              <TextBlock Text="GEOMETRIA DO OVERLAY LINUX" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="As posições e dimensões abaixo comparam o pedido do app com o estado observado após a janela abrir. Em Wayland nativo, o compositor pode ignorar posições absolutas." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding LinuxOverlayDiagnosticLines}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,6">
+                      <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
           <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
             <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
               <StackPanel Spacing="7">

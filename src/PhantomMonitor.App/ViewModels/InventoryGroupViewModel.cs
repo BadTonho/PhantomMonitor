@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -58,17 +59,15 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
         _min = "--";
         _max = "--";
         _avg = "--";
-        Children.CollectionChanged += (_, _) =>
-        {
-            Raise(nameof(CanCollapseChildren));
-            Raise(nameof(ShowChildren));
-        };
+        Children.CollectionChanged += OnChildrenChanged;
     }
 
     public string Key { get; }
     public ObservableCollection<InventoryRowViewModel> Children { get; } = new();
     public bool CanCollapseChildren => Children.Count > 1;
-    public bool ShowChildren => !CanCollapseChildren || IsExpanded;
+    public bool HasSingleChild => Children.Count == 1;
+    public bool ShowChildren => CanCollapseChildren && IsExpanded;
+    public string SensorNameTooltip => HasSingleChild ? Children[0].SensorName : Key;
 
     /// <summary>Expansion state for this row's instance children, preserved while the row is reused.</summary>
     public bool IsExpanded
@@ -186,6 +185,27 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
 
     private void Raise([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private void OnChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+            foreach (InventoryRowViewModel child in e.OldItems)
+                child.PropertyChanged -= OnChildPropertyChanged;
+        if (e.NewItems is not null)
+            foreach (InventoryRowViewModel child in e.NewItems)
+                child.PropertyChanged += OnChildPropertyChanged;
+
+        Raise(nameof(CanCollapseChildren));
+        Raise(nameof(HasSingleChild));
+        Raise(nameof(ShowChildren));
+        Raise(nameof(SensorNameTooltip));
+    }
+
+    private void OnChildPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (HasSingleChild && (e.PropertyName is nameof(SensorName) or null))
+            Raise(nameof(SensorNameTooltip));
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

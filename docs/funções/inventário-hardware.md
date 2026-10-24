@@ -12,11 +12,11 @@ Mínimo, Máximo e Média. O nome amigável da origem é exibido como sensor; a 
 técnica (por exemplo, `CpuPerCore#1`) fica no tooltip. A unidade acompanha o valor
 atual e as estatísticas de sessão. A tabela e seus grupos ocupam toda a largura
 disponível, mantendo as colunas alinhadas até a margem direita. Cada família
-com instâncias mostra uma linha-resumo e seus itens indentados abaixo. Uma seta
-na linha-resumo recolhe ou expande somente as instâncias daquela família; o
-resumo e suas métricas continuam visíveis. A seta aparece em qualquer categoria
-que tenha pelo menos dois subitens, e somente ela alterna esse estado. Com um
-único subitem, a linha permanece visível sem seta. CPU Total mantém
+com instâncias mostra uma linha-resumo. Se houver uma única instância, a
+sublinha é omitida e seu nome amigável aparece no tooltip do resumo após dois
+segundos de hover. Com duas ou mais instâncias, as sublinhas indentadas ficam
+visíveis; uma seta no resumo recolhe ou expande apenas essas instâncias, sem
+ocultar o resumo ou suas métricas. A regra vale em todas as categorias. CPU Total mantém
 a linha do total e lista os núcleos abaixo; se não houver um agregado
 publicado, a linha-resumo usa a média das instâncias compatíveis. Fórmulas
 personalizadas e sensores sem instâncias continuam como linhas próprias.

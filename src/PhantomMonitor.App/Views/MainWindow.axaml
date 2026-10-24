@@ -358,7 +358,11 @@
                                 <StackPanel Spacing="0" HorizontalAlignment="Stretch">
                                   <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch">
                                     <Grid>
-                                      <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                      <TextBlock Text="{Binding SensorName}"
+                                                 ToolTip.Tip="{Binding SensorNameTooltip}"
+                                                 ToolTip.ShowDelay="2000"
+                                                 Foreground="{DynamicResource TextBodyBrush}"
+                                                 FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                       <Button Content="{Binding ExpansionGlyph}"
                                               IsVisible="{Binding CanCollapseChildren}"
                                               Click="OnInventoryRowToggleClick"

@@ -100,6 +100,8 @@ public sealed partial class AppConfig
         if (!IsValidHexColor(Overlay.AccentColor)) Overlay.AccentColor = "#1E90FF";
         if (Overlay.BackgroundColor is { } backgroundColor && !HexRgbColorRegex.IsMatch(backgroundColor))
             Overlay.BackgroundColor = null;
+        if (Overlay.BorderColor is { } borderColor && !HexRgbColorRegex.IsMatch(borderColor))
+            Overlay.BorderColor = null;
         Overlay.BackgroundOpacity = double.IsFinite(Overlay.BackgroundOpacity)
             ? Math.Clamp(Overlay.BackgroundOpacity, 0, 1)
             : 1;

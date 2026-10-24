@@ -7,6 +7,8 @@ public sealed partial class MainWindowViewModel
 {
     private double _overlayBackgroundOpacityPercent = 100;
     private string _overlayBackgroundColorText = "";
+    private bool _overlayBorderEnabled = true;
+    private string _overlayBorderColorText = "";
     private string _overlayFontFamilySelection = "Padrão do app";
     private string _overlayFontFamilyCustomText = "";
     private IReadOnlyList<string> _overlayFontFamilyOptions = ["Padrão do app"];
@@ -33,6 +35,26 @@ public sealed partial class MainWindowViewModel
         set
         {
             if (Set(ref _overlayBackgroundColorText, value ?? ""))
+                RaiseOverlayPreviewProperties();
+        }
+    }
+
+    public bool OverlayBorderEnabled
+    {
+        get => _overlayBorderEnabled;
+        set
+        {
+            if (Set(ref _overlayBorderEnabled, value))
+                RaiseOverlayPreviewProperties();
+        }
+    }
+
+    public string OverlayBorderColorText
+    {
+        get => _overlayBorderColorText;
+        set
+        {
+            if (Set(ref _overlayBorderColorText, value ?? ""))
                 RaiseOverlayPreviewProperties();
         }
     }
@@ -71,11 +93,16 @@ public sealed partial class MainWindowViewModel
     }
 
     public IBrush OverlayBackgroundBrush => _overlayBackgroundBrush;
+    public Avalonia.Thickness OverlayBorderThickness => _config.Overlay.BorderEnabled ? new(1) : new(0);
     public FontFamily OverlayMetricNameFontFamily => _overlayFontFamilyEffective ?? FontFamily.Default;
     public FontFamily OverlayMetricValueFontFamily => _overlayFontFamilyEffective ?? DefaultOverlayValueFontFamily;
 
     public IBrush OverlayPreviewBackgroundBrush => CreateOverlayBackgroundBrush(
         OverlayBackgroundColorText, OverlayBackgroundOpacityPercent / 100.0);
+    public IBrush OverlayPreviewBorderBrush => OverlayBorderEnabled
+        ? OverlayBrushHelper.Resolve(OverlayBorderColorText, ResolveBrush("OverlayBorderBrush"))
+        : Brushes.Transparent;
+    public Avalonia.Thickness OverlayPreviewBorderThickness => OverlayBorderEnabled ? new(1) : new(0);
     public FontFamily OverlayPreviewNameFontFamily => ResolvePreviewFontFamily() ?? FontFamily.Default;
     public FontFamily OverlayPreviewValueFontFamily => ResolvePreviewFontFamily() ?? DefaultOverlayValueFontFamily;
 
@@ -91,6 +118,8 @@ public sealed partial class MainWindowViewModel
         Raise(nameof(OverlayPreviewWidthInvalid));
         Raise(nameof(OverlayPreviewOpacity));
         Raise(nameof(OverlayPreviewBackgroundBrush));
+        Raise(nameof(OverlayPreviewBorderBrush));
+        Raise(nameof(OverlayPreviewBorderThickness));
         Raise(nameof(OverlayPreviewNameFontFamily));
         Raise(nameof(OverlayPreviewValueFontFamily));
         Raise(nameof(OverlayPreviewNameFontSize));
@@ -147,6 +176,8 @@ public sealed partial class MainWindowViewModel
     {
         _overlayBackgroundOpacityPercent = _config.Overlay.BackgroundOpacity * 100;
         _overlayBackgroundColorText = _config.Overlay.BackgroundColor ?? "";
+        _overlayBorderEnabled = _config.Overlay.BorderEnabled;
+        _overlayBorderColorText = _config.Overlay.BorderColor ?? "";
         SetOverlayFontFamilyDraft(_config.Overlay.FontFamily);
     }
 
@@ -156,6 +187,8 @@ public sealed partial class MainWindowViewModel
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
         OverlayBackgroundOpacityPercent = _config.Overlay.BackgroundOpacity * 100;
         OverlayBackgroundColorText = _config.Overlay.BackgroundColor ?? "";
+        OverlayBorderEnabled = _config.Overlay.BorderEnabled;
+        OverlayBorderColorText = _config.Overlay.BorderColor ?? "";
         OverlayFontSizeSlider = _config.Overlay.FontSize;
         OverlayCompactModeSetting = _config.Overlay.CompactMode;
         SetOverlayFontFamilyDraft(_config.Overlay.FontFamily);

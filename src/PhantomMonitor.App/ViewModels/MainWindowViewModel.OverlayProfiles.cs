@@ -205,6 +205,7 @@ public sealed partial class MainWindowViewModel
         _overlayAccentBrush = OverlayBrushHelper.Resolve(accentHex, _overlayAccentBrush);
         if (OverlayBrushHelper.TryParseColor(accentHex, out var accentColor))
             _overlayPanelBorderBrush = OverlayBrushHelper.Tint(accentColor);
+        _overlayPanelBorderBrush = OverlayBrushHelper.Resolve(config.Overlay.BorderColor, _overlayPanelBorderBrush);
         _overlayBackgroundBrush = CreateOverlayBackgroundBrush(config.Overlay.BackgroundColor, config.Overlay.BackgroundOpacity);
 
         OverlayProfileTagText = string.IsNullOrWhiteSpace(profile?.Name) ? "" : $"◉ perfil: {profile!.Name}";
@@ -212,6 +213,7 @@ public sealed partial class MainWindowViewModel
 
         Raise(nameof(OverlayAccentBrush));
         Raise(nameof(OverlayPanelBorderBrush));
+        Raise(nameof(OverlayBorderThickness));
         Raise(nameof(OverlayBackgroundBrush));
         Raise(nameof(OverlayWidth));
         Raise(nameof(OverlayOpacity));

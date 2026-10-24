@@ -19,4 +19,16 @@ public partial class OverlayAppearanceControls : UserControl
         if (DataContext is MainWindowViewModel viewModel)
             viewModel.OverlayBackgroundColorText = "";
     }
+
+    private void OnBorderColorSwatchClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string hex } && DataContext is MainWindowViewModel viewModel)
+            viewModel.OverlayBorderColorText = hex;
+    }
+
+    private void OnResetBorderColorClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+            viewModel.OverlayBorderColorText = "";
+    }
 }

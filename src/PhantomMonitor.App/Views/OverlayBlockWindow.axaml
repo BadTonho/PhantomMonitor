@@ -11,7 +11,7 @@
   <Border Margin="{Binding Owner.OverlayOuterMargin}"
           Padding="{Binding Owner.OverlayPadding}"
           CornerRadius="6" Background="{Binding Owner.OverlayBackgroundBrush}"
-          BorderBrush="{Binding Owner.OverlayPanelBorderBrush}" BorderThickness="1">
+          BorderBrush="{Binding Owner.OverlayPanelBorderBrush}" BorderThickness="{Binding Owner.OverlayBorderThickness}">
     <StackPanel Spacing="{Binding Owner.OverlayContentSpacing}">
       <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                  FontFamily="{Binding Owner.OverlayMetricNameFontFamily}"

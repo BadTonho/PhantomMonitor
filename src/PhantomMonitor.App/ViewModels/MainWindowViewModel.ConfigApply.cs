@@ -45,6 +45,14 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        var borderColor = OverlayBorderColorText.Trim();
+        if (borderColor.Length > 0
+            && (borderColor.Length != 7 || !OverlayBrushHelper.TryParseColor(borderColor, out _)))
+        {
+            SettingsMessage = "A cor da borda deve usar o formato hexadecimal #RRGGBB.";
+            return;
+        }
+
         var fontFamily = OverlayFontFamilyDraftValue;
         if (fontFamily.Length > 128 || fontFamily.Any(char.IsControl))
         {
@@ -94,6 +102,8 @@ public sealed partial class MainWindowViewModel
         var oldOverlayOpacity = _config.OverlayOpacity;
         var oldOverlayBackgroundColor = _config.Overlay.BackgroundColor;
         var oldOverlayBackgroundOpacity = _config.Overlay.BackgroundOpacity;
+        var oldOverlayBorderEnabled = _config.Overlay.BorderEnabled;
+        var oldOverlayBorderColor = _config.Overlay.BorderColor;
         var oldOverlayFontFamily = _config.Overlay.FontFamily;
         var oldOverlayFontSize = _config.Overlay.FontSize;
         var oldOverlayCompactMode = _config.Overlay.CompactMode;
@@ -114,7 +124,9 @@ public sealed partial class MainWindowViewModel
         var overlayVisualChanged = overlayWidth != oldOverlayWidth
             || Math.Abs(OverlayOpacityPercent / 100.0 - oldOverlayOpacity) > 0.000001
             || Math.Abs(OverlayBackgroundOpacityPercent / 100.0 - oldOverlayBackgroundOpacity) > 0.000001
-            || !string.Equals(backgroundColor, oldOverlayBackgroundColor ?? "", StringComparison.OrdinalIgnoreCase);
+            || !string.Equals(backgroundColor, oldOverlayBackgroundColor ?? "", StringComparison.OrdinalIgnoreCase)
+            || OverlayBorderEnabled != oldOverlayBorderEnabled
+            || !string.Equals(borderColor, oldOverlayBorderColor ?? "", StringComparison.OrdinalIgnoreCase);
         var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
             || !string.Equals(fontFamily, oldOverlayFontFamily ?? "", StringComparison.Ordinal)
             || OverlayCompactModeSetting != oldOverlayCompactMode;
@@ -146,6 +158,8 @@ public sealed partial class MainWindowViewModel
         _config.OverlayOpacity = OverlayOpacityPercent / 100.0;
         _config.Overlay.BackgroundColor = backgroundColor.Length == 0 ? null : backgroundColor.ToUpperInvariant();
         _config.Overlay.BackgroundOpacity = OverlayBackgroundOpacityPercent / 100.0;
+        _config.Overlay.BorderEnabled = OverlayBorderEnabled;
+        _config.Overlay.BorderColor = borderColor.Length == 0 ? null : borderColor.ToUpperInvariant();
         _config.Overlay.FontFamily = fontFamily;
         _config.Overlay.FontSize = overlayFontSize;
         _config.Overlay.CompactMode = OverlayCompactModeSetting;
@@ -168,6 +182,8 @@ public sealed partial class MainWindowViewModel
             _config.OverlayOpacity = oldOverlayOpacity;
             _config.Overlay.BackgroundColor = oldOverlayBackgroundColor;
             _config.Overlay.BackgroundOpacity = oldOverlayBackgroundOpacity;
+            _config.Overlay.BorderEnabled = oldOverlayBorderEnabled;
+            _config.Overlay.BorderColor = oldOverlayBorderColor;
             _config.Overlay.FontFamily = oldOverlayFontFamily ?? "";
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
@@ -217,6 +233,8 @@ public sealed partial class MainWindowViewModel
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
         OverlayBackgroundOpacityPercent = _config.Overlay.BackgroundOpacity * 100;
         OverlayBackgroundColorText = _config.Overlay.BackgroundColor ?? "";
+        OverlayBorderEnabled = _config.Overlay.BorderEnabled;
+        OverlayBorderColorText = _config.Overlay.BorderColor ?? "";
         OverlayFontSizeSlider = _config.Overlay.FontSize;
         OverlayCompactModeSetting = _config.Overlay.CompactMode;
         if (overlayVisualChanged)

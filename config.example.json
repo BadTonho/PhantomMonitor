@@ -29,6 +29,8 @@
     "backgroundColor": null,
     "backgroundOpacity": 1.0,
     "fontFamily": "",
+    "borderEnabled": true,
+    "borderColor": null,
     "shownSeries": ["Gpu*", "FanSpeed*", "Disk*"],
     "templates": [],
     "graphs": [

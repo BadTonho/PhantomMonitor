@@ -27,6 +27,8 @@ public sealed class OverlayConfig
     public string? BackgroundColor { get; set; }
     public double BackgroundOpacity { get; set; } = 1.0;
     public string FontFamily { get; set; } = "";
+    public bool BorderEnabled { get; set; } = true;
+    public string? BorderColor { get; set; }
 
     /// <summary>
     /// Posições normalizadas dos blocos do OSD (0–1) em relação à área da janela

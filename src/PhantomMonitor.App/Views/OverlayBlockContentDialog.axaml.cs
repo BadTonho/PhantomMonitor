@@ -42,6 +42,14 @@ public partial class OverlayBlockContentDialog : Window
     private void OnMoveContentDownClick(object? sender, RoutedEventArgs e) => ViewModel.MoveSelectedContent(1);
     private void OnRemoveContentClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveSelectedContent();
 
+    private async void OnOpenHiddenMetricsClick(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new OverlayHiddenMetricsDialog(ViewModel.GetHiddenMetricOptions());
+        var restored = await dialog.ShowDialog<string[]?>(this);
+        if (restored is { Length: > 0 })
+            ViewModel.RestoreHiddenMetrics(restored);
+    }
+
     private void InitializeContentReordering()
     {
         var list = this.FindControl<ListBox>("ContentItemsList");

@@ -61,6 +61,8 @@ Janela de OSD (On-Screen Display) transparente sobreposta à tela, com visual cl
 
 ## Editor visual do overlay
 
+No diálogo do bloco, **Remover da lista** em um cabeçalho remove a regra daquele bloco; em uma métrica, **Ocultar em todos os blocos** oculta essa identidade nas linhas de sensor de todos os blocos. Isso não altera a coleta de sensores nem o dashboard. Use **Linhas ocultadas…** para restaurar uma métrica ou todas. Identidades de sensores temporariamente indisponíveis permanecem salvas até serem restauradas. Ocultar e restaurar atualiza a prévia como rascunho; o overlay em execução só muda depois de **Salvar e aplicar**.
+
 O editor usa um canvas com grade e prévia ao vivo. Clique direito em uma área vazia cria um bloco; botão esquerdo arrasta com snap de 20 px e encaixe nas bordas dos blocos próximos (ou livremente segurando Shift), respeitando o tamanho do bloco e os limites do canvas; duplo clique abre o seletor multi-item; botão direito sobre um bloco abre as ações de edição e remoção. No diálogo do bloco, categorias e padrões são cabeçalhos na lista **Ordem no bloco**, com as métricas atualmente exibidas como sublinhas. Selecione uma métrica para editá-la diretamente; durante o arraste, o item acompanha o ponteiro e um marcador animado indica o destino; a ordem só muda ao soltar. Cabeçalhos movem o grupo inteiro e métricas só podem ser reordenadas dentro do próprio grupo. Regras sobrepostas mostram cada métrica uma vez, no primeiro grupo correspondente. A ordem personalizada é salva em `metricOrder`; novas métricas aparecem no fim do grupo e configurações sem essa propriedade mantêm a ordem padrão. As posições normalizadas `x`/`y` vão de 0 a 1 e usam a janela monitorada como referência no Windows e a área disponível no Linux. Conteúdo e posição ficam em rascunho até **Salvar e aplicar**. Configurações antigas são migradas de `layout` e demais opções legadas para `blocks`; sem posições salvas, os blocos começam na ordem vertical padrão.
 
 ## Configuração
@@ -76,6 +78,7 @@ Configuração atual por `overlay.blocks` e aparência global no painel **Config
 - `blocks` - Blocos com `{ id, x, y, items: [{ kind, value }] }`; `kind` aceita categoria, série, gráfico, template ou frametime. Vários itens podem ser reunidos em cada bloco.
 - `overlay.blocks[].metricOverrides` - Ajustes opcionais por sensor e específicos de cada bloco: `identity`, `displayName`, `decimals` (0–3) e `color`.
 - `overlay.blocks[].metricOrder` - Ordem opcional das linhas de métricas por regra do bloco (`category:<categoria>` ou `series:<padrão>`); métricas detectadas depois são acrescentadas ao fim do grupo.
+- `overlay.hiddenMetrics` - Lista global de identidades estáveis de métricas ocultadas em todos os blocos. Identidades desconhecidas ou temporariamente indisponíveis são preservadas; sem esse campo, nenhuma métrica fica oculta.
 - `compactMode` - Modo compacto: reduz paddings, espaçamento das linhas e a altura do gráfico de frametime
 - `accentColor` - Cor de destaque (hex) aplicada à linha do gráfico de frametime e ao contorno do painel
 - `fontSize` - Tamanho base da fonte do OSD em pt (8–20; sublinhas de detalhes/estatísticas usam fonte −2 pt)

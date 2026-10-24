@@ -6,9 +6,53 @@ namespace PhantomMonitor.App.ViewModels;
 public sealed partial class MainWindowViewModel
 {
     private readonly Dictionary<string, OverlayFrametimeGraphViewModel> _frametimeGraphItems = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _overlayHiddenMetricsDraft = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _overlayHiddenMetricsApplied = new(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyList<string> OverlayHiddenMetricsDraft
+        => _overlayHiddenMetricsDraft.OrderBy(identity => identity, StringComparer.OrdinalIgnoreCase).ToArray();
+
+    public bool IsOverlayMetricHiddenInDraft(string identity)
+        => _overlayHiddenMetricsDraft.Contains(identity);
+
+    public IReadOnlyList<OverlayHiddenMetricOption> GetOverlayHiddenMetricOptions()
+        => _overlayHiddenMetricsDraft
+            .OrderBy(identity => identity, StringComparer.OrdinalIgnoreCase)
+            .Select(identity =>
+            {
+                var row = OverlayRows.FirstOrDefault(candidate =>
+                    candidate.OverrideIdentity.Equals(identity, StringComparison.OrdinalIgnoreCase));
+                return new OverlayHiddenMetricOption(identity, row is null ? identity : $"{row.Name} · {row.Value}");
+            })
+            .ToArray();
+
+    public bool HideOverlayMetricDraft(string identity)
+    {
+        identity = (identity ?? "").Trim();
+        if (identity.Length == 0 || !_overlayHiddenMetricsDraft.Add(identity)) return false;
+        UpdateOverlayRows(_latestSensorData);
+        return true;
+    }
+
+    public bool RestoreOverlayMetricsDraft(IEnumerable<string> identities)
+    {
+        var changed = false;
+        foreach (var identity in identities)
+            changed |= _overlayHiddenMetricsDraft.Remove(identity);
+        if (changed) UpdateOverlayRows(_latestSensorData);
+        return changed;
+    }
+
+    private void ReloadOverlayHiddenMetricDraft()
+    {
+        _overlayHiddenMetricsDraft.Clear();
+        _overlayHiddenMetricsDraft.UnionWith(_config.Overlay.HiddenMetrics ?? []);
+        _overlayHiddenMetricsApplied = new HashSet<string>(_config.Overlay.HiddenMetrics ?? [], StringComparer.OrdinalIgnoreCase);
+    }
 
     private void InitializeOverlayBlocks()
     {
+        ReloadOverlayHiddenMetricDraft();
         foreach (var block in _overlayBlocks.Concat(_overlayAppliedBlocks))
             block.DisposeMetrics();
         _overlayBlocks.Clear();
@@ -83,6 +127,7 @@ public sealed partial class MainWindowViewModel
     public bool OverlayLayoutHasChanges()
     {
         if (_config.Overlay.BlocksMigrated) return true;
+        if (!_overlayHiddenMetricsDraft.SetEquals(_config.Overlay.HiddenMetrics ?? [])) return true;
         var saved = _config.Overlay.Blocks ?? [];
         if (saved.Count != _overlayBlocks.Count) return true;
         for (var index = 0; index < saved.Count; index++)
@@ -139,6 +184,8 @@ public sealed partial class MainWindowViewModel
 
     private void ApplyOverlayLayoutDraft()
     {
+        _config.Overlay.HiddenMetrics = OverlayHiddenMetricsDraft.ToList();
+        _overlayHiddenMetricsApplied = new HashSet<string>(_config.Overlay.HiddenMetrics, StringComparer.OrdinalIgnoreCase);
         BuildOverlayAppliedExtraRows();
         foreach (var block in _overlayAppliedBlocks)
             block.DisposeMetrics();
@@ -169,9 +216,11 @@ public sealed partial class MainWindowViewModel
             _ => ("", "")
         });
 
-        ReconcileOverlayBlocks(_overlayBlocks, categoryRows, draftExtras, categoryPlans, instancePlans, null);
+        ReconcileOverlayBlocks(_overlayBlocks, categoryRows, draftExtras, categoryPlans, instancePlans, null,
+            _overlayHiddenMetricsDraft);
         var profileSeries = _activeProfile?.ShownSeries is { Count: > 0 } series ? series : null;
-        ReconcileOverlayBlocks(_overlayAppliedBlocks, categoryRows, appliedExtras, categoryPlans, instancePlans, profileSeries);
+        ReconcileOverlayBlocks(_overlayAppliedBlocks, categoryRows, appliedExtras, categoryPlans, instancePlans, profileSeries,
+            _overlayHiddenMetricsApplied);
     }
 
     private void ReconcileOverlayBlocks(IEnumerable<OverlayCanvasBlockViewModel> blocks,
@@ -179,7 +228,8 @@ public sealed partial class MainWindowViewModel
         IReadOnlyDictionary<(string Kind, string Value), object> extras,
         IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> categoryPlans,
         IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> instancePlans,
-        IReadOnlyList<string>? profileSeries)
+        IReadOnlyList<string>? profileSeries,
+        IReadOnlySet<string> hiddenMetrics)
     {
         foreach (var block in blocks)
         {
@@ -192,7 +242,7 @@ public sealed partial class MainWindowViewModel
                     var rows = categoryPlans.Where(plan => OverlayBlockKeys.ForIdentity(plan.Identity) == item.Value)
                         .Select(plan => categoryRows.TryGetValue(plan.Identity, out var row) ? row : null)
                         .Where(row => row is not null).Cast<OverlayMetricViewModel>();
-                    AppendOrderedMetricRows(block, item, rows, desired, seenMetricIdentities);
+                    AppendOrderedMetricRows(block, item, rows, desired, seenMetricIdentities, hiddenMetrics);
                 }
                 else if (item.Kind == "series")
                 {
@@ -203,7 +253,7 @@ public sealed partial class MainWindowViewModel
                                 && (profileSeries is null || profileSeries.Count == 0 || profileSeries.Any(key.MatchesPattern))))
                         .Select(plan => categoryRows.TryGetValue(plan.Identity, out var row) ? row : null)
                         .Where(row => row is not null).Cast<OverlayMetricViewModel>();
-                    AppendOrderedMetricRows(block, item, rows, desired, seenMetricIdentities);
+                    AppendOrderedMetricRows(block, item, rows, desired, seenMetricIdentities, hiddenMetrics);
                 }
                 else if (item.Kind == "frametime") desired.Add(GetFrametimeGraphItem(block.Key + ":" + item.Value));
                 else if (extras.TryGetValue((item.Kind, item.Value), out var extra)) desired.Add(extra);
@@ -213,7 +263,8 @@ public sealed partial class MainWindowViewModel
     }
 
     private static void AppendOrderedMetricRows(OverlayCanvasBlockViewModel block, OverlayBlockItemConfig item,
-        IEnumerable<OverlayMetricViewModel> rows, ICollection<object> desired, ISet<string> seenIdentities)
+        IEnumerable<OverlayMetricViewModel> rows, ICollection<object> desired, ISet<string> seenIdentities,
+        IReadOnlySet<string> hiddenMetrics)
     {
         var groupKey = $"{item.Kind.ToLowerInvariant()}:{item.Value}";
         var order = block.Config.MetricOrder is { } metricOrder && metricOrder.TryGetValue(groupKey, out var savedOrder)
@@ -225,13 +276,14 @@ public sealed partial class MainWindowViewModel
             .ThenBy(pair => pair.index)
             .Select(pair => pair.row);
         foreach (var row in ordered)
-            if (seenIdentities.Add(row.OverrideIdentity))
+            if (!hiddenMetrics.Contains(row.OverrideIdentity) && seenIdentities.Add(row.OverrideIdentity))
                 desired.Add(block.GetMetricViewModel(row));
     }
 
     private void CopyOverlayLayoutToConfig()
     {
         _config.Overlay.Blocks = _overlayBlocks.Select(block => CloneOverlayBlock(block.Config)).ToList();
+        _config.Overlay.HiddenMetrics = OverlayHiddenMetricsDraft.ToList();
         _config.Overlay.Graphs = _overlayGraphsDraft.Select(CloneOverlayGraph).ToList();
         _config.Overlay.Templates = _overlayTemplatesDraft.Select(CloneOverlayTemplate).ToList();
     }

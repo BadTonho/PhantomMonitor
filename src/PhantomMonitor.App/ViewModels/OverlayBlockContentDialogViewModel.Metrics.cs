@@ -117,7 +117,7 @@ public sealed partial class OverlayBlockContentDialogViewModel
                     : key.MatchesPattern(item.Value))),
             _ => []
         };
-        return rows.Select(row =>
+        return rows.Where(row => !_owner.IsOverlayMetricHiddenInDraft(row.OverrideIdentity)).Select(row =>
         {
             if (_metricEditChoices.TryGetValue(row.OverrideIdentity, out var existing)
                 && ReferenceEquals(existing.Source, row))

@@ -41,6 +41,9 @@ public sealed class OverlayConfig
     [JsonIgnore]
     public bool BlocksMigrated { get; set; }
 
+    /// <summary>Identidades de métricas de sensor ocultadas em todos os blocos do overlay.</summary>
+    public List<string> HiddenMetrics { get; set; } = [];
+
     /// <summary>
     /// Linhas de template do usuário (P6.6): texto livre com placeholders
     /// {Chave} / {Chave:N} resolvidos no fim do painel; ver OverlayTemplate.

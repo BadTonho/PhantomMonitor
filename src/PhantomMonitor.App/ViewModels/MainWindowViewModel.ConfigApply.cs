@@ -109,6 +109,7 @@ public sealed partial class MainWindowViewModel
         var oldOverlayFontSize = _config.Overlay.FontSize;
         var oldOverlayCompactMode = _config.Overlay.CompactMode;
         var oldOverlayBlocks = (_config.Overlay.Blocks ?? []).Select(CloneOverlayBlock).ToList();
+        var oldOverlayHiddenMetrics = (_config.Overlay.HiddenMetrics ?? []).ToList();
         var oldOverlayGraphs = _config.Overlay.Graphs.Select(CloneOverlayGraph).ToList();
         var oldOverlayTemplates = _config.Overlay.Templates.Select(CloneOverlayTemplate).ToList();
         var collectionWasRunning = IsRunning;
@@ -193,6 +194,7 @@ public sealed partial class MainWindowViewModel
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
             _config.Overlay.Blocks = oldOverlayBlocks;
+            _config.Overlay.HiddenMetrics = oldOverlayHiddenMetrics;
             _config.Overlay.Graphs = oldOverlayGraphs;
             _config.Overlay.Templates = oldOverlayTemplates;
             ReloadOverlayLayoutDraft();

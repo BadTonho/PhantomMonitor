@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PhantomMonitor.App.Views.OverlayHiddenMetricsDialog"
+        Title="Linhas ocultadas"
+        Width="620" Height="520" MinWidth="480" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgWindowBrush}">
+  <Grid Margin="20" RowDefinitions="Auto,*,Auto" RowSpacing="12">
+    <StackPanel Spacing="4">
+      <TextBlock Text="LINHAS OCULTADAS" Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="15" FontWeight="SemiBold" />
+      <TextBlock Text="Estas métricas estão ocultas em todos os blocos. Restaurar permite que voltem a aparecer quando uma categoria ou série correspondente estiver ativa."
+                 Classes="muted" FontSize="10" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Grid Grid.Row="1">
+      <ListBox ItemsSource="{Binding Metrics}" SelectedItem="{Binding SelectedMetric, Mode=TwoWay}"
+               IsVisible="{Binding HasMetrics}"
+               Background="{DynamicResource BgCardBrush}"
+               BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Spacing="2" Margin="4">
+              <TextBlock Text="{Binding Label}" Foreground="{DynamicResource TextBodyBrush}"
+                         FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding Identity}" Foreground="{DynamicResource TextMonoBrush}"
+                         FontSize="10" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <TextBlock Text="Não há linhas ocultadas." Classes="muted"
+                 IsVisible="{Binding NoMetrics}" HorizontalAlignment="Center"
+                 VerticalAlignment="Center" />
+    </Grid>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Restaurar selecionada" IsEnabled="{Binding CanRestoreSelected}"
+              Click="OnRestoreSelectedClick" />
+      <Button Content="Restaurar todas" IsEnabled="{Binding HasMetrics}"
+              Click="OnRestoreAllClick" />
+      <Button Content="Fechar" Click="OnCloseClick" />
+    </StackPanel>
+  </Grid>
+</Window>

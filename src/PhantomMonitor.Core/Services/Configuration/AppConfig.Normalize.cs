@@ -108,6 +108,11 @@ public sealed partial class AppConfig
             Overlay.Blocks = MigrateLegacyOverlayBlocks(Overlay);
             Overlay.BlocksMigrated = true;
         }
+        Overlay.HiddenMetrics = (Overlay.HiddenMetrics ?? [])
+            .Where(identity => !string.IsNullOrWhiteSpace(identity))
+            .Select(identity => identity.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         Overlay.Blocks.RemoveAll(block => block is null);
         var blockIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var block in Overlay.Blocks)

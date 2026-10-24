@@ -33,6 +33,7 @@
     "borderEnabled": true,
     "borderColor": null,
     "shownSeries": ["Gpu*", "FanSpeed*", "Disk*"],
+    "hiddenMetrics": [],
     "templates": [],
     "graphs": [
       { "series": "GpuTemperature", "height": 36, "window": 240 }

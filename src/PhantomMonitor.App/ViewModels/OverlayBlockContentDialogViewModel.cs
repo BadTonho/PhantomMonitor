@@ -149,15 +149,29 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             Raise(nameof(CanMoveContentUp));
             Raise(nameof(CanMoveContentDown));
             Raise(nameof(CanRemoveSelectedContent));
+            Raise(nameof(RemoveSelectedContentText));
             Raise(nameof(HasSelectedMetric));
         }
     }
 
     public bool HasSelectedMetric => SelectedOrderRow?.Metric is not null;
     public bool ShowMetricEditorHint => !HasSelectedMetric;
-    public bool CanRemoveSelectedContent => SelectedOrderRow is { IsMetric: false };
+    public bool CanRemoveSelectedContent => SelectedOrderRow is not null;
+    public string RemoveSelectedContentText => SelectedOrderRow?.IsMetric == true
+        ? "Ocultar em todos os blocos"
+        : "Remover da lista";
     public bool CanMoveContentUp => CanMoveSelectedOrderRow(-1);
     public bool CanMoveContentDown => CanMoveSelectedOrderRow(1);
+
+    public IReadOnlyList<OverlayHiddenMetricOption> GetHiddenMetricOptions()
+        => _owner.GetOverlayHiddenMetricOptions();
+
+    public void RestoreHiddenMetrics(IEnumerable<string> identities)
+    {
+        if (!_owner.RestoreOverlayMetricsDraft(identities)) return;
+        RefreshDynamicChoices();
+        RebuildOrderRows();
+    }
 
     public string SelectedSeriesCategory
     {
@@ -399,6 +413,16 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
 
     public void RemoveSelectedContent()
     {
+        if (SelectedOrderRow?.Metric is { } metric)
+        {
+            if (_owner.HideOverlayMetricDraft(metric.Identity))
+            {
+                RefreshDynamicChoices();
+                RebuildOrderRows();
+            }
+            return;
+        }
+
         if (SelectedContentItem is not { } item) return;
         var choice = FindChoice(item.Kind, item.Value);
         if (choice is not null)
@@ -598,6 +622,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         Raise(nameof(CanMoveContentUp));
         Raise(nameof(CanMoveContentDown));
         Raise(nameof(CanRemoveSelectedContent));
+        Raise(nameof(RemoveSelectedContentText));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

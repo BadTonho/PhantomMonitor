@@ -4,8 +4,8 @@
 
 > O que fazer para o Phantom Monitor alcançar as suítes de referência do mercado.
 > Gerado a partir da comparação com o código em fim de 2026 (pós a bateria de correções
-> `79913ed..6233267`). **Status: P1–P4 implementados/entregues em
-> `6b5c148..` (série "paridade"); P5 é decisão de escopo, não tarefa.
+> `79913ed..6233267`). **Status: P1–P3 implementados/entregues; P4 teve a
+> decisão atualizada e os renderizadores estão pendentes; P5 é decisão de escopo, não tarefa.
 > Rodada 3 (`bb8342f..` = P8): os 4 gaps "Camada A" da análise RTSS×HWiNFO
 > (sensores por fórmula, WHEA, journal JSON, EDID) também fechados.**
 
@@ -17,7 +17,7 @@
 - 1% / 0.1% Low, min/max/avg, gráfico circular de 600 amostras.
 - Alertas acionáveis (popup, som, script externo, desligamento com trava) — incluindo alvos por instância (`sensorIndex`).
 - Overlay configurável (editor visual, presets, hotkey, tray), instância única.
-- Export CSV/JSON + `errors.log`; sem injeção → sem risco de ban.
+- Export CSV/JSON + `errors.log`; o build atual não carrega hooks de jogo.
 - Camada Vulkan implícita com gating por env (Linux).
 
 ---
@@ -71,19 +71,21 @@
 - [x] Tray: seção dinâmica "Automático (por aplicativo)" + perfis (fixar manualmente);
       indicador `◉ perfil: X` no rodapé do OSD quando ativo.
 
-## P4 — OSD in-frame no Windows — ✅ ENTREGUE COMO ESTUDO + POLÍTICA (`docs/osd-in-frame-estudo.md`)
+## P4 — OSD in-frame — decisão atualizada; renderizadores pendentes
 
-> Decisão: **não implementar hooks/injeção**. O caminho seguro registrado no
-> estudo é um plugin OBS consumindo a SDK de telemetria (P2) e renderizando o
-> OSD dentro do pipeline de captura do OBS — in-frame para game capture, zero
-> risco de anti-cheat. Nenhuma DLL nativa, nenhum schema de config morto.
+> Decisão atual: oferecer janela flutuante e modo dentro do jogo como escolha
+> global. No Windows, hook próprio restrito a executáveis adicionados pelo
+> usuário, com aviso anti-cheat e sem tentativa de contorno. Janela flutuante
+> continua sendo o padrão e opção disponível.
 
-- [x] Estudo de arquitetura completo com alternativas avaliadas e esforço
-      (`docs/osd-in-frame-estudo.md`); caminho "DLL injetada que intercepta Present"
-      **explicitamente descartado** (assinatura clássica de cheat).
-- [x] Comunicação pelo padrão SHM já existente (P2) — é a base do design recomendado.
-- [x] Nota de risco anti-cheat no README ("Políticas por design"); o overlay WPF
-      segue como default de risco zero.
+- [x] Contrato interno v1 de apresentação aplicada em memória compartilhada,
+      seleção global, migração para `floating`, lista de executáveis e ativações
+      Linux por launcher/Steam.
+- [x] Documentar fases, política anti-cheat e diagnóstico em português/inglês.
+- [ ] Renderer Linux Vulkan e hooks Windows Direct3D 11/12 (fase base).
+- [ ] Linux OpenGL e Windows OpenGL, Vulkan e Direct3D 9/10 (expansão).
+- [ ] Validar matriz completa com game capture, fullscreen, resize, gráficos,
+      templates, quadros obsoletos e falha sem fallback.
 
 ## P5 — Controle (OC/ventoinha/limiter) — 🔒 DECISÃO: FORA DO ESCOPO
 
@@ -156,8 +158,8 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 # Rodada 2 — gaps restantes (pós P1..P5)
 
 > Nova verificação após a implementação de P1..P5. Os itens estão separados em
-> **(A)** produto — dá para implementar no escopo atual;
-> **(B)** política — fechados conscientemente por não injetar/tocar no processo do jogo;
+> **(A)** produto — implementável no escopo atual;
+> **(B)** política/integração de jogo — recursos que exigem hook e têm riscos de compatibilidade;
 > **(C)** engine — dependem de fontes de leitura que a LibreHardwareMonitor não abre
 > (drivers próprios, MSR, NPU ou APIs proprietárias de vendor — NVAPI/ADLX).
 >
@@ -168,7 +170,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 
 | Recurso | Camada | Ação definida |
 |---|---|---|
-| OSD in-frame (game capture, replay, gravação) | B | Fora por política; caminho seguro documentado: plugin OBS consumindo a SDK (docs/osd-in-frame-estudo.md) |
+| OSD in-frame (game capture, replay, gravação) | B | Decisão atualizada: modo opt-in; hooks Windows limitados a executáveis permitidos pelo usuário, aviso anti-cheat e sem contorno. Contrato v1 existe; renderizadores pendentes (docs/osd-in-frame-estudo.md) |
 | Frame limiter (FRTC, millisecond) | B | Fora por política: exige hook no processo do jogo; não reabrir |
 | Curva de ventoinha, V/F curve, OC scanner | B | P5: fora do escopo read-only (app separado um dia) |
 | Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (padrão dos hooks de captura); OBS no plugin cobre gravação |
@@ -234,7 +236,8 @@ engine" quando implementável apenas com driver próprio.**
 - **SDK de memória compartilhada gratuita e estável no WPF/Windows** (P2): em soluções comerciais
   de referência, o acesso de terceiros à telemetria bruta via memória compartilhada
   tende a ser recurso licenciado/pago — aqui é aberto, documentado e versionado.
-- **Sem hook/injection**: anti-cheats podem restringir os OSDs que injetam hooks no
-  processo do jogo — o nosso design nunca corre esse risco, por construção.
+- **Hook explicitamente limitado**: o modo flutuante atual não carrega hooks; o
+  modo dentro do jogo será opt-in e limitado a executáveis aprovados pelo usuário.
+  Anti-cheats podem bloquear a integração, e não haverá tentativa de contorno.
 - **CSV livre e dinâmico** com séries por instância, JSON de snapshot local e leitor de
   referência da SDK incluso.

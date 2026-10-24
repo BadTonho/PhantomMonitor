@@ -11,7 +11,7 @@ This document records feature comparisons and implementation decisions for Phant
 - Configurable alerts, including per-instance targets.
 - Configurable OSD, profiles, hotkey, and tray integration on Windows.
 - CSV/JSON logging and error log.
-- No game-process DLL injection; opt-in implicit Vulkan layer on Linux.
+- Current builds do not load game-process hooks; Linux FPS uses an opt-in implicit Vulkan layer. The accepted in-game OSD design adds an explicit Windows executable allowlist and anti-cheat warning before hooks ship.
 
 ## P1 — Dynamic sensor series (completed)
 
@@ -25,9 +25,9 @@ The retired WPF/Windows frontend published the versioned `phantom_monitor_teleme
 
 Profiles can override position, size, font, opacity, series, accent, and visibility based on the focused executable. The Windows editor manages profile cards; the tray can pin one for the session or return to automatic matching. Active profiles are indicated in the OSD footer.
 
-## P4 — Windows in-frame OSD (architecture study)
+## P4 — In-game OSD (decision updated; renderers pending)
 
-Hooks and injected DLLs were rejected due to anti-cheat risk. The documented safe alternative is an OBS plugin that consumes the telemetry SDK and draws inside OBS's capture pipeline. No hook or new configuration schema was added. See [in-frame OSD study](osd-in-frame-study.md).
+The product will offer floating windows and an opt-in in-game mode. Windows hooks will be limited to user-allowlisted executables, with an anti-cheat warning and no bypass. Shared-memory v1, mode persistence, and Linux activation controls are implemented; native renderers are pending. See [in-frame OSD study](osd-in-frame-study.md).
 
 ## P5 — Hardware control (out of scope)
 
@@ -67,7 +67,7 @@ The project does not plan a Vulkan shared-memory seqlock at this time, placehold
 
 | Area | Status / decision |
 |---|---|
-| In-frame game capture, screenshots, and frame limiting | No injected hooks. OBS integration is the documented capture path; frame limiting remains out of scope. |
+| In-frame game capture | Decision updated: opt-in in-game mode with an allowlist for Windows hooks and no anti-cheat bypass. Shared-memory v1 and settings are implemented; native renderers are pending. See [in-frame OSD study](osd-in-frame-study.md). Frame limiting remains out of scope. |
 | Fan curves, voltage/frequency tuning, and overclocking | Out of scope for the read-only monitor. |
 | PresentMon metrics (Windows) | Busy/wait, present latency, and P1/P99 are published when present in the installed PresentMon output; the Linux reader does not publish them. Mode-of-present/click-to-photon are not planned. |
 | Rich OSD markup, conditional layers, bars, and formulas | Templates cover basic text and resolved-series conditions; more advanced layout remains a UI project. |

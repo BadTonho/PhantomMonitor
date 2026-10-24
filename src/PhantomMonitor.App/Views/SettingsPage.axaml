@@ -20,9 +20,39 @@
 
         <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
           <StackPanel Spacing="12">
-            <TextBlock Text="OVERLAY FLUTUANTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-            <TextBlock Text="A aparência e a composição do overlay são ajustadas no editor visual." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="MODO DO OVERLAY" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <ComboBox ItemsSource="{Binding OverlayRenderModeOptions}"
+                      SelectedIndex="{Binding OverlayRenderModeIndex, Mode=TwoWay}"
+                      HorizontalAlignment="Left" MinWidth="240" />
+            <TextBlock Text="Janela flutuante mantém os blocos em janelas separadas. Dentro do jogo usa um renderer nativo para desenhar no quadro apresentado pelo jogo; a opção depende de suporte para a API gráfica e pode ser bloqueada por anti-cheat." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding IsOverlayInGameModeSelected}" Text="{Binding InGameOverlayCapabilityNotice}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="A aparência e a composição dos blocos são ajustadas no editor visual." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <Button Classes="action accent" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
+            <StackPanel IsVisible="{Binding IsOverlayInGameModeSelected}" Spacing="8">
+              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O hook do Windows só será carregado nos executáveis desta lista. Alguns anti-cheats podem bloquear a integração; o PhantomMonitor não tenta contornar essa proteção." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="No Linux, adicione um executável para iniciá-lo com a camada Vulkan. Para jogos Steam, cole a opção de inicialização abaixo nas propriedades do jogo." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
+                <TextBox Text="{Binding OverlayTargetPathText, Mode=TwoWay}" PlaceholderText="Caminho do executável" />
+                <TextBox Grid.Column="1" Text="{Binding OverlayTargetArgumentsText, Mode=TwoWay}" PlaceholderText="Argumentos (opcional)" />
+                <Button Grid.Column="2" Content="Adicionar" Click="OnAddOverlayTargetClick" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding OverlayInGameTargets}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,2">
+                      <TextBlock Text="{Binding ExecutablePath}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].DataContext.IsLinuxPlatform}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
+                      <Button Grid.Column="2" Content="Remover" Click="OnRemoveOverlayTargetClick" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <StackPanel IsVisible="{Binding IsLinuxPlatform}" Orientation="Horizontal" Spacing="8">
+                <TextBox Text="{Binding SteamOverlayLaunchOption}" IsReadOnly="True" MinWidth="260" />
+                <Button Content="Copiar opção Steam" Click="OnCopySteamOverlayOptionClick" />
+              </StackPanel>
+              <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
           </StackPanel>
         </Border>
 

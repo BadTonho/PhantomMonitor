@@ -21,8 +21,13 @@ public sealed partial class MainWindow : Window
         SyncNavPage("overview");
         Opened += (_, _) =>
         {
-            EnsureOverlayWindow();
+            if (Screens.Primary is { } screen)
+            {
+                var scale = double.IsFinite(screen.Scaling) && screen.Scaling > 0 ? screen.Scaling : 1;
+                ViewModel.SetOverlayCanvasSize(screen.Bounds.Width / scale, screen.Bounds.Height / scale);
+            }
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            SyncOverlayVisibility();
             RefreshWindowPresentationState();
             ViewModel.Start();
             SyncOverlayVisibility();
@@ -119,12 +124,21 @@ public sealed partial class MainWindow : Window
 
         if (e.PropertyName == nameof(MainWindowViewModel.OverlayVisible))
             SyncOverlayVisibility();
+        else if (e.PropertyName == nameof(MainWindowViewModel.OverlayRenderMode))
+            SyncOverlayVisibility();
         else if (e.PropertyName == nameof(MainWindowViewModel.OverlayOpacity) && _overlayWindow is not null)
             _overlayWindow.Opacity = ViewModel.OverlayOpacity;
     }
 
     private void SyncOverlayVisibility()
     {
+        if (ViewModel.OverlayRenderMode != "floating")
+        {
+            if (_overlayWindow?.IsVisible == true)
+                _overlayWindow.Hide();
+            return;
+        }
+
         // Overlay pode ter sido fechada pelo usuário (Alt+F4): recriar antes de mostrar.
         if (ViewModel.OverlayVisible)
             EnsureOverlayWindow();

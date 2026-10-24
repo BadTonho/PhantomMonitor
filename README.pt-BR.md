@@ -34,14 +34,14 @@ O projeto roda um **único app desktop Avalonia** no Windows e no Linux. Release
 | --- | --- | --- |
 | Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe via LibreHardwareMonitor | Sensores de `sysfs`, `procfs` (incluindo `fdinfo` DRM), `hwmon`, zonas térmicas Linux, DRM e NVML opcional da NVIDIA; métricas de GPU variam conforme o driver |
 | FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
-| Overlay | OSD avançado, click-through e perfis (edição via config.json) | Janelas separadas e arrastáveis; Diagnóstico compara posição e tamanho solicitados e observados; o compositor pode limitar posições absolutas |
+| Overlay | OSD flutuante com click-through e perfis; hooks dentro do jogo estão planejados para executáveis permitidos pelo usuário e não estão disponíveis nesta versão | Janelas separadas e arrastáveis; renderização Vulkan dentro do jogo está planejada; a camada atual coleta somente FPS |
 | Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |
 | Alertas | Notificação, som, scripts e desligamento configurável | Toast interno, notificações do desktop e execução de scripts |
 | Diagnóstico | Fontes de sensores, avisos atuais de GPU e log de erros | Fontes por placa, geometria das janelas do overlay, avisos atuais de GPU, erros recentes e detalhes da NVML NVIDIA |
 | Fórmulas e ajuste por série | Compatibilidade com as configurações existentes | Editores visuais de sensores customizados e ajuste de cadência/suavização |
 | Telemetria | CSV, JSON, JSONL e exportador HTTP opcional | CSV, JSON, JSONL e exportador HTTP opcional |
 
-Os recursos que dependem do hardware ou do compositor podem variar entre máquinas. No Linux, o FPS requer um jogo Vulkan e a camada Phantom ativada. No Windows, a coleta de FPS usa ETW; o monitor não injeta DLLs nos jogos.
+Os recursos que dependem do hardware ou do compositor podem variar entre máquinas. No Linux, o FPS requer um jogo Vulkan e a camada Phantom ativada. No Windows, a coleta de FPS usa ETW. O modo dentro do jogo é opcional e os renderizadores nativos ainda não estão disponíveis nesta versão. O hook planejado para Windows ficará restrito aos executáveis adicionados pelo usuário e pode ser bloqueado por anti-cheat; o monitor não tentará contornar essas proteções.
 
 ## Comece a usar
 
@@ -69,7 +69,7 @@ Depois, nas opções de inicialização do jogo — por exemplo, na Steam — us
 ENABLE_PHANTOM_OVERLAY=1 %command%
 ```
 
-O dashboard e o overlay Linux funcionam sem a camada quando você não precisa de FPS. Em um desktop Wayland, confira **Diagnóstico → Resumo** para ver o backend Avalonia: a configuração padrão do projeto usa X11/XWayland, enquanto um compositor Wayland nativo pode ignorar posições absolutas das janelas.
+O dashboard e o overlay flutuante Linux funcionam sem a camada quando você não precisa de FPS. A camada atual publica FPS/frametime, mas ainda não desenha o OSD dentro do jogo. Em **Configurações → Modo do overlay**, `floating` continua sendo o padrão e configurações antigas migram para esse valor. Escolher `inGame` oculta as janelas flutuantes; Diagnóstico informa que o renderer ainda não está disponível. Em um desktop Wayland, confira **Diagnóstico → Resumo** para ver o backend Avalonia: a configuração padrão do projeto usa X11/XWayland, enquanto um compositor Wayland nativo pode ignorar posições absolutas das janelas.
 
 ### Windows
 
@@ -94,7 +94,7 @@ Builds publicados ficam na [página de Releases](https://github.com/BadTonho/Pha
 | `PhantomMonitor-<versão>-linux-x64.AppImage` | Linux (AppImage) |
 | `PhantomMonitorSetup-<versão>.exe` | Windows (instalador per-user via Inno Setup) |
 | `phantom-monitor_<versão>_amd64.deb` | Linux (pacote .deb) |
-| `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan (instalação manual com `install_layer.sh`; não entra na troca automática) |
+| `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan para FPS/frametime (instalação manual com `install_layer.sh`; não entra na troca automática) |
 
 Releases são geradas localmente por mantenedores (`scripts/release.ps1`, sem CI); detalhes na [documentação de atualizações](docs/funções/atualizações.md) e nos empacotadores em `packaging/`. Como os pacotes são binários independentes assinados por nós, o Windows pode exibir o aviso do **SmartScreen** ("editor desconhecido") e o Linux pode pedir confirmação de execução na primeira abertura.
 

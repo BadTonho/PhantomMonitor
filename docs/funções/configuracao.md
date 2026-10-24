@@ -30,6 +30,8 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 - `overlay.graphs` - Sparklines por série no OSD: `[{ id, series, height?, window?, color?, min?, max? }]` — resolução igual às templates (chave/wildcard/nome), buffer circular por gráfico, eixo auto ou fixo; editáveis no seletor de conteúdo — ver [overlay.md](overlay.md) (P8.5)
 
 ### OverlayConfig
+- `renderMode` - Modo global do OSD: `floating` (padrão/migração de configs antigas) ou `inGame`. O segundo modo publica o conteúdo aplicado no canal nativo, mas ainda não tem renderer conectado neste build; não abre janelas flutuantes como fallback.
+- `inGameTargets` - Executáveis escolhidos pelo usuário para integração nativa: caminho e argumentos. No Linux também alimenta o botão Iniciar com a variável `ENABLE_PHANTOM_OVERLAY=1`; no Windows a lista limita os processos que poderão receber o hook quando ele for disponibilizado.
 - `width` - Largura do overlay em pixels
 - `showCpu/Gpu/Ram/Disk/Network/Fans/Motherboard/Fps/FrametimeGraph` - Opções legadas usadas ao migrar arquivos sem `blocks`; a visibilidade atual é definida pelos itens de `blocks`.
 - `compactMode` - Modo compacto

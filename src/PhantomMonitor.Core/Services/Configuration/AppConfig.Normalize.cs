@@ -57,6 +57,23 @@ public sealed partial class AppConfig
         OverlayOpacity = Math.Clamp(OverlayOpacity, 0.1, 1.0);
         OverlayPosition ??= new();
         Overlay ??= new();
+        Overlay.RenderMode = string.Equals(Overlay.RenderMode, "inGame", StringComparison.OrdinalIgnoreCase)
+            ? "inGame"
+            : "floating";
+        Overlay.InGameTargets ??= [];
+        var targetPaths = new HashSet<string>(OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal);
+        Overlay.InGameTargets = Overlay.InGameTargets
+            .Where(target => target is not null && !string.IsNullOrWhiteSpace(target.ExecutablePath))
+            .Select(target => new OverlayLaunchTargetConfig
+            {
+                ExecutablePath = target.ExecutablePath.Trim(),
+                Arguments = (target.Arguments ?? "").Trim()
+            })
+            .Where(target => targetPaths.Add(target.ExecutablePath))
+            .Take(64)
+            .ToList();
         var normalizedOverlayLayout = new Dictionary<string, OverlayBlockPosition>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, position) in Overlay.Layout ?? [])
         {

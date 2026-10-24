@@ -179,6 +179,7 @@ public sealed partial class MainWindowViewModel
             block.SetCanvasSize(width, height);
         foreach (var block in _overlayBlocks)
             block.RefreshCanvasPosition();
+        PublishInGameOverlayFrame();
     }
 
     public void SetOverlayCanvasSizeIfMissing(double width, double height)

@@ -81,6 +81,25 @@ For Lutris, Heroic, or a terminal:
 ENABLE_PHANTOM_OVERLAY=1 ./game-executable
 ```
 
+## In-game overlay mode
+
+**Settings → Overlay mode** keeps `floating` as the default and offers `inGame`.
+Older configs migrate to `floating`. The app publishes applied content through
+`/dev/shm/phantommonitor_overlay_v1_<uid>` using a versioned protocol, stable
+sequence, and timestamp; consumers must map it read-only and reject partial or
+stale frames.
+
+The in-frame Vulkan renderer is not connected yet: the current layer still only
+collects FPS/frametime. Selecting `inGame` hides the floating windows, and
+Diagnostics reports that the renderer is unavailable; there is no automatic
+fallback. OpenGL expansion and Windows hooks are recorded in the [in-frame OSD
+study](../osd-in-frame-study.md). The Settings **Launch** button starts a saved
+executable with `ENABLE_PHANTOM_OVERLAY=1`. For Steam, copy this launch option:
+
+```bash
+ENABLE_PHANTOM_OVERLAY=1 %command%
+```
+
 ## Linux frontend notes
 
 The floating overlay follows `showOverlay` and existing `OverlayConfig` fields. Each Linux block remains a separate Topmost window. After a window opens or changes size, the app measures it and recalculates its position in physical pixels using the screen scale. **Diagnostics → Summary** records the desktop session, Avalonia backend, requested and observed positions, and each window's size; identical diagnostic lines are not repeated. A Wayland desktop session alone does not show that the app uses the native Wayland backend: this project's default setup uses X11/XWayland. When the native Wayland backend is identified and the position differs, diagnostics explains that the compositor may ignore absolute positions; transparency and fullscreen stacking also depend on compositor support. On Windows, the Avalonia overlay is a true click-through OSD that follows the focused app (30 ms) with a Topmost reinforcement (500 ms); on Linux, the overlay remains interactive and draggable with fixed Topmost — click-through, follow, and the per-app profile matcher are Windows-only behaviors.

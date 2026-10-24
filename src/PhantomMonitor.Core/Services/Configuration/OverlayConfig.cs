@@ -11,6 +11,10 @@ public sealed class OverlayPositionConfig
 
 public sealed class OverlayConfig
 {
+    /// <summary>Modo global de apresentação do OSD. "floating" preserva a janela desktop.</summary>
+    public string RenderMode { get; set; } = "floating";
+    /// <summary>Executáveis autorizados para hook no Windows e lançáveis no Linux.</summary>
+    public List<OverlayLaunchTargetConfig> InGameTargets { get; set; } = [];
     public int Width { get; set; } = 220;
     public bool ShowCpu { get; set; } = true;
     public bool ShowGpu { get; set; } = true;
@@ -146,4 +150,10 @@ public sealed class OverlayGraph
 
     /// <summary>Teto do eixo Y (opcional; auto quando null).</summary>
     public double? Max { get; set; }
+}
+
+public sealed class OverlayLaunchTargetConfig
+{
+    public string ExecutablePath { get; set; } = "";
+    public string Arguments { get; set; } = "";
 }

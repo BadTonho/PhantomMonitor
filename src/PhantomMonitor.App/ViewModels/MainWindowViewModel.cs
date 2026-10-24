@@ -73,6 +73,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private bool _hasDiagnosticSensorSnapshot;
     private string _diagnosticsMessage = "Os diagnósticos ficam somente neste computador.";
     private string _updateIntervalText;
+    private int _overlayRenderModeIndex;
     private bool _intervalEdited;
     private bool _logToCsv;
     private bool _logToJson;
@@ -325,6 +326,17 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         : $"http://127.0.0.1:{TelemetryExportPortText}/values · http://127.0.0.1:{TelemetryExportPortText}/health";
     public string LogDirectoryText => UserDataPaths.LogDirectory;
     public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
+    public IReadOnlyList<string> OverlayRenderModeOptions { get; } = ["Janela flutuante", "Dentro do jogo"];
+    public int OverlayRenderModeIndex
+    {
+        get => _overlayRenderModeIndex;
+        set
+        {
+            if (!Set(ref _overlayRenderModeIndex, Math.Clamp(value, 0, 1))) return;
+            Raise(nameof(IsOverlayInGameModeSelected));
+        }
+    }
+    public string OverlayRenderMode => _config.Overlay.RenderMode;
     public ObservableCollection<OverlayMetricViewModel> OverlayRows => _overlayRows;
     public ObservableCollection<OverlayCanvasBlockViewModel> OverlayBlocks => _overlayBlocks;
     public ObservableCollection<OverlayCanvasBlockViewModel> OverlayAppliedBlocks => _overlayAppliedBlocks;
@@ -426,6 +438,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _overlayFontSizeText = _config.Overlay.FontSize.ToString("0.#", CultureInfo.CurrentCulture);
         _overlayFontSizeSlider = _config.Overlay.FontSize;
         _overlayCompactModeSetting = _config.Overlay.CompactMode;
+        _overlayRenderModeIndex = _config.Overlay.RenderMode == "inGame" ? 1 : 0;
+        LoadOverlayInGameTargets();
         _alertEvaluator = new AlertRuleEvaluator(_config.Alerts);
         _desktopNotificationService = OperatingSystem.IsLinux() ? new LinuxDesktopNotificationService() : null;
         LoadCustomSensorEditors();
@@ -436,6 +450,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         RefreshStartWithWindows();
         ApplyHotkeys();
         UpdateOverlayRows(null);
+        ConfigureInGameOverlayHeartbeat();
         LoadDiagnosticEntries();
         ErrorLog.EntryWritten += OnDiagnosticEntryWritten;
         App.ThemeChanged += OnThemeChanged;
@@ -811,6 +826,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public void Dispose()
     {
         if (_disposed) return;
+        if (_inGameFrameChannelActive)
+            PublishInGameOverlayFrame(forceHidden: true);
         _disposed = true;
         ErrorLog.EntryWritten -= OnDiagnosticEntryWritten;
         App.ThemeChanged -= OnThemeChanged;
@@ -828,7 +845,10 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _updateTimer = null;
         _updates = null;
         _alertToastTimer?.Stop();
+        _inGameOverlayHeartbeat?.Stop();
+        _inGameOverlayHeartbeat = null;
         _desktopNotificationService?.Dispose();
         _sensorService.Dispose();
+        _inGameOverlayFramePublisher.Dispose();
     }
 }

@@ -34,7 +34,12 @@ public sealed partial class MainWindowViewModel
 
         Raise(nameof(OverlayVisible));
         Raise(nameof(OverlayButtonText));
-        SettingsMessage = _config.ShowOverlay ? "Overlay ativado." : "Overlay ocultado.";
+        PublishInGameOverlayFrame();
+        SettingsMessage = _config.ShowOverlay
+            ? _config.Overlay.RenderMode == "inGame"
+                ? "Overlay ativado no modo dentro do jogo. O renderer ainda não está disponível neste build."
+                : "Overlay ativado."
+            : "Overlay ocultado.";
     }
 
     private void UpdateOverlayRows(SensorData? data)
@@ -55,6 +60,7 @@ public sealed partial class MainWindowViewModel
         UpdateOverlayExtraRows(data);
         UpdateOverlayAppliedExtraRows(data);
         ReconcileOverlayBlocks(categoryPlans, instancePlans);
+        PublishInGameOverlayFrame();
     }
 
     private void ReconcileOverlayRows(IReadOnlyList<OverlayMetricsBuilder.OverlayRowPlan> plan)

@@ -19,6 +19,12 @@
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsDiagnosticSummary}" Spacing="12">
+          <Border IsVisible="{Binding IsInGameOverlayDiagnosticsVisible}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+            <StackPanel Spacing="7">
+              <TextBlock Text="OVERLAY DENTRO DO JOGO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="{Binding InGameOverlayDiagnosticText}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
           <Border IsVisible="{Binding IsLinuxOverlayDiagnosticsVisible}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
             <StackPanel Spacing="8">
               <TextBlock Text="GEOMETRIA DO OVERLAY LINUX" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />

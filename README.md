@@ -34,14 +34,14 @@ The project runs a **single Avalonia desktop app** on Windows and Linux. Earlier
 | --- | --- | --- |
 | Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors via LibreHardwareMonitor | Sensors from `sysfs`, `procfs` (including DRM `fdinfo`), `hwmon`, Linux thermal zones, DRM, and optional NVIDIA NVML; GPU metrics vary by driver |
 | FPS and frametime | PresentMon through ETW | Phantom Vulkan layer for Vulkan games |
-| Overlay | Advanced OSD, click-through, and profiles (editing via config.json) | Separate draggable windows; Diagnostics compares requested and observed position and size; the compositor may limit absolute placement |
+| Overlay | Existing floating OSD with click-through and profiles; in-game hooks are planned for allowlisted executables and are unavailable in this build | Separate draggable windows; in-game Vulkan rendering is planned; the current layer collects FPS only |
 | Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |
 | Alerts | Notifications, sound, scripts, and configurable shutdown action | In-app toast, desktop notifications, and scripts |
 | Diagnostics | Sensor sources, current GPU warnings, and application error log | Per-GPU source status, overlay window geometry, current GPU warnings, recent errors, and NVIDIA NVML details |
 | Formulas and per-series tuning | Compatible with the existing configuration format | Visual editors for custom sensors and sampling/smoothing rules |
 | Telemetry | CSV, JSON, JSONL, and optional HTTP exporter | CSV, JSON, JSONL, and optional HTTP exporter |
 
-Hardware and compositor support varies between systems. On Linux, FPS requires a Vulkan game and the Phantom layer enabled. On Windows, FPS collection uses ETW; the monitor does not inject DLLs into games.
+Hardware and compositor support varies between systems. On Linux, FPS requires a Vulkan game and the Phantom layer enabled. On Windows, FPS collection uses ETW. The in-game mode is opt-in and its native renderers are not available in this build. The Windows design is limited to executables explicitly added by the user and may be blocked by anti-cheat; the monitor will not try to bypass those protections.
 
 ## Getting started
 
@@ -69,7 +69,7 @@ Then add this to the game's launch options, for example in Steam:
 ENABLE_PHANTOM_OVERLAY=1 %command%
 ```
 
-The dashboard and Linux overlay work without the layer when FPS is not needed. On a Wayland desktop, check **Diagnostics → Summary** for the Avalonia backend: this project's default uses X11/XWayland, while a native Wayland compositor may ignore absolute window positions.
+The dashboard and floating Linux overlay work without the layer when FPS is not needed. The layer currently publishes FPS/frametime only; it does not yet draw the in-game OSD. In **Settings → Overlay mode**, `floating` remains the default and old configs migrate to it. Choosing `inGame` hides the floating windows, and Diagnostics reports that the renderer is unavailable in this build. On a Wayland desktop, check **Diagnostics → Summary** for the Avalonia backend: this project's default uses X11/XWayland, while a native Wayland compositor may ignore absolute window positions.
 
 ### Windows
 
@@ -102,7 +102,7 @@ Published builds live on the [Releases page](https://github.com/BadTonho/Phantom
 | `PhantomMonitor-<version>-linux-x64.AppImage` | Linux (AppImage) |
 | `PhantomMonitorSetup-<version>.exe` | Windows (per-user installer via Inno Setup) |
 | `phantom-monitor_<version>_amd64.deb` | Linux (.deb package) |
-| `PhantomVulkanLayer-<version>-linux.so` | Vulkan layer (manual install with `install_layer.sh`; not part of the automatic swap) |
+| `PhantomVulkanLayer-<version>-linux.so` | Vulkan FPS/frametime layer (manual install with `install_layer.sh`; not part of the automatic swap) |
 
 Releases are generated locally by maintainers (`scripts/release.ps1`, no CI); see the [updates guide](docs/en/functions/updates.md) and the packagers under `packaging/`. Because the packages are standalone binaries signed by us, Windows may show the **SmartScreen** warning ("unknown publisher") and Linux may ask for confirmation on the first launch.
 

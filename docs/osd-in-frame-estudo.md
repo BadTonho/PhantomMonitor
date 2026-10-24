@@ -1,90 +1,81 @@
-# OSD In-Frame no Windows — Estudo de Arquitetura (P4)
+# OSD dentro do jogo — arquitetura e fases
 
 > **Idioma:** Português (Brasil) · [English](en/osd-in-frame-study.md)
 
-**Status:** estudo de arquitetura. Nenhuma DLL nativa nova, nenhum hook, nenhum
-schema de config foi adicionado — a decisão deixa isso explícito por segurança
-(anti-cheat) e pela filosofia do projeto descrita no README.
+## Decisão
 
-> **Nota (Fase 2 da unificação visual):** o estudo foi escrito na era do frontend
-> WPF — o `OverlayWindow` citado abaixo era a janela WPF, aposentada com o
-> frontend na Fase 2 (`6c4d2c0`). O app único mantém o mesmo desenho de OSD em
-> janela separada (`WS_EX_LAYERED` no Windows) e as conclusões seguem válidas
-> como direção futura; o baseline comparativo das seções era o overlay do WPF.
+O PhantomMonitor oferecerá dois modos globais: **Janela flutuante**, que mantém
+os blocos em janelas separadas, e **Dentro do jogo**, que desenha a apresentação
+aplicada no quadro do jogo. O modo flutuante continua como padrão para
+instalações novas e configurações antigas. A escolha dentro do jogo é explícita;
+se o renderer não estiver disponível ou falhar, o app informa o motivo em
+Diagnóstico e não muda automaticamente para janelas.
 
-## 1. O problema
+No Windows, o hook próprio será limitado aos executáveis que o usuário adicionar
+em `overlay.inGameTargets`. Hooks podem ser recusados ou bloqueados por EAC,
+BattlEye, Vanguard e outros anti-cheats. O PhantomMonitor não tentará contornar
+essas proteções. O modo flutuante continua disponível nesses casos.
 
-Na época, o `OverlayWindow` do WPF era uma janela `WS_EX_LAYERED` **separada** do jogo:
+## Contrato entre app e renderers
 
-- aparece no desktop e em `window capture`/`display capture` do OBS;
-- **não aparece** em `game capture` (capture de swapchain): o compositor captura
-  apenas os quadros que o jogo apresenta — janelas de outros processos ficam de fora.
+O app monta a apresentação usando o conteúdo **aplicado**: ordem dos blocos e
+itens, valores atuais, estilos, gráficos, templates e posições. O preview do
+editor continua usando os valores de rascunho. A apresentação ativa é publicada
+por um canal interno de memória compartilhada versionado. O leitor nativo tem
+acesso somente de leitura e aceita um quadro apenas quando versão, sequência
+estável, tamanho e timestamp são válidos. Quadros incompletos, desconhecidos ou
+antigos não devem ser desenhados. O contrato não é uma API pública.
 
-Esse é o gap estrutural em relação aos overlays com hook no processo do jogo:
-overlay "in-frame", dentro das imagens que o jogo apresenta, visível em qualquer
-captura e em gravações do Driver-level/GPU capture.
+O canal v1 atual usa cabeçalho de 32 bytes e payload UTF-8 com registros
+tabulados (linhas terminadas em LF). `F` contém versão do payload, visibilidade,
+pausa, largura, área de referência, fontes de rótulo e valor, opacidade, cores,
+borda, margens, padding, espaçamentos e altura do gráfico de frametime. `B`
+contém id Base64, posição normalizada e título Base64. `N`/`T` carregam tamanho
+de fonte, cor e texto Base64; `G` carrega altura, cor, eixo opcional e até 1200
+amostras; `E` termina o bloco.
+O cabeçalho marca a hora de publicação e a sequência; o app renova o timestamp
+a cada segundo enquanto o modo estiver ativo, inclusive durante pausa; leitores
+devem rejeitar publicação com mais de três segundos de idade. O nome POSIX fica
+persistentemente disponível para que um jogo já aberto receba quadros depois de
+reiniciar o app; no encerramento normal o app publica estado oculto. O app
+mantém o objeto `/phantommonitor_overlay_v1_<uid>` somente leitura para outros
+processos enquanto escreve pelo mapeamento que já abriu.
+Uma implementação que não reconheça a versão deve ignorar o quadro.
 
-## 2. Alternativas avaliadas
+## Matriz de implementação
 
-| Opção | Nível | Risco | Decisão |
-|---|---|---|---|
-| Hook de `Present`/DXGI via DLL injetada no processo do jogo | user-mode hook | **Alto**: a assinatura típica de cheat; bans com EAC/Vanguard/BattlEye são comuns | ❌ contra a filosofia do projeto (sem injeção) |
-| Camada Vulkan própria injetável no Windows | driver/layer | Mesmo risco do acima + manutenção por API gráfica | ❌ fora do Windows |
-| DirectComposition / Hardware overlay plane (DWM) | sistema | Overlay permanece fora do swapchain do jogo (só improve composição própria) | ❌ não resolve game capture |
-| **Plugin OBS que consuma o SDK de telemetria (P2) e renderize dentro do pipeline do OBS** | fora do jogo | **Zero**: toca apenas na memória compartilhada; o stream embute o OSD | ✅ caminho recomendado |
+| Fase | Linux | Windows |
+|---|---|---|
+| Base | Vulkan | Direct3D 11 e 12 |
+| Expansão | OpenGL | OpenGL, Vulkan e Direct3D 9 e 10 |
+| Meta | Vulkan e OpenGL | Direct3D 9–12, Vulkan e OpenGL |
 
-## 3. Design recomendado: plugin OBS + SDK de telemetria
+Cada API precisa interceptar sua apresentação e tratar seu próprio ciclo de
+vida, swapchain/contexto, redimensionamento, sincronização, captura e falhas.
+Camadas Vulkan seguem o modelo de interceptar a apresentação do quadro, como
+MangoHud, mas o renderizador Phantom terá seu próprio protocolo e tratamento de
+recursos. Não se presume que um hook de uma API cubra outra.
 
-A infraestrutura do P2 para WPF/Windows (`docs/telemetry-sdk.md`) já fornece, sem parse:
+No Linux, o usuário poderá iniciar um executável configurado no PhantomMonitor,
+que define `ENABLE_PHANTOM_OVERLAY=1`, ou copiar essa variável para as opções de
+inicialização do jogo na Steam. O gating por processo também mantém disponível a
+coleta FPS da camada Vulkan existente.
 
-- memória compartilhada `phantom_monitor_telemetry_v1` com seqlock;
-- chaves estáveis `Categoria` / `Categoria#índice` (`SensorKey`);
-- unidades (`SensorUnits`) e rótulos de origem.
+## Estado do código
 
-No Avalonia/Linux, esse mapa completo ainda não é publicado. A memória
-compartilhada POSIX da camada Vulkan carrega somente as métricas de frame do
-processo do jogo; para snapshots completos de sensores, o Linux oferece o
-exportador HTTP opt-in.
+Configuração, migração para `floating`, lista de executáveis, publicação do
+quadro aplicado v1, controles de ativação Linux e diagnósticos da capacidade
+estão implementados. **Os renderizadores nativos ainda não estão implementados**:
+a camada Vulkan atual mede FPS/frametime, mas não consome o quadro para desenhar;
+hooks Direct3D também não foram adicionados. Portanto `inGame` permanece sem
+renderização nesta versão e o app informa essa limitação. A tabela acima é o
+plano de entrega, não uma declaração de suporte atual.
 
-O plugin (C/C++ via `obs-frontend-api`/`obs-graphics`) faria:
+## Validação necessária por API
 
-1. **Fonte de dados:** thread dedicada lendo o mapa (mesma sequência do
-   `TelemetrySdkReader` de exemplo: magic → version → seqlock duplo) e
-   mantendo um cache snapshot a snapshot.
-2. **Render:** `obs_source` custom desenhando as linhas no `render()` do OBS
-   (já roda dentro da cena capturada, portanto in-frame para game capture e
-   gravações). Layout segue o mesmo desenho do OSD Phantom (tags de família
-   `GPU1`, `FAN2`... + colunas tabulares monoespaçadas).
-3. **Filtro/séries:** reutiliza a whitelist `overlay.shownSeries`
-   (wildcards de `SensorKey`) e a ordem por família já implementada no
-   `OverlayWindow` — paridade de configuração entre o OSD desktop e o in-frame.
-4. **Distribuição:** plugin separado (não assinado) vai ao próprio repositório do
-   plugin (fora desta solução); o monitor continua com a arquitetura atual.
-
-### Esforço estimado (fases)
-1. Fonte de leitura C++ com seqlock (≈1 day; referência: `TelemetrySdkReader` em C#).
-2. `obs_source` de texto em canvas dos itens formatados (2–4 days).
-3. Gráfico de frametime antes (cross-OS: dados já publicados em `FrametimeHistory`?)
-   — v2; somente texto primeiro.
-
-Total ≈ 1 semana para o MVP texto-only.
-
-## 4. Por que NÃO hooks/injeção (política)
-
-- Anti-cheats modernos (EAC, BattlEye, Vanguard...) detetam tipicamente DLLs
-  estranhas no processo do jogo; hooks de `Present` são a assinatura clássica
-  de cheats de ESP. Sem injeção, os mesmos consumidores podem usar o monitor
-  em **qualquer** jogo, mesmo em rankeds.
-- O projeto já tem in-frame-OSD no **Linux** por uma via que não fala com o
-  processo do jogo: a camada Vulkan própria (`PhantomVulkanLayer`) é uma
-  VK_LAYER opt-in ativada por variável de ambiente do jogo, **publicando**
-  (gravando) os frametimes no formato de memória compartilhada POSIX
-  `/dev/shm/phantom_fps_<pid>` — sem DLL
-  injetada em processos alheios. O estudo de portar esse modelo ao Windows
-  continua descartado: no Windows não existe o hook de camada equivalente sem
-  injeção de DLL no processo alvo.
-
-## 5. O que muda no produto hoje
-
-Nada em código. O roteiro de implementação fica registrado neste documento;
-se um dia o plugin OBS for implementado, o SDK de P2 já é o contrato.
+Para cada fase, verificar fullscreen e janela sem borda, resize, sete blocos,
+gráficos e templates, game capture, alternância de modos, ocultar/reabrir,
+quadros parciais/antigos e falhas sem fallback. No Linux, validar X11/XWayland e
+Wayland quando aplicável. No Windows, validar que só executáveis cadastrados
+carregam o hook e que a falha é visível em Diagnóstico. Testes com anti-cheat
+devem respeitar os bloqueios existentes.

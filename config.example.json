@@ -14,6 +14,8 @@
     "y": 80
   },
   "overlay": {
+    "renderMode": "floating",
+    "inGameTargets": [],
     "width": 220,
     "showCpu": true,
     "showGpu": true,

@@ -144,6 +144,27 @@ Perfis por aplicativo, templates (P6.6) e gráficos por série (P8.5) são
 consumidos do `config.json` no arranque da app — ver
 [overlay.md](overlay.md).
 
+## 6. Modo dentro do jogo
+
+**Configurações → Modo do overlay** mantém `floating` como padrão e permite
+selecionar `inGame`. Configurações antigas migram para `floating`. O app publica
+o conteúdo aplicado em `/dev/shm/phantommonitor_overlay_v1_<uid>` com protocolo
+versionado, sequência para leitura consistente e timestamp; consumidores devem
+mapear a região somente para leitura e rejeitar quadros parciais ou antigos.
+
+O renderer in-frame Vulkan ainda não está conectado: a camada atual continua
+responsável apenas por FPS/frametime. Ao escolher `inGame`, as janelas
+flutuantes são ocultadas, e Diagnóstico informa que o renderer não está
+disponível; não há fallback automático. A expansão para OpenGL e os hooks
+Windows estão registrados no [estudo de OSD in-frame](../osd-in-frame-estudo.md).
+Para FPS e para a futura camada, ative o processo explicitamente. O botão
+**Iniciar** nas Configurações aplica `ENABLE_PHANTOM_OVERLAY=1` ao executável
+salvo. Para a Steam, copie esta opção:
+
+```bash
+ENABLE_PHANTOM_OVERLAY=1 %command%
+```
+
 Os arquivos CSV/JSON/JSONL e o `errors.log` ficam em
 `~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`. A página
 **Diagnóstico** mostra os registros recentes, as posições e dimensões do overlay Linux na aba **Resumo**, avisos atuais para métricas GPU indisponíveis na aba **Erros** e o estado detalhado das fontes na aba **Sensores**;

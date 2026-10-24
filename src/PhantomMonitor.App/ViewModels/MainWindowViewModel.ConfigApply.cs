@@ -108,6 +108,8 @@ public sealed partial class MainWindowViewModel
         var oldOverlayFontFamily = _config.Overlay.FontFamily;
         var oldOverlayFontSize = _config.Overlay.FontSize;
         var oldOverlayCompactMode = _config.Overlay.CompactMode;
+        var oldOverlayRenderMode = _config.Overlay.RenderMode;
+        var oldOverlayTargets = _config.Overlay.InGameTargets.Select(CloneOverlayTarget).ToList();
         var oldOverlayBlocks = (_config.Overlay.Blocks ?? []).Select(CloneOverlayBlock).ToList();
         var oldOverlayHiddenMetrics = (_config.Overlay.HiddenMetrics ?? []).ToList();
         var oldOverlayGraphs = _config.Overlay.Graphs.Select(CloneOverlayGraph).ToList();
@@ -135,9 +137,13 @@ public sealed partial class MainWindowViewModel
             || !string.Equals(fontFamily, oldOverlayFontFamily ?? "", StringComparison.Ordinal)
             || OverlayCompactModeSetting != oldOverlayCompactMode;
         var overlayLayoutChanged = OverlayLayoutHasChanges();
+        var overlayRenderModeChanged = (OverlayRenderModeIndex == 1 ? "inGame" : "floating") != oldOverlayRenderMode;
+        var overlayTargetsChanged = OverlayInGameTargetsChanged(oldOverlayTargets);
         var overlayChanged = overlayLayoutChanged
             || overlayVisualChanged
-            || overlayAppearanceChanged;
+            || overlayAppearanceChanged
+            || overlayRenderModeChanged
+            || overlayTargetsChanged;
 
         if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged && !updateChanged
             && !themeAppearanceChanged)
@@ -168,6 +174,8 @@ public sealed partial class MainWindowViewModel
         _config.Overlay.FontFamily = fontFamily;
         _config.Overlay.FontSize = overlayFontSize;
         _config.Overlay.CompactMode = OverlayCompactModeSetting;
+        _config.Overlay.RenderMode = OverlayRenderModeIndex == 1 ? "inGame" : "floating";
+        _config.Overlay.InGameTargets = OverlayInGameTargets.Select(CloneOverlayTarget).ToList();
         CopyOverlayLayoutToConfig();
 
         if (!_config.Save(ConfigPaths.ConfigFile))
@@ -193,6 +201,9 @@ public sealed partial class MainWindowViewModel
             _config.Overlay.FontFamily = oldOverlayFontFamily ?? "";
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
+            _config.Overlay.RenderMode = oldOverlayRenderMode;
+            _config.Overlay.InGameTargets = oldOverlayTargets;
+            LoadOverlayInGameTargets();
             _config.Overlay.Blocks = oldOverlayBlocks;
             _config.Overlay.HiddenMetrics = oldOverlayHiddenMetrics;
             _config.Overlay.Graphs = oldOverlayGraphs;
@@ -203,6 +214,11 @@ public sealed partial class MainWindowViewModel
         }
 
         _config.Overlay.BlocksMigrated = false;
+        if (overlayRenderModeChanged)
+        {
+            Raise(nameof(OverlayRenderMode));
+            Raise(nameof(IsInGameOverlayDiagnosticsVisible));
+        }
         if (overlayLayoutChanged)
             ApplyOverlayLayoutDraft();
 
@@ -241,6 +257,7 @@ public sealed partial class MainWindowViewModel
         // em vigor sobre ela (perfis P3 — F1.3).
         OnOverlayBaseConfigChanged();
         UpdateOverlayRows(_latestSensorData);
+        ConfigureInGameOverlayHeartbeat();
         OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
         OverlayBackgroundOpacityPercent = _config.Overlay.BackgroundOpacity * 100;
@@ -266,7 +283,9 @@ public sealed partial class MainWindowViewModel
                     : "Coleta reiniciada; as estatísticas da sessão foram zeradas."
                 : "Intervalo salvo. Será usado quando a coleta for iniciada."
             : overlayChanged && !loggingChanged && !telemetryChanged
-                ? "Opções do overlay salvas e aplicadas."
+                ? _config.Overlay.RenderMode == "inGame"
+                    ? "Modo dentro do jogo salvo. O renderer nativo ainda não está disponível neste build; veja Diagnóstico."
+                    : "Opções do overlay salvas e aplicadas."
             : loggingChanged && telemetryChanged
                 ? collectionWasRunning
                     ? "Logs e exportador HTTP atualizados sem reiniciar a coleta."

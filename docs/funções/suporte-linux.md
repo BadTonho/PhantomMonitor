@@ -152,18 +152,22 @@ o conteúdo aplicado em `/dev/shm/phantommonitor_overlay_v1_<uid>` com protocolo
 versionado, sequência para leitura consistente e timestamp; consumidores devem
 mapear a região somente para leitura e rejeitar quadros parciais ou antigos.
 
-O renderer in-frame Vulkan ainda não está conectado: a camada atual continua
-responsável apenas por FPS/frametime. Ao escolher `inGame`, as janelas
-flutuantes são ocultadas, e Diagnóstico informa que o renderer não está
-disponível; não há fallback automático. A expansão para OpenGL e os hooks
-Windows estão registrados no [estudo de OSD in-frame](../osd-in-frame-estudo.md).
-Para FPS e para a futura camada, ative o processo explicitamente. O botão
-**Iniciar** nas Configurações aplica `ENABLE_PHANTOM_OVERLAY=1` ao executável
-salvo. Para a Steam, copie esta opção:
+O modo `inGame` desenha em Vulkan pela camada Phantom e em OpenGL por preload
+GLX/EGL. `install_layer.sh` compila e instala ambas as bibliotecas. O botão
+**Iniciar** nas Configurações ativa `ENABLE_PHANTOM_OVERLAY=1` e acrescenta o
+preload OpenGL quando a biblioteca existe. Para a Steam, copie a opção exibida
+no app; ela inclui o caminho do preload para GLX/EGL:
 
 ```bash
-ENABLE_PHANTOM_OVERLAY=1 %command%
+ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD="$HOME/.local/lib/libPhantomOpenGLOverlay.so${LD_PRELOAD:+:$LD_PRELOAD}" %command%
 ```
+
+O renderer EGL requer OpenGL ES 3 ou superior e, neste momento, cada processo
+OpenGL pode apresentar por um único contexto. A camada Vulkan também registra
+apresentações com múltiplas swapchains como não suportadas. Em ambos os casos,
+Diagnóstico mostra o processo, API e motivo. O modo não abre janelas flutuantes
+automaticamente. Veja o [estudo de OSD in-frame](../osd-in-frame-estudo.md)
+para a matriz de APIs e a validação pendente no Windows.
 
 Os arquivos CSV/JSON/JSONL e o `errors.log` ficam em
 `~/.local/share/PhantomMonitor/logs/`, respeitando `XDG_DATA_HOME`. A página

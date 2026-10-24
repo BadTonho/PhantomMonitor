@@ -1,4 +1,6 @@
 using Avalonia.Threading;
+using System.ComponentModel;
+using System.Diagnostics;
 using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.Services;
 
@@ -10,6 +12,11 @@ public sealed partial class MainWindowViewModel
     private string _inGameOverlayDiagnosticText = "Canal nativo ainda não foi aberto.";
     private bool _inGameFrameChannelActive;
     private DispatcherTimer? _inGameOverlayHeartbeat;
+    private readonly Dictionary<int, DateTimeOffset> _windowsOverlayInjectionAttempts = [];
+    private readonly HashSet<int> _windowsOverlayInjectedProcessIds = [];
+    private readonly HashSet<int> _windowsOverlayLiveProcessIds = [];
+    private bool _windowsOverlayProcessScanActive;
+    private string _windowsOverlayInjectionDiagnostic = "";
 
     public string InGameOverlayDiagnosticText
     {
@@ -19,9 +26,9 @@ public sealed partial class MainWindowViewModel
 
     public bool IsInGameOverlayDiagnosticsVisible => OverlayRenderMode == "inGame";
     public string InGameOverlayCapabilityNotice => OperatingSystem.IsLinux()
-        ? "Linux: a camada Vulkan disponível neste projeto coleta FPS, mas ainda não desenha o OSD no quadro. O modo dentro do jogo oculta as janelas flutuantes e não faz fallback automático."
+        ? "Linux: Vulkan usa a camada ativada por jogo; OpenGL usa preload GLX/EGL. O modo não abre janelas flutuantes automaticamente."
         : OperatingSystem.IsWindows()
-            ? "Windows: o hook Direct3D ainda não está disponível neste build. O modo dentro do jogo oculta as janelas flutuantes e não faz fallback automático."
+            ? "Windows: hooks x86/x64 para Direct3D 9–12 e OpenGL em executáveis cadastrados; Vulkan é ativado ao iniciar pelo PhantomMonitor. O app também detecta jogos autorizados iniciados por outros launchers enquanto estiver aberto. Anti-cheats podem recusar o hook; não há troca automática para janelas flutuantes."
             : "O renderer dentro do jogo não está disponível nesta plataforma. O modo selecionado não alterna automaticamente para janelas flutuantes.";
 
     private void PublishInGameOverlayFrame(bool initializeOrClear = false, bool forceHidden = false)
@@ -33,7 +40,7 @@ public sealed partial class MainWindowViewModel
             _inGameOverlayFramePublisher.Publish(InGameOverlayFrameSerializer.Build(this,
                 forceHidden || OverlayRenderMode != "inGame"));
             _inGameFrameChannelActive = OverlayRenderMode == "inGame";
-            InGameOverlayDiagnosticText = $"{GetInGameOverlayPlatformStatus()}\n{_inGameOverlayFramePublisher.Status}\nAPI detectada: indisponível enquanto o hook de apresentação não estiver conectado. Renderer in-frame: indisponível neste build; nenhuma janela flutuante será aberta automaticamente.";
+            InGameOverlayDiagnosticText = $"{GetInGameOverlayPlatformStatus()}\n{_inGameOverlayFramePublisher.Status}\n{GetNativeOverlayStatusText()}";
         }
         catch (Exception ex)
         {
@@ -62,8 +69,53 @@ public sealed partial class MainWindowViewModel
         PublishInGameOverlayFrame(initializeOrClear: true, forceHidden: true); // limpa estado deixado por outra execução.
     }
 
-    private void OnInGameOverlayHeartbeat(object? sender, EventArgs e)
-        => PublishInGameOverlayFrame();
+    private async void OnInGameOverlayHeartbeat(object? sender, EventArgs e)
+    {
+        if (_disposed) return;
+        PublishInGameOverlayFrame();
+        if (!OperatingSystem.IsWindows() || OverlayRenderMode != "inGame" || _windowsOverlayProcessScanActive)
+            return;
+
+        _windowsOverlayProcessScanActive = true;
+        try
+        {
+            var candidates = await Task.Run(FindAllowedWindowsProcesses);
+            if (_disposed) return;
+            var livePids = candidates.Select(candidate => candidate.ProcessId).ToHashSet();
+            _windowsOverlayLiveProcessIds.Clear();
+            _windowsOverlayLiveProcessIds.UnionWith(livePids);
+            _windowsOverlayInjectedProcessIds.RemoveWhere(pid => !livePids.Contains(pid));
+            foreach (var pid in _windowsOverlayInjectionAttempts.Keys.Where(pid => !livePids.Contains(pid)).ToArray())
+                _windowsOverlayInjectionAttempts.Remove(pid);
+
+            var alreadyPublished = InGameOverlayNativeStatusReader.ReadWindows(livePids)
+                .Select(status => status.ProcessId).ToHashSet();
+            _windowsOverlayInjectedProcessIds.UnionWith(alreadyPublished);
+            foreach (var candidate in candidates)
+            {
+                if (_windowsOverlayInjectedProcessIds.Contains(candidate.ProcessId)) continue;
+                if (_windowsOverlayInjectionAttempts.TryGetValue(candidate.ProcessId, out var attemptedAt)
+                    && DateTimeOffset.UtcNow - attemptedAt < TimeSpan.FromSeconds(20)) continue;
+
+                _windowsOverlayInjectionAttempts[candidate.ProcessId] = DateTimeOffset.UtcNow;
+                var result = await WindowsOverlayHookService.InjectAsync(candidate.ProcessId, candidate.ExecutablePath);
+                if (_disposed) return;
+                _windowsOverlayInjectionDiagnostic = result.Success
+                    ? $"PID {candidate.ProcessId}: DLL carregada; aguardando o renderer DXGI."
+                    : $"PID {candidate.ProcessId}: hook não instalado: {result.Message}";
+                if (result.Success) _windowsOverlayInjectedProcessIds.Add(candidate.ProcessId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _windowsOverlayInjectionDiagnostic = $"Falha ao observar jogos autorizados: {ex.Message}";
+            ErrorLog.Write("InGameOverlay.ProcessMonitor", ex);
+        }
+        finally
+        {
+            _windowsOverlayProcessScanActive = false;
+        }
+    }
 
     private string GetInGameOverlayPlatformStatus()
     {
@@ -83,12 +135,74 @@ public sealed partial class MainWindowViewModel
                 "/usr/lib64/libVkLayer_phantom_monitor.so",
                 "/usr/local/lib/libVkLayer_phantom_monitor.so"
             };
-            return $"Plataforma: Linux · camada Vulkan {(manifestCandidates.Any(File.Exists) && libraryCandidates.Any(File.Exists) ? "instalada" : "não encontrada")}; estado do jogo: não detectado.";
+            var openGlLibrary = Path.Combine(home, ".local", "lib", "libPhantomOpenGLOverlay.so");
+            return $"Plataforma: Linux · camada Vulkan {(manifestCandidates.Any(File.Exists) && libraryCandidates.Any(File.Exists) ? "instalada" : "não encontrada")} · preload OpenGL {(File.Exists(openGlLibrary) ? "instalado" : "não encontrado")}.";
         }
 
         if (OperatingSystem.IsWindows())
-            return $"Plataforma: Windows · executáveis autorizados: {OverlayInGameTargets.Count}; hook D3D11/12: não instalado neste build.";
+            return $"Plataforma: Windows · executáveis autorizados: {OverlayInGameTargets.Count}; hooks Direct3D/OpenGL x86/x64 e camada Vulkan no início pelo app.";
 
         return "Plataforma: sem integração nativa para overlay dentro do jogo.";
+    }
+
+    private string GetNativeOverlayStatusText()
+    {
+        IReadOnlyList<InGameOverlayNativeStatus> statuses;
+        try
+        {
+            statuses = OperatingSystem.IsLinux()
+                ? InGameOverlayNativeStatusReader.ReadLinux()
+                : OperatingSystem.IsWindows()
+                    ? InGameOverlayNativeStatusReader.ReadWindows(_windowsOverlayLiveProcessIds)
+                    : [];
+        }
+        catch (Exception ex)
+        {
+            return $"Falha ao consultar diagnóstico nativo: {ex.Message}";
+        }
+
+        var nativeText = statuses.Count == 0
+            ? OperatingSystem.IsLinux()
+                ? "API detectada: nenhum processo Vulkan publicou estado. Inicie o jogo com ENABLE_PHANTOM_OVERLAY=1."
+                : "API detectada: nenhum processo autorizado publicou estado do hook."
+            : string.Join("\n", statuses.Select(status =>
+                $"PID {status.ProcessId} · {status.ApiName} · {status.StateName}: {status.Message}"));
+        return _windowsOverlayInjectionDiagnostic.Length == 0
+            ? nativeText
+            : nativeText + "\n" + _windowsOverlayInjectionDiagnostic;
+    }
+
+    private IReadOnlyList<(int ProcessId, string ExecutablePath)> FindAllowedWindowsProcesses()
+    {
+        if (!OperatingSystem.IsWindows()) return [];
+        var allowedPaths = OverlayInGameTargets
+            .Select(target => target.ExecutablePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (allowedPaths.Count == 0) return [];
+
+        var targetNames = allowedPaths.Select(Path.GetFileNameWithoutExtension)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var processes = new Dictionary<int, string>();
+        foreach (var name in targetNames)
+        {
+            foreach (var process in Process.GetProcessesByName(name))
+            {
+                using (process)
+                {
+                    try
+                    {
+                        if (!WindowsOverlayHookService.TryGetExecutablePath(process.Id, out var executablePath))
+                            continue;
+                        var executable = Path.GetFullPath(executablePath);
+                        if (allowedPaths.Contains(executable)) processes[process.Id] = executable;
+                    }
+                    catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or
+                                               NotSupportedException or ArgumentException) { }
+                }
+            }
+        }
+        return processes.Select(item => (item.Key, item.Value)).ToArray();
     }
 }

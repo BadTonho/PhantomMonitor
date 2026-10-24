@@ -34,14 +34,14 @@ O projeto roda um **único app desktop Avalonia** no Windows e no Linux. Release
 | --- | --- | --- |
 | Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe via LibreHardwareMonitor | Sensores de `sysfs`, `procfs` (incluindo `fdinfo` DRM), `hwmon`, zonas térmicas Linux, DRM e NVML opcional da NVIDIA; métricas de GPU variam conforme o driver |
 | FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
-| Overlay | OSD flutuante com click-through e perfis; hooks dentro do jogo estão planejados para executáveis permitidos pelo usuário e não estão disponíveis nesta versão | Janelas separadas e arrastáveis; renderização Vulkan dentro do jogo está planejada; a camada atual coleta somente FPS |
+| Overlay | OSD flutuante com click-through e perfis; renderizadores opcionais dentro do jogo para executáveis x86/x64 autorizados: Direct3D 9–12, OpenGL/WGL e Vulkan ao iniciar pelo PhantomMonitor | Janelas separadas e arrastáveis; renderização opcional dentro do jogo via Vulkan e OpenGL GLX/EGL; jogos OpenGL precisam da biblioteca preload instalada |
 | Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |
 | Alertas | Notificação, som, scripts e desligamento configurável | Toast interno, notificações do desktop e execução de scripts |
 | Diagnóstico | Fontes de sensores, avisos atuais de GPU e log de erros | Fontes por placa, geometria das janelas do overlay, avisos atuais de GPU, erros recentes e detalhes da NVML NVIDIA |
 | Fórmulas e ajuste por série | Compatibilidade com as configurações existentes | Editores visuais de sensores customizados e ajuste de cadência/suavização |
 | Telemetria | CSV, JSON, JSONL e exportador HTTP opcional | CSV, JSON, JSONL e exportador HTTP opcional |
 
-Os recursos que dependem do hardware ou do compositor podem variar entre máquinas. No Linux, o FPS requer um jogo Vulkan e a camada Phantom ativada. No Windows, a coleta de FPS usa ETW. O modo dentro do jogo é opcional e os renderizadores nativos ainda não estão disponíveis nesta versão. O hook planejado para Windows ficará restrito aos executáveis adicionados pelo usuário e pode ser bloqueado por anti-cheat; o monitor não tentará contornar essas proteções.
+O suporte varia conforme hardware, API gráfica e compositor. No Linux, FPS Vulkan e desenho dentro do jogo usam a camada Phantom; OpenGL usa a biblioteca preload GLX/EGL instalada por `install_layer.sh`. No Windows, a coleta de FPS usa ETW. O modo dentro do jogo é opcional e os hooks Windows ficam restritos aos executáveis adicionados pelo usuário; anti-cheats podem bloqueá-los e o Phantom Monitor não tentará contornar essas proteções. Os renderizadores nativos Windows exigem build em Windows com Visual Studio 2022 e Vulkan SDK e ainda precisam de validação em execução no Windows.
 
 ## Comece a usar
 
@@ -69,7 +69,13 @@ Depois, nas opções de inicialização do jogo — por exemplo, na Steam — us
 ENABLE_PHANTOM_OVERLAY=1 %command%
 ```
 
-O dashboard e o overlay flutuante Linux funcionam sem a camada quando você não precisa de FPS. A camada atual publica FPS/frametime, mas ainda não desenha o OSD dentro do jogo. Em **Configurações → Modo do overlay**, `floating` continua sendo o padrão e configurações antigas migram para esse valor. Escolher `inGame` oculta as janelas flutuantes; Diagnóstico informa que o renderer ainda não está disponível. Em um desktop Wayland, confira **Diagnóstico → Resumo** para ver o backend Avalonia: a configuração padrão do projeto usa X11/XWayland, enquanto um compositor Wayland nativo pode ignorar posições absolutas das janelas.
+O instalador compila a camada Vulkan e a biblioteca preload GLX/EGL. Inicie um executável cadastrado pelo botão **Iniciar** nas Configurações ou use a opção Steam gerada pelo app:
+
+```bash
+ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD="$HOME/.local/lib/libPhantomOpenGLOverlay.so${LD_PRELOAD:+:$LD_PRELOAD}" %command%
+```
+
+Vulkan usa a camada para FPS e desenho dentro do jogo. OpenGL exige a biblioteca preload e suporta GLX e EGL (OpenGL ES 3+); apenas um contexto OpenGL por processo é suportado. Em **Configurações → Modo do overlay**, `floating` continua sendo o padrão e configurações antigas migram para esse valor. Escolher `inGame` oculta as janelas flutuantes; o estado e as falhas nativas por processo aparecem em Diagnóstico. Vários swapchains Vulkan ou DXGI no mesmo processo são indicados como não suportados. Em um desktop Wayland, confira **Diagnóstico → Resumo** para ver o backend Avalonia: a configuração padrão do projeto usa X11/XWayland, enquanto um compositor Wayland nativo pode ignorar posições absolutas das janelas.
 
 ### Windows
 
@@ -82,6 +88,11 @@ dotnet run --project src/PhantomMonitor.App
 O tema builtin é escolhido com `theme` no `config.json` (`neptune` = visual original do Avalonia, `slate` = porta verbatim do visual do WPF; a chave legada `uiTheme` continua sendo lida e migra), pelo card **INTERFACE** em Configurações (trocado na interface em execução, sem reiniciar) ou pela linha de comando com `--theme=<nome>` (o `--ui-theme=` legado segue aceito).
 
 Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.
+
+O pacote completo do renderer dentro do jogo é compilado por
+`scripts/build-windows-overlay.ps1`, que gera hooks, launchers e camadas Vulkan
+x86/x64. O script exige as ferramentas C++ do Visual Studio 2022 e o Vulkan SDK.
+Ainda é necessária validação em execução no Windows para cada API e game capture.
 
 ## Releases e atualização automática
 

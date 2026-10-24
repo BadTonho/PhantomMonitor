@@ -25,3 +25,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Dear ImGui
+
+The native in-game overlay renderers use Dear ImGui **v1.91.9b** and its
+Direct3D, OpenGL, and Vulkan backends. Its MIT license is included at
+`src/PhantomNativeOverlay/third_party/imgui/LICENSE.txt`.
+
+## MinHook
+
+The Windows overlay hook uses MinHook **v1.3.4**. Its BSD 2-Clause license is
+included at `src/PhantomNativeOverlay/third_party/minhook/LICENSE.txt`.

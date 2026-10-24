@@ -25,9 +25,9 @@ The retired WPF/Windows frontend published the versioned `phantom_monitor_teleme
 
 Profiles can override position, size, font, opacity, series, accent, and visibility based on the focused executable. The Windows editor manages profile cards; the tray can pin one for the session or return to automatic matching. Active profiles are indicated in the OSD footer.
 
-## P4 — In-game OSD (decision updated; renderers pending)
+## P4 — In-game OSD (renderers implemented; validation pending)
 
-The product will offer floating windows and an opt-in in-game mode. Windows hooks will be limited to user-allowlisted executables, with an anti-cheat warning and no bypass. Shared-memory v1, mode persistence, and Linux activation controls are implemented; native renderers are pending. See [in-frame OSD study](osd-in-frame-study.md).
+The product offers floating windows and an opt-in in-game mode. Linux Vulkan and GLX/EGL, plus Windows Direct3D 9–12, WGL, and Vulkan renderers are implemented. Windows hooks are limited to user-allowlisted executables, with an anti-cheat warning and no bypass. Fullscreen, resize, game-capture, and Windows runtime validation remains pending. See [in-frame OSD study](osd-in-frame-study.md).
 
 ## P5 — Hardware control (out of scope)
 
@@ -67,7 +67,7 @@ The project does not plan a Vulkan shared-memory seqlock at this time, placehold
 
 | Area | Status / decision |
 |---|---|
-| In-frame game capture | Decision updated: opt-in in-game mode with an allowlist for Windows hooks and no anti-cheat bypass. Shared-memory v1 and settings are implemented; native renderers are pending. See [in-frame OSD study](osd-in-frame-study.md). Frame limiting remains out of scope. |
+| In-frame game capture | Opt-in in-game mode with Windows executable allowlist and no anti-cheat bypass. Shared-memory v1 and Linux/Windows native renderers are implemented; API-by-API runtime validation is pending. See [in-frame OSD study](osd-in-frame-study.md). Frame limiting remains out of scope. |
 | Fan curves, voltage/frequency tuning, and overclocking | Out of scope for the read-only monitor. |
 | PresentMon metrics (Windows) | Busy/wait, present latency, and P1/P99 are published when present in the installed PresentMon output; the Linux reader does not publish them. Mode-of-present/click-to-photon are not planned. |
 | Rich OSD markup, conditional layers, bars, and formulas | Templates cover basic text and resolved-series conditions; more advanced layout remains a UI project. |

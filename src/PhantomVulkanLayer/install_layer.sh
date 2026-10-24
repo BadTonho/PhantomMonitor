@@ -10,14 +10,18 @@ VULKAN_LAYER_DIR="${HOME}/.local/share/vulkan/implicit_layer.d"
 LIB_DIR="${HOME}/.local/lib"
 MANIFEST="${VULKAN_LAYER_DIR}/phantom_vulkan_layer.json"
 LIB_PATH="${LIB_DIR}/libVkLayer_phantom_monitor.so"
+OPENGL_LIB_PATH="${LIB_DIR}/libPhantomOpenGLOverlay.so"
+LICENSE_DIR="${HOME}/.local/share/licenses/PhantomMonitor"
 
-echo "=== Compilando PhantomVulkanLayer ==="
+echo "=== Compilando a camada Vulkan e o preload OpenGL ==="
 cmake -B "${BUILD_DIR}" -S "${SCRIPT_DIR}" -DCMAKE_BUILD_TYPE=Release
 cmake --build "${BUILD_DIR}" -j"$(nproc)"
 
 echo "=== Instalando camada Vulkan (implícita) para o usuário ==="
-mkdir -p "${VULKAN_LAYER_DIR}" "${LIB_DIR}"
+mkdir -p "${VULKAN_LAYER_DIR}" "${LIB_DIR}" "${LICENSE_DIR}"
 cp "${BUILD_DIR}/libVkLayer_phantom_monitor.so" "${LIB_PATH}"
+cp "${BUILD_DIR}/PhantomNativeOverlay/libPhantomOpenGLOverlay.so" "${OPENGL_LIB_PATH}"
+cp "${SCRIPT_DIR}/../PhantomNativeOverlay/third_party/imgui/LICENSE.txt" "${LICENSE_DIR}/LICENSE-Dear-ImGui.txt"
 
 # library_path escapada para JSON (barra invertida e aspa dupla) — suporta
 # caminhos com espaços e/ou caracteres especiais do nome do usuário.
@@ -35,7 +39,7 @@ cat <<EOF > "${MANIFEST}"
         "library_path": "${LIB_JSON}",
         "api_version": "1.3.0",
         "implementation_version": "1",
-        "description": "PhantomMonitor Native Vulkan Frametime & FPS Telemetry Layer",
+        "description": "PhantomMonitor in-game overlay and Vulkan FPS/frametime layer",
         "functions": {
             "vkGetInstanceProcAddr": "Phantom_vkGetInstanceProcAddr",
             "vkGetDeviceProcAddr": "Phantom_vkGetDeviceProcAddr"
@@ -61,16 +65,17 @@ echo "Camada instalada em: ${MANIFEST}"
 echo ""
 echo "=== Como usar ==="
 echo "A camada é IMPLÍCITA: todo processo Vulkan a carrega, mas só publica telemetria"
-echo "com ENABLE_PHANTOM_OVERLAY=1 (gate por jogo)."
+echo "e desenha o overlay com ENABLE_PHANTOM_OVERLAY=1 (gate por jogo)."
 echo ""
 echo "Steam (Opções de inicialização do jogo):"
-echo "  ENABLE_PHANTOM_OVERLAY=1 %command%"
+echo "  ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD=\"${OPENGL_LIB_PATH}\${LD_PRELOAD:+:\$LD_PRELOAD}\" %command%"
 echo ""
 echo "Lutris / Heroic / terminal:"
 echo "  ENABLE_PHANTOM_OVERLAY=1 ./game"
+echo "  OpenGL via GLX/EGL exige LD_PRELOAD=${OPENGL_LIB_PATH}; o botão Iniciar já define essa variável."
 echo ""
 echo "Desativar por sessão (mesmo com o enable no jogo):"
 echo "  DISABLE_PHANTOM_OVERLAY=1 ./game"
 echo ""
-echo "Remover: rm -f '${MANIFEST}' '${LIB_PATH}'"
+echo "Remover: rm -f '${MANIFEST}' '${LIB_PATH}' '${OPENGL_LIB_PATH}' '${LICENSE_DIR}/LICENSE-Dear-ImGui.txt'"
 echo "==================================="

@@ -29,8 +29,8 @@
             <TextBlock Text="A aparência e a composição dos blocos são ajustadas no editor visual." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <Button Classes="action accent" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
             <StackPanel IsVisible="{Binding IsOverlayInGameModeSelected}" Spacing="8">
-              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O hook do Windows só será carregado nos executáveis desta lista. Alguns anti-cheats podem bloquear a integração; o PhantomMonitor não tenta contornar essa proteção." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
-              <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="No Linux, adicione um executável para iniciá-lo com a camada Vulkan. Para jogos Steam, cole a opção de inicialização abaixo nas propriedades do jogo." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="Hooks x86/x64 para Direct3D 9–12 e OpenGL só são carregados nos executáveis desta lista; Vulkan é ativado ao iniciar pelo app. Iniciar pelo app prepara o hook antes de retomar o jogo; outros launchers são monitorados enquanto o PhantomMonitor está aberto. Anti-cheats podem recusar o hook; não há tentativa de contorno." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="No Linux, adicione um executável para iniciá-lo com Vulkan e, se instalado, o preload OpenGL GLX/EGL. Para Steam, cole a opção gerada abaixo nas propriedades do jogo." Classes="muted" FontSize="10" TextWrapping="Wrap" />
               <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
                 <TextBox Text="{Binding OverlayTargetPathText, Mode=TwoWay}" PlaceholderText="Caminho do executável" />
                 <TextBox Grid.Column="1" Text="{Binding OverlayTargetArgumentsText, Mode=TwoWay}" PlaceholderText="Argumentos (opcional)" />
@@ -41,7 +41,7 @@
                   <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,2">
                       <TextBlock Text="{Binding ExecutablePath}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                      <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].DataContext.IsLinuxPlatform}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
+                      <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].DataContext.IsOverlayTargetLaunchVisible}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
                       <Button Grid.Column="2" Content="Remover" Click="OnRemoveOverlayTargetClick" />
                     </Grid>
                   </DataTemplate>

@@ -71,7 +71,7 @@
 - [x] Tray: seção dinâmica "Automático (por aplicativo)" + perfis (fixar manualmente);
       indicador `◉ perfil: X` no rodapé do OSD quando ativo.
 
-## P4 — OSD in-frame — decisão atualizada; renderizadores pendentes
+## P4 — OSD in-frame — decisão e renderizadores implementados; validação pendente
 
 > Decisão atual: oferecer janela flutuante e modo dentro do jogo como escolha
 > global. No Windows, hook próprio restrito a executáveis adicionados pelo
@@ -82,8 +82,8 @@
       seleção global, migração para `floating`, lista de executáveis e ativações
       Linux por launcher/Steam.
 - [x] Documentar fases, política anti-cheat e diagnóstico em português/inglês.
-- [ ] Renderer Linux Vulkan e hooks Windows Direct3D 11/12 (fase base).
-- [ ] Linux OpenGL e Windows OpenGL, Vulkan e Direct3D 9/10 (expansão).
+- [x] Renderer Linux Vulkan e hooks Windows Direct3D 11/12 (fase base).
+- [x] Linux OpenGL e Windows OpenGL, Vulkan e Direct3D 9/10 (expansão).
 - [ ] Validar matriz completa com game capture, fullscreen, resize, gráficos,
       templates, quadros obsoletos e falha sem fallback.
 
@@ -170,7 +170,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 
 | Recurso | Camada | Ação definida |
 |---|---|---|
-| OSD in-frame (game capture, replay, gravação) | B | Decisão atualizada: modo opt-in; hooks Windows limitados a executáveis permitidos pelo usuário, aviso anti-cheat e sem contorno. Contrato v1 existe; renderizadores pendentes (docs/osd-in-frame-estudo.md) |
+| OSD in-frame (game capture, replay, gravação) | B | Modo opt-in; hooks Windows limitados a executáveis permitidos pelo usuário, aviso anti-cheat e sem contorno. Renderers Linux Vulkan/GLX/EGL e Windows D3D9–12/WGL/Vulkan implementados; validação por API pendente (docs/osd-in-frame-estudo.md) |
 | Frame limiter (FRTC, millisecond) | B | Fora por política: exige hook no processo do jogo; não reabrir |
 | Curva de ventoinha, V/F curve, OC scanner | B | P5: fora do escopo read-only (app separado um dia) |
 | Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (padrão dos hooks de captura); OBS no plugin cobre gravação |

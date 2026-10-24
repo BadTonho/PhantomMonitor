@@ -89,16 +89,22 @@ Older configs migrate to `floating`. The app publishes applied content through
 sequence, and timestamp; consumers must map it read-only and reject partial or
 stale frames.
 
-The in-frame Vulkan renderer is not connected yet: the current layer still only
-collects FPS/frametime. Selecting `inGame` hides the floating windows, and
-Diagnostics reports that the renderer is unavailable; there is no automatic
-fallback. OpenGL expansion and Windows hooks are recorded in the [in-frame OSD
-study](../osd-in-frame-study.md). The Settings **Launch** button starts a saved
-executable with `ENABLE_PHANTOM_OVERLAY=1`. For Steam, copy this launch option:
+`inGame` draws through the Phantom Vulkan layer and through an OpenGL GLX/EGL
+preload. `install_layer.sh` builds and installs both libraries. The Settings
+**Launch** button sets `ENABLE_PHANTOM_OVERLAY=1` and adds the OpenGL preload
+when its library is present. Copy the option shown by the app into Steam; it
+includes the preload path for GLX/EGL:
 
 ```bash
-ENABLE_PHANTOM_OVERLAY=1 %command%
+ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD="$HOME/.local/lib/libPhantomOpenGLOverlay.so${LD_PRELOAD:+:$LD_PRELOAD}" %command%
 ```
+
+The EGL renderer requires OpenGL ES 3 or newer, and each OpenGL process can
+currently present through one context. Vulkan presentations with multiple
+swapchains are also reported as unsupported. Diagnostics shows the process, API,
+and reason. The mode never opens floating windows automatically. See the
+[in-frame OSD study](../osd-in-frame-study.md) for the API matrix and pending
+Windows validation.
 
 ## Linux frontend notes
 

@@ -41,40 +41,56 @@ normal shutdown publishes a hidden state. The app keeps
 through its already-open mapping. A reader
 that does not recognize the version must ignore the frame.
 
-## Implementation matrix
+## Implemented renderers
 
-| Phase | Linux | Windows |
+| Platform | Native APIs in the code | Activation |
 |---|---|---|
-| Base | Vulkan | Direct3D 11 and 12 |
-| Expansion | OpenGL | OpenGL, Vulkan, and Direct3D 9 and 10 |
-| Target | Vulkan and OpenGL | Direct3D 9–12, Vulkan, and OpenGL |
+| Linux | Vulkan; OpenGL through GLX/EGL (OpenGL ES 3+) | Vulkan layer enabled per game; OpenGL through `LD_PRELOAD` |
+| Windows | Direct3D 9–12, OpenGL/WGL, and Vulkan | x86/x64 hooks for allowlisted executables; Vulkan layer enabled when launched by Phantom Monitor |
 
-Each API needs its own presentation interception and lifecycle, swapchain or
-context, resize, synchronization, capture, and failure handling. Vulkan layers
-follow the frame-presentation interception approach used by MangoHud, while the
-Phantom renderer will use its own protocol and resource handling. A hook for
-one API does not imply support for another.
+The renderers use an internal API-independent presentation and Dear ImGui as
+the initial drawing implementation. The presentation channel uses sequence
+validation, checks protocol version and size, and rejects frames older than
+three seconds. Native diagnostics use a separate channel for each renderer and
+process so a Vulkan layer and DXGI hook in the same game do not overwrite each
+other. Hidden, invalid, or stale frames are not drawn.
+
+Multiple presentations are currently limited: Vulkan requires one swapchain
+per present call; the Windows hook follows the first DXGI swapchain in a
+process; and the Linux OpenGL preload supports one context per process.
+Diagnostics reports these limits. EGL with OpenGL ES requires OpenGL ES 3 or
+newer. The v1 frame preserves the selected font family names, but the current
+renderer uses Dear ImGui's built-in default font; size, colors, and geometry are
+applied, while a font family selected in the editor is not yet loaded by the
+native renderer.
 
 On Linux, users can start a configured executable from Phantom Monitor, which
 sets `ENABLE_PHANTOM_OVERLAY=1`, or copy that variable into the game's Steam
 launch options. Per-process gating also keeps the existing Vulkan FPS layer
 available.
 
-## Code status
+## Status and validation
 
-Configuration, migration to `floating`, executable list, v1 publication of the
-applied frame, Linux activation controls, and capability diagnostics are
-implemented. **Native renderers are not implemented yet**: the current Vulkan
-layer measures FPS/frametime but does not consume the frame to draw it; no
-Direct3D hooks have been added. Therefore `inGame` does not render in this build
-and the app reports this limitation. The table above is a delivery plan, not a
-statement of current support.
+The code includes the Linux Vulkan layer with drawing and the existing
+FPS/frametime collection, the OpenGL GLX/EGL renderer, Windows Direct3D 9–12 and
+WGL hooks, and a Windows Vulkan layer for games launched by Phantom Monitor.
+The Windows hook selects an x86 or x64 launcher from the executable and injects
+the DLL only into allowlisted processes; detection of games launched elsewhere
+works while the app is open. The **Launch** button keeps the game suspended
+until hook initialization finishes. Failures appear in Diagnostics and never
+open floating windows automatically.
+
+The Linux build compiles the Vulkan layer, OpenGL preload, and native tests.
+Windows components require Visual Studio 2022 and the Vulkan SDK; they must be
+built on Windows and need runtime validation on x86/x64. Source presence and a
+Linux build do not replace that validation. Anti-cheats may reject the DLL and
+there is no attempt to bypass them.
 
 ## Required validation per API
 
-For every phase, validate fullscreen and borderless windowed mode, resize, seven
+For each API, validate fullscreen and borderless windowed mode, resize, seven
 blocks, graphs and templates, game capture, mode switching, hide/reopen,
 partial/stale frames, and failure without fallback. On Linux, include X11/
-XWayland and Wayland where applicable. On Windows, verify only allowlisted
-executables load the hook and failures appear in Diagnostics. Anti-cheat tests
+XWayland and Wayland when available. On Windows, validate x86 and x64, both
+launch paths, the executable allowlist, and the Vulkan layer. Anti-cheat tests
 must respect existing blocks.

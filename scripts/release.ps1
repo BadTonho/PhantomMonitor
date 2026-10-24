@@ -58,6 +58,10 @@ try {
             -p:Version=$Version -o (Join-Path $stage "win")
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish do Windows falhou." }
 
+        Write-Step "Compilando renderers nativos Windows (x86/x64; requer Visual Studio 2022 e Vulkan SDK)..."
+        & (Join-Path $repoRoot "scripts\build-windows-overlay.ps1") -OutDirectory (Join-Path $stage "win\PhantomOverlay")
+        if ($LASTEXITCODE -ne 0) { throw "Build dos hooks nativos Windows falhou." }
+
         # O bundler single-file classifica o PresentMon.exe (binário PE nativo)
         # como biblioteca nativa e o embute (reaparece em %TEMP%\.net no
         # arranque — caminho que o FpsMonitor não usa). O contrato do payload

@@ -13,6 +13,7 @@ var tests = new (string Name, Action Run)[]
     ("modo do overlay migra configs antigas para janela flutuante", TestOverlayRenderModeMigration),
     ("modo e executáveis do overlay persistem no config.json", TestOverlayRenderModePersistence),
     ("protocolo nativo rejeita quadros parciais e desatualizados", TestInGameFrameProtocol),
+    ("diagnóstico nativo valida sequência, versão, idade e UTF-8", TestNativeOverlayStatusProtocol),
     ("canal POSIX publica leitura estável e somente leitura", TestPosixInGameFramePublisher)
 };
 
@@ -246,6 +247,51 @@ static void TestPosixInGameFramePublisher()
     }
 
     Assert(!File.Exists(path), "O teste remove a região persistente depois de validar o ciclo de reinício.");
+}
+
+static void TestNativeOverlayStatusProtocol()
+{
+    var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    var bytes = CreateNativeStatusSnapshot(now);
+    Assert(InGameOverlayNativeStatusReader.TryParseSnapshot(bytes, out var status)
+        && status.ProcessId == 42 && status.Api == 1 && status.State == 1
+        && status.Message == "Renderer Vulkan ativo",
+        "Um diagnóstico nativo válido deve manter o PID, API, estado e mensagem.");
+
+    Assert(!InGameOverlayNativeStatusReader.TryParseSnapshot(bytes[..^1], out _),
+        "Um mapeamento de diagnóstico parcial deve ser rejeitado.");
+
+    var inProgress = CreateNativeStatusSnapshot(now, sequence: 3);
+    Assert(!InGameOverlayNativeStatusReader.TryParseSnapshot(inProgress, out _),
+        "Uma sequência ímpar indica que o produtor ainda escreve o diagnóstico.");
+
+    var stale = CreateNativeStatusSnapshot(now - 31_000);
+    Assert(!InGameOverlayNativeStatusReader.TryParseSnapshot(stale, out _),
+        "Um diagnóstico com mais de 30 segundos deve ser rejeitado.");
+
+    var unknownVersion = CreateNativeStatusSnapshot(now);
+    BinaryPrimitives.WriteUInt32LittleEndian(unknownVersion.AsSpan(4), 99);
+    Assert(!InGameOverlayNativeStatusReader.TryParseSnapshot(unknownVersion, out _),
+        "Uma versão desconhecida do diagnóstico deve ser rejeitada.");
+
+    var malformedUtf8 = CreateNativeStatusSnapshot(now);
+    malformedUtf8[36] = 0xFF;
+    Assert(!InGameOverlayNativeStatusReader.TryParseSnapshot(malformedUtf8, out _),
+        "Mensagem de diagnóstico com UTF-8 inválido deve ser rejeitada.");
+}
+
+static byte[] CreateNativeStatusSnapshot(long timestamp, long sequence = 2)
+{
+    var bytes = new byte[InGameOverlayNativeStatusReader.Capacity];
+    BinaryPrimitives.WriteUInt32LittleEndian(bytes, InGameOverlayNativeStatusReader.Magic);
+    BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(4), InGameOverlayNativeStatusReader.Version);
+    BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(8), sequence);
+    BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(16), 42);
+    BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(20), 1);
+    BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(24), 1);
+    BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(28), timestamp);
+    Encoding.UTF8.GetBytes("Renderer Vulkan ativo").CopyTo(bytes, 36);
+    return bytes;
 }
 
 static (long Sequence, byte[] Payload) ReadPublishedFrame(string name)

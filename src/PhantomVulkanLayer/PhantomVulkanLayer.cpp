@@ -1,4 +1,5 @@
 #include "PhantomVulkanLayer.h"
+#include "PhantomVulkanOverlay.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -22,20 +23,28 @@ namespace {
 
 // Tabela de despacho para funÃ§Ãµes de instÃ¢ncia
 struct InstanceDispatch {
+    VkInstance instance = VK_NULL_HANDLE;
     PFN_vkGetInstanceProcAddr get_instance_proc_addr = nullptr;
     PFN_vkDestroyInstance destroy_instance = nullptr;
+    PFN_vkEnumeratePhysicalDevices enumerate_physical_devices = nullptr;
 };
 
 // Tabela de despacho para funÃ§Ãµes de dispositivo
 struct DeviceDispatch {
+    VkDevice device = VK_NULL_HANDLE;
     PFN_vkGetDeviceProcAddr get_device_proc_addr = nullptr;
     PFN_vkDestroyDevice destroy_device = nullptr;
     PFN_vkQueuePresentKHR queue_present_khr = nullptr;
+    PFN_vkGetDeviceQueue get_device_queue = nullptr;
+    PFN_vkGetDeviceQueue2 get_device_queue2 = nullptr;
+    PFN_vkCreateSwapchainKHR create_swapchain_khr = nullptr;
+    PFN_vkDestroySwapchainKHR destroy_swapchain_khr = nullptr;
 };
 
 std::mutex g_mutex;
 std::unordered_map<void*, InstanceDispatch> g_instance_dispatch;
 std::unordered_map<void*, DeviceDispatch> g_device_dispatch;
+std::unordered_map<void*, VkInstance> g_physical_device_instances;
 
 // Telemetria e memÃ³ria compartilhada
 std::atomic<PhantomVulkanTelemetryHeader*> g_telemetry_shm{nullptr};
@@ -210,6 +219,21 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
         init_shared_memory();
     }
     if (next_present != nullptr) {
+        VkDevice device = VK_NULL_HANDLE;
+        {
+            std::lock_guard<std::mutex> lock(g_mutex);
+            auto it = g_device_dispatch.find(key);
+            if (it != g_device_dispatch.end()) device = it->second.device;
+        }
+        VkResult overlay_result = VK_SUCCESS;
+        try {
+            if (device != VK_NULL_HANDLE && pPresentInfo != nullptr
+                && phantom::vulkan_overlay::TryPresent(device, queue, pPresentInfo,
+                    next_present, &overlay_result))
+                return overlay_result;
+        } catch (...) {
+            // Renderer failure must never interrupt the game's own presentation.
+        }
         return next_present(queue, pPresentInfo);
     }
     // Sem cadeia para apresentar: retornar VK_SUCCESS mintava sucesso e a tela do
@@ -266,9 +290,12 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateInstance(
             std::lock_guard<std::mutex> lock(g_mutex);
             void* key = get_dispatch_key(*pInstance);
             InstanceDispatch disp;
+            disp.instance = *pInstance;
             disp.get_instance_proc_addr = next_gipa;
             disp.destroy_instance = reinterpret_cast<PFN_vkDestroyInstance>(
                 next_gipa(*pInstance, "vkDestroyInstance"));
+            disp.enumerate_physical_devices = reinterpret_cast<PFN_vkEnumeratePhysicalDevices>(
+                next_gipa(*pInstance, "vkEnumeratePhysicalDevices"));
             g_instance_dispatch[key] = disp;
         }
         return res;
@@ -303,6 +330,11 @@ static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyInstance(
             auto it = g_instance_dispatch.find(key);
             if (it != g_instance_dispatch.end()) {
                 next_destroy = it->second.destroy_instance;
+                for (auto physical = g_physical_device_instances.begin();
+                     physical != g_physical_device_instances.end();) {
+                    if (physical->second == instance) physical = g_physical_device_instances.erase(physical);
+                    else ++physical;
+                }
                 g_instance_dispatch.erase(it);
             }
         }
@@ -320,6 +352,30 @@ static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyInstance(
         // garanta que a telemetria nÃ£o sobreviva ao destroy.
         cleanup_shared_memory();
     }
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkEnumeratePhysicalDevices(
+    VkInstance instance,
+    std::uint32_t* pPhysicalDeviceCount,
+    VkPhysicalDevice* pPhysicalDevices)
+{
+    if (instance == VK_NULL_HANDLE || pPhysicalDeviceCount == nullptr)
+        return VK_ERROR_INITIALIZATION_FAILED;
+    PFN_vkEnumeratePhysicalDevices next = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        auto found = g_instance_dispatch.find(get_dispatch_key(instance));
+        if (found != g_instance_dispatch.end()) next = found->second.enumerate_physical_devices;
+    }
+    if (next == nullptr) return VK_ERROR_INITIALIZATION_FAILED;
+    const VkResult result = next(instance, pPhysicalDeviceCount, pPhysicalDevices);
+    if ((result == VK_SUCCESS || result == VK_INCOMPLETE) && pPhysicalDevices != nullptr) {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        for (std::uint32_t index = 0; index < *pPhysicalDeviceCount; ++index)
+            if (pPhysicalDevices[index] != VK_NULL_HANDLE)
+                g_physical_device_instances[get_dispatch_key(pPhysicalDevices[index])] = instance;
+    }
+    return result;
 }
 
 static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
@@ -346,6 +402,12 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
         PFN_vkGetInstanceProcAddr next_gipa = layer_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
         PFN_vkGetDeviceProcAddr next_gdpa = layer_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
         if (next_gdpa == nullptr) return VK_ERROR_INITIALIZATION_FAILED;
+        VkInstance parent_instance = VK_NULL_HANDLE;
+        {
+            std::lock_guard<std::mutex> lock(g_mutex);
+            auto found = g_physical_device_instances.find(get_dispatch_key(physicalDevice));
+            if (found != g_physical_device_instances.end()) parent_instance = found->second;
+        }
         PFN_vkCreateDevice next_create = reinterpret_cast<PFN_vkCreateDevice>(
             next_gipa(VK_NULL_HANDLE, "vkCreateDevice"));
         if (next_create == nullptr) return VK_ERROR_INITIALIZATION_FAILED;
@@ -358,12 +420,23 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
             std::lock_guard<std::mutex> lock(g_mutex);
             void* key = get_dispatch_key(*pDevice);
             DeviceDispatch disp;
+            disp.device = *pDevice;
             disp.get_device_proc_addr = next_gdpa;
             disp.destroy_device = reinterpret_cast<PFN_vkDestroyDevice>(
                 next_gdpa(*pDevice, "vkDestroyDevice"));
             disp.queue_present_khr = reinterpret_cast<PFN_vkQueuePresentKHR>(
                 next_gdpa(*pDevice, "vkQueuePresentKHR"));
+            disp.get_device_queue = reinterpret_cast<PFN_vkGetDeviceQueue>(
+                next_gdpa(*pDevice, "vkGetDeviceQueue"));
+            disp.get_device_queue2 = reinterpret_cast<PFN_vkGetDeviceQueue2>(
+                next_gdpa(*pDevice, "vkGetDeviceQueue2"));
+            disp.create_swapchain_khr = reinterpret_cast<PFN_vkCreateSwapchainKHR>(
+                next_gdpa(*pDevice, "vkCreateSwapchainKHR"));
+            disp.destroy_swapchain_khr = reinterpret_cast<PFN_vkDestroySwapchainKHR>(
+                next_gdpa(*pDevice, "vkDestroySwapchainKHR"));
             g_device_dispatch[key] = disp;
+            phantom::vulkan_overlay::RegisterDevice(parent_instance, physicalDevice, *pDevice,
+                pCreateInfo, next_gipa, next_gdpa);
         }
         return res;
     }
@@ -397,8 +470,82 @@ static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyDevice(
     }
 
     if (next_destroy != nullptr) {
+        phantom::vulkan_overlay::DestroyDevice(device);
         next_destroy(device, pAllocator);
+    } else {
+        phantom::vulkan_overlay::DestroyDevice(device);
     }
+}
+
+static VKAPI_ATTR void VKAPI_CALL Phantom_vkGetDeviceQueue(
+    VkDevice device,
+    std::uint32_t queueFamilyIndex,
+    std::uint32_t queueIndex,
+    VkQueue* pQueue)
+{
+    if (pQueue == nullptr) return;
+    PFN_vkGetDeviceQueue next = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        auto found = g_device_dispatch.find(get_dispatch_key(device));
+        if (found != g_device_dispatch.end()) next = found->second.get_device_queue;
+    }
+    if (next == nullptr) { *pQueue = VK_NULL_HANDLE; return; }
+    next(device, queueFamilyIndex, queueIndex, pQueue);
+    if (*pQueue != VK_NULL_HANDLE)
+        phantom::vulkan_overlay::RegisterQueue(device, *pQueue, queueFamilyIndex);
+}
+
+static VKAPI_ATTR void VKAPI_CALL Phantom_vkGetDeviceQueue2(
+    VkDevice device,
+    const VkDeviceQueueInfo2* pQueueInfo,
+    VkQueue* pQueue)
+{
+    if (pQueue == nullptr || pQueueInfo == nullptr) return;
+    PFN_vkGetDeviceQueue2 next = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        auto found = g_device_dispatch.find(get_dispatch_key(device));
+        if (found != g_device_dispatch.end()) next = found->second.get_device_queue2;
+    }
+    if (next == nullptr) { *pQueue = VK_NULL_HANDLE; return; }
+    next(device, pQueueInfo, pQueue);
+    if (*pQueue != VK_NULL_HANDLE)
+        phantom::vulkan_overlay::RegisterQueue(device, *pQueue, pQueueInfo->queueFamilyIndex);
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateSwapchainKHR(
+    VkDevice device,
+    const VkSwapchainCreateInfoKHR* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkSwapchainKHR* pSwapchain)
+{
+    PFN_vkCreateSwapchainKHR next = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        auto found = g_device_dispatch.find(get_dispatch_key(device));
+        if (found != g_device_dispatch.end()) next = found->second.create_swapchain_khr;
+    }
+    if (next == nullptr) return VK_ERROR_INITIALIZATION_FAILED;
+    const VkResult result = next(device, pCreateInfo, pAllocator, pSwapchain);
+    if (result == VK_SUCCESS && pSwapchain != nullptr && *pSwapchain != VK_NULL_HANDLE)
+        phantom::vulkan_overlay::RegisterSwapchain(device, *pSwapchain, pCreateInfo, pAllocator);
+    return result;
+}
+
+static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroySwapchainKHR(
+    VkDevice device,
+    VkSwapchainKHR swapchain,
+    const VkAllocationCallbacks* pAllocator)
+{
+    PFN_vkDestroySwapchainKHR next = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        auto found = g_device_dispatch.find(get_dispatch_key(device));
+        if (found != g_device_dispatch.end()) next = found->second.destroy_swapchain_khr;
+    }
+    phantom::vulkan_overlay::DestroySwapchain(device, swapchain, pAllocator);
+    if (next != nullptr) next(device, swapchain, pAllocator);
 }
 
 // Repasse para physical device (interface v2 do negotiate): a layer nÃ£o intercepta
@@ -449,6 +596,8 @@ PHANTOM_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetInstancePro
         return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkDestroyInstance);
     if (std::strcmp(pName, "vkCreateDevice") == 0)
         return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkCreateDevice);
+    if (std::strcmp(pName, "vkEnumeratePhysicalDevices") == 0)
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkEnumeratePhysicalDevices);
 
     if (instance == VK_NULL_HANDLE) return nullptr;
 
@@ -479,6 +628,14 @@ PHANTOM_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetDeviceProcA
         return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkDestroyDevice);
     if (std::strcmp(pName, "vkQueuePresentKHR") == 0)
         return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkQueuePresentKHR);
+    if (std::strcmp(pName, "vkGetDeviceQueue") == 0)
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkGetDeviceQueue);
+    if (std::strcmp(pName, "vkGetDeviceQueue2") == 0)
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkGetDeviceQueue2);
+    if (std::strcmp(pName, "vkCreateSwapchainKHR") == 0)
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkCreateSwapchainKHR);
+    if (std::strcmp(pName, "vkDestroySwapchainKHR") == 0)
+        return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkDestroySwapchainKHR);
 
     if (device == VK_NULL_HANDLE) return nullptr;
 

@@ -37,7 +37,7 @@ public sealed partial class MainWindowViewModel
         PublishInGameOverlayFrame();
         SettingsMessage = _config.ShowOverlay
             ? _config.Overlay.RenderMode == "inGame"
-                ? "Overlay ativado no modo dentro do jogo. O renderer ainda não está disponível neste build."
+                ? "Overlay ativado no modo dentro do jogo. Consulte Diagnóstico para ver o estado do renderer nativo."
                 : "Overlay ativado."
             : "Overlay ocultado.";
     }

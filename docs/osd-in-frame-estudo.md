@@ -42,40 +42,56 @@ mantém o objeto `/phantommonitor_overlay_v1_<uid>` somente leitura para outros
 processos enquanto escreve pelo mapeamento que já abriu.
 Uma implementação que não reconheça a versão deve ignorar o quadro.
 
-## Matriz de implementação
+## Renderers implementados
 
-| Fase | Linux | Windows |
+| Plataforma | APIs no código nativo | Ativação |
 |---|---|---|
-| Base | Vulkan | Direct3D 11 e 12 |
-| Expansão | OpenGL | OpenGL, Vulkan e Direct3D 9 e 10 |
-| Meta | Vulkan e OpenGL | Direct3D 9–12, Vulkan e OpenGL |
+| Linux | Vulkan; OpenGL por GLX/EGL (OpenGL ES 3+) | Vulkan pela camada ativada para o jogo; OpenGL pela biblioteca `LD_PRELOAD` |
+| Windows | Direct3D 9–12, OpenGL/WGL e Vulkan | Hooks x86/x64 nos executáveis cadastrados; camada Vulkan ativada ao iniciar pelo PhantomMonitor |
 
-Cada API precisa interceptar sua apresentação e tratar seu próprio ciclo de
-vida, swapchain/contexto, redimensionamento, sincronização, captura e falhas.
-Camadas Vulkan seguem o modelo de interceptar a apresentação do quadro, como
-MangoHud, mas o renderizador Phantom terá seu próprio protocolo e tratamento de
-recursos. Não se presume que um hook de uma API cubra outra.
+Os renderers usam uma apresentação interna independente de API e Dear ImGui
+como implementação de desenho. O canal de apresentação tem leitura consistente
+por sequência, valida versão e tamanho e rejeita quadros com mais de três
+segundos. O diagnóstico nativo tem um canal separado por renderer e processo,
+para que a camada Vulkan e um hook DXGI no mesmo jogo não sobrescrevam o estado
+um do outro. Quadros ocultos, inválidos ou antigos não são desenhados.
+
+O suporte a múltiplas apresentações ainda é restrito: o renderer Vulkan exige
+uma swapchain por chamada de apresentação; o hook Windows acompanha a primeira
+swapchain DXGI do processo; e o preload Linux OpenGL suporta um contexto por
+processo. O Diagnóstico registra a limitação. Para EGL com OpenGL ES, é exigido
+OpenGL ES 3 ou superior. O nome da família de fonte é preservado no quadro v1,
+mas a versão atual do renderer usa a fonte padrão interna do Dear ImGui; tamanho,
+cores e geometria são aplicados, enquanto a família selecionada no editor ainda
+não é carregada pelo renderer nativo.
 
 No Linux, o usuário poderá iniciar um executável configurado no PhantomMonitor,
 que define `ENABLE_PHANTOM_OVERLAY=1`, ou copiar essa variável para as opções de
 inicialização do jogo na Steam. O gating por processo também mantém disponível a
 coleta FPS da camada Vulkan existente.
 
-## Estado do código
+## Estado e validação
 
-Configuração, migração para `floating`, lista de executáveis, publicação do
-quadro aplicado v1, controles de ativação Linux e diagnósticos da capacidade
-estão implementados. **Os renderizadores nativos ainda não estão implementados**:
-a camada Vulkan atual mede FPS/frametime, mas não consome o quadro para desenhar;
-hooks Direct3D também não foram adicionados. Portanto `inGame` permanece sem
-renderização nesta versão e o app informa essa limitação. A tabela acima é o
-plano de entrega, não uma declaração de suporte atual.
+O código contém a camada Vulkan Linux com desenho e coleta existente de
+FPS/frametime, o renderer OpenGL GLX/EGL, hooks Windows Direct3D 9–12 e WGL,
+além da camada Vulkan Windows para jogos iniciados pelo PhantomMonitor. O hook
+Windows escolhe o launcher x86 ou x64 pelo executável e injeta a DLL somente em
+processos cadastrados; a detecção de outros launchers funciona enquanto o app
+está aberto. A inicialização feita pelo botão **Iniciar** mantém o jogo suspenso
+até a instalação dos hooks terminar. Falhas aparecem no Diagnóstico e não
+acionam janelas flutuantes automaticamente.
+
+O build Linux compila a camada Vulkan, o preload OpenGL e os testes nativos. O
+build dos componentes Windows exige Visual Studio 2022 e Vulkan SDK; deve ser
+executado em Windows e os renderers precisam de validação real em x86/x64. A
+presença do código e a compilação Linux não substituem essa validação. Anti-cheats
+podem rejeitar a DLL e não existe tentativa de contorno.
 
 ## Validação necessária por API
 
-Para cada fase, verificar fullscreen e janela sem borda, resize, sete blocos,
-gráficos e templates, game capture, alternância de modos, ocultar/reabrir,
-quadros parciais/antigos e falhas sem fallback. No Linux, validar X11/XWayland e
-Wayland quando aplicável. No Windows, validar que só executáveis cadastrados
-carregam o hook e que a falha é visível em Diagnóstico. Testes com anti-cheat
-devem respeitar os bloqueios existentes.
+Em cada API ainda é preciso validar fullscreen e janela sem borda, resize, sete
+blocos, gráficos e templates, game capture, alternância de modos,
+ocultar/reabrir, quadros parciais/antigos e falhas sem fallback. No Linux,
+validar X11/XWayland e Wayland quando disponível. No Windows, validar x86 e x64,
+os dois caminhos de início, a lista de executáveis e a camada Vulkan. Testes com
+anti-cheat devem respeitar os bloqueios existentes.

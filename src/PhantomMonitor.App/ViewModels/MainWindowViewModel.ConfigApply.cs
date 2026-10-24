@@ -284,7 +284,7 @@ public sealed partial class MainWindowViewModel
                 : "Intervalo salvo. Será usado quando a coleta for iniciada."
             : overlayChanged && !loggingChanged && !telemetryChanged
                 ? _config.Overlay.RenderMode == "inGame"
-                    ? "Modo dentro do jogo salvo. O renderer nativo ainda não está disponível neste build; veja Diagnóstico."
+                    ? "Modo dentro do jogo salvo. Consulte Diagnóstico para ver a camada ou hook nativo."
                     : "Opções do overlay salvas e aplicadas."
             : loggingChanged && telemetryChanged
                 ? collectionWasRunning

@@ -334,6 +334,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         {
             if (!Set(ref _overlayRenderModeIndex, Math.Clamp(value, 0, 1))) return;
             Raise(nameof(IsOverlayInGameModeSelected));
+            Raise(nameof(IsOverlayTargetLaunchVisible));
         }
     }
     public string OverlayRenderMode => _config.Overlay.RenderMode;

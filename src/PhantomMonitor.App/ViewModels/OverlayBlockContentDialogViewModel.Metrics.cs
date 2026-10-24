@@ -79,8 +79,6 @@ public sealed partial class OverlayBlockContentDialogViewModel
                 Decimals = decimals,
                 Color = color
             };
-        RefreshBlockPreview();
-        Raise(nameof(PreviewTitle));
         LoadMetricOverrideDraft();
     }
 

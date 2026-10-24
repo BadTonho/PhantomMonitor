@@ -1,6 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:charts="using:PhantomMonitor.App.Controls"
         xmlns:vm="using:PhantomMonitor.App.ViewModels"
         x:Class="PhantomMonitor.App.Views.OverlayBlockContentDialog"
         Title="Conteúdo do bloco"
@@ -27,6 +26,16 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
+        <Canvas Grid.Row="1" x:Name="InsertionMarkerCanvas" IsHitTestVisible="False" ZIndex="5">
+          <Border x:Name="InsertionMarker" Height="3" IsVisible="False"
+                  Background="{DynamicResource AccentLightBrush}" CornerRadius="2">
+            <Border.Transitions>
+              <Transitions>
+                <DoubleTransition Property="Canvas.Top" Duration="0:0:0.12" />
+              </Transitions>
+            </Border.Transitions>
+          </Border>
+        </Canvas>
         <WrapPanel Grid.Row="2" Orientation="Horizontal">
           <Button Content="Mover para cima" IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" Margin="0,0,8,8" />
           <Button Content="Mover para baixo" IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" Margin="0,0,8,8" />
@@ -76,65 +85,21 @@
             <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" />
             <Button Content="Aplicar ajuste à linha" HorizontalAlignment="Left" Click="OnSaveMetricOverrideClick" />
           </StackPanel>
-          <StackPanel Spacing="6" Margin="0,16,0,0">
-            <TextBlock Text="PRÉVIA DO BLOCO" FontSize="10" FontWeight="Bold" />
-            <Border Width="{Binding OverlayPreviewWidth}"
-                    Opacity="{Binding OverlayPreviewOpacity}"
-                    Background="{Binding Owner.OverlayPreviewBackgroundBrush}"
-                    BorderBrush="{Binding Owner.OverlayPreviewBorderBrush}"
-                    BorderThickness="{Binding Owner.OverlayPreviewBorderThickness}"
-                    Padding="{Binding Owner.OverlayPreviewBlockPadding}"
-                    CornerRadius="5" HorizontalAlignment="Left">
-              <StackPanel Spacing="{Binding Owner.OverlayPreviewContentSpacing}">
-                <TextBlock Text="{Binding PreviewTitle}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
-                           FontFamily="{Binding Owner.OverlayPreviewNameFontFamily}"
-                           FontSize="{Binding Owner.OverlayPreviewNameFontSize}" FontWeight="SemiBold" />
-                <ItemsControl ItemsSource="{Binding PreviewRows}">
-                  <ItemsControl.DataTemplates>
-                    <DataTemplate DataType="vm:OverlayBlockMetricViewModel">
-                      <StackPanel Spacing="2" Margin="{Binding $parent[Window].DataContext.Owner.OverlayPreviewRowMargin}">
-                        <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{Binding NameForeground}"
-                                   FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayPreviewNameFontFamily}"
-                                   FontSize="{Binding $parent[Window].DataContext.Owner.OverlayPreviewNameFontSize}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding Value}" Foreground="{Binding ValueForeground}"
-                                   FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayPreviewValueFontFamily}"
-                                   FontSize="{Binding $parent[Window].DataContext.Owner.OverlayPreviewValueFontSize}" TextWrapping="WrapWithOverflow" />
-                        <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
-                                             Values="{Binding $parent[Window].DataContext.Owner.FrametimeSamples}"
-                                             Stroke="{Binding $parent[Window].DataContext.Owner.OverlayAccentBrush}"
-                                             GuideBrush="{DynamicResource OverlayGuideBrush}"
-                                             MinY="0" MaxFloor="33.3" GuideAt="16.66"
-                                             Height="{Binding $parent[Window].DataContext.Owner.OverlayPreviewFrametimeGraphHeight}" />
-                      </StackPanel>
-                    </DataTemplate>
-                    <DataTemplate DataType="vm:OverlayGraphRowViewModel">
-                      <charts:HistoryChart Values="{Binding Samples}" Stroke="{Binding Stroke}"
-                                           MinY="{Binding MinY}" MaxY="{Binding MaxY}" Height="{Binding Height}" />
-                    </DataTemplate>
-                    <DataTemplate DataType="vm:OverlayFrametimeGraphViewModel">
-                      <charts:HistoryChart Values="{Binding Owner.FrametimeSamples}"
-                                           Stroke="{Binding Owner.OverlayAccentBrush}"
-                                           GuideBrush="{DynamicResource OverlayGuideBrush}"
-                                           MinY="0" MaxFloor="33.3" GuideAt="16.66"
-                                           Height="{Binding Owner.OverlayPreviewFrametimeGraphHeight}" />
-                    </DataTemplate>
-                    <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
-                      <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
-                                 FontFamily="{Binding $parent[Window].DataContext.Owner.OverlayPreviewValueFontFamily}"
-                                 FontSize="{Binding $parent[Window].DataContext.Owner.OverlayPreviewValueFontSize}" TextTrimming="CharacterEllipsis" />
-                    </DataTemplate>
-                    <DataTemplate DataType="vm:OverlayBlockPreviewTextViewModel">
-                      <TextBlock Text="{Binding Text}" Foreground="{DynamicResource TextPrimaryBrush}"
-                                 FontSize="{Binding $parent[Window].DataContext.Owner.OverlayPreviewValueFontSize}" TextTrimming="CharacterEllipsis" />
-                    </DataTemplate>
-                  </ItemsControl.DataTemplates>
-                </ItemsControl>
-              </StackPanel>
-            </Border>
-          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Grid>
+
+    <Canvas Grid.Row="0" Grid.ColumnSpan="2" x:Name="DragOverlay" IsHitTestVisible="False" ZIndex="20">
+      <Border x:Name="DragGhost" IsVisible="False" Padding="8,5" CornerRadius="4"
+              Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
+              BorderThickness="1" Opacity="0.92">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+          <TextBlock x:Name="DragGhostKind" Classes="muted" FontSize="9" VerticalAlignment="Center" />
+          <TextBlock x:Name="DragGhostLabel" Grid.Column="1" TextTrimming="CharacterEllipsis"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </Canvas>
 
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
       <Button Content="Adicionar conteúdo…" HorizontalAlignment="Left" Click="OnOpenContentPickerClick" />

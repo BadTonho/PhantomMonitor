@@ -16,7 +16,10 @@ public partial class OverlayBlockContentDialog : Window
     private IPointer? _reorderPointer;
     private OverlayBlockOrderRowViewModel? _reorderItem;
     private Point _reorderStart;
+    private Point _dragGrabOffset;
     private bool _isReordering;
+    private bool _dragOverList;
+    private int _pendingInsertionIndex = -1;
 
     private OverlayBlockContentDialogViewModel ViewModel => (OverlayBlockContentDialogViewModel)DataContext!;
 
@@ -69,7 +72,13 @@ public partial class OverlayBlockContentDialog : Window
         _reorderPointer = e.Pointer;
         _reorderItem = item;
         _reorderStart = e.GetPosition(list);
+        _dragGrabOffset = list.ContainerFromItem(item) is Control container
+            ? e.GetPosition(container)
+            : e.GetPosition(list);
         _isReordering = false;
+        _dragOverList = false;
+        _pendingInsertionIndex = -1;
+        InsertionMarker.IsVisible = false;
         e.Pointer.Capture(list);
         e.Handled = true;
     }
@@ -95,19 +104,32 @@ public partial class OverlayBlockContentDialog : Window
                 || Math.Sqrt(deltaX * deltaX + deltaY * deltaY) < ReorderStartThreshold)
                 return;
             _isReordering = true;
+            DragGhostKind.Text = _reorderItem.Kind;
+            DragGhostLabel.Text = _reorderItem.Label;
+            if (list.ContainerFromItem(_reorderItem) is Control draggedContainer)
+            {
+                DragGhost.Width = draggedContainer.Bounds.Width;
+                DragGhost.Height = draggedContainer.Bounds.Height;
+            }
+            DragGhost.IsVisible = true;
         }
 
-        if (currentPosition.X < 0 || currentPosition.X > list.Bounds.Width
-            || currentPosition.Y < 0 || currentPosition.Y > list.Bounds.Height)
+        var ghostPosition = e.GetPosition(DragOverlay);
+        Canvas.SetLeft(DragGhost, Math.Max(0, ghostPosition.X - _dragGrabOffset.X));
+        Canvas.SetTop(DragGhost, Math.Max(0, ghostPosition.Y - _dragGrabOffset.Y));
+
+        _dragOverList = currentPosition.X >= 0 && currentPosition.X <= list.Bounds.Width
+            && currentPosition.Y >= 0 && currentPosition.Y <= list.Bounds.Height;
+        if (!_dragOverList)
+        {
+            InsertionMarker.IsVisible = false;
             return;
+        }
 
         var insertionIndex = FindInsertionIndex(list, currentPosition.Y);
-        var sourceIndex = ViewModel.OrderRows.IndexOf(_reorderItem);
-        if (sourceIndex < 0 || insertionIndex < 0) return;
-        if (sourceIndex < insertionIndex) insertionIndex--;
-        var targetIndex = Math.Clamp(insertionIndex, 0, ViewModel.OrderRows.Count - 1);
-        ViewModel.MoveOrderRow(sourceIndex, targetIndex);
-        _reorderItem = ViewModel.FindCurrentOrderRow(_reorderItem);
+        if (insertionIndex < 0) return;
+        _pendingInsertionIndex = ConstrainInsertionIndex(list, _reorderItem, insertionIndex, currentPosition.Y);
+        PositionInsertionMarker(list, _pendingInsertionIndex);
     }
 
     private static OverlayBlockOrderRowViewModel? FindOrderRow(object? source, Control boundary)
@@ -139,10 +161,97 @@ public partial class OverlayBlockContentDialog : Window
         return insertionIndex;
     }
 
+    private int ConstrainInsertionIndex(ListBox list, OverlayBlockOrderRowViewModel item, int insertionIndex, double pointerY)
+    {
+        if (item.IsMetric)
+        {
+            var siblingIndices = ViewModel.OrderRows
+                .Select((row, index) => (row, index))
+                .Where(entry => entry.row.IsMetric && entry.row.GroupKey.Equals(item.GroupKey, StringComparison.OrdinalIgnoreCase))
+                .Select(entry => entry.index)
+                .ToArray();
+            if (siblingIndices.Length == 0) return insertionIndex;
+            return Math.Clamp(insertionIndex, siblingIndices[0], siblingIndices[^1] + 1);
+        }
+
+        var groupInsertionSlots = ViewModel.OrderRows
+            .Select((row, index) => (row, index))
+            .Where(entry => !entry.row.IsMetric)
+            .Select(entry => entry.index)
+            .Append(ViewModel.OrderRows.Count)
+            .Distinct()
+            .ToArray();
+        return groupInsertionSlots
+            .OrderBy(slot => Math.Abs(GetInsertionY(list, slot) - pointerY))
+            .FirstOrDefault(insertionIndex);
+    }
+
+    private void PositionInsertionMarker(ListBox list, int insertionIndex)
+    {
+        var position = list.TranslatePoint(new Point(0, GetInsertionY(list, insertionIndex)), InsertionMarkerCanvas);
+        if (position is null)
+        {
+            InsertionMarker.IsVisible = false;
+            return;
+        }
+
+        Canvas.SetLeft(InsertionMarker, 0);
+        Canvas.SetTop(InsertionMarker, position.Value.Y - InsertionMarker.Height / 2);
+        InsertionMarker.Width = list.Bounds.Width;
+        InsertionMarker.IsVisible = true;
+    }
+
+    private double GetInsertionY(ListBox list, int insertionIndex)
+    {
+        if (ViewModel.OrderRows.Count == 0) return 0;
+        if (insertionIndex < ViewModel.OrderRows.Count
+            && list.ContainerFromIndex(insertionIndex) is Control nextContainer)
+        {
+            var position = nextContainer.TranslatePoint(new Point(0, 0), list);
+            if (position is not null) return position.Value.Y;
+        }
+
+        var lastIndex = Math.Min(ViewModel.OrderRows.Count - 1, list.ItemCount - 1);
+        if (lastIndex >= 0 && list.ContainerFromIndex(lastIndex) is Control lastContainer)
+        {
+            var position = lastContainer.TranslatePoint(new Point(0, 0), list);
+            if (position is not null) return position.Value.Y + lastContainer.Bounds.Height;
+        }
+        return list.Bounds.Height;
+    }
+
+    private void CommitContentReordering()
+    {
+        if (!_isReordering || !_dragOverList || _reorderItem is null || _pendingInsertionIndex < 0)
+            return;
+        var currentItem = ViewModel.FindCurrentOrderRow(_reorderItem);
+        if (currentItem is null) return;
+        var sourceIndex = ViewModel.OrderRows.IndexOf(currentItem);
+        ViewModel.MoveOrderRowToInsertion(sourceIndex, _pendingInsertionIndex);
+    }
+
     private void OnContentListPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (_reorderPointer == e.Pointer)
+        {
+            if (sender is ListBox list && _isReordering)
+            {
+                var position = e.GetPosition(list);
+                _dragOverList = position.X >= 0 && position.X <= list.Bounds.Width
+                    && position.Y >= 0 && position.Y <= list.Bounds.Height;
+                if (_dragOverList)
+                {
+                    var insertionIndex = FindInsertionIndex(list, position.Y);
+                    _pendingInsertionIndex = insertionIndex >= 0
+                        ? ConstrainInsertionIndex(list, _reorderItem!, insertionIndex, position.Y)
+                        : -1;
+                }
+                else
+                    _pendingInsertionIndex = -1;
+                CommitContentReordering();
+            }
             ClearContentReordering(releaseCapture: true);
+        }
     }
 
     private void OnContentListPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
@@ -154,6 +263,10 @@ public partial class OverlayBlockContentDialog : Window
         _reorderPointer = null;
         _reorderItem = null;
         _isReordering = false;
+        _dragOverList = false;
+        _pendingInsertionIndex = -1;
+        DragGhost.IsVisible = false;
+        InsertionMarker.IsVisible = false;
         if (releaseCapture && pointer is not null)
             pointer.Capture(null);
     }

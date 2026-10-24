@@ -42,12 +42,10 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     private readonly Dictionary<string, List<string>> _metricOrder;
     private readonly Dictionary<string, OverlayMetricEditChoiceViewModel> _metricEditChoices = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _customMetricOrderGroups = new(StringComparer.OrdinalIgnoreCase);
-    private readonly bool _enableBlockPreview;
 
     public OverlayBlockContentDialogViewModel(MainWindowViewModel viewModel, OverlayCanvasBlockViewModel block)
     {
         _owner = viewModel;
-        _enableBlockPreview = true;
         _owner.OverlayRows.CollectionChanged += OnOverlayRowsChanged;
         _block = block;
         _detectedSeries = viewModel.OverlaySeriesOptions.ToArray();
@@ -74,7 +72,6 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     private OverlayBlockContentDialogViewModel(OverlayBlockContentDialogViewModel source)
     {
         _owner = source._owner;
-        _enableBlockPreview = false;
         _block = source._block;
         _detectedSeries = source._detectedSeries;
         _selected = new HashSet<(string Kind, string Value)>(source._selected);
@@ -119,19 +116,6 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     public ObservableCollection<OverlayBlockContentChoiceViewModel> TemplateChoices { get; } = [];
     public ObservableCollection<OverlayBlockItemChoiceViewModel> OrderedContentItems { get; } = [];
     public ObservableCollection<OverlayBlockOrderRowViewModel> OrderRows { get; } = [];
-    public ObservableCollection<object> PreviewRows { get; } = [];
-    public MainWindowViewModel Owner => _owner;
-    public double OverlayPreviewWidth => _owner.OverlayPreviewWidth;
-    public double OverlayPreviewOpacity => _owner.OverlayPreviewOpacity;
-    public string PreviewTitle
-    {
-        get
-        {
-            var labels = PreviewRows.OfType<OverlayBlockMetricViewModel>().Select(row => row.Name)
-                .Distinct(StringComparer.OrdinalIgnoreCase).Take(2).ToArray();
-            return labels.Length == 0 ? "Prévia do bloco" : string.Join(" · ", labels);
-        }
-    }
     public IReadOnlyList<OverlayBlockItemConfig> Result { get; private set; } = [];
     public IReadOnlyList<OverlayGraph> ResultGraphs => _graphs;
     public IReadOnlyList<OverlayTemplate> ResultTemplates => _templates;
@@ -223,12 +207,6 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     public void Dispose()
     {
         _owner.OverlayRows.CollectionChanged -= OnOverlayRowsChanged;
-        foreach (var metric in PreviewRows.OfType<OverlayBlockMetricViewModel>())
-        {
-            metric.PropertyChanged -= OnPreviewMetricPropertyChanged;
-            metric.Dispose();
-        }
-        PreviewRows.Clear();
         foreach (var choice in _metricEditChoices.Values)
             choice.Dispose();
         _metricEditChoices.Clear();
@@ -348,6 +326,43 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         var from = siblings.IndexOf(row);
         var to = siblings.IndexOf(targetRow);
         if (from < 0 || to < 0) return;
+        siblings.RemoveAt(from);
+        siblings.Insert(to, row);
+        _metricOrder[groupKey] = siblings.Select(candidate => candidate.Identity).ToList();
+        _customMetricOrderGroups.Add(groupKey);
+        RebuildOrderRows();
+        SelectedOrderRow = OrderRows.FirstOrDefault(candidate => candidate.IsMetric
+            && candidate.GroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase)
+            && candidate.Identity.Equals(row.Identity, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void MoveOrderRowToInsertion(int sourceIndex, int insertionIndex)
+    {
+        if (sourceIndex < 0 || sourceIndex >= OrderRows.Count) return;
+        insertionIndex = Math.Clamp(insertionIndex, 0, OrderRows.Count);
+        var row = OrderRows[sourceIndex];
+        if (!row.IsMetric)
+        {
+            var sourceGroupIndex = OrderedContentItems.IndexOf(row.Group);
+            if (sourceGroupIndex < 0) return;
+            var targetGroupIndex = OrderRows.Take(insertionIndex).Count(candidate => !candidate.IsMetric);
+            if (sourceGroupIndex < targetGroupIndex) targetGroupIndex--;
+            targetGroupIndex = Math.Clamp(targetGroupIndex, 0, OrderedContentItems.Count - 1);
+            MoveContent(sourceGroupIndex, targetGroupIndex);
+            SelectedOrderRow = OrderRows.FirstOrDefault(candidate => !candidate.IsMetric && ReferenceEquals(candidate.Group, row.Group));
+            return;
+        }
+
+        var groupKey = row.GroupKey;
+        var siblings = OrderRows.Where(candidate => candidate.IsMetric
+            && candidate.GroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase)).ToList();
+        var from = siblings.IndexOf(row);
+        if (from < 0) return;
+        var to = OrderRows.Take(insertionIndex).Count(candidate => candidate.IsMetric
+            && candidate.GroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase));
+        if (from < to) to--;
+        to = Math.Clamp(to, 0, siblings.Count - 1);
+        if (from == to) return;
         siblings.RemoveAt(from);
         siblings.Insert(to, row);
         _metricOrder[groupKey] = siblings.Select(candidate => candidate.Identity).ToList();
@@ -571,62 +586,6 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         Raise(nameof(CanMoveContentUp));
         Raise(nameof(CanMoveContentDown));
         Raise(nameof(CanRemoveSelectedContent));
-        RefreshBlockPreview();
-        Raise(nameof(PreviewTitle));
-    }
-
-    private void RefreshBlockPreview()
-    {
-        if (!_enableBlockPreview) return;
-        foreach (var metric in PreviewRows.OfType<OverlayBlockMetricViewModel>())
-        {
-            metric.PropertyChanged -= OnPreviewMetricPropertyChanged;
-            metric.Dispose();
-        }
-        PreviewRows.Clear();
-
-        foreach (var item in OrderedContentItems)
-        {
-            if (item.Kind is "category" or "series")
-            {
-                foreach (var orderRow in OrderRows.Where(row => row.IsMetric
-                             && row.Group.Kind.Equals(item.Kind, StringComparison.OrdinalIgnoreCase)
-                             && row.Group.Value.Equals(item.Value, StringComparison.OrdinalIgnoreCase)))
-                {
-                    var source = orderRow.Metric!.Source;
-                    var metricOverride = _metricOverrides.TryGetValue(source.OverrideIdentity, out var value) ? value : null;
-                    var previewMetric = new OverlayBlockMetricViewModel(source, metricOverride);
-                    previewMetric.PropertyChanged += OnPreviewMetricPropertyChanged;
-                    PreviewRows.Add(previewMetric);
-                }
-            }
-            else if (item.Kind == "frametime")
-                PreviewRows.Add(new OverlayFrametimeGraphViewModel(_owner));
-            else if (item.Kind == "graph")
-            {
-                var graph = _graphs.FirstOrDefault(candidate => candidate.Id.Equals(item.Value, StringComparison.OrdinalIgnoreCase));
-                if (graph is not null)
-                {
-                    var existing = _owner.OverlayExtraRows.OfType<OverlayGraphRowViewModel>()
-                        .FirstOrDefault(row => row.Identity.Equals($"#graph:{graph.Id}", StringComparison.OrdinalIgnoreCase));
-                    PreviewRows.Add(existing is not null
-                        ? existing
-                        : new OverlayBlockPreviewTextViewModel($"Gráfico · {graph.Series}"));
-                }
-            }
-            else if (item.Kind == "template")
-            {
-                var template = _templates.FirstOrDefault(candidate => candidate.Id.Equals(item.Value, StringComparison.OrdinalIgnoreCase));
-                if (template is not null)
-                    PreviewRows.Add(new OverlayBlockPreviewTextViewModel(template.Text));
-            }
-        }
-    }
-
-    private void OnPreviewMetricPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(OverlayBlockMetricViewModel.Name))
-            Raise(nameof(PreviewTitle));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

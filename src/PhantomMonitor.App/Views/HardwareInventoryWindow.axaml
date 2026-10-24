@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PhantomMonitor.App.Views.HardwareInventoryWindow"
+        Title="Hardware detectado"
+        Width="760" Height="680" MinWidth="420" MinHeight="320"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgWindowBrush}">
+  <Grid Margin="18" RowDefinitions="Auto,*" RowSpacing="12">
+    <StackPanel Spacing="4">
+      <TextBlock Text="HARDWARE DETECTADO" Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="17" FontWeight="SemiBold" />
+      <TextBlock Text="Componentes enumerados pelo serviço de monitoramento."
+                 Classes="muted" FontSize="11" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Background="{DynamicResource BgCardBrush}"
+            BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1"
+            CornerRadius="8" Padding="12">
+      <Grid>
+        <TreeView ItemsSource="{Binding InventoryHardwareNodes}"
+                  IsVisible="{Binding HasInventoryHardware}"
+                  Background="Transparent" BorderThickness="0">
+          <TreeView.Styles>
+            <Style Selector="TreeViewItem">
+              <Setter Property="IsExpanded" Value="True" />
+            </Style>
+          </TreeView.Styles>
+          <TreeView.ItemTemplate>
+            <TreeDataTemplate ItemsSource="{Binding Children}">
+              <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}"
+                         FontSize="11" />
+            </TreeDataTemplate>
+          </TreeView.ItemTemplate>
+        </TreeView>
+        <TextBlock IsVisible="{Binding !HasInventoryHardware}"
+                   Text="Nenhum hardware enumerado — no Windows, inicie o monitoramento como Administrador para ver a árvore."
+                   Classes="muted" FontSize="12" TextWrapping="Wrap"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

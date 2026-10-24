@@ -10,6 +10,7 @@ public sealed partial class MainWindow : Window
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     private OverlayWindow? _overlayWindow;
     private OverlayEditorWindow? _overlayEditorWindow;
+    private HardwareInventoryWindow? _hardwareInventoryWindow;
     private TrayIconService? _tray;
 
     public MainWindow()
@@ -41,6 +42,7 @@ public sealed partial class MainWindow : Window
             }
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _overlayWindow?.Close();
+            _hardwareInventoryWindow?.Close();
             ViewModel.Dispose();
         };
     }
@@ -190,6 +192,18 @@ public sealed partial class MainWindow : Window
     {
         if (sender is Button { DataContext: InventoryRowViewModel row } && row.CanCollapseChildren)
             row.IsExpanded = !row.IsExpanded;
+    }
+    private void OnOpenHardwareInventoryClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_hardwareInventoryWindow is null)
+        {
+            _hardwareInventoryWindow = new HardwareInventoryWindow(ViewModel);
+            _hardwareInventoryWindow.Closed += (_, _) => _hardwareInventoryWindow = null;
+            _hardwareInventoryWindow.Show(this);
+            return;
+        }
+
+        _hardwareInventoryWindow.Activate();
     }
     private void OnCustomSensorsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

@@ -408,26 +408,8 @@
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasInventorySnapshot}">
-          <StackPanel Spacing="10">
-            <TextBlock Text="Hardware detectado" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
-            <TreeView ItemsSource="{Binding InventoryHardwareNodes}" IsVisible="{Binding HasInventoryHardware}" Background="Transparent" BorderThickness="0">
-              <TreeView.Styles>
-                <Style Selector="TreeViewItem">
-                  <Setter Property="IsExpanded" Value="True" />
-                </Style>
-              </TreeView.Styles>
-              <TreeView.ItemTemplate>
-                <TreeDataTemplate ItemsSource="{Binding Children}">
-                  <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" />
-                </TreeDataTemplate>
-              </TreeView.ItemTemplate>
-            </TreeView>
-            <TextBlock IsVisible="{Binding !HasInventoryHardware}"
-                       Text="Nenhum hardware enumerado — no Windows, inicie o monitoramento como Administrador para ver a árvore."
-                       Classes="muted" FontSize="11" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
+        <Button Content="Hardware detectado…" HorizontalAlignment="Left" Margin="0,0,0,14"
+                IsVisible="{Binding HasInventorySnapshot}" Click="OnOpenHardwareInventoryClick" />
 
         <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasMonitors}">
           <StackPanel Spacing="10">

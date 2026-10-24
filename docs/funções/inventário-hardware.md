@@ -26,18 +26,19 @@ personalizadas e sensores sem instâncias continuam como linhas próprias.
 As médias calculadas têm mínimo, máximo e média de sessão em memória, limpos por
 **Resetar estatísticas**. Sem amostra, as estatísticas mostram `--` (NaN).
 
-A página também tem, desde a F1.4, os acréscimos do InventoryWindow do WPF:
+A página também inclui recursos herdados do InventoryWindow do WPF:
 
 - **Botão "Resetar estatísticas"** no cabeçalho: zera min/máx/média de todas as
   séries (`ISensorService.ResetSeriesStats`) e grava um marcador `#marker` no CSV
   ativo + nota equivalente no journal JSONL (`reset (inventário)`), com
   confirmação transitória junto do botão e amostras zeradas na hora.
-- **Card "Hardware detectado"**: árvore dos nós enumerados (placa-mãe →
-  SuperIO/EC, CPU, GPUs com sub-hardware...), decodificada das linhas
-  `[HWR]` via `InventoryBuilder.BuildHardware` (Core); nós expandidos por
-  padrão e reconstrução da árvore **só quando a enumeração muda** (assinatura
-  `Depth:Type:Name`). No Windows sem administrador ou sem detecção, um aviso
-  orienta iniciar como Administrador.
+- **Botão "Hardware detectado…"**: abre uma janela flutuante com a árvore dos
+  nós enumerados (placa-mãe → SuperIO/EC, CPU, GPUs com sub-hardware...),
+  decodificada das linhas `[HWR]` via `InventoryBuilder.BuildHardware` (Core).
+  Os nós começam expandidos e a árvore é reconstruída **só quando a enumeração
+  muda** (assinatura `Depth:Type:Name`). A janela reutiliza os dados vivos do
+  Inventário; cliques repetidos a reativam. No Windows sem administrador ou sem
+  detecção, a janela orienta iniciar como Administrador.
 - **Card "Monitores (EDID)"**: instância WMI (device), fabricante, modelo,
   código, serial, diagonal e fabricação + indicador PRIMÁRIO (mesma fonte
   `WmiMonitorID`/`WmiMonitorBasicDisplayParams`); a lista só troca quando o

@@ -13,6 +13,8 @@ public sealed partial class OverlayWindow
 {
     private DispatcherTimer? _followTimer;
     private DispatcherTimer? _topmostTimer;
+    private Rect? _lastTargetRect;
+    private double _lastTargetScale = 1;
     private static uint _explorerPid;
     private static DateTime _explorerPidCheckedAt = DateTime.MinValue;
 
@@ -61,12 +63,27 @@ public sealed partial class OverlayWindow
         var foreground = Win32Interop.GetForegroundWindow();
         if (foreground == IntPtr.Zero) return;
         Win32Interop.GetWindowThreadProcessId(foreground, out var pid);
-        if (pid == (uint)Environment.ProcessId || pid == GetExplorerPid()) return;
-        if (!GetWindowRect(foreground, out var rect) || rect.Left <= -32000) return;
-
-        _viewModel.UpdateProfileForForeground(pid);
         var referenceWindow = _windows.Values.FirstOrDefault(window => window.IsVisible);
-        var scale = referenceWindow?.RenderScaling ?? 1;
+        Rect rect;
+        double scale;
+        var isMonitorWindow = pid == (uint)Environment.ProcessId || pid == GetExplorerPid();
+        if (!isMonitorWindow && GetWindowRect(foreground, out rect) && rect.Left > -32000)
+        {
+            scale = referenceWindow?.RenderScaling ?? 1;
+            _lastTargetRect = rect;
+            _lastTargetScale = scale;
+            _viewModel.UpdateProfileForForeground(pid);
+        }
+        else if (_lastTargetRect is { } lastTargetRect)
+        {
+            rect = lastTargetRect;
+            scale = _lastTargetScale;
+        }
+        else if (!TryGetPrimaryScreenRect(referenceWindow, out rect, out scale))
+        {
+            return;
+        }
+
         var width = (rect.Right - rect.Left) / scale;
         var height = (rect.Bottom - rect.Top) / scale;
         _viewModel.SetOverlayCanvasSize(width, height);
@@ -79,6 +96,21 @@ public sealed partial class OverlayWindow
             var top = rect.Top / scale + _viewModel.FollowOffsetY + block.Y * Math.Max(0, height - window.Height);
             window.Position = new PixelPoint((int)(left * scale), (int)(top * scale));
         }
+    }
+
+    private static bool TryGetPrimaryScreenRect(Window? referenceWindow, out Rect rect, out double scale)
+    {
+        if (referenceWindow?.Screens.Primary is { } screen)
+        {
+            var bounds = screen.Bounds;
+            rect = new Rect { Left = bounds.X, Top = bounds.Y, Right = bounds.Right, Bottom = bounds.Bottom };
+            scale = screen.Scaling;
+            return true;
+        }
+
+        rect = default;
+        scale = 1;
+        return false;
     }
 
     private static uint GetExplorerPid()

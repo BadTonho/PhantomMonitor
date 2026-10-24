@@ -50,6 +50,8 @@ The device accents are orange for GPU, cyan for CPU, purple for RAM, blue for di
 
 ## Visual overlay editor
 
+On Windows, while Phantom Monitor or Explorer is focused, overlay positions continue to use the last valid external window as their reference. Before an external window is available, the primary screen is used.
+
 In the block dialog, **Remove from list** on a group header removes that rule from the block; on a metric row, **Hide from all blocks** hides that identity from sensor rows in every block. This does not change sensor collection or the dashboard. Use **Hidden rows…** to restore one metric or all of them. Identities for temporarily unavailable sensors remain saved until restored. Hiding and restoring updates the preview as a draft; the running overlay changes only after **Save and apply**.
 
 The editor is a gridded canvas with a live preview. Right-click an empty area to create a block; left-drag to move it with 20 px grid snapping and edge alignment to nearby blocks (or freely while holding Shift), constrained by the rendered block size and canvas edges. Double-click a block to edit its order and sensor rows; use **Add content** in the block dialog to open the multi-item selector. Right-click a block to edit or remove it. Normalized `x`/`y` positions range from 0 to 1 and use the monitored window as reference on Windows and the available screen area on Linux. Content and positions stay as a draft until **Save and apply**. Older configurations migrate from `layout` and other legacy options into `blocks`; without saved positions, blocks start in the default vertical order.

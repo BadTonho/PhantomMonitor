@@ -7,16 +7,15 @@
         Width="1120" Height="820" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
-  <Grid Margin="20" RowDefinitions="*,Auto" RowSpacing="12">
-    <Grid>
-      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <Grid x:Name="EditorCanvasSurface" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
-              Background="Transparent" PointerPressed="OnCanvasPointerPressed">
-          <Border CornerRadius="6" Background="{DynamicResource BgOverlayPanelBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1" />
-          <charts:OverlayGridCanvas Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
-                                    LineBrush="{DynamicResource OverlayGridBrush}" GridSpacing="20" />
-          <ItemsControl x:Name="EditorBlockCanvas" ItemsSource="{Binding OverlayBlocks}"
-                        Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}">
+  <Grid Margin="20">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <Grid x:Name="EditorCanvasSurface" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
+            Background="Transparent" PointerPressed="OnCanvasPointerPressed">
+        <Border CornerRadius="6" Background="{DynamicResource BgOverlayPanelBrush}" BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1" />
+        <charts:OverlayGridCanvas Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
+                                  LineBrush="{DynamicResource OverlayGridBrush}" GridSpacing="20" />
+        <ItemsControl x:Name="EditorBlockCanvas" ItemsSource="{Binding OverlayBlocks}"
+                      Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}">
             <ItemsControl.ItemContainerTheme>
               <ControlTheme TargetType="ContentPresenter">
                 <Setter Property="Canvas.Left" Value="{Binding CanvasX}" />
@@ -83,16 +82,17 @@
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </Grid>
-      </ScrollViewer>
-    </Grid>
+        </ItemsControl>
+      </Grid>
+    </ScrollViewer>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
-      <TextBlock Text="A posição é relativa à janela monitorada. O overlay acompanha a janela ativa no Windows; no Linux, a posição depende do compositor."
-                 Classes="muted" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
-      <Button Grid.Column="1" Content="Fechar" Click="OnCloseClick" />
-      <Button Grid.Column="2" Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
-    </Grid>
+    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,12"
+            Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
+            BorderThickness="1" CornerRadius="8" Padding="8">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Fechar" Click="OnCloseClick" />
+        <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
+      </StackPanel>
+    </Border>
   </Grid>
 </Window>

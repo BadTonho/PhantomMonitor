@@ -114,11 +114,13 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             Raise(nameof(CanMoveContentUp));
             Raise(nameof(CanMoveContentDown));
             Raise(nameof(CanEditSelectedContent));
+            Raise(nameof(ShowMetricEditorHint));
             RefreshMetricChoices();
         }
     }
 
     public bool CanEditSelectedContent => SelectedContentItem is { Kind: "category" or "series" };
+    public bool ShowMetricEditorHint => !CanEditSelectedContent;
     public bool CanMoveContentUp => SelectedContentItem is not null && OrderedContentItems.IndexOf(SelectedContentItem) > 0;
     public bool CanMoveContentDown => SelectedContentItem is not null
         && OrderedContentItems.IndexOf(SelectedContentItem) >= 0
@@ -226,9 +228,17 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     {
         if (SelectedContentItem is null) return;
         var current = OrderedContentItems.IndexOf(SelectedContentItem);
-        var target = current + offset;
-        if (current < 0 || target < 0 || target >= OrderedContentItems.Count) return;
-        OrderedContentItems.Move(current, target);
+        MoveContent(current, current + offset);
+    }
+
+    public void MoveContent(int sourceIndex, int targetIndex)
+    {
+        if (sourceIndex < 0 || sourceIndex >= OrderedContentItems.Count
+            || targetIndex < 0 || targetIndex >= OrderedContentItems.Count
+            || sourceIndex == targetIndex) return;
+        var item = OrderedContentItems[sourceIndex];
+        OrderedContentItems.Move(sourceIndex, targetIndex);
+        SelectedContentItem = item;
         Raise(nameof(CanMoveContentUp));
         Raise(nameof(CanMoveContentDown));
     }

@@ -3,7 +3,7 @@
         xmlns:vm="using:PhantomMonitor.App.ViewModels"
         x:Class="PhantomMonitor.App.Views.OverlayBlockContentDialog"
         Title="Conteúdo do bloco"
-        Width="700" Height="760" MinWidth="560" MinHeight="560"
+        Width="980" Height="760" MinWidth="800" MinHeight="560"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -11,67 +11,78 @@
       <TextBlock Text="CONTEÚDO DO BLOCO" FontSize="17" FontWeight="SemiBold" />
       <TextBlock Text="Organize a ordem e personalize os sensores deste bloco." FontSize="11" TextWrapping="Wrap" Classes="muted" />
 
-      <TextBlock Text="ORDEM NO BLOCO" FontSize="10" FontWeight="Bold" />
-      <ListBox ItemsSource="{Binding OrderedContentItems}"
-               SelectedItem="{Binding SelectedContentItem, Mode=TwoWay}"
-               Height="150" MinHeight="70">
-        <ListBox.ItemTemplate>
-          <DataTemplate DataType="{x:Type vm:OverlayBlockItemChoiceViewModel}">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2">
-              <TextBlock Text="{Binding Kind}" Classes="muted" FontSize="9" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-            </Grid>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="Mover para cima" IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" />
-        <Button Content="Mover para baixo" IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" />
-        <Button Content="Remover da lista" Click="OnRemoveContentClick" />
-      </StackPanel>
-
-      <StackPanel IsVisible="{Binding CanEditSelectedContent}" Spacing="8">
-        <TextBlock Text="EDITAR LINHA DO SENSOR" FontSize="10" FontWeight="Bold" />
-        <ComboBox ItemsSource="{Binding MetricChoices}"
-                  SelectedItem="{Binding SelectedMetric, Mode=TwoWay}"
-                  IsVisible="{Binding HasMetricChoices}" />
-        <TextBlock Text="Nenhuma linha de sensor disponível para este item agora."
-                   Classes="muted" IsVisible="{Binding NoMetricChoices}" />
-        <StackPanel IsVisible="{Binding HasMetricChoices}" Spacing="8">
-          <TextBox PlaceholderText="Nome exibido (vazio usa o nome atual)"
-                   Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />
-          <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-            <StackPanel Spacing="3">
-              <TextBlock Text="CASAS DECIMAIS" FontSize="9" />
-              <ComboBox ItemsSource="{Binding MetricDecimalsOptions}"
-                        SelectedItem="{Binding MetricDecimals, Mode=TwoWay}"
-                        IsEnabled="{Binding CanEditMetricDecimals}" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Spacing="3">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="COR DO TEXTO" FontSize="9" />
-                <Button Grid.Column="1" Content="Padrão" Padding="6,2" Click="OnResetMetricColorClick" />
-              </Grid>
-              <TextBox PlaceholderText="#RRGGBB" Text="{Binding MetricColor, UpdateSourceTrigger=PropertyChanged}" />
-            </StackPanel>
-          </Grid>
-          <ItemsControl ItemsSource="{Binding ColorSwatches}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Button Width="20" Height="20" MinWidth="20" Padding="0" Margin="2"
-                        Tag="{Binding Hex}" Background="{Binding Brush}"
-                        BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1"
-                        ToolTip.Tip="{Binding Hex}" Click="OnMetricColorSwatchClick" />
+      <Grid ColumnDefinitions="1*,1.35*" ColumnSpacing="16">
+        <StackPanel Grid.Column="0" Spacing="8">
+          <TextBlock Text="ORDEM NO BLOCO" FontSize="10" FontWeight="Bold" />
+          <ListBox ItemsSource="{Binding OrderedContentItems}"
+                   SelectedItem="{Binding SelectedContentItem, Mode=TwoWay}"
+                   Height="340" MinHeight="120">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="{x:Type vm:OverlayBlockItemChoiceViewModel}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2"
+                      PointerPressed="OnContentItemPointerPressed"
+                      DragDrop.AllowDrop="True"
+                      DragDrop.DragOver="OnContentItemDragOver"
+                      DragDrop.Drop="OnContentItemDrop">
+                  <TextBlock Text="{Binding Kind}" Classes="muted" FontSize="9" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </Grid>
               </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" />
-          <Button Content="Aplicar ajuste à linha" HorizontalAlignment="Left" Click="OnSaveMetricOverrideClick" />
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <WrapPanel Orientation="Horizontal">
+            <Button Content="Mover para cima" IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" Margin="0,0,8,8" />
+            <Button Content="Mover para baixo" IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" Margin="0,0,8,8" />
+            <Button Content="Remover da lista" Click="OnRemoveContentClick" Margin="0,0,8,8" />
+          </WrapPanel>
         </StackPanel>
-      </StackPanel>
+
+        <StackPanel Grid.Column="1" Spacing="8">
+          <TextBlock Text="EDITAR LINHA DO SENSOR" FontSize="10" FontWeight="Bold"
+                     IsVisible="{Binding CanEditSelectedContent}" />
+          <TextBlock Text="Selecione uma categoria ou série na lista para editar sua apresentação."
+                     Classes="muted" TextWrapping="Wrap" IsVisible="{Binding ShowMetricEditorHint}" />
+          <ComboBox ItemsSource="{Binding MetricChoices}"
+                    SelectedItem="{Binding SelectedMetric, Mode=TwoWay}"
+                    IsVisible="{Binding HasMetricChoices}" />
+          <TextBlock Text="Nenhuma linha de sensor disponível para este item agora."
+                     Classes="muted" IsVisible="{Binding NoMetricChoices}" />
+          <StackPanel IsVisible="{Binding HasMetricChoices}" Spacing="8">
+            <TextBox PlaceholderText="Nome exibido (vazio usa o nome atual)"
+                     Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+              <StackPanel Spacing="3">
+                <TextBlock Text="CASAS DECIMAIS" FontSize="9" />
+                <ComboBox ItemsSource="{Binding MetricDecimalsOptions}"
+                          SelectedItem="{Binding MetricDecimals, Mode=TwoWay}"
+                          IsEnabled="{Binding CanEditMetricDecimals}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="3">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="COR DO TEXTO" FontSize="9" />
+                  <Button Grid.Column="1" Content="Padrão" Padding="6,2" Click="OnResetMetricColorClick" />
+                </Grid>
+                <TextBox PlaceholderText="#RRGGBB" Text="{Binding MetricColor, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding ColorSwatches}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Width="20" Height="20" MinWidth="20" Padding="0" Margin="2"
+                          Tag="{Binding Hex}" Background="{Binding Brush}"
+                          BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1"
+                          ToolTip.Tip="{Binding Hex}" Click="OnMetricColorSwatchClick" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" />
+            <Button Content="Aplicar ajuste à linha" HorizontalAlignment="Left" Click="OnSaveMetricOverrideClick" />
+          </StackPanel>
+        </StackPanel>
+      </Grid>
 
       <Button Content="Adicionar conteúdo…" HorizontalAlignment="Left" Click="OnOpenContentPickerClick" />
 

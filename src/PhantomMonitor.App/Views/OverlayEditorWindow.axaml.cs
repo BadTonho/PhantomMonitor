@@ -12,7 +12,20 @@ public partial class OverlayEditorWindow : Window
     private OverlayCanvasBlockViewModel? _dragBlock;
     private Point _dragOffset;
 
-    public OverlayEditorWindow() => InitializeComponent();
+    public OverlayEditorWindow()
+    {
+        InitializeComponent();
+        Opened += (_, _) => UpdateEditorCanvasSize(EditorCanvasViewport.Bounds.Size);
+    }
+
+    private void OnEditorCanvasViewportSizeChanged(object? sender, SizeChangedEventArgs e)
+        => UpdateEditorCanvasSize(e.NewSize);
+
+    private void UpdateEditorCanvasSize(Size size)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+            viewModel.SetOverlayEditorCanvasSize(size.Width, size.Height);
+    }
 
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {

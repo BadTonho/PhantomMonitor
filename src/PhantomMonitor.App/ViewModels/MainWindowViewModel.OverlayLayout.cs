@@ -103,9 +103,18 @@ public sealed partial class MainWindowViewModel
         if (Math.Abs(OverlayCanvasWidth - width) < 0.5 && Math.Abs(OverlayCanvasHeight - height) < 0.5) return;
         OverlayCanvasWidth = width;
         OverlayCanvasHeight = height;
-        foreach (var block in _overlayBlocks)
-            block.SetCanvasSize(width, height);
         foreach (var block in _overlayAppliedBlocks)
+            block.SetCanvasSize(width, height);
+    }
+
+    public void SetOverlayEditorCanvasSize(double width, double height)
+    {
+        width = Math.Clamp(width, 240, 10000);
+        height = Math.Clamp(height, 120, 10000);
+        if (Math.Abs(OverlayEditorCanvasWidth - width) < 0.5 && Math.Abs(OverlayEditorCanvasHeight - height) < 0.5) return;
+        OverlayEditorCanvasWidth = width;
+        OverlayEditorCanvasHeight = height;
+        foreach (var block in _overlayBlocks)
             block.SetCanvasSize(width, height);
     }
 

@@ -94,6 +94,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private readonly ObservableCollection<object> _overlayAppliedExtraRows = new();
     private double _overlayCanvasWidth = 960;
     private double _overlayCanvasHeight = 620;
+    private double _overlayEditorCanvasWidth = 960;
+    private double _overlayEditorCanvasHeight = 760;
     private IReadOnlyList<string> _overlaySeriesOptions = [];
     private IReadOnlyList<double> _cpuSamples = [];
     private IReadOnlyList<double> _gpuSamples = [];
@@ -364,8 +366,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public Avalonia.Thickness OverlayPreviewPadding => OverlayPreviewCompact ? new(6, 4) : new(12);
     public Avalonia.Thickness OverlayPreviewBlockPadding => OverlayPreviewCompact ? new(4, 2.5) : new(7, 4.5);
     public double OverlayPreviewFrametimeGraphHeight => OverlayPreviewCompact ? 18 : 24;
-    public double OverlayEditorCanvasWidth => 960;
-    public double OverlayEditorCanvasHeight => 760;
+    public double OverlayEditorCanvasWidth { get => _overlayEditorCanvasWidth; private set => Set(ref _overlayEditorCanvasWidth, value); }
+    public double OverlayEditorCanvasHeight { get => _overlayEditorCanvasHeight; private set => Set(ref _overlayEditorCanvasHeight, value); }
 
     private void RaiseOverlayPreviewProperties()
     {

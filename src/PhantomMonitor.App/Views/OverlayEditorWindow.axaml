@@ -2,13 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:charts="using:PhantomMonitor.App.Controls"
         xmlns:vm="using:PhantomMonitor.App.ViewModels"
+        xmlns:views="using:PhantomMonitor.App.Views"
         x:Class="PhantomMonitor.App.Views.OverlayEditorWindow"
         Title="Editor do overlay flutuante"
         Width="1120" Height="820" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
-  <Grid x:Name="EditorCanvasViewport" SizeChanged="OnEditorCanvasViewportSizeChanged">
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+  <Grid x:Name="EditorCanvasViewport" ColumnDefinitions="*,Auto" SizeChanged="OnEditorCanvasViewportSizeChanged">
+    <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <Grid x:Name="EditorCanvasSurface" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
             Background="{DynamicResource BgOverlayPanelBrush}" PointerPressed="OnCanvasPointerPressed">
         <charts:OverlayGridCanvas Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
@@ -85,12 +86,35 @@
       </Grid>
     </ScrollViewer>
 
-    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,12"
+    <Grid x:Name="AppearanceSettingsHost" Grid.Column="1" Width="0" IsVisible="False" ClipToBounds="True">
+      <Border x:Name="AppearanceSettingsPanel" Width="360" HorizontalAlignment="Left"
+              Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
+              BorderThickness="1,0,0,0" Padding="16">
+        <Border.RenderTransform>
+          <TranslateTransform X="-360" />
+        </Border.RenderTransform>
+        <Grid RowDefinitions="Auto,*" RowSpacing="14">
+          <StackPanel Spacing="4">
+            <TextBlock Text="APARÊNCIA DO OVERLAY" Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="15" FontWeight="SemiBold" />
+            <TextBlock Text="Ajuste os valores e confira o resultado no canvas."
+                       Classes="muted" FontSize="10" TextWrapping="Wrap" />
+          </StackPanel>
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <views:OverlayAppearanceControls />
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,12"
             Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
             BorderThickness="1" CornerRadius="8" Padding="8">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="Fechar" Click="OnCloseClick" />
         <Button Classes="action" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
+        <Button x:Name="AppearanceSettingsButton" Classes="action" Content="Configurações"
+                Click="OnAppearanceSettingsClick" />
       </StackPanel>
     </Border>
   </Grid>

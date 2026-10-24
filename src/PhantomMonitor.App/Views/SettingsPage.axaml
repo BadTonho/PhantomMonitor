@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:views="using:PhantomMonitor.App.Views"
             x:Class="PhantomMonitor.App.Views.SettingsPage">
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSettings}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
@@ -22,31 +23,7 @@
           <StackPanel Spacing="12">
             <TextBlock Text="OVERLAY FLUTUANTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
             <TextBlock Text="Ajuste a aparência global aqui. O conteúdo e a posição dos blocos são editados no canvas." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-              <StackPanel Spacing="5">
-                <TextBlock Text="LARGURA (140–700 PX)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                <TextBox Text="{Binding OverlayWidthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="5">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="OPACIDADE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                  <TextBlock Grid.Column="1" Text="{Binding OverlayOpacityLabel}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" />
-                </Grid>
-                <Slider Minimum="10" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
-                        Value="{Binding OverlayOpacityPercent, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <StackPanel Spacing="5">
-                <TextBlock Text="FONTE (8–20 PT)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                <TextBox Text="{Binding OverlayFontSizeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <TextBlock Grid.Column="1" Text="{Binding OverlayFontSizeLabel}" Foreground="{DynamicResource TextMonoBrush}"
-                         FontSize="10" VerticalAlignment="Bottom" Margin="0,0,0,8" />
-            </Grid>
-            <Slider Minimum="8" Maximum="20" TickFrequency="0.5" IsSnapToTickEnabled="True"
-                    Value="{Binding OverlayFontSizeSlider, Mode=TwoWay}" />
-            <CheckBox Content="Modo compacto" IsChecked="{Binding OverlayCompactModeSetting, Mode=TwoWay}" />
+            <views:OverlayAppearanceControls />
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="action" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
               <TextBlock Text="Salvar entra no config e aplica à janela aberta sem reiniciar a coleta." Classes="muted" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" />

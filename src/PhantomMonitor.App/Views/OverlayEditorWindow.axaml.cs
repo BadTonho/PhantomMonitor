@@ -2,15 +2,22 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using PhantomMonitor.App.ViewModels;
+using System.Diagnostics;
 
 namespace PhantomMonitor.App.Views;
 
 public partial class OverlayEditorWindow : Window
 {
+    private const double AppearancePanelWidth = 360;
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     private OverlayCanvasBlockViewModel? _dragBlock;
     private Point _dragOffset;
+    private bool _appearanceSettingsOpen;
+    private bool _appearanceSettingsTransitioning;
+    private double _windowWidthBeforeAppearanceSettings;
+    private TranslateTransform AppearancePanelTransform => (TranslateTransform)AppearanceSettingsPanel.RenderTransform!;
 
     public OverlayEditorWindow()
     {
@@ -24,7 +31,64 @@ public partial class OverlayEditorWindow : Window
     private void UpdateEditorCanvasSize(Size size)
     {
         if (DataContext is MainWindowViewModel viewModel)
-            viewModel.SetOverlayEditorCanvasSize(size.Width, size.Height);
+            viewModel.SetOverlayEditorCanvasSize(
+                size.Width - (_appearanceSettingsOpen ? AppearancePanelWidth : 0), size.Height);
+    }
+
+    private async void OnAppearanceSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        if (_appearanceSettingsTransitioning) return;
+
+        _appearanceSettingsTransitioning = true;
+        AppearanceSettingsButton.IsEnabled = false;
+        try
+        {
+            if (_appearanceSettingsOpen)
+            {
+                await AnimateAppearancePanelAsync(0, -AppearancePanelWidth);
+                if (!IsVisible) return;
+
+                _appearanceSettingsOpen = false;
+                AppearanceSettingsHost.Width = 0;
+                AppearanceSettingsHost.IsVisible = false;
+                Width = _windowWidthBeforeAppearanceSettings;
+                AppearanceSettingsButton.Content = "Configurações";
+                await Task.Delay(16);
+                UpdateEditorCanvasSize(EditorCanvasViewport.Bounds.Size);
+            }
+            else
+            {
+                _windowWidthBeforeAppearanceSettings = Width;
+                _appearanceSettingsOpen = true;
+                AppearancePanelTransform.X = -AppearancePanelWidth;
+                AppearanceSettingsHost.Width = AppearancePanelWidth;
+                AppearanceSettingsHost.IsVisible = true;
+                AppearanceSettingsButton.Content = "Voltar";
+                Width = _windowWidthBeforeAppearanceSettings + AppearancePanelWidth;
+                await AnimateAppearancePanelAsync(-AppearancePanelWidth, 0);
+                if (IsVisible)
+                    UpdateEditorCanvasSize(EditorCanvasViewport.Bounds.Size);
+            }
+        }
+        finally
+        {
+            _appearanceSettingsTransitioning = false;
+            if (IsVisible) AppearanceSettingsButton.IsEnabled = true;
+        }
+    }
+
+    private async Task AnimateAppearancePanelAsync(double from, double to)
+    {
+        const double durationMilliseconds = 220;
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed.TotalMilliseconds < durationMilliseconds)
+        {
+            var progress = Math.Clamp(stopwatch.Elapsed.TotalMilliseconds / durationMilliseconds, 0, 1);
+            var eased = 1 - Math.Pow(1 - progress, 3);
+            AppearancePanelTransform.X = from + ((to - from) * eased);
+            await Task.Delay(16);
+        }
+        AppearancePanelTransform.X = to;
     }
 
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)

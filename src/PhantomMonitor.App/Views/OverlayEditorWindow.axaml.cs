@@ -120,25 +120,40 @@ public partial class OverlayEditorWindow : Window
 
     private void OnBlockPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_dragBlock is null || !ReferenceEquals(e.Pointer.Captured, sender)) return;
+        if (_dragBlock is null || sender is not Control control || !ReferenceEquals(e.Pointer.Captured, sender)) return;
         var point = e.GetPosition(EditorBlockCanvas);
-        var maxX = Math.Max(1, EditorBlockCanvas.Width - ViewModel.OverlayPreviewWidth);
-        var maxY = Math.Max(1, EditorBlockCanvas.Height - 90);
-        var x = Math.Clamp(point.X - _dragOffset.X, 0, maxX);
-        var y = Math.Clamp(point.Y - _dragOffset.Y, 0, maxY);
+        var canvasWidth = EditorBlockCanvas.Bounds.Width;
+        var canvasHeight = EditorBlockCanvas.Bounds.Height;
+        var maxX = Math.Max(0, canvasWidth - control.Bounds.Width);
+        var maxY = Math.Max(0, canvasHeight - control.Bounds.Height);
+        var x = point.X - _dragOffset.X;
+        var y = point.Y - _dragOffset.Y;
         var gridSpacing = EditorGrid.GridSpacing;
         if ((e.KeyModifiers & KeyModifiers.Shift) == 0 && gridSpacing > 0)
         {
-            x = Math.Round(x / gridSpacing, MidpointRounding.AwayFromZero) * gridSpacing;
-            y = Math.Round(y / gridSpacing, MidpointRounding.AwayFromZero) * gridSpacing;
+            x = SnapWithinBounds(x, maxX, gridSpacing);
+            y = SnapWithinBounds(y, maxY, gridSpacing);
+        }
+        else
+        {
             x = Math.Clamp(x, 0, maxX);
             y = Math.Clamp(y, 0, maxY);
         }
+
+        var normalizedXRange = Math.Max(0, canvasWidth - ViewModel.OverlayPreviewWidth);
+        var normalizedYRange = Math.Max(0, canvasHeight - 90);
         ViewModel.ApplyOverlayBlockPosition(
             _dragBlock.Key,
-            x / maxX,
-            y / maxY);
+            normalizedXRange > 0 ? x / normalizedXRange : 0,
+            normalizedYRange > 0 ? y / normalizedYRange : 0);
         e.Handled = true;
+    }
+
+    private static double SnapWithinBounds(double value, double max, double spacing)
+    {
+        var lastGridPosition = Math.Floor(max / spacing) * spacing;
+        var snapped = Math.Round(value / spacing, MidpointRounding.AwayFromZero) * spacing;
+        return Math.Clamp(snapped, 0, lastGridPosition);
     }
 
     private void OnBlockPointerReleased(object? sender, PointerReleasedEventArgs e)

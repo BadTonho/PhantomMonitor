@@ -42,6 +42,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     private readonly Dictionary<string, List<string>> _metricOrder;
     private readonly Dictionary<string, OverlayMetricEditChoiceViewModel> _metricEditChoices = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _customMetricOrderGroups = new(StringComparer.OrdinalIgnoreCase);
+    private bool _isPickerDraft;
 
     public OverlayBlockContentDialogViewModel(MainWindowViewModel viewModel, OverlayCanvasBlockViewModel block)
     {
@@ -71,6 +72,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
 
     private OverlayBlockContentDialogViewModel(OverlayBlockContentDialogViewModel source)
     {
+        _isPickerDraft = true;
         _owner = source._owner;
         _block = source._block;
         _detectedSeries = source._detectedSeries;
@@ -116,9 +118,6 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     public ObservableCollection<OverlayBlockContentChoiceViewModel> TemplateChoices { get; } = [];
     public ObservableCollection<OverlayBlockItemChoiceViewModel> OrderedContentItems { get; } = [];
     public ObservableCollection<OverlayBlockOrderRowViewModel> OrderRows { get; } = [];
-    public IReadOnlyList<OverlayBlockItemConfig> Result { get; private set; } = [];
-    public IReadOnlyList<OverlayGraph> ResultGraphs => _graphs;
-    public IReadOnlyList<OverlayTemplate> ResultTemplates => _templates;
     public OverlayBlockItemChoiceViewModel? SelectedContentItem
     {
         get => _selectedContentItem;
@@ -265,6 +264,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             : OrderedContentItems.FirstOrDefault(item => item.Kind == selectedItem.Kind
                 && item.Value.Equals(selectedItem.Value, StringComparison.OrdinalIgnoreCase));
         RebuildOrderRows();
+        PublishDraftToCanvas();
     }
 
     public void AddSeriesPattern()
@@ -301,6 +301,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         Raise(nameof(CanMoveContentUp));
         Raise(nameof(CanMoveContentDown));
         RebuildOrderRows();
+        PublishDraftToCanvas();
     }
 
     public void MoveOrderRow(int sourceIndex, int targetIndex)
@@ -334,6 +335,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         SelectedOrderRow = OrderRows.FirstOrDefault(candidate => candidate.IsMetric
             && candidate.GroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase)
             && candidate.Identity.Equals(row.Identity, StringComparison.OrdinalIgnoreCase));
+        PublishDraftToCanvas();
     }
 
     public void MoveOrderRowToInsertion(int sourceIndex, int insertionIndex)
@@ -371,6 +373,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         SelectedOrderRow = OrderRows.FirstOrDefault(candidate => candidate.IsMetric
             && candidate.GroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase)
             && candidate.Identity.Equals(row.Identity, StringComparison.OrdinalIgnoreCase));
+        PublishDraftToCanvas();
     }
 
     public OverlayBlockOrderRowViewModel? FindCurrentOrderRow(OverlayBlockOrderRowViewModel row)
@@ -484,18 +487,20 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         graph.Min = min;
         graph.Max = max;
         graph.Color = EmptyToNull(GraphColor);
-        SetSelected("graph", graph.Id, true);
+        SetSelected("graph", graph.Id, true, publishDraft: false);
         _editingGraphId = graph.Id;
         RefreshDynamicChoices();
+        PublishDraftToCanvas();
     }
 
     public void RemoveGraph()
     {
         if (_editingGraphId is null) return;
         _graphs.RemoveAll(item => item.Id == _editingGraphId);
-        SetSelected("graph", _editingGraphId, false);
+        SetSelected("graph", _editingGraphId, false, publishDraft: false);
         NewGraph();
         RefreshDynamicChoices();
+        PublishDraftToCanvas();
     }
 
     public void EditTemplate(string id)
@@ -526,18 +531,20 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         }
         template.Text = text;
         template.Color = EmptyToNull(TemplateColor);
-        SetSelected("template", template.Id, true);
+        SetSelected("template", template.Id, true, publishDraft: false);
         _editingTemplateId = template.Id;
         RefreshDynamicChoices();
+        PublishDraftToCanvas();
     }
 
     public void RemoveTemplate()
     {
         if (_editingTemplateId is null) return;
         _templates.RemoveAll(item => item.Id == _editingTemplateId);
-        SetSelected("template", _editingTemplateId, false);
+        SetSelected("template", _editingTemplateId, false, publishDraft: false);
         NewTemplate();
         RefreshDynamicChoices();
+        PublishDraftToCanvas();
     }
 
     public void Apply()
@@ -547,16 +554,21 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         CaptureSelection(SeriesChoices);
         CaptureSelection(GraphChoices);
         CaptureSelection(TemplateChoices);
-        Result = OrderedContentItems
-            .Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value })
-            .ToList();
-        ResultMetricOverrides = _metricOverrides.Values.Select(Clone).ToArray();
-        ResultMetricOrder = _customMetricOrderGroups.ToDictionary(key => key,
-            key => _metricOrder.TryGetValue(key, out var identities) ? identities.ToList() : [], StringComparer.OrdinalIgnoreCase);
+        PublishDraftToCanvas();
     }
 
-    public IReadOnlyDictionary<string, List<string>> ResultMetricOrder { get; private set; } =
-        new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+    private void PublishDraftToCanvas()
+    {
+        if (_isPickerDraft) return;
+
+        var items = OrderedContentItems
+            .Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value })
+            .ToArray();
+        var metricOrder = _customMetricOrderGroups.ToDictionary(key => key,
+            key => _metricOrder.TryGetValue(key, out var identities) ? identities.ToList() : [], StringComparer.OrdinalIgnoreCase);
+        _owner.SetOverlayBlockDefinition(_block, items, _graphs, _templates,
+            _metricOverrides.Values, metricOrder);
+    }
 
     public static string GetMetricOrderKey(string kind, string value) => $"{kind.ToLowerInvariant()}:{value}";
 
@@ -604,7 +616,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             selectionChanged?.Invoke(isSelected);
         });
 
-    private void SetSelected(string kind, string value, bool isSelected)
+    private void SetSelected(string kind, string value, bool isSelected, bool publishDraft = true)
     {
         var key = (kind, value);
         if (isSelected)
@@ -628,6 +640,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         Raise(nameof(CanMoveContentUp));
         Raise(nameof(CanMoveContentDown));
         RebuildOrderRows();
+        if (publishDraft) PublishDraftToCanvas();
     }
 
     private OverlayBlockContentChoiceViewModel? FindChoice(string kind, string value)

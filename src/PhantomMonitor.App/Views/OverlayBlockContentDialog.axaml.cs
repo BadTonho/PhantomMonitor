@@ -23,12 +23,6 @@ public partial class OverlayBlockContentDialog : Window
 
     private OverlayBlockContentDialogViewModel ViewModel => (OverlayBlockContentDialogViewModel)DataContext!;
 
-    public IReadOnlyList<OverlayBlockItemConfig> Result => ViewModel.Result;
-    public IReadOnlyList<OverlayMetricOverrideConfig> ResultMetricOverrides => ViewModel.ResultMetricOverrides;
-    public IReadOnlyDictionary<string, List<string>> ResultMetricOrder => ViewModel.ResultMetricOrder;
-    public IReadOnlyList<OverlayGraph> ResultGraphs => ViewModel.ResultGraphs;
-    public IReadOnlyList<OverlayTemplate> ResultTemplates => ViewModel.ResultTemplates;
-
     public OverlayBlockContentDialog()
     {
         InitializeComponent();

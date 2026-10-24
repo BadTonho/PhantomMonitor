@@ -14,7 +14,6 @@ public sealed partial class OverlayBlockContentDialogViewModel
     private string _metricEditorMessage = "";
 
     public ObservableCollection<OverlayMetricEditChoiceViewModel> MetricChoices { get; } = [];
-    public IReadOnlyList<OverlayMetricOverrideConfig> ResultMetricOverrides { get; private set; } = [];
     public IReadOnlyList<OverlayColorSwatch> ColorSwatches => _owner.OverlayColorSwatches;
     public IReadOnlyList<string> MetricDecimalsOptions { get; } = ["Automática", "0", "1", "2", "3"];
     public bool CanEditMetricDecimals => SelectedMetric?.SupportsPrecision == true;
@@ -79,6 +78,7 @@ public sealed partial class OverlayBlockContentDialogViewModel
                 Decimals = decimals,
                 Color = color
             };
+        PublishDraftToCanvas();
         LoadMetricOverrideDraft();
     }
 

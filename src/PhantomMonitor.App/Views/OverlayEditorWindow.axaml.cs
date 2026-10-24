@@ -125,8 +125,10 @@ public partial class OverlayEditorWindow : Window
         _pendingBlockPlacements.Remove(block);
 
         ViewModel.ApplyOverlayBlockPosition(block.Key,
-            OverlayPositionMath.ToNormalized(point.X, EditorBlockCanvas.Bounds.Width, blockSize.Width, block.PreviewOriginOffsetX),
-            OverlayPositionMath.ToNormalized(point.Y, EditorBlockCanvas.Bounds.Height, blockSize.Height, block.PreviewOriginOffsetY));
+            OverlayPositionMath.ToNormalizedFromDisplay(point.X, EditorBlockCanvas.Bounds.Width, blockSize.Width,
+                OverlayPositionMath.ReferenceWidth, block.PreviewOriginOffsetXReference),
+            OverlayPositionMath.ToNormalizedFromDisplay(point.Y, EditorBlockCanvas.Bounds.Height, blockSize.Height,
+                OverlayPositionMath.ReferenceHeight, block.PreviewOriginOffsetYReference));
     }
 
     private void OnBlockPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -173,8 +175,10 @@ public partial class OverlayEditorWindow : Window
 
         ViewModel.ApplyOverlayBlockPosition(
             _dragBlock.Key,
-            OverlayPositionMath.ToNormalized(x, canvasWidth, control.Bounds.Width, _dragBlock.PreviewOriginOffsetX),
-            OverlayPositionMath.ToNormalized(y, canvasHeight, control.Bounds.Height, _dragBlock.PreviewOriginOffsetY));
+            OverlayPositionMath.ToNormalizedFromDisplay(x, canvasWidth, control.Bounds.Width,
+                OverlayPositionMath.ReferenceWidth, _dragBlock.PreviewOriginOffsetXReference),
+            OverlayPositionMath.ToNormalizedFromDisplay(y, canvasHeight, control.Bounds.Height,
+                OverlayPositionMath.ReferenceHeight, _dragBlock.PreviewOriginOffsetYReference));
         e.Handled = true;
     }
 

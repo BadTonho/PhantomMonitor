@@ -44,10 +44,14 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     public bool IsRenderable => HasContent && Owner.OverlayPanelVisible;
     public double X => Config.X;
     public double Y => Config.Y;
-    public double PreviewOriginOffsetX => GetPreviewOriginOffset(Owner.FollowOffsetX, Owner.OverlayCanvasWidth, _canvasWidth);
-    public double PreviewOriginOffsetY => GetPreviewOriginOffset(Owner.FollowOffsetY, Owner.OverlayCanvasHeight, _canvasHeight);
-    public double CanvasX => OverlayPositionMath.ToPosition(X, _canvasWidth, _editorPreviewWidth, PreviewOriginOffsetX);
-    public double CanvasY => OverlayPositionMath.ToPosition(Y, _canvasHeight, _editorPreviewHeight, PreviewOriginOffsetY);
+    public double PreviewOriginOffsetXReference => GetPreviewOriginOffsetInReference(Owner.FollowOffsetX,
+        Owner.OverlayCanvasWidth, OverlayPositionMath.ReferenceWidth);
+    public double PreviewOriginOffsetYReference => GetPreviewOriginOffsetInReference(Owner.FollowOffsetY,
+        Owner.OverlayCanvasHeight, OverlayPositionMath.ReferenceHeight);
+    public double CanvasX => OverlayPositionMath.ToDisplayPosition(X, _canvasWidth, _editorPreviewWidth,
+        OverlayPositionMath.ReferenceWidth, PreviewOriginOffsetXReference);
+    public double CanvasY => OverlayPositionMath.ToDisplayPosition(Y, _canvasHeight, _editorPreviewHeight,
+        OverlayPositionMath.ReferenceHeight, PreviewOriginOffsetYReference);
 
     public void SetCanvasSize(double width, double height)
     {
@@ -58,7 +62,7 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
 
     public void RefreshCanvasPosition() => RaisePosition();
 
-    private static double GetPreviewOriginOffset(double offset, double referenceSize, double previewSize)
+    private static double GetPreviewOriginOffsetInReference(double offset, double referenceSize, double previewSize)
         => OperatingSystem.IsWindows()
             ? OverlayPositionMath.ScaleOffset(offset, referenceSize, previewSize)
             : 0;

@@ -18,9 +18,9 @@ std::wstring hook_ready_name(DWORD process_id) {
 }
 
 std::uint64_t read_sequence(const void* mapping) {
-    auto* sequence = reinterpret_cast<volatile LONG64*>(
+    auto* sequence = reinterpret_cast<const volatile LONG64*>(
         static_cast<const std::uint8_t*>(mapping) + 8);
-    return static_cast<std::uint64_t>(InterlockedCompareExchange64(sequence, 0, 0));
+    return static_cast<std::uint64_t>(ReadAcquire64(sequence));
 }
 
 bool read_initialization_status(DWORD process_id, std::wstring& error) {

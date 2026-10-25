@@ -97,8 +97,10 @@ The output carries `PresentMon.exe` and `config.example.json` alongside the exec
 
 The full in-game renderer package is built by `scripts/build-windows-overlay.ps1`;
 it creates x86/x64 hooks, launchers, and Vulkan layers. The script requires
-Visual Studio 2022 C++ tools and the Vulkan SDK. Windows runtime validation is
-still required for each API and for game capture.
+Visual Studio 2022 C++ tools and a Vulkan SDK with loader import libraries for
+both x86 and x64. An x64-only SDK still allows the x86 Direct3D/OpenGL hooks to
+build, but the x86 Vulkan layer cannot link. Windows runtime validation is still
+required for each API and for game capture.
 
 Some hardware readings may require elevated permissions. FPS collection uses PresentMon/ETW and may depend on the Windows version and available permissions.
 

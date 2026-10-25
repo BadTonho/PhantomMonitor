@@ -81,8 +81,10 @@ until hook initialization finishes. Failures appear in Diagnostics and never
 open floating windows automatically.
 
 The Linux build compiles the Vulkan layer, OpenGL preload, and native tests.
-Windows components require Visual Studio 2022 and the Vulkan SDK; they must be
-built on Windows and need runtime validation on x86/x64. Source presence and a
+Windows components require Visual Studio 2022 and a Vulkan SDK with loader
+import libraries for both x86 and x64; they must be built on Windows and need
+runtime validation on x86/x64. With an x64-only SDK, the x86 Direct3D/OpenGL
+hooks still build, but the x86 Vulkan layer cannot link. Source presence and a
 Linux build do not replace that validation. Anti-cheats may reject the DLL and
 there is no attempt to bypass them.
 

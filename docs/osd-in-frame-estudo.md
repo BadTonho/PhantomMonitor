@@ -82,8 +82,10 @@ até a instalação dos hooks terminar. Falhas aparecem no Diagnóstico e não
 acionam janelas flutuantes automaticamente.
 
 O build Linux compila a camada Vulkan, o preload OpenGL e os testes nativos. O
-build dos componentes Windows exige Visual Studio 2022 e Vulkan SDK; deve ser
-executado em Windows e os renderers precisam de validação real em x86/x64. A
+build dos componentes Windows exige Visual Studio 2022 e Vulkan SDK com as
+bibliotecas de importação do loader x86 e x64; deve ser executado em Windows e
+os renderers precisam de validação real em x86/x64. Com um SDK somente x64, os
+hooks x86 Direct3D/OpenGL ainda compilam, mas a camada Vulkan x86 não linka. A
 presença do código e a compilação Linux não substituem essa validação. Anti-cheats
 podem rejeitar a DLL e não existe tentativa de contorno.
 

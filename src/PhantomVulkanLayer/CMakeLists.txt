@@ -38,6 +38,10 @@ if(UNIX AND NOT APPLE)
 endif()
 
 if(WIN32)
+    if(MSVC)
+        set_property(TARGET VkLayer_phantom_monitor
+            PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
     configure_file(phantom_vulkan_layer_windows.json
         ${CMAKE_CURRENT_BINARY_DIR}/phantom_vulkan_layer.json COPYONLY)
 else()

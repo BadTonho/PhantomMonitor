@@ -13,7 +13,7 @@ public sealed class OverlayConfig
 {
     /// <summary>Modo global de apresentação do OSD. "floating" preserva a janela desktop.</summary>
     public string RenderMode { get; set; } = "floating";
-    /// <summary>Executáveis autorizados para hook no Windows e lançáveis no Linux.</summary>
+    /// <summary>Alvos de inicialização manual no Linux; preservados em configs legadas e ignorados pelo hook global Windows.</summary>
     public List<OverlayLaunchTargetConfig> InGameTargets { get; set; } = [];
     public int Width { get; set; } = 220;
     public bool ShowCpu { get; set; } = true;

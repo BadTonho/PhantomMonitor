@@ -31,7 +31,7 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 
 ### OverlayConfig
 - `renderMode` - Modo global do OSD: `floating` (padrão/migração de configs antigas) ou `inGame`. O segundo desenha o conteúdo aplicado pelos renderers nativos disponíveis e não abre janelas flutuantes como fallback.
-- `inGameTargets` - Executáveis escolhidos pelo usuário para integração nativa: caminho e argumentos. No Linux, o botão Iniciar ativa `ENABLE_PHANTOM_OVERLAY=1` e acrescenta o preload GLX/EGL instalado; no Windows, a lista limita os processos que recebem os hooks Direct3D/OpenGL e o botão Iniciar ativa também a camada Vulkan empacotada.
+- `inGameTargets` - Lista legada de caminhos e argumentos preservada nos arquivos de configuração. No Linux, a interface continua usando essa lista para iniciar jogos com `ENABLE_PHANTOM_OVERLAY=1` e o preload GLX/EGL instalado. No Windows, a lista é ignorada: o modo `inGame` descobre processos por ETW/PresentMon sem cadastro de `.exe`.
 - `width` - Largura do overlay em pixels
 - `showCpu/Gpu/Ram/Disk/Network/Fans/Motherboard/Fps/FrametimeGraph` - Opções legadas usadas ao migrar arquivos sem `blocks`; a visibilidade atual é definida pelos itens de `blocks`.
 - `compactMode` - Modo compacto

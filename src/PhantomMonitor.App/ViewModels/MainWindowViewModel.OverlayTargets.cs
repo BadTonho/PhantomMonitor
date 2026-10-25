@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Avalonia.Threading;
-using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.ViewModels;
@@ -18,7 +16,7 @@ public sealed partial class MainWindowViewModel
     public string OverlayTargetMessage { get => _overlayTargetMessage; private set => Set(ref _overlayTargetMessage, value); }
     public bool IsLinuxPlatform => OperatingSystem.IsLinux();
     public bool IsWindowsPlatform => OperatingSystem.IsWindows();
-    public bool IsOverlayTargetLaunchVisible => IsOverlayInGameModeSelected && (IsLinuxPlatform || IsWindowsPlatform);
+    public bool IsOverlayTargetLaunchVisible => IsOverlayInGameModeSelected && IsLinuxPlatform;
     public bool IsOverlayInGameModeSelected => OverlayRenderModeIndex == 1;
     public string SteamOverlayLaunchOption
     {
@@ -81,27 +79,14 @@ public sealed partial class MainWindowViewModel
             OverlayTargetMessage = "Executável removido. Use Salvar e aplicar para gravar a lista.";
     }
 
-    public async void LaunchOverlayTarget(OverlayLaunchTargetConfig? target)
+    public void LaunchOverlayTarget(OverlayLaunchTargetConfig? target)
     {
-        if (target is null) return;
+        if (target is null || !OperatingSystem.IsLinux()) return;
         if (!File.Exists(target.ExecutablePath))
         {
             OverlayTargetMessage = "O executável não foi encontrado no caminho salvo.";
             return;
         }
-
-        if (OperatingSystem.IsWindows())
-        {
-            OverlayTargetMessage = $"Iniciando {Path.GetFileName(target.ExecutablePath)} com hook autorizado…";
-            var result = await WindowsOverlayHookService.LaunchAsync(target.ExecutablePath, target.Arguments);
-            OverlayTargetMessage = result.Success
-                ? $"{Path.GetFileName(target.ExecutablePath)} iniciado. {result.Message}"
-                : result.TargetStarted
-                    ? $"O jogo foi iniciado sem overlay: {result.Message}"
-                    : $"Não foi possível iniciar o jogo: {result.Message}";
-            return;
-        }
-        if (!OperatingSystem.IsLinux()) return;
 
         try
         {
@@ -134,7 +119,6 @@ public sealed partial class MainWindowViewModel
             ErrorLog.Write("OverlayTarget.Launch", ex);
         }
     }
-
     internal bool OverlayInGameTargetsChanged(IReadOnlyList<OverlayLaunchTargetConfig> saved)
     {
         if (saved.Count != OverlayInGameTargets.Count) return true;

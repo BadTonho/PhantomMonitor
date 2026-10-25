@@ -22,6 +22,8 @@ public sealed partial class MainWindowViewModel
 
         _sensorService = SensorServiceFactory.Create(_config.UpdateIntervalMs, _config);
         AttachSensorService(_sensorService);
+        if (OverlayRenderMode == "inGame" && _sensorService is IOverlayProcessDiscovery discovery)
+            discovery.OverlayProcessDiscoveryEnabled = true;
         ResetDisplayedSession();
 
         if (wasRunning)

@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/fps-monitor.md)
 
-Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon** (open-source) em segundo plano para capturar eventos de apresentação de frames (`Present`) da placa de vídeo via ETW nativo. Não injeta DLL nos jogos — imune a banimentos de anti-cheat.
+Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon** (open-source) em segundo plano para capturar eventos de apresentação de frames (`Present`) da placa de vídeo via ETW nativo. Essa coleta não injeta DLL. Separadamente, o modo opt-in do overlay dentro do jogo instala hooks nos processos observados pelo PresentMon; anti-cheats podem bloquear essa integração, e o aplicativo não tenta contornar esses bloqueios.
 
 ## Funcionalidades
 

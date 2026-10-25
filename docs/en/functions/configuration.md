@@ -27,7 +27,7 @@ Phantom Monitor uses JSON configuration. In a development checkout, `config.json
 
 ## `OverlayConfig`
 
-`renderMode` selects `floating` (default, including migration of older configs) or `inGame`. The latter draws the applied content through the available native renderers and does not fall back to floating windows. `inGameTargets` stores user-selected executable paths and arguments. On Linux, Launch sets `ENABLE_PHANTOM_OVERLAY=1` and adds the installed GLX/EGL preload; on Windows, this list limits Direct3D/OpenGL hook targets, and Launch also enables the packaged Vulkan layer.
+`renderMode` selects `floating` (default, including migration of older configs) or `inGame`. The latter draws the applied content through the available native renderers and does not fall back to floating windows. `inGameTargets` is retained for compatibility with existing configs. Linux continues to use it to launch selected apps with `ENABLE_PHANTOM_OVERLAY=1` and the installed GLX/EGL preload; Windows ignores it and discovers frame-presenting processes through PresentMon/ETW without an executable list. In-game Windows Vulkan uses per-user implicit-layer registry entries while the mode is active; those entries are removed on mode switch or app exit, and already-running Vulkan applications must restart.
 
 `width`, `overlayOpacity`, `fontSize`, and `compactMode` control global appearance. `blocks` stores stable block ids, ordered content items, and normalized positions. The legacy `show*`, `shownSeries`, and `layout` fields are read when migrating configurations that do not yet have `blocks`; after migration, block content and positions come from `blocks`.
 

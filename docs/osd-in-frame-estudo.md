@@ -4,17 +4,14 @@
 
 ## Decisão
 
-O PhantomMonitor oferecerá dois modos globais: **Janela flutuante**, que mantém
+O PhantomMonitor oferece dois modos globais: **Janela flutuante**, que mantém
 os blocos em janelas separadas, e **Dentro do jogo**, que desenha a apresentação
 aplicada no quadro do jogo. O modo flutuante continua como padrão para
 instalações novas e configurações antigas. A escolha dentro do jogo é explícita;
 se o renderer não estiver disponível ou falhar, o app informa o motivo em
 Diagnóstico e não muda automaticamente para janelas.
 
-No Windows, o hook próprio será limitado aos executáveis que o usuário adicionar
-em `overlay.inGameTargets`. Hooks podem ser recusados ou bloqueados por EAC,
-BattlEye, Vanguard e outros anti-cheats. O PhantomMonitor não tentará contornar
-essas proteções. O modo flutuante continua disponível nesses casos.
+No Windows, **Dentro do jogo** detecta aplicações que apresentam frames por uma única sessão ETW/PresentMon e tenta instalar o hook x86/x64 existente em Direct3D/OpenGL sem exigir uma lista de executáveis. A descoberta segue ativa enquanto o modo estiver selecionado, mesmo que a coleta de sensores esteja parada. Processos do PhantomMonitor, shell e sistema são excluídos; nenhum fallback injeta PIDs fora da lista observada pelo PresentMon. ETW pode exigir a conta no grupo Performance Log Users. Processos elevados podem impedir a consulta do executável e jogos Vulkan elevados podem ignorar registros HKCU. EAC, BattlEye, Vanguard e outros anti-cheats podem recusar ou bloquear hooks; o PhantomMonitor não tenta contornar essas proteções.
 
 ## Contrato entre app e renderers
 
@@ -47,7 +44,7 @@ Uma implementação que não reconheça a versão deve ignorar o quadro.
 | Plataforma | APIs no código nativo | Ativação |
 |---|---|---|
 | Linux | Vulkan; OpenGL por GLX/EGL (OpenGL ES 3+) | Vulkan pela camada ativada para o jogo; OpenGL pela biblioteca `LD_PRELOAD` |
-| Windows | Direct3D 9–12, OpenGL/WGL e Vulkan | Hooks x86/x64 nos executáveis cadastrados; camada Vulkan ativada ao iniciar pelo PhantomMonitor |
+| Windows | Direct3D 9–12, OpenGL/WGL e Vulkan | Hooks x86/x64 para PIDs que o PresentMon identifica apresentando frames; camada Vulkan implícita registrada no HKCU nas visões x86/x64 enquanto o modo está ativo |
 
 Os renderers usam uma apresentação interna independente de API e Dear ImGui
 como implementação de desenho. O canal de apresentação tem leitura consistente
@@ -65,21 +62,14 @@ mas a versão atual do renderer usa a fonte padrão interna do Dear ImGui; taman
 cores e geometria são aplicados, enquanto a família selecionada no editor ainda
 não é carregada pelo renderer nativo.
 
-No Linux, o usuário poderá iniciar um executável configurado no PhantomMonitor,
+No Linux, o usuário pode iniciar um executável configurado no PhantomMonitor,
 que define `ENABLE_PHANTOM_OVERLAY=1`, ou copiar essa variável para as opções de
 inicialização do jogo na Steam. O gating por processo também mantém disponível a
 coleta FPS da camada Vulkan existente.
 
 ## Estado e validação
 
-O código contém a camada Vulkan Linux com desenho e coleta existente de
-FPS/frametime, o renderer OpenGL GLX/EGL, hooks Windows Direct3D 9–12 e WGL,
-além da camada Vulkan Windows para jogos iniciados pelo PhantomMonitor. O hook
-Windows escolhe o launcher x86 ou x64 pelo executável e injeta a DLL somente em
-processos cadastrados; a detecção de outros launchers funciona enquanto o app
-está aberto. A inicialização feita pelo botão **Iniciar** mantém o jogo suspenso
-até a instalação dos hooks terminar. Falhas aparecem no Diagnóstico e não
-acionam janelas flutuantes automaticamente.
+O código contém a camada Vulkan Linux com desenho e coleta existente de FPS/frametime, o renderer OpenGL GLX/EGL, hooks Windows Direct3D 9–12 e WGL, além da camada Vulkan Windows. No Windows, a sessão PresentMon permanece ativa se a coleta de sensores parar enquanto **Dentro do jogo** estiver ativo; o parser coleta PIDs válidos antes do filtro de janela em foco usado pelas métricas. O app resolve a imagem e arquitetura do processo, ignora PhantomMonitor e processos de shell/sistema, e tenta o launcher nativo x86/x64 uma vez por processo, com diagnóstico de falhas e sem fallback para injetar processos não observados. Vulkan usa manifests implícitos em HKCU nas visões de Registro correspondentes; os registros são limpos ao trocar para janela flutuante, ao encerrar o app e ao iniciar já em modo flutuante. O manifest oferece `PHANTOMMONITOR_DISABLE_VULKAN_LAYER=1`; aplicações Vulkan iniciadas antes do registro precisam ser reiniciadas. Falhas aparecem em Diagnóstico e não acionam janelas flutuantes automaticamente.
 
 O build Linux compila a camada Vulkan, o preload OpenGL e os testes nativos. O
 build dos componentes Windows exige Visual Studio 2022 e Vulkan SDK com as
@@ -91,9 +81,4 @@ podem rejeitar a DLL e não existe tentativa de contorno.
 
 ## Validação necessária por API
 
-Em cada API ainda é preciso validar fullscreen e janela sem borda, resize, sete
-blocos, gráficos e templates, game capture, alternância de modos,
-ocultar/reabrir, quadros parciais/antigos e falhas sem fallback. No Linux,
-validar X11/XWayland e Wayland quando disponível. No Windows, validar x86 e x64,
-os dois caminhos de início, a lista de executáveis e a camada Vulkan. Testes com
-anti-cheat devem respeitar os bloqueios existentes.
+Ainda é preciso validar fullscreen e janela sem borda, resize, sete blocos, gráficos e templates, game capture, alternância de modos, ocultar/reabrir, quadros parciais/antigos e falhas sem fallback. No Linux, validar X11/XWayland e Wayland quando disponível. No Windows, validar x86 e x64, Direct3D, OpenGL e Vulkan sem cadastrar executáveis; verificar múltiplos PIDs, expiração sem frames, ETW inválido, descoberta com a coleta parada, e ativação/remoção das duas visões do Registro. Testes com anti-cheat devem respeitar os bloqueios existentes.

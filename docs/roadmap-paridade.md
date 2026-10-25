@@ -17,7 +17,7 @@
 - 1% / 0.1% Low, min/max/avg, gráfico circular de 600 amostras.
 - Alertas acionáveis (popup, som, script externo, desligamento com trava) — incluindo alvos por instância (`sensorIndex`).
 - Overlay configurável (editor visual, presets, hotkey, tray), instância única.
-- Export CSV/JSON + `errors.log`; o build atual não carrega hooks de jogo.
+- Export CSV/JSON + `errors.log`; a coleta de FPS usa ETW/PresentMon e o modo opt-in dentro do jogo usa hooks apenas nos processos observados.
 - Camada Vulkan implícita com gating por env (Linux).
 
 ---
@@ -73,13 +73,10 @@
 
 ## P4 — OSD in-frame — decisão e renderizadores implementados; validação pendente
 
-> Decisão atual: oferecer janela flutuante e modo dentro do jogo como escolha
-> global. No Windows, hook próprio restrito a executáveis adicionados pelo
-> usuário, com aviso anti-cheat e sem tentativa de contorno. Janela flutuante
-> continua sendo o padrão e opção disponível.
+> Decisão atual: oferecer janela flutuante e modo dentro do jogo como escolha global. No Windows, ETW/PresentMon detecta aplicações que apresentam frames; hooks x86/x64 atuam nos PIDs observados, sem cadastro de executável. Vulkan usa camada implícita por usuário enquanto o modo está ativo. Há aviso anti-cheat, sem tentativa de contorno. Janela flutuante continua como padrão e opção disponível.
 
 - [x] Contrato interno v1 de apresentação aplicada em memória compartilhada,
-      seleção global, migração para `floating`, lista de executáveis e ativações
+- [x] Contrato interno v1 de apresentação aplicada em memória compartilhada, seleção global e migração para `floating`; a lista manual continua no Linux e os hooks Windows detectam processos por PresentMon/ETW.
       Linux por launcher/Steam.
 - [x] Documentar fases, política anti-cheat e diagnóstico em português/inglês.
 - [x] Renderer Linux Vulkan e hooks Windows Direct3D 11/12 (fase base).
@@ -170,7 +167,7 @@ Quatro commits Conventional, build 0 erros/0 avisos e engine validada por harnes
 
 | Recurso | Camada | Ação definida |
 |---|---|---|
-| OSD in-frame (game capture, replay, gravação) | B | Modo opt-in; hooks Windows limitados a executáveis permitidos pelo usuário, aviso anti-cheat e sem contorno. Renderers Linux Vulkan/GLX/EGL e Windows D3D9–12/WGL/Vulkan implementados; validação por API pendente (docs/osd-in-frame-estudo.md) |
+| OSD in-frame (game capture, replay, gravação) | B | Modo opt-in; hooks Windows x86/x64 para processos observados pelo PresentMon/ETW, camada Vulkan implícita HKCU e aviso anti-cheat sem contorno. Renderers Linux Vulkan/GLX/EGL e Windows D3D9–12/WGL/Vulkan implementados; validação por API pendente (docs/osd-in-frame-estudo.md) |
 | Frame limiter (FRTC, millisecond) | B | Fora por política: exige hook no processo do jogo; não reabrir |
 | Curva de ventoinha, V/F curve, OC scanner | B | P5: fora do escopo read-only (app separado um dia) |
 | Captura de tela (BMP/PNG/JPG) e gravação de vídeo em tempo real (MJPG/VFW externos, NVENC/VCE/QuickSync) | B | Feita por hook no processo do jogo (padrão dos hooks de captura); OBS no plugin cobre gravação |
@@ -236,7 +233,7 @@ engine" quando implementável apenas com driver próprio.**
 - **SDK de memória compartilhada gratuita e estável no WPF/Windows** (P2): em soluções comerciais
   de referência, o acesso de terceiros à telemetria bruta via memória compartilhada
   tende a ser recurso licenciado/pago — aqui é aberto, documentado e versionado.
-- **Hook explicitamente limitado**: o modo flutuante atual não carrega hooks; o
+- **Hook acionado por detecção**: o modo flutuante não carrega hooks; o modo dentro do jogo é opt-in e injeta apenas processos que o PresentMon identifica apresentando frames. Anti-cheats podem bloquear a integração, sem tentativa de contorno.
   modo dentro do jogo será opt-in e limitado a executáveis aprovados pelo usuário.
   Anti-cheats podem bloquear a integração, e não haverá tentativa de contorno.
 - **CSV livre e dinâmico** com séries por instância, JSON de snapshot local e leitor de

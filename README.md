@@ -34,14 +34,14 @@ The project runs a **single Avalonia desktop app** on Windows and Linux. Earlier
 | --- | --- | --- |
 | Sensors | CPU, GPU, RAM, drives, network, fans, and motherboard sensors via LibreHardwareMonitor | Sensors from `sysfs`, `procfs` (including DRM `fdinfo`), `hwmon`, Linux thermal zones, DRM, and optional NVIDIA NVML; GPU metrics vary by driver |
 | FPS and frametime | PresentMon through ETW | Phantom Vulkan layer for Vulkan games |
-| Overlay | Floating OSD with click-through and profiles; opt-in in-game renderers for allowlisted x86/x64 executables: Direct3D 9–12, OpenGL/WGL, and Vulkan when launched by PhantomMonitor | Separate draggable windows; opt-in in-game rendering through Vulkan and OpenGL GLX/EGL; OpenGL games require the installed preload library |
+| Overlay | Floating OSD with click-through and profiles; opt-in in-game renderers for frame-presenting applications: Direct3D 9–12, OpenGL/WGL, and Vulkan through a per-user implicit layer | Separate draggable windows; opt-in in-game rendering through Vulkan and OpenGL GLX/EGL; OpenGL games require the installed preload library |
 | Inventory | Hardware inventory and per-series statistics | Detected series by category; expected sensors without readings are marked unavailable |
 | Alerts | Notifications, sound, scripts, and configurable shutdown action | In-app toast, desktop notifications, and scripts |
 | Diagnostics | Sensor sources, current GPU warnings, and application error log | Per-GPU source status, overlay window geometry, current GPU warnings, recent errors, and NVIDIA NVML details |
 | Formulas and per-series tuning | Compatible with the existing configuration format | Visual editors for custom sensors and sampling/smoothing rules |
 | Telemetry | CSV, JSON, JSONL, and optional HTTP exporter | CSV, JSON, JSONL, and optional HTTP exporter |
 
-Hardware, graphics API, and compositor support varies between systems. On Linux, Vulkan FPS and in-game drawing use the Phantom layer; OpenGL rendering uses the GLX/EGL preload installed by `install_layer.sh`. On Windows, FPS collection uses ETW. In-game mode is opt-in, and Windows hooks are restricted to executables added by the user; anti-cheats may block them and Phantom Monitor will not bypass those protections. Windows native renderers require a Windows build with Visual Studio 2022 and the Vulkan SDK, and need runtime validation on Windows.
+Hardware, graphics API, and compositor support varies between systems. On Linux, Vulkan FPS and in-game drawing use the Phantom layer; OpenGL rendering uses the GLX/EGL preload installed by `install_layer.sh`. On Windows, in-game mode uses one PresentMon/ETW session to discover applications presenting frames and keeps discovery active even when sensor collection is stopped. It hooks detected x86/x64 Direct3D and OpenGL processes without an executable list, and registers x86/x64 Vulkan implicit-layer manifests under the current user while the mode is active. ETW may require membership in Performance Log Users; the app does not elevate itself or bypass anti-cheat protections. Elevated Vulkan applications may ignore per-user layer registrations. Windows native renderers require Visual Studio 2022 and a Vulkan SDK; x86 Vulkan also requires the SDK 32-bit import library and needs runtime validation on Windows.
 
 ## Getting started
 

@@ -5,43 +5,43 @@ using System.Text;
 
 namespace PhantomMonitor.App.Services.Overlay;
 
-/// <summary>Runs the architecture-matched, allowlist-directed native overlay launcher.</summary>
+/// <summary>Runs the architecture-matched, native overlay injector.</summary>
 internal static class WindowsOverlayHookService
 {
-    internal sealed record Result(bool Success, string Message, bool TargetStarted = false);
+    internal sealed record Result(bool Success, string Message);
     private const uint ProcessQueryLimitedInformation = 0x1000;
 
-    internal static bool TryGetExecutablePath(int processId, out string executablePath)
+    internal static bool TryGetExecutablePath(int processId, out string executablePath, out string error)
     {
         executablePath = "";
+        error = "";
         var process = OpenProcess(ProcessQueryLimitedInformation, false, processId);
-        if (process == IntPtr.Zero) return false;
+        if (process == IntPtr.Zero)
+        {
+            error = FormatProcessLookupError(Marshal.GetLastWin32Error());
+            return false;
+        }
         try
         {
             var buffer = new StringBuilder(32768);
             var length = (uint)buffer.Capacity;
-            if (!QueryFullProcessImageName(process, 0, buffer, ref length)) return false;
+            if (!QueryFullProcessImageName(process, 0, buffer, ref length))
+            {
+                error = FormatProcessLookupError(Marshal.GetLastWin32Error());
+                return false;
+            }
             executablePath = buffer.ToString();
             return executablePath.Length > 0;
         }
         finally { CloseHandle(process); }
     }
 
-    internal static async Task<Result> LaunchAsync(string executablePath, string arguments)
+    private static string FormatProcessLookupError(int error) => error switch
     {
-        if (!TryResolve(executablePath, out var launcher, out var library, out var error))
-            return new Result(false, error);
-        var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var layerDirectory = Path.GetDirectoryName(launcher)!;
-        if (File.Exists(Path.Combine(layerDirectory, "VkLayer_phantom_monitor.dll"))
-            && File.Exists(Path.Combine(layerDirectory, "phantom_vulkan_layer.json")))
-        {
-            environment["VK_LAYER_PATH"] = AppendEnvironmentPath("VK_LAYER_PATH", layerDirectory, ";");
-            environment["VK_INSTANCE_LAYERS"] = AppendLayer("VK_INSTANCE_LAYERS", "VK_LAYER_PHANTOM_monitor", ";");
-            environment["ENABLE_PHANTOM_OVERLAY"] = "1";
-        }
-        return await RunAsync(launcher, ["--launch", library, executablePath, arguments], environment);
-    }
+        5 => "acesso negado ao processo (o jogo pode estar elevado ou protegido por anti-cheat)",
+        87 => "PID inválido ou processo encerrado durante a detecção",
+        _ => $"não foi possível consultar o executável do processo (erro Win32 {error})"
+    };
 
     internal static async Task<Result> InjectAsync(int processId, string executablePath)
     {
@@ -56,7 +56,7 @@ internal static class WindowsOverlayHookService
         try
         {
             var fullPath = Path.GetFullPath(executablePath);
-            if (!File.Exists(fullPath)) { error = "O executável cadastrado não existe mais."; return false; }
+            if (!File.Exists(fullPath)) { error = "O executável detectado não existe mais."; return false; }
             var architecture = ReadArchitecture(fullPath);
             if (architecture is null)
             {
@@ -99,22 +99,7 @@ internal static class WindowsOverlayHookService
         };
     }
 
-    private static string AppendEnvironmentPath(string name, string item, string separator)
-    {
-        var existing = Environment.GetEnvironmentVariable(name);
-        return string.IsNullOrWhiteSpace(existing) ? item : item + separator + existing;
-    }
-
-    private static string AppendLayer(string name, string layer, string separator)
-    {
-        var existing = Environment.GetEnvironmentVariable(name);
-        if (string.IsNullOrWhiteSpace(existing)) return layer;
-        return existing.Split(separator, StringSplitOptions.RemoveEmptyEntries)
-            .Contains(layer, StringComparer.OrdinalIgnoreCase) ? existing : existing + separator + layer;
-    }
-
-    private static async Task<Result> RunAsync(string launcher, IReadOnlyList<string> arguments,
-        IReadOnlyDictionary<string, string>? environment = null)
+    private static async Task<Result> RunAsync(string launcher, IReadOnlyList<string> arguments)
     {
         try
         {
@@ -127,8 +112,6 @@ internal static class WindowsOverlayHookService
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
-            if (environment is not null)
-                foreach (var item in environment) startInfo.Environment[item.Key] = item.Value;
             foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
             using var process = Process.Start(startInfo);
             if (process is null) return new Result(false, "Não foi possível iniciar o launcher nativo.");
@@ -138,8 +121,7 @@ internal static class WindowsOverlayHookService
             var detail = string.Join(" ", new[] { output.Trim(), error.Trim() }.Where(text => text.Length > 0));
             return process.ExitCode == 0
                 ? new Result(true, detail.Length == 0 ? "Hook instalado." : detail)
-                : new Result(false, detail.Length == 0 ? $"Launcher nativo terminou com código {process.ExitCode}." : detail,
-                    TargetStarted: process.ExitCode == 4);
+                : new Result(false, detail.Length == 0 ? $"Launcher nativo terminou com código {process.ExitCode}." : detail);
         }
         catch (TimeoutException)
         {

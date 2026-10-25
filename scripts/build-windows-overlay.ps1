@@ -1,4 +1,4 @@
-<# Compiles the allowlist-only in-game overlay hook, launcher, and Vulkan layer for x86/x64. #>
+<# Compiles the in-game overlay hook, launcher, and Vulkan layer for x86/x64. #>
 param(
     [Parameter(Mandatory = $true)]
     [string]$OutDirectory,

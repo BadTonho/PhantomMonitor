@@ -7,6 +7,9 @@
         "api_version": "1.3.0",
         "implementation_version": "1",
         "description": "PhantomMonitor in-game Vulkan overlay layer",
+        "disable_environment": {
+            "PHANTOMMONITOR_DISABLE_VULKAN_LAYER": "1"
+        },
         "functions": {
             "vkGetInstanceProcAddr": "Phantom_vkGetInstanceProcAddr",
             "vkGetDeviceProcAddr": "Phantom_vkGetDeviceProcAddr"

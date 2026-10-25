@@ -8,7 +8,7 @@ using SType = PhantomMonitor.Models.SensorType;
 namespace PhantomMonitor.Services;
 
 [SupportedOSPlatform("windows")]
-public sealed class HardwareMonitorService : ISensorService
+public sealed class HardwareMonitorService : ISensorService, IOverlayProcessDiscovery
 {
     private static readonly SType[] GpuAvailabilityTypes =
     [
@@ -64,6 +64,14 @@ public sealed class HardwareMonitorService : ISensorService
 
     public event Action<SensorData>? SensorUpdated;
     public bool IsRunning { get; private set; }
+    public bool OverlayProcessDiscoveryEnabled
+    {
+        get => _fpsMonitor.OverlayProcessDiscoveryEnabled;
+        set => _fpsMonitor.OverlayProcessDiscoveryEnabled = value;
+    }
+    public IReadOnlyList<PresentingProcess> GetRecentPresentingProcesses() =>
+        _fpsMonitor.GetRecentPresentingProcesses();
+    public string OverlayDiscoveryDiagnostic => _fpsMonitor.EtwDiag;
 
     /// <summary>Pausa (P6.7): o timer continua, mas os ciclos pulam sem publicar evento.</summary>
     public bool Paused { get; private set; }

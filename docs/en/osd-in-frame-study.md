@@ -4,16 +4,13 @@
 
 ## Decision
 
-Phantom Monitor will offer two global modes: **Floating window**, which keeps
+Phantom Monitor offers two global modes: **Floating window**, which keeps
 blocks in separate windows, and **In-game**, which draws the applied
 presentation into the game's frame. Floating remains the default for new and
 existing configurations. In-game is opt-in; when its renderer is unavailable or
 fails, Diagnostics reports the reason and the app does not switch to windows.
 
-On Windows, the custom hook will be limited to executables the user adds to
-`overlay.inGameTargets`. EAC, BattlEye, Vanguard, and other anti-cheats may reject
-or block hooks. Phantom Monitor will not bypass those protections. Floating mode
-remains available in those cases.
+On Windows, **In-game** detects applications presenting frames through one ETW/PresentMon session and attempts the existing x86/x64 Direct3D/OpenGL hook without an executable list. Discovery remains active while the mode is selected, even when sensor collection is stopped. Phantom Monitor, shell, and system processes are excluded; the app never injects PIDs that PresentMon did not observe. ETW may require membership in Performance Log Users. Elevated processes may prevent executable-path lookup, and elevated Vulkan applications may ignore HKCU layer registrations. EAC, BattlEye, Vanguard, and other anti-cheats may reject or block hooks; Phantom Monitor does not bypass them.
 
 ## App-to-renderer contract
 
@@ -46,7 +43,7 @@ that does not recognize the version must ignore the frame.
 | Platform | Native APIs in the code | Activation |
 |---|---|---|
 | Linux | Vulkan; OpenGL through GLX/EGL (OpenGL ES 3+) | Vulkan layer enabled per game; OpenGL through `LD_PRELOAD` |
-| Windows | Direct3D 9–12, OpenGL/WGL, and Vulkan | x86/x64 hooks for allowlisted executables; Vulkan layer enabled when launched by Phantom Monitor |
+| Windows | Direct3D 9–12, OpenGL/WGL, and Vulkan | x86/x64 hooks for PIDs PresentMon identifies as presenting frames; Vulkan implicit layers registered in the matching x86/x64 HKCU registry views while the mode is active |
 
 The renderers use an internal API-independent presentation and Dear ImGui as
 the initial drawing implementation. The presentation channel uses sequence
@@ -71,14 +68,7 @@ available.
 
 ## Status and validation
 
-The code includes the Linux Vulkan layer with drawing and the existing
-FPS/frametime collection, the OpenGL GLX/EGL renderer, Windows Direct3D 9–12 and
-WGL hooks, and a Windows Vulkan layer for games launched by Phantom Monitor.
-The Windows hook selects an x86 or x64 launcher from the executable and injects
-the DLL only into allowlisted processes; detection of games launched elsewhere
-works while the app is open. The **Launch** button keeps the game suspended
-until hook initialization finishes. Failures appear in Diagnostics and never
-open floating windows automatically.
+The code includes the Linux Vulkan layer with drawing and existing FPS/frametime collection, the OpenGL GLX/EGL renderer, Windows Direct3D 9–12 and WGL hooks, and a Windows Vulkan layer. On Windows, the PresentMon session stays active when sensor collection stops while **In-game** is selected; the parser records valid PIDs before the foreground-window filter used by FPS metrics. The app resolves each image and architecture, excludes Phantom Monitor and shell/system processes, and tries the matching x86/x64 native launcher once per process, reporting failures without falling back to unobserved PIDs. Vulkan uses implicit manifests in the matching HKCU registry views; registrations are removed when switching to Floating, on app exit, and when starting in Floating mode. The manifest provides `PHANTOMMONITOR_DISABLE_VULKAN_LAYER=1`; Vulkan applications started before registration must restart. Failures appear in Diagnostics and never open floating windows automatically.
 
 The Linux build compiles the Vulkan layer, OpenGL preload, and native tests.
 Windows components require Visual Studio 2022 and a Vulkan SDK with loader
@@ -90,9 +80,4 @@ there is no attempt to bypass them.
 
 ## Required validation per API
 
-For each API, validate fullscreen and borderless windowed mode, resize, seven
-blocks, graphs and templates, game capture, mode switching, hide/reopen,
-partial/stale frames, and failure without fallback. On Linux, include X11/
-XWayland and Wayland when available. On Windows, validate x86 and x64, both
-launch paths, the executable allowlist, and the Vulkan layer. Anti-cheat tests
-must respect existing blocks.
+Validation still needs fullscreen and borderless modes, resize, seven blocks, graphs and templates, game capture, mode switching, hide/reopen, partial/stale frames, and failure without fallback. On Linux, include X11/XWayland and Wayland when available. On Windows, validate x86 and x64 Direct3D, OpenGL, and Vulkan without registering executables; verify multiple PIDs, expiration without frames, invalid ETW rows, discovery while collection is stopped, and activation/removal in both registry views. Anti-cheat tests must respect existing blocks.

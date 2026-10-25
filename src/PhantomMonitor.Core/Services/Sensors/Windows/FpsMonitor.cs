@@ -1,9 +1,7 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using System.Text;
 using System.Threading;
 using static PhantomMonitor.Services.Win32Interop;
 
@@ -18,6 +16,10 @@ public sealed class FpsMonitor : IFpsMonitor
     private readonly Queue<double> _fpsSamples = new(MaxStatsSamples);
     private readonly Queue<double> _frametimeSamples = new(MaxStatsSamples); // janela p/ percentis puros
     private readonly object _lock = new();
+    private readonly object _presentMonLock = new();
+    private readonly PresentMonCsvParser _csvParser = new();
+    private readonly RecentPresentingProcessTracker _presentingProcesses = new();
+    private readonly PresentMonSessionDemand _sessionDemand = new();
 
     private Process? _presentMonProcess;
     private readonly Timer _pollTimer;
@@ -46,19 +48,6 @@ public sealed class FpsMonitor : IFpsMonitor
     private volatile string _targetProcessName = "";
     private DateTime _lastFrameTime = DateTime.UtcNow;
     private DateTime _lastStatsCalc = DateTime.UtcNow;
-
-    // Colunas dinâmicas do CSV do PresentMon
-    private int _colPid = -1;
-    private int _colApp = -1;
-    private int _colFrametime = -1;
-
-    // Colunas opcionais (present tracking estendido): quando o executável/versão não
-    // as emite, os índices ficam em -1 e as métricas publicam 0 ("indisponível").
-    private int _colGpuBusy = -1;
-    private int _colCpuBusy = -1;
-    private int _colCpuWait = -1;
-    private int _colDisplayLatency = -1;
-    private bool _headerParsed;
 
     // EMA (Exponential Moving Average) para suavizar o FPS
     private double _emaFps;
@@ -97,8 +86,41 @@ public sealed class FpsMonitor : IFpsMonitor
     {
         _debugInfo = "Iniciando PresentMon...";
         Reset();
-        StartPresentMon();
+        _sessionDemand.SetCollectionActive(true);
+        EnsurePresentMonState();
         _pollTimer.Change(0, 500);
+    }
+
+    public bool OverlayProcessDiscoveryEnabled
+    {
+        get => _sessionDemand.DiscoveryActive;
+        set
+        {
+            _sessionDemand.SetDiscoveryActive(value);
+            if (!value) _presentingProcesses.Clear();
+            EnsurePresentMonState();
+        }
+    }
+
+    public IReadOnlyList<PresentingProcess> GetRecentPresentingProcesses() =>
+        _presentingProcesses.Snapshot(DateTimeOffset.UtcNow);
+
+    private void EnsurePresentMonState()
+    {
+        lock (_presentMonLock)
+        {
+            if (_sessionDemand.IsRequired)
+            {
+                if (_presentMonProcess is null || IsPresentMonExited()) StartPresentMonCore();
+            }
+            else StopPresentMonCore();
+        }
+    }
+
+    private bool IsPresentMonExited()
+    {
+        try { return _presentMonProcess?.HasExited ?? true; }
+        catch (InvalidOperationException) { return true; }
     }
 
     private static string? FindPresentMonPath()
@@ -125,22 +147,12 @@ public sealed class FpsMonitor : IFpsMonitor
         return null;
     }
 
-    private void StartPresentMon()
+    private void StartPresentMonCore()
     {
         try
         {
-            StopPresentMon();
-
-            // Colunas descobertas na sessão anterior não podem vazar para o novo CSV
-            // (o formato do header pode diferir entre sessões/versões do PresentMon).
-            _headerParsed = false;
-            _colPid = -1;
-            _colApp = -1;
-            _colFrametime = -1;
-            _colGpuBusy = -1;
-            _colCpuBusy = -1;
-            _colCpuWait = -1;
-            _colDisplayLatency = -1;
+            StopPresentMonCore();
+            _csvParser.Reset();
 
             var presentMonPath = FindPresentMonPath();
             if (presentMonPath == null)
@@ -159,8 +171,8 @@ public sealed class FpsMonitor : IFpsMonitor
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
+                StandardErrorEncoding = System.Text.Encoding.UTF8
             };
 
             var permissionErrorLogged = 0;
@@ -225,87 +237,28 @@ public sealed class FpsMonitor : IFpsMonitor
     {
         try
         {
-            // Cabeçalho: chega no início da sessão (e re-emite quando ela reinicia).
-            // Trata como header apenas linhas que CONTÊM as colunas esperadas — um jogo
-            // cujo processo se chama "Application.exe" (padrão do Unreal) gerava linhas
-            // de dados começando com "Application" e re-parseava o header no meio da
-            // sessão, desalinhando os índices de coluna.
-            if (!_headerParsed || LooksLikeHeader(line))
-            {
-                var headers = SplitCsv(line);
-                for (int i = 0; i < headers.Count; i++)
-                {
-                    var h = headers[i].Trim();
-                    if (h.Equals("ProcessID", StringComparison.OrdinalIgnoreCase))
-                        _colPid = i;
-                    else if (h.Equals("Application", StringComparison.OrdinalIgnoreCase))
-                        _colApp = i;
-                    else if (h.Equals("msBetweenPresents", StringComparison.OrdinalIgnoreCase) ||
-                             h.Equals("FrameTime", StringComparison.OrdinalIgnoreCase) ||
-                             h.Equals("msBetweenDisplayChange", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (_colFrametime == -1 || h.Equals("msBetweenPresents", StringComparison.OrdinalIgnoreCase))
-                            _colFrametime = i;
-                    }
+            if (!_csvParser.TryParseLine(line, out var frame) || frame is null) return;
+            var pid = frame.ProcessId;
+            var appName = frame.Application;
+            if (_sessionDemand.DiscoveryActive && !WindowsOverlayProcessFilter.IsIgnored(appName))
+                _presentingProcesses.Observe(pid, appName, DateTimeOffset.UtcNow);
 
-                    // Colunas opcionais, casadas por substring case-insensitive porque o
-                    // PresentMon varia o nome entre versões ("GpuBusy%", "GPU Busy %".
-                    // "MsUntilDisplayed"...). Colunas ausentes = índice permanece -1 e as
-                    // métricas publicam 0 (indicativo de indisponível) sem quebrar o resto.
-                    else if (_colGpuBusy == -1 && h.Contains("gpubusy", StringComparison.OrdinalIgnoreCase))
-                        _colGpuBusy = i;
-                    else if (_colCpuBusy == -1 && h.Contains("cpubusy", StringComparison.OrdinalIgnoreCase))
-                        _colCpuBusy = i;
-                    else if (_colCpuWait == -1 && h.Contains("cpuwait", StringComparison.OrdinalIgnoreCase))
-                        _colCpuWait = i;
-                    else if (_colDisplayLatency == -1 &&
-                             (h.Contains("msuntildisplayed", StringComparison.OrdinalIgnoreCase) ||
-                              h.Contains("presentlatency", StringComparison.OrdinalIgnoreCase)))
-                        _colDisplayLatency = i;
-                }
-
-                if (_colPid >= 0 && _colFrametime >= 0)
-                {
-                    _headerParsed = true;
-                }
-                return;
-            }
-
-            var parts = SplitCsv(line);
-            int minCols = Math.Max(_colPid, _colFrametime);
-            if (parts.Count <= minCols) return;
-
-            if (!int.TryParse(parts[_colPid].Trim(), out int pid) || pid <= 0)
-                return;
-
+            // A mesma sessão ETW continua servindo à descoberta com a coleta parada.
+            if (!_sessionDemand.CollectionActive) return;
             int targetPid = _targetPid;
+            if (targetPid > 0 && pid != targetPid) return;
 
-            // Filtro por processo: focar no processo da janela ativa se definido
-            if (targetPid > 0 && pid != targetPid)
-                return;
+            double ftMs = frame.FrametimeMs;
+            double gpuBusy = frame.GpuBusy;
+            double cpuBusy = frame.CpuBusy;
+            double cpuWait = frame.CpuWait;
+            double latency = frame.DisplayLatencyMs;
 
-            string rawFt = parts[_colFrametime].Trim();
-            if (!double.TryParse(rawFt, NumberStyles.Float, CultureInfo.InvariantCulture, out double ftMs) || ftMs <= 0 || ftMs > 2000)
-                return;
-
-            // Métricas extras (colunas opcionais): só entram se o header declarou a
-            // coluna e o valor for plausível — linhas antigas/outra versão publicam 0.
-            double gpuBusy = ParseOptional(parts, _colGpuBusy, 0, 100);
-            double cpuBusy = ParseOptional(parts, _colCpuBusy, 0, 100);
-            double cpuWait = ParseOptional(parts, _colCpuWait, 0, 100);
-            double latency = ParseOptional(parts, _colDisplayLatency, 0, 2000);
-
-            // Se ainda não temos um target e o processo não é do sistema, adotamos este
-            if (targetPid == 0 && _colApp >= 0 && parts.Count > _colApp)
+            if (targetPid == 0 && appName.Length > 0 && !WindowsOverlayProcessFilter.IsIgnored(appName))
             {
-                var appName = parts[_colApp].Trim();
-                if (!IsIgnoredProcess(Path.GetFileNameWithoutExtension(appName)))
-                {
-                    _targetPid = pid;
-                    _targetProcessName = appName;
-                }
+                _targetPid = pid;
+                _targetProcessName = appName;
             }
-
             lock (_lock)
             {
                 _lastFrametimeMs = (float)ftMs;
@@ -381,50 +334,6 @@ public sealed class FpsMonitor : IFpsMonitor
         }
     }
 
-    private static bool LooksLikeHeader(string line)
-    {
-        return line.Contains("ProcessID", StringComparison.OrdinalIgnoreCase) &&
-               (line.Contains("msBetweenPresents", StringComparison.OrdinalIgnoreCase) ||
-                line.Contains("FrameTime", StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>Divide uma linha CSV respeitando campos entre aspas.</summary>
-    private static List<string> SplitCsv(string line)
-    {
-        var result = new List<string>();
-        var sb = new StringBuilder();
-        bool inQuotes = false;
-
-        for (int i = 0; i < line.Length; i++)
-        {
-            char c = line[i];
-            if (c == '"')
-            {
-                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    sb.Append('"');
-                    i++;
-                }
-                else
-                {
-                    inQuotes = !inQuotes;
-                }
-            }
-            else if (c == ',' && !inQuotes)
-            {
-                result.Add(sb.ToString());
-                sb.Clear();
-            }
-            else
-            {
-                sb.Append(c);
-            }
-        }
-
-        result.Add(sb.ToString());
-        return result;
-    }
-
     private void CheckForegroundWindow()
     {
         try
@@ -443,7 +352,7 @@ public sealed class FpsMonitor : IFpsMonitor
                     }
                     catch { pName = $"pid:{fgPid}"; }
 
-                    if (!IsIgnoredProcess(pName) && _targetPid != (int)fgPid)
+                    if (!WindowsOverlayProcessFilter.IsIgnored(pName) && _targetPid != (int)fgPid)
                     {
                         _targetPid = (int)fgPid;
                         _targetProcessName = pName;
@@ -465,20 +374,6 @@ public sealed class FpsMonitor : IFpsMonitor
             }
         }
         catch (Exception ex) { ErrorLog.Write("FpsMonitor.CheckForegroundWindow", ex); }
-    }
-
-    private static bool IsIgnoredProcess(string name)
-    {
-        return name.Equals("PhantomMonitor", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("explorer", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("ShellExperienceHost", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("StartMenuExperienceHost", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("SearchHost", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("TextInputHost", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("LockApp", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("dwm", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("ApplicationFrameHost", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("devenv", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ResetStats()
@@ -513,14 +408,6 @@ public sealed class FpsMonitor : IFpsMonitor
     private static double PercentileOf(List<double> sortedLower, double p) =>
         sortedLower[Math.Clamp((int)Math.Floor(sortedLower.Count * p), 0, sortedLower.Count - 1)];
 
-    /// <summary>Coluna opcional: -1 = ausente, valor ruins = 0 ("indisponível"); range plausível protege de lixo.</summary>
-    private static double ParseOptional(List<string> parts, int col, double min, double max)
-    {
-        if (col < 0 || col >= parts.Count) return 0;
-        return double.TryParse(parts[col].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) &&
-               v >= min && v <= max ? v : 0;
-    }
-
     public void Reset()
     {
         ResetStats();
@@ -534,10 +421,16 @@ public sealed class FpsMonitor : IFpsMonitor
         // CheckForegroundWindow continuava rodando a cada 500 ms com o monitor parado.
         try { _pollTimer.Change(Timeout.Infinite, Timeout.Infinite); }
         catch (ObjectDisposedException) { /* Dispose em corrida com Stop */ }
-        StopPresentMon();
+        _sessionDemand.SetCollectionActive(false);
+        EnsurePresentMonState();
     }
 
     private void StopPresentMon()
+    {
+        lock (_presentMonLock) StopPresentMonCore();
+    }
+
+    private void StopPresentMonCore()
     {
         if (_presentMonProcess != null)
         {
@@ -560,6 +453,9 @@ public sealed class FpsMonitor : IFpsMonitor
 
     public void Dispose()
     {
+        _sessionDemand.SetCollectionActive(false);
+        _sessionDemand.SetDiscoveryActive(false);
+        _presentingProcesses.Clear();
         _pollTimer.Dispose();
         StopPresentMon();
     }

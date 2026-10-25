@@ -849,6 +849,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _inGameOverlayHeartbeat?.Stop();
         _inGameOverlayHeartbeat = null;
         _desktopNotificationService?.Dispose();
+        CleanupWindowsOverlayState();
         _sensorService.Dispose();
         _inGameOverlayFramePublisher.Dispose();
     }

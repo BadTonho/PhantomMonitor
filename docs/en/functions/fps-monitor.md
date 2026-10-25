@@ -2,7 +2,7 @@
 
 # FPS and frametime monitoring
 
-FPS collection is platform-specific and does not inject a DLL into the game.
+FPS collection is platform-specific and does not inject a DLL into the game. Separately, the opt-in in-game overlay installs hooks in processes observed by PresentMon; anti-cheat software may block this integration, and the app does not try to bypass those blocks.
 
 ## Windows: PresentMon and ETW
 

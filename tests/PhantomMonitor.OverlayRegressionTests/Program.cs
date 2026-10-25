@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Win32;
 using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
@@ -14,7 +15,11 @@ var tests = new (string Name, Action Run)[]
     ("modo e executáveis do overlay persistem no config.json", TestOverlayRenderModePersistence),
     ("protocolo nativo rejeita quadros parciais e desatualizados", TestInGameFrameProtocol),
     ("diagnóstico nativo valida sequência, versão, idade e UTF-8", TestNativeOverlayStatusProtocol),
-    ("canal POSIX publica leitura estável e somente leitura", TestPosixInGameFramePublisher)
+    ("canal POSIX publica leitura estável e somente leitura", TestPosixInGameFramePublisher),
+    ("PresentMon descobre múltiplos PIDs e ignora linhas inválidas", TestPresentMonProcessDiscovery),
+    ("PIDs sem novos frames expiram da descoberta", TestPresentMonProcessExpiration),
+    ("sessão PresentMon continua ativa para descoberta com coleta parada", TestPresentMonSessionDemand),
+    ("registro Vulkan x86/x64 pode ser ativado e removido sem Registro real", TestVulkanLayerRegistration)
 };
 
 foreach (var test in tests)
@@ -69,6 +74,94 @@ static void TestCanvasToScreenCoordinates()
         }
     }
 }
+
+static void TestPresentMonProcessDiscovery()
+{
+    var parser = new PresentMonCsvParser();
+    Assert(parser.TryParseLine("ProcessID,Application,msBetweenPresents", out var header) && header is null,
+        "PresentMon CSV header should be accepted.");
+    var tracker = new RecentPresentingProcessTracker(TimeSpan.FromSeconds(5));
+    var now = DateTimeOffset.UtcNow;
+    var rows = new[]
+    {
+        "101,game-one.exe,16.6",
+        "202,game-two.exe,8.3",
+        "-1,invalid.exe,16.6",
+        "303,broken-time.exe,NaN",
+        "404,zero-time.exe,0",
+        "505,explorer.exe,16.6"
+    };
+    foreach (var row in rows)
+    {
+        if (parser.TryParseLine(row, out var frame) && frame is not null
+            && !WindowsOverlayProcessFilter.IsIgnored(frame.Application))
+            tracker.Observe(frame.ProcessId, frame.Application, now);
+    }
+
+    var pids = tracker.Snapshot(now).Select(process => process.ProcessId).ToArray();
+    Assert(pids.SequenceEqual(new[] { 101, 202 }),
+        $"Expected only the two valid presenting applications, got {string.Join(",", pids)}.");
+}
+
+static void TestPresentMonProcessExpiration()
+{
+    var tracker = new RecentPresentingProcessTracker(TimeSpan.FromSeconds(5));
+    var now = DateTimeOffset.UtcNow;
+    tracker.Observe(101, "game.exe", now);
+    Assert(tracker.Snapshot(now.AddSeconds(4)).Count == 1, "Recent presenters should remain available during the TTL.");
+    Assert(tracker.Snapshot(now.AddSeconds(6)).Count == 0, "Processes with no recent frames should expire.");
+}
+
+static void TestPresentMonSessionDemand()
+{
+    var demand = new PresentMonSessionDemand();
+    demand.SetDiscoveryActive(true);
+    Assert(demand.IsRequired, "In-game discovery should start the shared PresentMon session without sensor collection.");
+    demand.SetCollectionActive(true);
+    demand.SetCollectionActive(false);
+    Assert(demand.IsRequired && demand.DiscoveryActive,
+        "Stopping sensor collection must leave PresentMon running while overlay discovery is active.");
+    demand.SetDiscoveryActive(false);
+    Assert(!demand.IsRequired, "PresentMon should stop after both consumers are disabled.");
+}
+
+#pragma warning disable CA1416 // Registro simulado; nenhum acesso ao Windows Registry ocorre no teste.
+static void TestVulkanLayerRegistration()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"phantom-vulkan-regression-{Guid.NewGuid():N}");
+    var registry = new FakeVulkanLayerRegistry();
+    try
+    {
+        foreach (var architecture in new[] { "x64", "x86" })
+        {
+            var directory = Path.Combine(root, "PhantomOverlay", architecture);
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "phantom_vulkan_layer.json"), "{}");
+        }
+
+        var registration = new WindowsVulkanImplicitLayerRegistration(registry);
+        var enabled = registration.Enable(root);
+        var expectedViews = Environment.Is64BitOperatingSystem
+            ? new[] { RegistryView.Registry64, RegistryView.Registry32 }
+            : new[] { RegistryView.Registry32 };
+        Assert(enabled.Contains("ativa", StringComparison.OrdinalIgnoreCase), "Registration should report success.");
+        Assert(registry.Entries.Select(entry => entry.View).Order().SequenceEqual(expectedViews.Order()),
+            "x86 and x64 manifests must be registered in their matching registry views.");
+        Assert(registry.Entries.All(entry => Path.IsPathFullyQualified(entry.ManifestPath)),
+            "Vulkan registry value names must be absolute manifest paths.");
+
+        registry.Entries.Add(new VulkanLayerRegistryEntry(RegistryView.Registry32,
+            Path.Combine(root, "old-install", "PhantomOverlay", "x86", "phantom_vulkan_layer.json")));
+        var removed = registration.Disable(root);
+        Assert(removed.Contains("removida", StringComparison.OrdinalIgnoreCase), "Removal should report success.");
+        Assert(registry.Entries.Count == 0, "Disable should remove active and stale registrations through the test writer.");
+    }
+    finally
+    {
+        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+    }
+}
+#pragma warning restore CA1416
 
 static void TestAppliedContentParity()
 {
@@ -369,4 +462,20 @@ static class NativeMethods
     internal static extern int shm_unlink(string name);
     [DllImport("libc")]
     internal static extern uint getuid();
+}
+
+sealed class FakeVulkanLayerRegistry : IVulkanLayerRegistryWriter
+{
+    public List<VulkanLayerRegistryEntry> Entries { get; } = [];
+
+    public void Register(VulkanLayerRegistryEntry entry)
+    {
+        Entries.RemoveAll(current => current.View == entry.View && current.ManifestPath == entry.ManifestPath);
+        Entries.Add(entry);
+    }
+
+    public void Remove(VulkanLayerRegistryEntry entry) =>
+        Entries.RemoveAll(current => current.View == entry.View && current.ManifestPath == entry.ManifestPath);
+
+    public IReadOnlyList<VulkanLayerRegistryEntry> FindOwnedEntries() => Entries.ToArray();
 }

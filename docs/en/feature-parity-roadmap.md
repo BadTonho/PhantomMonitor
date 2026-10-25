@@ -11,7 +11,7 @@ This document records feature comparisons and implementation decisions for Phant
 - Configurable alerts, including per-instance targets.
 - Configurable OSD, profiles, hotkey, and tray integration on Windows.
 - CSV/JSON logging and error log.
-- Current builds do not load game-process hooks; Linux FPS uses an opt-in implicit Vulkan layer. The accepted in-game OSD design adds an explicit Windows executable allowlist and anti-cheat warning before hooks ship.
+- The in-game OSD is opt-in: Windows detects frame-presenting processes through PresentMon/ETW and injects only observed PIDs; Linux FPS still uses its implicit Vulkan layer. Anti-cheat protections are not bypassed.
 
 ## P1 — Dynamic sensor series (completed)
 
@@ -27,7 +27,7 @@ Profiles can override position, size, font, opacity, series, accent, and visibil
 
 ## P4 — In-game OSD (renderers implemented; validation pending)
 
-The product offers floating windows and an opt-in in-game mode. Linux Vulkan and GLX/EGL, plus Windows Direct3D 9–12, WGL, and Vulkan renderers are implemented. Windows hooks are limited to user-allowlisted executables, with an anti-cheat warning and no bypass. Fullscreen, resize, game-capture, and Windows runtime validation remains pending. See [in-frame OSD study](osd-in-frame-study.md).
+The product offers floating windows and an opt-in in-game mode. Linux Vulkan and GLX/EGL, plus Windows Direct3D 9–12, WGL, and Vulkan renderers are implemented. Windows uses PresentMon/ETW to discover frame-presenting applications and applies x86/x64 hooks only to observed PIDs; Vulkan manifests are registered per user while in-game mode is active. The app warns about anti-cheat blocks and does not bypass them. Fullscreen, resize, game-capture, and Windows runtime validation remains pending. See [in-frame OSD study](osd-in-frame-study.md).
 
 ## P5 — Hardware control (out of scope)
 
@@ -67,7 +67,7 @@ The project does not plan a Vulkan shared-memory seqlock at this time, placehold
 
 | Area | Status / decision |
 |---|---|
-| In-frame game capture | Opt-in in-game mode with Windows executable allowlist and no anti-cheat bypass. Shared-memory v1 and Linux/Windows native renderers are implemented; API-by-API runtime validation is pending. See [in-frame OSD study](osd-in-frame-study.md). Frame limiting remains out of scope. |
+| In-frame game capture | Opt-in in-game mode; Windows hooks x86/x64 processes detected presenting frames by PresentMon/ETW, with per-user Vulkan implicit-layer registration and no anti-cheat bypass. Shared-memory v1 and Linux/Windows native renderers are implemented; API-by-API runtime validation is pending. See [in-frame OSD study](osd-in-frame-study.md). Frame limiting remains out of scope. |
 | Fan curves, voltage/frequency tuning, and overclocking | Out of scope for the read-only monitor. |
 | PresentMon metrics (Windows) | Busy/wait, present latency, and P1/P99 are published when present in the installed PresentMon output; the Linux reader does not publish them. Mode-of-present/click-to-photon are not planned. |
 | Rich OSD markup, conditional layers, bars, and formulas | Templates cover basic text and resolved-series conditions; more advanced layout remains a UI project. |
@@ -90,6 +90,6 @@ Additional distinctions from the reference suites:
 
 ## Project strengths
 
-The retired WPF shared-memory SDK was open and documented, CSV columns grow dynamically with instance series, and the design avoids hooks into game processes. The unified app offers the opt-in HTTP exporter for full sensor snapshots on both systems and uses the POSIX shared-memory channel only for Vulkan frame timings on Linux. These choices keep telemetry available to external tools without granting them access to the game's address space.
+The retired WPF shared-memory SDK was open and documented, and CSV columns grow dynamically with instance series. The unified app offers the opt-in HTTP exporter for full sensor snapshots on both systems and uses the POSIX shared-memory channel only for Vulkan frame timings on Linux. Windows in-game mode uses a narrow hook triggered by PIDs observed presenting frames through PresentMon/ETW; anti-cheat protections are never bypassed.
 
 The implementation order recorded in the original roadmap prioritized session statistics/reset, per-app hide, HTTP export, battery, PresentMon metrics, templates, and pause/resume (P6.1–P6.7), followed by custom sensors, WHEA, JSONL, EDID, OSD graphs, GPU memory junction, and per-series tuning. The next larger work items remain vendor-dependent hardware sources rather than missing basic monitoring controls.

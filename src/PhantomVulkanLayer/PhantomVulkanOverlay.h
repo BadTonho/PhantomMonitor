@@ -12,6 +12,8 @@ void RegisterDevice(VkInstance instance, VkPhysicalDevice physical_device, VkDev
                     PFN_vkGetDeviceProcAddr next_gdpa,
                     PFN_vkSetDeviceLoaderData set_loader_data);
 void RegisterQueue(VkDevice device, VkQueue queue, std::uint32_t queue_family);
+bool PrepareSwapchainForOverlay(VkDevice device, const VkSwapchainCreateInfoKHR* original,
+                                VkSwapchainCreateInfoKHR& adjusted);
 void RegisterSwapchain(VkDevice device, VkSwapchainKHR swapchain,
                        const VkSwapchainCreateInfoKHR* create_info,
                        const VkAllocationCallbacks* allocator);

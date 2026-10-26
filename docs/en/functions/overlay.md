@@ -142,8 +142,12 @@ For history graphs, a flat series receives a small automatic vertical range (±0
 Windows frame reads never write to read-only pages. Vulkan initializes dispatch
 data on layer-owned command buffers, resolves ImGui through the next chain,
 serializes the global context and uses per-image fences and per-queue handle keys.
-Protected/layered swapchains, missing color-attachment usage and queue-family
-changes are rejected while preserving presentation. Windows manifests and x86
+For a simple initial swapchain without color-attachment usage, the layer checks
+surface and image-format capabilities before adding that usage. A format or
+initialization failure retries the original creation; recreations using
+`oldSwapchain` are not modified or retried. Protected/layered swapchains, still
+missing color-attachment usage, and queue-family changes are rejected with a
+specific diagnostic while preserving presentation. Windows manifests and x86
 exports are loader-compatible; no Vulkan import library is required. Settings can
 launch Windows games early. Late D3D12 discovery observes command submissions and
 uses only an unambiguous DIRECT queue; multiple-queue games should use early launch.

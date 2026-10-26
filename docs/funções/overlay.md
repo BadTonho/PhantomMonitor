@@ -235,9 +235,13 @@ ull usa a cor do tema/acento
 O canal Windows é lido sem operações de escrita em páginas somente leitura.
 Vulkan inicializa loader data dos seus command buffers, resolve o backend ImGui
 pela cadeia seguinte e serializa o contexto global. Filas são identificadas pelo
-próprio handle; fences por imagem protegem a reutilização dos comandos. Swapchains
-protegidas, com camadas, sem color attachment ou com mudança de família são
-recusadas preservando o present do jogo. O manifesto Windows usa caminho nativo
+próprio handle; fences por imagem protegem a reutilização dos comandos. Na criação
+inicial de uma swapchain simples sem color attachment, a camada consulta a superfície
+e o formato e acrescenta esse uso quando ambos o permitem. Se a criação ajustada
+falhar por formato ou inicialização, tenta a configuração original; não altera nem
+repete recriações com `oldSwapchain`. Swapchains protegidas, com camadas, ainda sem
+color attachment ou com mudança de família são recusadas com diagnóstico específico,
+preservando o present do jogo. O manifesto Windows usa caminho nativo
 e exports sem decoração também em x86. Não são necessárias import libraries Vulkan.
 No Windows, Configurações permite iniciar executáveis com o hook antes da criação
 da swapchain. A descoberta tardia observa `ExecuteCommandLists` e usa uma fila

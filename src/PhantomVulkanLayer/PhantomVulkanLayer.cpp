@@ -1,5 +1,6 @@
 #include "PhantomVulkanLayer.h"
 #include "PhantomVulkanOverlay.h"
+#include "PhantomSwapchainPolicy.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -556,9 +557,13 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateSwapchainKHR(
         if (found != g_device_dispatch.end()) next = found->second.create_swapchain_khr;
     }
     if (next == nullptr) return VK_ERROR_INITIALIZATION_FAILED;
-    const VkResult result = next(device, pCreateInfo, pAllocator, pSwapchain);
+    VkSwapchainCreateInfoKHR adjusted{};
+    const bool enhanced = phantom::vulkan_overlay::PrepareSwapchainForOverlay(device, pCreateInfo, adjusted);
+    const VkSwapchainCreateInfoKHR* applied = nullptr;
+    const VkResult result = phantom::vulkan_overlay::CreateSwapchainWithFallback(
+        next, device, pCreateInfo, adjusted, enhanced, pAllocator, pSwapchain, applied);
     if (result == VK_SUCCESS && pSwapchain != nullptr && *pSwapchain != VK_NULL_HANDLE)
-        phantom::vulkan_overlay::RegisterSwapchain(device, *pSwapchain, pCreateInfo, pAllocator);
+        phantom::vulkan_overlay::RegisterSwapchain(device, *pSwapchain, applied, pAllocator);
     return result;
 }
 

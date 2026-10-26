@@ -1,5 +1,6 @@
 #include "PhantomVulkanOverlay.h"
 #include "PhantomVulkanDispatch.h"
+#include "PhantomSwapchainPolicy.h"
 
 #include "OverlayFrameReader.h"
 #include "OverlayImGuiDraw.h"
@@ -74,6 +75,7 @@ struct SwapchainState {
     bool initialized = false;
     bool supported = true;
     bool submission_failed = false;
+    std::string unsupported_reason;
     std::uint32_t initialized_family = UINT32_MAX;
     std::string last_error;
     std::mutex render_mutex;
@@ -410,7 +412,10 @@ bool draw_present(DeviceState& device, SwapchainState& swapchain, VkQueue queue,
                   std::uint32_t queue_family, const VkPresentInfoKHR* present_info,
                   PFN_vkQueuePresentKHR next_present, VkResult* result_out) {
     if (!swapchain.supported || swapchain.submission_failed || (swapchain.initialized && swapchain.initialized_family != queue_family)) {
-        update_status(RenderState::Unsupported, "Swapchain Vulkan protegida, sem color attachment, em camadas ou com mudança de família; overlay ignorado.");
+        const auto reason = !swapchain.supported ? swapchain.unsupported_reason
+            : swapchain.submission_failed ? "Uma submissão anterior do overlay Vulkan falhou."
+            : "A fila de apresentação Vulkan mudou de família após inicializar o overlay.";
+        update_status(RenderState::Unsupported, reason);
         return false;
     }
     if (!load_backend_functions(device)) {
@@ -600,6 +605,30 @@ void RegisterQueue(VkDevice device, VkQueue queue, std::uint32_t queue_family) {
     state->queue_families[queue] = queue_family;
 }
 
+bool PrepareSwapchainForOverlay(VkDevice device, const VkSwapchainCreateInfoKHR* original,
+                                VkSwapchainCreateInfoKHR& adjusted) {
+    if (!original || original->surface == VK_NULL_HANDLE || original->oldSwapchain != VK_NULL_HANDLE || original->pNext != nullptr
+        || original->flags != 0 || original->imageArrayLayers != 1
+        || (original->imageUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0) return false;
+    const auto state = find_device(device);
+    if (!state || !state->gipa || !state->physical) return false;
+    const auto get_surface = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(
+        state->gipa(state->instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"));
+    const auto get_format = reinterpret_cast<PFN_vkGetPhysicalDeviceImageFormatProperties>(
+        state->gipa(state->instance, "vkGetPhysicalDeviceImageFormatProperties"));
+    if (!get_surface || !get_format) return false;
+    VkSurfaceCapabilitiesKHR surface{};
+    VkImageFormatProperties format{};
+    const auto usage = original->imageUsage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (get_surface(state->physical, original->surface, &surface) != VK_SUCCESS
+        || get_format(state->physical, original->imageFormat, VK_IMAGE_TYPE_2D,
+                      VK_IMAGE_TILING_OPTIMAL, usage, 0, &format) != VK_SUCCESS
+        || !CanAddColorAttachment(*original, surface, format)) return false;
+    adjusted = *original;
+    adjusted.imageUsage = usage;
+    return true;
+}
+
 void RegisterSwapchain(VkDevice device, VkSwapchainKHR swapchain,
                        const VkSwapchainCreateInfoKHR* create_info,
                        const VkAllocationCallbacks* allocator) {
@@ -613,6 +642,12 @@ void RegisterSwapchain(VkDevice device, VkSwapchainKHR swapchain,
     entry->supported = (create_info->imageUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0
         && create_info->imageArrayLayers == 1
         && (create_info->flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR) == 0;
+    if ((create_info->flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR) != 0)
+        entry->unsupported_reason = "Swapchain Vulkan protegida; o overlay não pode desenhar nela.";
+    else if (create_info->imageArrayLayers != 1)
+        entry->unsupported_reason = "Swapchain Vulkan com múltiplas camadas não é suportada pelo overlay.";
+    else if ((create_info->imageUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0)
+        entry->unsupported_reason = "Swapchain Vulkan sem uso color attachment; não foi possível habilitá-lo com segurança.";
     (void)allocator; // Renderer-owned objects always use Vulkan's default allocator.
     std::lock_guard<std::mutex> lock(g_mutex);
     state->swapchains[handle_key(swapchain)] = std::move(entry);

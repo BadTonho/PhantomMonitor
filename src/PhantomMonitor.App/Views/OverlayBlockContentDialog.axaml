@@ -46,8 +46,21 @@
           </Border>
         </Canvas>
         <WrapPanel Grid.Row="2" Orientation="Horizontal">
-          <Button Content="Mover para cima" IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" Margin="0,0,8,8" />
-          <Button Content="Mover para baixo" IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" Margin="0,0,8,8" />
+          <Button IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" Margin="0,0,8,8"
+                  MinWidth="36" MinHeight="34" Padding="8" ToolTip.Tip="Mover para cima" AutomationProperties.Name="Mover para cima">
+            <Path Data="M 8,13 L 8,3 M 3,8 L 8,3 L 13,8" Width="14" Height="14" Stretch="Uniform"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" />
+          </Button>
+          <Button IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" Margin="0,0,8,8"
+                  MinWidth="36" MinHeight="34" Padding="8" ToolTip.Tip="Mover para baixo" AutomationProperties.Name="Mover para baixo">
+            <Path Data="M 8,3 L 8,13 M 3,8 L 8,13 L 13,8" Width="14" Height="14" Stretch="Uniform"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" />
+          </Button>
+          <Button Click="OnOpenContentPickerClick" Margin="0,0,8,8" MinWidth="36" MinHeight="34" Padding="8"
+                  ToolTip.Tip="Adicionar conteúdo" AutomationProperties.Name="Adicionar conteúdo">
+            <Path Data="M 8,3 L 8,13 M 3,8 L 13,8" Width="14" Height="14" Stretch="Uniform"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" />
+          </Button>
           <Button Content="{Binding RemoveSelectedContentText}" IsEnabled="{Binding CanRemoveSelectedContent}" Click="OnRemoveContentClick" Margin="0,0,8,8" />
         </WrapPanel>
       </Grid>
@@ -135,7 +148,6 @@
     </Canvas>
 
     <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Content="Adicionar conteúdo…" Click="OnOpenContentPickerClick" Margin="0,0,8,8" />
       <Button Content="Linhas ocultadas…" Click="OnOpenHiddenMetricsClick" Margin="0,0,8,8" />
       <Button Content="Cancelar" Click="OnCancelClick" Margin="0,0,8,8" />
       <Button Content="Aplicar conteúdo" IsEnabled="{Binding CanApplyCustomLine}" Click="OnApplyClick" Margin="0,0,0,8" />

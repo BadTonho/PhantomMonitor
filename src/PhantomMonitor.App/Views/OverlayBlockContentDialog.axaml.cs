@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
+using PhantomMonitor.Models;
 using Avalonia.VisualTree;
 
 namespace PhantomMonitor.App.Views;
@@ -20,6 +21,7 @@ public partial class OverlayBlockContentDialog : Window
     private bool _isReordering;
     private bool _dragOverList;
     private int _pendingInsertionIndex = -1;
+    private bool _handlingHardwareSelection;
 
     private OverlayBlockContentDialogViewModel ViewModel => (OverlayBlockContentDialogViewModel)DataContext!;
 
@@ -274,6 +276,51 @@ public partial class OverlayBlockContentDialog : Window
     }
 
     private void OnSaveMetricOverrideClick(object? sender, RoutedEventArgs e) => ViewModel.SaveMetricOverride();
+    private void OnHardwareCategoryChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_handlingHardwareSelection || DataContext is not OverlayBlockContentDialogViewModel viewModel
+            || viewModel.IsSyncingHardwareSelection || !viewModel.HasSelectedCustomLine
+            || e.AddedItems.OfType<string>().FirstOrDefault() is not { } category) return;
+        _handlingHardwareSelection = true;
+        try
+        {
+            var device = viewModel.ChooseHardwareCategory(category);
+            if (!viewModel.ShowHardwareOptions && sender is ComboBox combo) combo.SelectedItem = null;
+            if (device is not null) InsertHardware(device);
+        }
+        finally { _handlingHardwareSelection = false; }
+    }
+
+    private void OnHardwareDeviceChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_handlingHardwareSelection || DataContext is not OverlayBlockContentDialogViewModel viewModel
+            || viewModel.IsSyncingHardwareSelection || !viewModel.HasSelectedCustomLine
+            || e.AddedItems.OfType<OverlayHardwareOption>().FirstOrDefault() is not { } option) return;
+        _handlingHardwareSelection = true;
+        try
+        {
+            var device = viewModel.ChooseHardwareDevice(option);
+            if (device is not null) InsertHardware(device);
+        }
+        finally { _handlingHardwareSelection = false; }
+    }
+
+    private void InsertHardware(HardwareIdentity device)
+    {
+        if (ViewModel.CreateHardwareToken(device) is not { } token) return;
+        var text = ViewModel.CustomLineText;
+        var (updated, caret) = InsertAtSelection(text, token, CustomLineTextBox.SelectionStart, CustomLineTextBox.SelectionEnd);
+        ViewModel.CustomLineText = updated;
+        CustomLineTextBox.Focus();
+        CustomLineTextBox.CaretIndex = caret;
+    }
+
+    internal static (string Text, int Caret) InsertAtSelection(string text, string token, int selectionStart, int selectionEnd)
+    {
+        var start = Math.Clamp(Math.Min(selectionStart, selectionEnd), 0, text.Length);
+        var end = Math.Clamp(Math.Max(selectionStart, selectionEnd), start, text.Length);
+        return (text[..start] + token + text[end..], start + token.Length);
+    }
     private void OnMetricColorSwatchClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string hex }) ViewModel.SetMetricColor(hex);

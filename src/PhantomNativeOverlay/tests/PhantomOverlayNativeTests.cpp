@@ -70,6 +70,19 @@ int main() {
     check(parsed.valid && parsed.frame.blocks[0].elements.size() == 3
           && parsed.frame.blocks[0].elements[2].samples.size() == 3,
           "text and graph elements parse in order");
+    auto v2_payload = valid_payload();
+    v2_payload.replace(0, 3, "F\t2");
+    v2_payload.insert(v2_payload.rfind("E\n"), "W\t16\tFFF2F5FA\tR1BV\t80\n");
+    const auto extended = ParseFramePayload(v2_payload);
+    check(extended.valid && extended.frame.blocks[0].elements.back().text == "GPU"
+          && extended.frame.blocks[0].elements.back().text_width == 80,
+          "v2 custom line retains font, text and width");
+    auto invalid_width = v2_payload;
+    invalid_width.replace(invalid_width.find("\t80\n"), 4, "\t0\n");
+    check(!ParseFramePayload(invalid_width).valid, "v2 rejects zero width");
+    auto invalid_legacy = v2_payload;
+    invalid_legacy.replace(0, 3, "F\t1");
+    check(!ParseFramePayload(invalid_legacy).valid, "v1 rejects v2 custom records");
     if (parsed.valid) {
         const auto at_1080p = ToPixelPosition(parsed.frame, parsed.frame.blocks[0],
             1920, 1080, 440, 100);
@@ -110,6 +123,7 @@ int main() {
     first.font_size = 12;
     first.color = 0xFFFF0000;
     first.text = "A long metric value which must wrap onto several lines without overlap";
+    first.text_width = 55;
     Element second;
     second.kind = Element::Kind::Text;
     second.font_size = 12;
@@ -173,7 +187,7 @@ int main() {
     check(!malformed.valid, "malformed frame rejected");
     malformed = ParseFramePayload(valid_payload().substr(0, valid_payload().size() - 1));
     check(!malformed.valid, "truncated frame rejected");
-    malformed = ParseFramePayload("F\t2\t1\t0\t220\t960\t760\t11.5\t0.85\tFF141A24\t1\tFF2C527A\tFF1E90FF\t0\t\t\t9\t8\t8\t8\t8\t8\t8\t8\t8\t2\t0\t2\t0\t2\t36\n\n");
+    malformed = ParseFramePayload("F\t3\t1\t0\t220\t960\t760\t11.5\t0.85\tFF141A24\t1\tFF2C527A\tFF1E90FF\t0\t\t\t9\t8\t8\t8\t8\t8\t8\t8\t8\t2\t0\t2\t0\t2\t36\n\n");
     check(!malformed.valid, "unknown payload version rejected");
     return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

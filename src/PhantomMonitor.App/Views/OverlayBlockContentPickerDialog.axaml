@@ -15,6 +15,7 @@
         <TextBlock Text="ADICIONAR CONTEÚDO" FontSize="17" FontWeight="SemiBold" />
         <TextBlock Text="Os itens confirmados entram no final da lista do bloco. Você pode reorganizar a ordem depois."
                    FontSize="11" TextWrapping="Wrap" Classes="muted" />
+        <Button Content="Adicionar linha personalizada" HorizontalAlignment="Left" Click="OnAddCustomLineClick" />
         <ItemsControl ItemsSource="{Binding CategoriesChoices}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>

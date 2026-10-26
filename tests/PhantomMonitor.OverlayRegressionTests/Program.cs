@@ -5,11 +5,13 @@ using System.Text.Json;
 using Microsoft.Win32;
 using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.App.ViewModels;
+using PhantomMonitor.App.Views;
 using PhantomMonitor.App.Services.Hotkeys;
 using PhantomMonitor.Models;
 using Avalonia.Input;
 using Tmds.DBus.Protocol;
 using PhantomMonitor.Services;
+using PhantomMonitor.Services.Linux;
 
 (string Name, Action Run)[] tests =
 [
@@ -18,6 +20,10 @@ using PhantomMonitor.Services;
     ("nomes de métricas são personalizados por bloco e voltam ao padrão", TestOverlayMetricNames),
     ("modelo da GPU é opcional sem afetar outros dispositivos", TestOverlayGpuModel),
     ("configuração de nomes e modelo da GPU sobrevive ao reinício", TestOverlayNamesPersistence),
+    ("linha personalizada mantém referências e configurações do bloco", TestCustomLine),
+    ("seleção de hardware insere somente após escolha explícita", TestHardwareSelection),
+    ("inventário Linux identifica CPU, placa-mãe e GPUs por PCI", TestLinuxHardwareNames),
+    ("protocolo aceita largura de linha na versão 2", TestCustomLineFrame),
     ("modo do overlay migra configs antigas para janela flutuante", TestOverlayRenderModeMigration),
     ("modo e executáveis do overlay persistem no config.json", TestOverlayRenderModePersistence),
     ("protocolo nativo rejeita quadros parciais e desatualizados", TestInGameFrameProtocol),
@@ -45,6 +51,123 @@ foreach (var test in tests)
     catch (Exception ex) { failed++; Console.Error.WriteLine($"FAIL: {test.Name}: {ex}"); }
 }
 Environment.ExitCode = failed > 0 ? 1 : 0;
+
+static void TestHardwareSelection()
+{
+    var state = new OverlayHardwareSelection();
+    HardwareIdentity[] devices = [new("gpu", "gpu-1", "Placa 1"), new("cpu", "cpu-1", "CPU")];
+    Assert(state.Category is null && state.Options.Count == 0, "Seleção deve começar vazia.");
+    Assert(state.ChooseCategory("GPU", devices)?.Id == "gpu-1" && state.Category is null,
+        "GPU única deve ser inserida sem exigir outra escolha.");
+    state.Refresh(devices);
+    Assert(state.Category is null && state.Options.Count == 0, "Atualização não deve reinserir dispositivo.");
+    Assert(state.ChooseCategory("CPU", devices)?.Id == "cpu-1", "CPU única deve ser inserida imediatamente.");
+    var boardDevices = devices.Append(new HardwareIdentity("motherboard", "board-1", "Placa-mãe")).ToArray();
+    Assert(state.ChooseCategory("Placa-mãe", boardDevices)?.Id == "board-1", "Placa-mãe única deve ser inserida imediatamente.");
+    Assert(state.ChooseCategory("Placa-mãe", devices) is null && state.Category is null
+        && state.Message.Contains("Nenhum"), "Categoria sem dispositivo deve informar ausência.");
+    HardwareIdentity[] multiple = [.. devices, new("gpu", "gpu-2", "Placa 2")];
+    Assert(state.ChooseCategory("GPU", multiple) is null && state.Options.Count == 2,
+        "Múltiplas GPUs exigem escolha explícita.");
+    state.Refresh(multiple);
+    Assert(state.Options.Count == 2 && state.Category == "GPU", "Atualização não deve escolher automaticamente.");
+    Assert(state.ChooseDevice(state.Options[1])?.Id == "gpu-2" && state.Category is null,
+        "A escolha deve usar o dispositivo selecionado e limpar o seletor.");
+    Assert(state.ChooseCategory("GPU", multiple) is null && state.Options.Count == 2,
+        "A mesma categoria pode ser escolhida novamente.");
+    state.Refresh(devices);
+    Assert(state.Category is null && state.Message.Contains("mudaram"), "Uma mudança para dispositivo único não deve inseri-lo sem escolha.");
+    var multiCpu = devices.Append(new HardwareIdentity("cpu", "cpu-2", "CPU 2")).ToArray();
+    Assert(state.ChooseCategory("CPU", multiCpu) is null && state.Options.Count == 2,
+        "Múltiplas CPUs também exigem escolha explícita.");
+    var staleChoice = state.Options[1];
+    state.Refresh(devices);
+    Assert(state.ChooseDevice(staleChoice) is null, "Não inserir uma escolha que deixou de estar disponível.");
+    var (text, caret) = OverlayBlockContentDialog.InsertAtSelection("Antes depois", "{GPU 1}", 6, 12);
+    Assert(text == "Antes {GPU 1}" && caret == text.Length, "Inserção deve substituir a seleção na posição do cursor.");
+    (text, caret) = OverlayBlockContentDialog.InsertAtSelection("abc", "{CPU 1}", 2, 2);
+    Assert(text == "ab{CPU 1}c" && caret == 9, "Inserção no cursor deve preservar o texto ao redor.");
+}
+
+static void TestCustomLine()
+{
+    var line = new OverlayCustomLineConfig
+    {
+        Id = "line", Text = "Minha GPU: {GPU 1}; CPU: {CPU 1}", Width = 90, FontSize = 18,
+        Hardware = [new() { Token = "GPU 1", DeviceId = "gpu-a", Category = "gpu" },
+            new() { Token = "CPU 1", DeviceId = "cpu-a", Category = "cpu" }]
+    };
+    HardwareIdentity[] devices = [new("gpu", "gpu-a", "GPU original"), new("gpu", "gpu-b", "GPU diferente"),
+        new("cpu", "cpu-a", "Processador")];
+    Assert(OverlayCustomLineRenderer.Render(line, devices) == "Minha GPU: GPU original; CPU: Processador", "Referências devem resolver os dispositivos escolhidos.");
+    devices[0] = new("gpu", "gpu-a", "GPU renomeada");
+    Assert(OverlayCustomLineRenderer.Render(line, devices).Contains("GPU renomeada"), "Nome deve ser atualizado.");
+    Assert(OverlayCustomLineRenderer.Render(line, devices[1..]).Contains("Indisponível"), "Não deve trocar para outra GPU quando o dispositivo desaparecer.");
+    Assert(OverlayCustomLineRenderer.Render(new OverlayCustomLineConfig(), []) == "", "Linha vazia deve ser válida.");
+    var block = new OverlayBlockConfig { Id = "b", Items = [new() { Kind = "customline", Value = "line" }], CustomLines = [line] };
+    var copy = MainWindowViewModel.CloneOverlayBlock(block);
+    copy.CustomLines[0].Hardware[0].Token = "outro";
+    Assert(block.CustomLines[0].Hardware[0].Token == "GPU 1", "Rascunho não pode modificar o bloco salvo.");
+    var path = Path.Combine(Path.GetTempPath(), $"phantom-custom-line-{Guid.NewGuid():N}.json");
+    try
+    {
+        var config = new AppConfig { Overlay = new() { Blocks = [block] } };
+        Assert(config.Save(path), "Configuração da linha deve ser salva.");
+        var loaded = AppConfig.Load(path).Overlay.Blocks!.Single();
+        Assert(loaded.Items.Single().Kind == "customline" && loaded.CustomLines.Single().Width == 90
+            && loaded.CustomLines.Single().FontSize == 18 && loaded.CustomLines.Single().Hardware.Count == 2,
+            "Linha, dimensões e referências devem sobreviver ao reinício.");
+    }
+    finally { if (File.Exists(path)) File.Delete(path); if (File.Exists(path + ".tmp")) File.Delete(path + ".tmp"); }
+}
+
+static void TestLinuxHardwareNames()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"phantom-hardware-{Guid.NewGuid():N}");
+    try
+    {
+        var proc = Path.Combine(root, "proc");
+        var sys = Path.Combine(root, "sys");
+        Directory.CreateDirectory(proc);
+        var board = Path.Combine(sys, "class", "dmi", "id");
+        var gpu = Path.Combine(sys, "class", "drm", "card0", "device");
+        Directory.CreateDirectory(board);
+        Directory.CreateDirectory(gpu);
+        File.WriteAllText(Path.Combine(proc, "cpuinfo"), "processor : 0\nphysical id : 0\nmodel name : CPU Teste\n\nprocessor : 1\nphysical id : 0\nmodel name : CPU Teste\n");
+        File.WriteAllText(Path.Combine(board, "board_vendor"), "Marca");
+        File.WriteAllText(Path.Combine(board, "board_name"), "Placa");
+        File.WriteAllText(Path.Combine(gpu, "vendor"), "0x1234");
+        File.WriteAllText(Path.Combine(gpu, "device"), "0xabcd");
+        File.WriteAllText(Path.Combine(gpu, "uevent"), "PCI_SLOT_NAME=0000:01:00.0\n");
+        var ids = Path.Combine(root, "pci.ids");
+        File.WriteAllText(ids, "1234  Fabricante\n\tabcd  Modelo de vídeo\n");
+        var reader = new LinuxHardwareIdentityReader(proc, sys, [ids]);
+        var devices = reader.Read();
+        Assert(devices.Count == 3 && devices.Any(item => item.Name == "CPU Teste")
+            && devices.Any(item => item.Name == "Marca Placa")
+            && devices.Any(item => item.Id == "linux:pci:0000:01:00.0" && item.Name == "Fabricante Modelo de vídeo"), "Inventário deve usar modelos e identificadores estáveis.");
+        File.Delete(ids);
+        Assert(reader.Read().Single(item => item.Category == "gpu").Name == "Modelo indisponível", "Sem base PCI, não inventar o modelo.");
+    }
+    finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+}
+
+static void TestCustomLineFrame()
+{
+    var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    var presentation = new InGameOverlayPresentation(true, false, 220, 1920, 1080, 11.5, 1,
+        "FF141A24", true, "FF2C527A", "FF1E90FF", false, "", "", 9,
+        new Avalonia.Thickness(8), new Avalonia.Thickness(8), 2, new Avalonia.Thickness(2), 24,
+        [new("block", 0, 0, "GPU", [new InGameOverlayText('W', 16, "FFF2F5FA", "GPU", 80)])]);
+    var payload = InGameOverlayFrameSerializer.Serialize(presentation);
+    var text = Encoding.UTF8.GetString(payload);
+    Assert(text.StartsWith("F\t2\t", StringComparison.Ordinal) && text.Contains("W\t16\tFFF2F5FA\tR1BV\t80\n", StringComparison.Ordinal),
+        "Publicador deve emitir fonte, texto e largura no protocolo v2.");
+    var frame = CreateNativeFrame(payload, sequence: 2, timestamp: now);
+    Assert(InGameOverlayFrameProtocol.TryCopyStableFrame(frame, now, TimeSpan.FromSeconds(3), out _), "Diagnóstico deve aceitar linha v2.");
+    var invalid = Encoding.UTF8.GetBytes(text.Replace("\t80\n", "\t0\n", StringComparison.Ordinal));
+    Assert(!InGameOverlayFrameProtocol.TryCopyStableFrame(CreateNativeFrame(invalid, sequence: 2, timestamp: now), now, TimeSpan.FromSeconds(3), out _), "Largura inválida deve ser recusada.");
+}
 
 static void TestOverlayMetricNames()
 {

@@ -16,14 +16,20 @@
         <ListBox Grid.Row="1" x:Name="ContentItemsList"
                  ItemsSource="{Binding OrderRows}"
                  SelectedItem="{Binding SelectedOrderRow, Mode=TwoWay}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  MinHeight="120" VerticalAlignment="Stretch">
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
+          </ListBox.Styles>
           <ListBox.ItemTemplate>
             <DataTemplate DataType="{x:Type vm:OverlayBlockOrderRowViewModel}">
               <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2">
                 <TextBlock Text="{Binding Kind}" Classes="muted" FontSize="9" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
+                <TextBlock Grid.Column="1" Text="{Binding Label}" TextWrapping="Wrap"
                            VerticalAlignment="Center" IsVisible="{Binding IsGroup}" />
-                <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
+                <TextBlock Grid.Column="1" Text="{Binding Label}" TextWrapping="Wrap"
                            VerticalAlignment="Center" Margin="14,0,0,0" IsVisible="{Binding IsMetric}" />
               </Grid>
             </DataTemplate>
@@ -46,32 +52,56 @@
         </WrapPanel>
       </Grid>
 
-      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="8">
           <TextBlock Text="EDITAR LINHA DO SENSOR" FontSize="10" FontWeight="Bold"
                      IsVisible="{Binding HasSelectedMetric}" />
           <TextBlock Text="Selecione uma categoria ou série na lista para editar sua apresentação."
                      Classes="muted" TextWrapping="Wrap" IsVisible="{Binding ShowMetricEditorHint}" />
           <TextBlock Text="Nenhuma linha de sensor disponível para este item agora."
-                     Classes="muted" IsVisible="{Binding NoMetricChoices}" />
+                     Classes="muted" TextWrapping="Wrap" IsVisible="{Binding NoMetricChoices}" />
+          <StackPanel IsVisible="{Binding HasSelectedCustomLine}" Spacing="8">
+            <TextBlock Text="EDITAR LINHA PERSONALIZADA" FontSize="10" FontWeight="Bold" />
+            <TextBox x:Name="CustomLineTextBox" PlaceholderText="Digite o texto da linha" MaxLength="2048"
+                     Text="{Binding CustomLineText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <StackPanel Spacing="3">
+              <TextBlock Text="TAMANHO DO TEXTO (8–20 PT)" FontSize="9" TextWrapping="Wrap" />
+              <TextBox PlaceholderText="Padrão" Text="{Binding CustomLineFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+            <StackPanel Spacing="3">
+              <TextBlock Text="LARGURA (40–700 PX)" FontSize="9" TextWrapping="Wrap" />
+              <TextBox PlaceholderText="Largura do bloco" Text="{Binding CustomLineWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+            <TextBlock Text="{Binding CustomLineMessage}" Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="SENSORES" FontSize="9" FontWeight="Bold" />
+            <ComboBox ItemsSource="{Binding HardwareCategories}" SelectedItem="{Binding HardwareCategory, Mode=TwoWay}"
+                      PlaceholderText="Selecione uma categoria" HorizontalAlignment="Stretch" SelectionChanged="OnHardwareCategoryChanged" />
+            <ComboBox ItemsSource="{Binding HardwareOptions}" IsVisible="{Binding ShowHardwareOptions}"
+                      PlaceholderText="Selecione o dispositivo detectado" HorizontalAlignment="Stretch" SelectionChanged="OnHardwareDeviceChanged">
+              <ComboBox.ItemTemplate>
+                <DataTemplate><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="{Binding HardwareSelectionMessage}" Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="O nome é atualizado automaticamente. Se o dispositivo não estiver disponível, a linha mostrará Indisponível."
+                       Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
           <StackPanel IsVisible="{Binding HasSelectedMetric}" Spacing="8">
             <TextBox PlaceholderText="Nome exibido (vazio usa o nome atual)"
                      Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-              <StackPanel Spacing="3">
-                <TextBlock Text="CASAS DECIMAIS" FontSize="9" />
-                <ComboBox ItemsSource="{Binding MetricDecimalsOptions}"
-                          SelectedItem="{Binding MetricDecimals, Mode=TwoWay}"
-                          IsEnabled="{Binding CanEditMetricDecimals}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="3">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="COR DO TEXTO" FontSize="9" />
-                  <Button Grid.Column="1" Content="Padrão" Padding="6,2" Click="OnResetMetricColorClick" />
-                </Grid>
-                <TextBox PlaceholderText="#RRGGBB" Text="{Binding MetricColor, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-            </Grid>
+            <StackPanel Spacing="3">
+              <TextBlock Text="CASAS DECIMAIS" FontSize="9" TextWrapping="Wrap" />
+              <ComboBox ItemsSource="{Binding MetricDecimalsOptions}"
+                        SelectedItem="{Binding MetricDecimals, Mode=TwoWay}"
+                        IsEnabled="{Binding CanEditMetricDecimals}" />
+            </StackPanel>
+            <StackPanel Spacing="3">
+              <WrapPanel>
+                <TextBlock Text="COR DO TEXTO" FontSize="9" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <Button Content="Padrão" Padding="6,2" Click="OnResetMetricColorClick" />
+              </WrapPanel>
+              <TextBox PlaceholderText="#RRGGBB" Text="{Binding MetricColor, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
             <ItemsControl ItemsSource="{Binding ColorSwatches}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -85,7 +115,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" />
+            <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" TextWrapping="Wrap" />
             <Button Content="Aplicar ajuste à linha" HorizontalAlignment="Left" Click="OnSaveMetricOverrideClick" />
           </StackPanel>
         </StackPanel>
@@ -104,15 +134,11 @@
       </Border>
     </Canvas>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="Adicionar conteúdo…" Click="OnOpenContentPickerClick" />
-        <Button Content="Linhas ocultadas…" Click="OnOpenHiddenMetricsClick" />
-      </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-        <Button Content="Cancelar" Click="OnCancelClick" />
-        <Button Content="Aplicar conteúdo" Click="OnApplyClick" />
-      </StackPanel>
-    </Grid>
+    <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button Content="Adicionar conteúdo…" Click="OnOpenContentPickerClick" Margin="0,0,8,8" />
+      <Button Content="Linhas ocultadas…" Click="OnOpenHiddenMetricsClick" Margin="0,0,8,8" />
+      <Button Content="Cancelar" Click="OnCancelClick" Margin="0,0,8,8" />
+      <Button Content="Aplicar conteúdo" IsEnabled="{Binding CanApplyCustomLine}" Click="OnApplyClick" Margin="0,0,0,8" />
+    </WrapPanel>
   </Grid>
 </Window>

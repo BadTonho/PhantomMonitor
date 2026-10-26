@@ -661,6 +661,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         if (_disposed || !_started) return;
 
         _latestSensorData = data;
+        UpdateOverlayHardwareDevices(data);
         if (IsDiagnostics && (SelectedDiagnosticSection is "errors" or "sensors"))
             RefreshDiagnosticSensorState(data);
         ReconcileInventoryGroups(SensorInventoryBuilder.Plan(data, _inventoryAggregateStats));

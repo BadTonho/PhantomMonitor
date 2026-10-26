@@ -26,6 +26,13 @@ public partial class OverlayBlockContentPickerDialog : Window
     private void OnSaveTemplateClick(object? sender, RoutedEventArgs e) => ViewModel.SaveTemplate();
     private void OnRemoveTemplateClick(object? sender, RoutedEventArgs e) => ViewModel.RemoveTemplate();
 
+    private void OnAddCustomLineClick(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.AddCustomLine();
+        ViewModel.Apply();
+        Close(true);
+    }
+
     private void OnEditGraphClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: OverlayBlockContentChoiceViewModel choice })

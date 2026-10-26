@@ -140,8 +140,9 @@ FrameReadResult ParseFramePayload(const std::string& payload) {
     if (lines.size() < 2) return fail("missing frame terminator");
 
     const auto header = split(lines.front(), '\t');
-    if (header.size() != 31 || header[0] != "F" || header[1] != "1")
+    if (header.size() != 31 || header[0] != "F" || (header[1] != "1" && header[1] != "2"))
         return fail("unsupported frame header");
+    const bool extended = header[1] == "2";
     Frame frame;
     if (!parse_flag(header[2], frame.visible) || !parse_flag(header[3], frame.paused)
         || !parse_number(header[4], frame.width) || !parse_number(header[5], frame.reference_width)
@@ -188,10 +189,12 @@ FrameReadResult ParseFramePayload(const std::string& payload) {
             return fail("element outside block or too many elements");
 
         Element element;
-        if (fields[0] == "N" || fields[0] == "T") {
-            if (fields.size() != 4 || !parse_number(fields[1], element.font_size)
+        if (fields[0] == "N" || fields[0] == "T" || (extended && fields[0] == "W")) {
+            const bool custom_width = fields[0] == "W";
+            if (fields.size() != (custom_width ? 5 : 4) || !parse_number(fields[1], element.font_size)
                 || !bounded(element.font_size, 1, 256) || !parse_color(fields[2], element.color)
-                || !decode_base64(fields[3], element.text) || element.text.size() > 65536)
+                || !decode_base64(fields[3], element.text) || element.text.size() > 65536
+                || (custom_width && (!parse_number(fields[4], element.text_width) || !bounded(element.text_width, 1, 10000))))
                 return fail("invalid text element");
             element.kind = fields[0] == "N" ? Element::Kind::Name : Element::Kind::Text;
         } else if (fields[0] == "G") {

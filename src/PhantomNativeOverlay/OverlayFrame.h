@@ -16,6 +16,7 @@ struct Insets {
 struct Element {
     enum class Kind { Name, Text, Graph } kind = Kind::Text;
     float font_size = 0;
+    float text_width = 0;
     std::uint32_t color = 0xFFFFFFFF;
     std::string text;
     float graph_height = 0;

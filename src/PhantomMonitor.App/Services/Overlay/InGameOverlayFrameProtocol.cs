@@ -54,7 +54,7 @@ internal static class InGameOverlayFrameProtocol
             if (lines.Length < 2 || lines[^1].Length != 0) return false;
 
             var frame = lines[0].Split('\t');
-            if (frame.Length != 31 || frame[0] != "F" || frame[1] != "1"
+            if (frame.Length != 31 || frame[0] != "F" || frame[1] is not ("1" or "2")
                 || !Flag(frame[2]) || !Flag(frame[3])
                 || !Positive(frame[4]) || !Positive(frame[5]) || !Positive(frame[6])
                 || !Positive(frame[7]) || !Range(frame[8], 0, 1)
@@ -89,6 +89,11 @@ internal static class InGameOverlayFrameProtocol
                 {
                     if (fields.Length != 4 || !Positive(fields[1]) || !Color(fields[2]) || !Base64(fields[3]))
                         return false;
+                }
+                else if (frame[1] == "2" && fields[0] == "W")
+                {
+                    if (fields.Length != 5 || !Range(fields[1], 1, 256) || !Color(fields[2])
+                        || !Base64(fields[3]) || !Range(fields[4], 1, 10000)) return false;
                 }
                 else if (fields[0] == "G")
                 {

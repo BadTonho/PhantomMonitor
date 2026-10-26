@@ -42,6 +42,9 @@ public sealed class SensorData
     [JsonIgnore]
     public List<SensorAvailabilityDiagnostic> SensorAvailabilityDiagnostics { get; set; } = [];
 
+    [JsonIgnore]
+    public List<HardwareIdentity> HardwareDevices { get; set; } = [];
+
     public double GetValue(SensorType type) =>
         Values.TryGetValue(type, out var v) ? v : 0;
 

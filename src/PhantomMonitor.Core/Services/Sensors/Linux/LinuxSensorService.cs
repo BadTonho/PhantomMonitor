@@ -18,6 +18,9 @@ public sealed partial class LinuxSensorService : ISensorService
     private readonly LinuxCpuMemoryReader _cpuMemoryReader = new();
     private readonly LinuxDiskNetworkReader _diskNetworkReader = new();
     private readonly LinuxGpuSensorReader _gpuSensorReader = new();
+    private readonly LinuxHardwareIdentityReader _hardwareIdentityReader = new();
+    private List<HardwareIdentity> _hardwareIdentities = [];
+    private DateTime _lastHardwareIdentityRefresh = DateTime.MinValue;
     private readonly LinuxHardwarePowerReader _hardwarePowerReader;
     private readonly object _updateLock = new();
     private SensorData _current = new();
@@ -90,6 +93,13 @@ public sealed partial class LinuxSensorService : ISensorService
             {
                 Timestamp = DateTime.UtcNow
             };
+
+            if ((data.Timestamp - _lastHardwareIdentityRefresh).TotalSeconds >= 10)
+            {
+                _hardwareIdentities = _hardwareIdentityReader.Read();
+                _lastHardwareIdentityRefresh = data.Timestamp;
+            }
+            data.HardwareDevices = _hardwareIdentities;
 
             _gpuSensorReader.BeginSample(data.Timestamp);
             _cpuMemoryReader.ReadCpuStats(data);

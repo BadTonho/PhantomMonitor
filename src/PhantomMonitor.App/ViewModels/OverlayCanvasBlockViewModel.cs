@@ -12,6 +12,7 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
 {
     private readonly Action<string, double, double> _move;
     private readonly Dictionary<string, OverlayBlockMetricViewModel> _metricViewModels = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, OverlayCustomLineViewModel> _customLines = new(StringComparer.OrdinalIgnoreCase);
     private double _canvasWidth = 960;
     private double _canvasHeight = 760;
     private double _editorPreviewWidth;
@@ -36,6 +37,7 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
                 .Concat(Content.OfType<OverlayGraphRowViewModel>().Select(_ => "Gráfico"))
                 .Concat(Content.OfType<OverlayFrametimeGraphViewModel>().Select(_ => "Frametime"))
                 .Concat(Content.OfType<OverlayTemplateRowViewModel>().Select(_ => "Template"))
+                .Concat(Content.OfType<OverlayCustomLineViewModel>().Select(_ => "Texto"))
                 .Distinct(StringComparer.OrdinalIgnoreCase).Take(2).ToArray();
             return labels.Length == 0 ? "Bloco do overlay" : string.Join(" · ", labels);
         }
@@ -157,8 +159,17 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
             metric.RefreshTheme();
     }
 
+    public OverlayCustomLineViewModel GetCustomLine(OverlayCustomLineConfig config, IReadOnlyList<HardwareIdentity> devices)
+    {
+        if (!_customLines.TryGetValue(config.Id, out var line))
+            _customLines[config.Id] = line = new OverlayCustomLineViewModel(this, config.Id);
+        line.Update(config, devices);
+        return line;
+    }
+
     public void RefreshPresentation()
     {
+        foreach (var line in _customLines.Values) line.RefreshPresentation();
         Raise(nameof(PresentationWidth));
         Raise(nameof(PresentationBackgroundBrush));
         Raise(nameof(PresentationBorderBrush));
@@ -209,6 +220,9 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
                 if (_metricViewModels.TryGetValue(metric.Identity, out var cached) && ReferenceEquals(cached, metric))
                     _metricViewModels.Remove(metric.Identity);
             }
+            else if (Content[^1] is OverlayCustomLineViewModel customLine
+                && _customLines.TryGetValue(customLine.Id, out var cachedLine) && ReferenceEquals(cachedLine, customLine))
+                _customLines.Remove(customLine.Id);
             Content.RemoveAt(Content.Count - 1);
         }
         NotifyContentChanged();

@@ -28,7 +28,10 @@ width, reference area, label and value fonts, opacity, colors, border, margins,
 padding, spacing, and frametime graph height. `B` contains a Base64 id,
 normalized position, and Base64 title. `N`/`T` carry font size, color, and
 Base64 text; `G` carries height, color, optional axis limits, and up to 1200
-samples; `E` ends a block. The header
+samples; `E` ends a block.
+When a custom line is visible, payload version 2 adds a `W` record with font size, color, Base64 text, and width. Updated renderers accept both v1 and v2 payloads; processes using an older renderer must be restarted after the update.
+
+The shared-memory header
 stores publication time and sequence. The app refreshes the timestamp every
 second while this mode is active, including when monitoring is paused; readers
 must reject publications older than three seconds. The POSIX name remains

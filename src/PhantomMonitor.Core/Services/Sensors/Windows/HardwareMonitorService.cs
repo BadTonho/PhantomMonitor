@@ -273,6 +273,16 @@ public sealed class HardwareMonitorService : ISensorService, IOverlayProcessDisc
         var indent = new string(' ', depth * 2);
         debugInfo.Add($"{indent}[HWR] {hardware.HardwareType}: {hardware.Name}");
 
+        var category = hardware.HardwareType switch
+        {
+            HardwareType.Cpu => "cpu",
+            HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel => "gpu",
+            HardwareType.Motherboard => "motherboard",
+            _ => null
+        };
+        if (category is not null && !string.IsNullOrWhiteSpace(hardware.Name))
+            data.HardwareDevices.Add(new HardwareIdentity(category, hardware.Identifier.ToString(), hardware.Name));
+
         if (hardware.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
             gpuInstance = _hardwareInstanceFor.GetValueOrDefault(hardware, gpuInstance);
 

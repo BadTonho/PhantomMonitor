@@ -86,9 +86,26 @@ public sealed class OverlayBlockConfig
     public double Y { get; set; }
     public List<OverlayBlockItemConfig> Items { get; set; } = [];
     public List<OverlayMetricOverrideConfig> MetricOverrides { get; set; } = [];
+    public List<OverlayCustomLineConfig> CustomLines { get; set; } = [];
     /// <summary>Optional metric row order per content rule, keyed by "kind:value".</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, List<string>>? MetricOrder { get; set; }
+}
+
+public sealed class OverlayCustomLineConfig
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Text { get; set; } = "";
+    public double? FontSize { get; set; }
+    public double? Width { get; set; }
+    public List<OverlayHardwareReference> Hardware { get; set; } = [];
+}
+
+public sealed class OverlayHardwareReference
+{
+    public string Token { get; set; } = "";
+    public string DeviceId { get; set; } = "";
+    public string Category { get; set; } = "";
 }
 
 public sealed class OverlayBlockItemConfig

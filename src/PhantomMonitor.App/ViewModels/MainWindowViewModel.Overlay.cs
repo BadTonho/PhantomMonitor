@@ -10,6 +10,15 @@ namespace PhantomMonitor.App.ViewModels;
 // Overlay: alternância de visibilidade, métricas e aparência.
 public sealed partial class MainWindowViewModel
 {
+    private IReadOnlyList<HardwareIdentity> _overlayHardwareDevices = [];
+    public IReadOnlyList<HardwareIdentity> OverlayHardwareDevices => _overlayHardwareDevices;
+
+    private void UpdateOverlayHardwareDevices(SensorData data)
+    {
+        if (_overlayHardwareDevices.SequenceEqual(data.HardwareDevices)) return;
+        _overlayHardwareDevices = data.HardwareDevices.ToArray();
+        Raise(nameof(OverlayHardwareDevices));
+    }
     public void ToggleOverlay()
     {
         SetOverlayVisible(!_config.ShowOverlay);

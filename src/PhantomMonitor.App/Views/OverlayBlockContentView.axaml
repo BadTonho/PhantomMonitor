@@ -50,6 +50,13 @@
                        FontFamily="{Binding $parent[UserControl].DataContext.PresentationValueFontFamily}" TextTrimming="CharacterEllipsis"
                        Margin="{Binding $parent[UserControl].DataContext.PresentationRowMargin}" />
           </DataTemplate>
+          <DataTemplate DataType="vm:OverlayCustomLineViewModel">
+            <TextBlock Text="{Binding Text}" IsVisible="{Binding IsVisible}" FontSize="{Binding FontSize}"
+                       Width="{Binding Width}" HorizontalAlignment="Left" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontFamily="{Binding $parent[UserControl].DataContext.PresentationValueFontFamily}"
+                       Margin="{Binding $parent[UserControl].DataContext.PresentationRowMargin}" />
+          </DataTemplate>
         </ItemsControl.DataTemplates>
       </ItemsControl>
     </StackPanel>

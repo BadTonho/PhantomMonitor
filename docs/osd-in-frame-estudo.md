@@ -30,6 +30,7 @@ borda, margens, padding, espaçamentos e altura do gráfico de frametime. `B`
 contém id Base64, posição normalizada e título Base64. `N`/`T` carregam tamanho
 de fonte, cor e texto Base64; `G` carrega altura, cor, eixo opcional e até 1200
 amostras; `E` termina o bloco.
+Quando existe linha personalizada visível, o payload usa versão 2 e o registro `W` acrescenta a largura ao tamanho de fonte, cor e texto Base64. Renderers atualizados aceitam os payloads v1 e v2; processos com um renderer antigo devem ser reiniciados após a atualização.
 O cabeçalho marca a hora de publicação e a sequência; o app renova o timestamp
 a cada segundo enquanto o modo estiver ativo, inclusive durante pausa; leitores
 devem rejeitar publicação com mais de três segundos de idade. O nome POSIX fica

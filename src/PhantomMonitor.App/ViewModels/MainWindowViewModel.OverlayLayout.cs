@@ -103,10 +103,11 @@ public sealed partial class MainWindowViewModel
     public void SetOverlayBlockDefinition(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items,
         IEnumerable<OverlayGraph> graphs, IEnumerable<OverlayTemplate> templates,
         IEnumerable<OverlayMetricOverrideConfig> metricOverrides,
-        IReadOnlyDictionary<string, List<string>> metricOrder)
+        IReadOnlyDictionary<string, List<string>> metricOrder, IEnumerable<OverlayCustomLineConfig> customLines)
     {
         block.Config.Items = items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList();
         block.Config.MetricOverrides = metricOverrides.Select(CloneOverlayMetricOverride).ToList();
+        block.Config.CustomLines = customLines.Select(CloneOverlayCustomLine).ToList();
         block.Config.MetricOrder = metricOrder.Count == 0 ? null
             : metricOrder.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase);
         _overlayGraphsDraft.Clear();
@@ -144,6 +145,7 @@ public sealed partial class MainWindowViewModel
             if (current.Id != previous.Id || Math.Abs(current.X - previous.X) > 0.0001
                 || Math.Abs(current.Y - previous.Y) > 0.0001 || current.Items.Count != previous.Items.Count
                 || !OverlayDefinitionsEqual(current.MetricOverrides, previous.MetricOverrides)
+                || !OverlayDefinitionsEqual(current.CustomLines, previous.CustomLines)
                 || !MetricOrdersEqual(current.MetricOrder, previous.MetricOrder))
                 return true;
             for (var itemIndex = 0; itemIndex < current.Items.Count; itemIndex++)
@@ -272,6 +274,11 @@ public sealed partial class MainWindowViewModel
                 else if (item.Kind == "frametime")
                     desired.Add(GetFrametimeGraphItem(block,
                         block.Key + (block.IsPreview ? ":draft:" : ":applied:") + item.Value));
+                else if (item.Kind == "customline")
+                {
+                    var line = block.Config.CustomLines.FirstOrDefault(candidate => candidate.Id == item.Value);
+                    if (line is not null) desired.Add(block.GetCustomLine(line, OverlayHardwareDevices));
+                }
                 else if (extras.TryGetValue((item.Kind, item.Value), out var extra)) desired.Add(extra);
             }
             block.ReconcileContent(desired.Distinct(ReferenceEqualityComparer.Instance).ToArray());
@@ -322,9 +329,19 @@ public sealed partial class MainWindowViewModel
         Y = block.Y,
         Items = block.Items.Select(item => new OverlayBlockItemConfig { Kind = item.Kind, Value = item.Value }).ToList(),
         MetricOverrides = (block.MetricOverrides ?? []).Select(CloneOverlayMetricOverride).ToList(),
+        CustomLines = (block.CustomLines ?? []).Select(CloneOverlayCustomLine).ToList(),
         MetricOrder = block.MetricOrder is { Count: > 0 } metricOrder
             ? metricOrder.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase)
             : null
+    };
+
+    internal static OverlayCustomLineConfig CloneOverlayCustomLine(OverlayCustomLineConfig line) => new()
+    {
+        Id = line.Id, Text = line.Text, Width = line.Width, FontSize = line.FontSize,
+        Hardware = (line.Hardware ?? []).Select(reference => new OverlayHardwareReference
+        {
+            Token = reference.Token, DeviceId = reference.DeviceId, Category = reference.Category
+        }).ToList()
     };
 
     private static OverlayMetricOverrideConfig CloneOverlayMetricOverride(OverlayMetricOverrideConfig metricOverride) => new()

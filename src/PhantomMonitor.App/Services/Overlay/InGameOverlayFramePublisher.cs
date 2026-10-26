@@ -241,7 +241,7 @@ internal sealed record InGameOverlayBlockPresentation(
     IReadOnlyList<InGameOverlayElement> Elements);
 
 internal abstract record InGameOverlayElement;
-internal sealed record InGameOverlayText(char Kind, double FontSize, string Color, string Text) : InGameOverlayElement;
+internal sealed record InGameOverlayText(char Kind, double FontSize, string Color, string Text, double? Width = null) : InGameOverlayElement;
 internal sealed record InGameOverlayGraph(double Height, string Color, double? Minimum, double? Maximum,
     IReadOnlyList<double> Samples) : InGameOverlayElement;
 
@@ -323,16 +323,21 @@ internal static class InGameOverlayFrameSerializer
                     elements.Add(new InGameOverlayText('T', viewModel.OverlayMetricValueFontSize,
                         ColorHex(template.TextBrush, "FFF2F5FA"), template.Text));
                     break;
+                case OverlayCustomLineViewModel line when line.IsVisible:
+                    elements.Add(new InGameOverlayText('W', line.FontSize,
+                        ColorHex(MainWindowViewModel.ResolveBrush("TextPrimaryBrush"), "FFF2F5FA"), line.Text, line.Width));
+                    break;
             }
         }
 
         return elements;
     }
 
-    private static byte[] Serialize(InGameOverlayPresentation presentation)
+    internal static byte[] Serialize(InGameOverlayPresentation presentation)
     {
         var builder = new StringBuilder(4096);
-        builder.Append("F\t1\t")
+        var version = presentation.Blocks.Any(block => block.Elements.OfType<InGameOverlayText>().Any(element => element.Kind == 'W')) ? 2 : 1;
+        builder.Append("F\t").Append(version).Append('\t')
             .Append(presentation.Visible ? '1' : '0').Append('\t')
             .Append(presentation.Paused ? '1' : '0').Append('\t')
             .Append(Number(presentation.Width)).Append('\t')
@@ -366,7 +371,9 @@ internal static class InGameOverlayFrameSerializer
                 {
                     case InGameOverlayText text:
                         builder.Append(text.Kind).Append('\t').Append(Number(text.FontSize)).Append('\t')
-                            .Append(text.Color).Append('\t').Append(Text64(text.Text)).Append('\n');
+                            .Append(text.Color).Append('\t').Append(Text64(text.Text));
+                        if (text.Kind == 'W') builder.Append('\t').Append(Number(text.Width ?? 1));
+                        builder.Append('\n');
                         break;
                     case InGameOverlayGraph graph:
                         builder.Append("G\t").Append(Number(graph.Height)).Append('\t').Append(graph.Color).Append('\t')

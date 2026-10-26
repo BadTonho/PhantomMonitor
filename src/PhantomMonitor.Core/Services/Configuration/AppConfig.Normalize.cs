@@ -149,10 +149,21 @@ public sealed partial class AppConfig
             {
                 item.Kind = (item.Kind ?? "").Trim().ToLowerInvariant();
                 item.Value = (item.Value ?? "").Trim();
-                if (item.Kind is not ("category" or "series" or "graph" or "template" or "frametime") || item.Value.Length == 0)
+                if (item.Kind is not ("category" or "series" or "graph" or "template" or "frametime" or "customline") || item.Value.Length == 0)
                     item.Kind = "invalid";
             }
             block.Items.RemoveAll(item => item.Kind == "invalid");
+            block.CustomLines ??= [];
+            block.CustomLines.RemoveAll(line => line is null || string.IsNullOrWhiteSpace(line.Id));
+            foreach (var line in block.CustomLines)
+            {
+                line.Text ??= "";
+                line.FontSize = line.FontSize is { } font && double.IsFinite(font) ? Math.Clamp(font, 8, 20) : null;
+                line.Width = line.Width is { } width && double.IsFinite(width) ? Math.Clamp(width, 40, 700) : null;
+                line.Hardware ??= [];
+                line.Hardware.RemoveAll(reference => reference is null || string.IsNullOrWhiteSpace(reference.Token)
+                    || string.IsNullOrWhiteSpace(reference.DeviceId));
+            }
             var normalizedMetricOrder = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var entry in block.MetricOrder ?? [])
             {

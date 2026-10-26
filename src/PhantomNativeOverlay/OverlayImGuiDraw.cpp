@@ -139,7 +139,8 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
                 continue;
             }
             const float text_size = std::max(1.0f, (element.font_size > 0 ? element.font_size : frame.font_size) * sy * text_scale);
-            content_height += measure_wrapped(font, text_size, element.text, text_width) + row_top + row_bottom;
+            const float element_width = element.text_width > 0 ? std::min(text_width, element.text_width * sx) : text_width;
+            content_height += measure_wrapped(font, text_size, element.text, element_width) + row_top + row_bottom;
             if (element.kind == Element::Kind::Name) content_height += 2.0f * sy;
         }
         const float height = content_height + pad_top + pad_bottom + frame.content_spacing * sy;
@@ -167,10 +168,11 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
                 cursor_y += graph_height;
             } else {
                 const float text_size = std::max(1.0f, (element.font_size > 0 ? element.font_size : frame.font_size) * sy * text_scale);
+                const float element_width = element.text_width > 0 ? std::min(text_width, element.text_width * sx) : text_width;
                 draw->AddText(font, text_size,
                     ImVec2(content_start.x + row_left, cursor_y), color(element.color, opacity),
-                    element.text.c_str(), element.text.c_str() + element.text.size(), text_width);
-                cursor_y += measure_wrapped(font, text_size, element.text, text_width);
+                    element.text.c_str(), element.text.c_str() + element.text.size(), element_width);
+                cursor_y += measure_wrapped(font, text_size, element.text, element_width);
                 if (element.kind == Element::Kind::Name) cursor_y += 2.0f * sy;
             }
             cursor_y += row_bottom;

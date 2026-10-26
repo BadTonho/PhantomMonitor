@@ -25,6 +25,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     private readonly HashSet<(string Kind, string Value)> _selected;
     private readonly List<OverlayGraph> _graphs;
     private readonly List<OverlayTemplate> _templates;
+    private readonly List<OverlayCustomLineConfig> _customLines;
     private string? _editingGraphId;
     private string? _editingTemplateId;
     private string _seriesPatternInput = "";
@@ -52,6 +53,8 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         _detectedSeries = viewModel.OverlaySeriesOptions.ToArray();
         _graphs = viewModel.OverlayGraphsDraft.Select(Clone).ToList();
         _templates = viewModel.OverlayTemplatesDraft.Select(Clone).ToList();
+        _customLines = (block.Config.CustomLines ?? []).Select(MainWindowViewModel.CloneOverlayCustomLine).ToList();
+        _owner.PropertyChanged += OnOwnerPropertyChanged;
         _metricOrder = (block.Config.MetricOrder ?? []).ToDictionary(entry => entry.Key,
             entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase);
         _customMetricOrderGroups.UnionWith(_metricOrder.Keys);
@@ -79,6 +82,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         _selected = new HashSet<(string Kind, string Value)>(source._selected);
         _graphs = source._graphs.Select(Clone).ToList();
         _templates = source._templates.Select(Clone).ToList();
+        _customLines = source._customLines.Select(MainWindowViewModel.CloneOverlayCustomLine).ToList();
         _metricOrder = source._metricOrder.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.OrdinalIgnoreCase);
         _customMetricOrderGroups.UnionWith(source._customMetricOrderGroups);
         _selectedSeriesCategory = source._selectedSeriesCategory;
@@ -151,11 +155,14 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             Raise(nameof(CanRemoveSelectedContent));
             Raise(nameof(RemoveSelectedContentText));
             Raise(nameof(HasSelectedMetric));
+            Raise(nameof(HasSelectedCustomLine));
+            Raise(nameof(ShowMetricEditorHint));
+            LoadCustomLineEditor();
         }
     }
 
     public bool HasSelectedMetric => SelectedOrderRow?.Metric is not null;
-    public bool ShowMetricEditorHint => !HasSelectedMetric;
+    public bool ShowMetricEditorHint => !HasSelectedMetric && !HasSelectedCustomLine;
     public bool CanRemoveSelectedContent => SelectedOrderRow is not null;
     public string RemoveSelectedContentText => SelectedOrderRow?.IsMetric == true
         ? "Ocultar em todos os blocos"
@@ -220,6 +227,8 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     public void Dispose()
     {
         _owner.OverlayRows.CollectionChanged -= OnOverlayRowsChanged;
+        _owner.PropertyChanged -= OnOwnerPropertyChanged;
+        foreach (var row in OrderRows) row.Dispose();
         foreach (var choice in _metricEditChoices.Values)
             choice.Dispose();
         _metricEditChoices.Clear();
@@ -241,6 +250,8 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         _graphs.AddRange(pickerDraft._graphs.Select(Clone));
         _templates.Clear();
         _templates.AddRange(pickerDraft._templates.Select(Clone));
+        _customLines.Clear();
+        _customLines.AddRange(pickerDraft._customLines.Select(MainWindowViewModel.CloneOverlayCustomLine));
 
         OrderedContentItems.Clear();
         foreach (var item in pickerDraft.OrderedContentItems)
@@ -278,6 +289,8 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
             : OrderedContentItems.FirstOrDefault(item => item.Kind == selectedItem.Kind
                 && item.Value.Equals(selectedItem.Value, StringComparison.OrdinalIgnoreCase));
         RebuildOrderRows();
+        if (selectedItem is { Kind: "customline" })
+            SelectedOrderRow = OrderRows.FirstOrDefault(row => row.Group.Kind == "customline" && row.Group.Value == selectedItem.Value);
         PublishDraftToCanvas();
     }
 
@@ -424,6 +437,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         }
 
         if (SelectedContentItem is not { } item) return;
+        if (item.Kind == "customline") _customLines.RemoveAll(line => line.Id == item.Value);
         var choice = FindChoice(item.Kind, item.Value);
         if (choice is not null)
             choice.IsSelected = false;
@@ -591,7 +605,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         var metricOrder = _customMetricOrderGroups.ToDictionary(key => key,
             key => _metricOrder.TryGetValue(key, out var identities) ? identities.ToList() : [], StringComparer.OrdinalIgnoreCase);
         _owner.SetOverlayBlockDefinition(_block, items, _graphs, _templates,
-            _metricOverrides.Values, metricOrder);
+            _metricOverrides.Values, metricOrder, _customLines);
     }
 
     public static string GetMetricOrderKey(string kind, string value) => $"{kind.ToLowerInvariant()}:{value}";
@@ -599,6 +613,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
     private void RebuildOrderRows()
     {
         var selected = _selectedOrderRow;
+        foreach (var row in OrderRows) row.Dispose();
         OrderRows.Clear();
         var seenMetrics = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in OrderedContentItems)
@@ -683,6 +698,7 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         "series" => value,
         "graph" => _graphs.FirstOrDefault(item => item.Id == value)?.Series ?? "Gráfico",
         "template" => _templates.FirstOrDefault(item => item.Id == value)?.Text ?? "Template",
+        "customline" => CustomLineLabel(value),
         _ => value
     };
 

@@ -1,0 +1,4 @@
+EXPORTS
+    Phantom_vkGetInstanceProcAddr=_Phantom_vkGetInstanceProcAddr@8
+    Phantom_vkGetDeviceProcAddr=_Phantom_vkGetDeviceProcAddr@8
+    Phantom_vkNegotiateLoaderLayerInterfaceVersion=_Phantom_vkNegotiateLoaderLayerInterfaceVersion@4

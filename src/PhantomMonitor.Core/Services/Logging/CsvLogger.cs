@@ -6,10 +6,8 @@ namespace PhantomMonitor.Services;
 
 /// <summary>
 /// CSV de telemetria com colunas dinâmicas: o cabeçalho é escrito na primeira escrita,
-/// a partir das séries realmente presentes no primeiro snapshot (séries canônicas +
-/// séries por instância como "GpuCore#1"), em vez de uma lista fixa de colunas.
-/// Colunas existentes continuam no lugar mesmo se some hardware (ventoinha extra,
-/// USB desligada...) — a célula fica em branco/0, sem desalinhar planilhas.
+/// a partir das séries presentes. Novas séries abrem um segmento .partNNN.csv
+/// com a união das colunas; séries ausentes deixam células vazias.
 /// </summary>
 public sealed class CsvLogger : IDisposable
 {
@@ -18,6 +16,7 @@ public sealed class CsvLogger : IDisposable
     private StreamWriter? _writer;
     private List<SensorKey> _columns = [];
     private bool _disposed;
+    private int _segment;
 
     public CsvLogger(string filePath)
     {
@@ -34,7 +33,14 @@ public sealed class CsvLogger : IDisposable
             // arquivo bloqueado) não deve propagar exceção para o app.
             try
             {
-                _writer ??= OpenWriter(data);
+                var additions = data.GetSeriesKeys().Except(_columns).ToArray();
+                if (_writer is not null && additions.Length > 0)
+                {
+                    _writer.Dispose();
+                    _writer = null;
+                }
+                _columns.AddRange(additions);
+                _writer ??= OpenWriter();
                 WriteRow(data);
             }
             catch (Exception ex)
@@ -44,17 +50,19 @@ public sealed class CsvLogger : IDisposable
         }
     }
 
-    private StreamWriter OpenWriter(SensorData data)
+    private StreamWriter OpenWriter()
     {
         var dir = Path.GetDirectoryName(_filePath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-        _columns = data.GetSeriesKeys();
-        var writer = new StreamWriter(_filePath, false) { AutoFlush = false };
+        var path = _segment == 0 ? _filePath : Path.Combine(dir ?? "",
+            $"{Path.GetFileNameWithoutExtension(_filePath)}.part{_segment + 1:D3}{Path.GetExtension(_filePath)}");
+        var writer = new StreamWriter(path, false) { AutoFlush = false };
 
         // Cabeçalho fixo na abertura: coluna 0 é o timestamp, o resto são as séries do snapshot.
         writer.WriteLine(string.Join(",", ["Timestamp", .. _columns.Select(c => c.ToString())]));
         writer.Flush();
+        _segment++;
         return writer;
     }
 
@@ -64,7 +72,9 @@ public sealed class CsvLogger : IDisposable
         cells[0] = data.Timestamp.ToString("O", CultureInfo.InvariantCulture);
         for (int i = 0; i < _columns.Count; i++)
         {
-            cells[i + 1] = data.GetValue(_columns[i]).ToString("F2", CultureInfo.InvariantCulture);
+            var key = _columns[i];
+            var present = key.IsPrimary ? data.Values.ContainsKey(key.Type) : data.Series.ContainsKey(key);
+            cells[i + 1] = present ? data.GetValue(key).ToString("F2", CultureInfo.InvariantCulture) : "";
         }
         _writer!.WriteLine(string.Join(",", cells));
         _writer.Flush();

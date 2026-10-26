@@ -304,8 +304,8 @@ public sealed class UpdateService
             // Troca: o applier lança o updater one-shot e o app encerra em seguida.
             try
             {
-                Publish(state with { Status = UpdateStatus.Applying });
                 _applier.Apply(targetVersion);
+                Publish(state with { Status = UpdateStatus.Applying });
             }
             catch (Exception ex)
             {

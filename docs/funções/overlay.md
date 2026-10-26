@@ -228,3 +228,17 @@ OSD" das suítes de referência):
 - `SetWindowPos` com `HWND_TOPMOST` para manter a sobreposição sempre visível
 
 ull usa a cor do tema/acento
+
+## Robustez dos renderizadores e D3D12
+O canal Windows é lido sem operações de escrita em páginas somente leitura.
+Vulkan inicializa loader data dos seus command buffers, resolve o backend ImGui
+pela cadeia seguinte e serializa o contexto global. Filas são identificadas pelo
+próprio handle; fences por imagem protegem a reutilização dos comandos. Swapchains
+protegidas, com camadas, sem color attachment ou com mudança de família são
+recusadas preservando o present do jogo. O manifesto Windows usa caminho nativo
+e exports sem decoração também em x86. Não são necessárias import libraries Vulkan.
+No Windows, Configurações permite iniciar executáveis com o hook antes da criação
+da swapchain. A descoberta tardia observa `ExecuteCommandLists` e usa uma fila
+DIRECT apenas se for inequívoca para o dispositivo; com várias filas, use o
+lançamento antecipado. `Present` e `Present1` são interceptados. Jogos com APIs ou
+proteções específicas ainda precisam de validação real; nenhuma proteção é contornada.

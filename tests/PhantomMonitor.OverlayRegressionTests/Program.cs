@@ -7,8 +7,8 @@ using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
 
-var tests = new (string Name, Action Run)[]
-{
+(string Name, Action Run)[] tests =
+[
     ("coordenadas do canvas acompanham resolução e escala da tela", TestCanvasToScreenCoordinates),
     ("layout aplicado preserva itens e o filtro de séries do preview", TestAppliedContentParity),
     ("modo do overlay migra configs antigas para janela flutuante", TestOverlayRenderModeMigration),
@@ -19,14 +19,18 @@ var tests = new (string Name, Action Run)[]
     ("PresentMon descobre múltiplos PIDs e ignora linhas inválidas", TestPresentMonProcessDiscovery),
     ("PIDs sem novos frames expiram da descoberta", TestPresentMonProcessExpiration),
     ("sessão PresentMon continua ativa para descoberta com coleta parada", TestPresentMonSessionDemand),
-    ("registro Vulkan x86/x64 pode ser ativado e removido sem Registro real", TestVulkanLayerRegistration)
-};
+    ("registro Vulkan x86/x64 pode ser ativado e removido sem Registro real", TestVulkanLayerRegistration),
+    .. CoreRegressionTests.Cases
+];
 
+var failed = 0;
 foreach (var test in tests)
 {
-    test.Run();
-    Console.WriteLine($"PASS: {test.Name}");
+    try { test.Run(); Console.WriteLine($"PASS: {test.Name}"); }
+    catch (TestSkippedException ex) { Console.WriteLine($"SKIP: {test.Name}: {ex.Message}"); }
+    catch (Exception ex) { failed++; Console.Error.WriteLine($"FAIL: {test.Name}: {ex}"); }
 }
+Environment.ExitCode = failed > 0 ? 1 : 0;
 
 static void TestCanvasToScreenCoordinates()
 {
@@ -296,7 +300,7 @@ static void TestInGameFrameProtocol()
 
 static void TestPosixInGameFramePublisher()
 {
-    if (!OperatingSystem.IsLinux()) return;
+    if (!OperatingSystem.IsLinux()) throw new TestSkippedException("Requer Linux.");
 
     var name = InGameOverlayFramePublisher.LinuxMappingNamePrefix
         + NativeMethods.getuid().ToString(System.Globalization.CultureInfo.InvariantCulture);

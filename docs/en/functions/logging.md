@@ -2,11 +2,17 @@
 
 # Logging (CSV / JSON / JSONL)
 
+CSV rotates to `.part002.csv`, `.part003.csv`, etc. when new series appear;
+each new segment contains the union of columns and earlier segments stay intact.
+Missing series have empty cells. Consumers should read all segments of a capture.
+The background writer accepts up to 256 queued snapshots. On saturation it drops
+new samples, reports `DroppedSnapshots` and logs an actionable disk warning.
+
 The unified app shares the log formats across platforms and writes to the per-user data directory: `%LOCALAPPDATA%\PhantomMonitor\logs` on Windows and normally `~/.local/share/PhantomMonitor/logs/` on Linux, respecting `XDG_DATA_HOME` when set.
 
 ## CSV (`CsvLogger`)
 
-CSV columns are created from the first snapshot: `Timestamp`, canonical sensor series, then per-instance keys such as `GpuCore#1`, `CpuTemperature#3`, and `FanSpeed#2`. A new file is created for each collection session. Names use a millisecond suffix, `sensors_YYYYMMDD_HHmmss_fff.csv` (the retired WPF format `sensors_YYYYMMDD_HHmmss.csv` remains readable). If hardware disappears, its column remains and the row contains zero to preserve table alignment.
+CSV columns are created from the first snapshot: `Timestamp`, canonical sensor series, then per-instance keys such as `GpuCore#1`, `CpuTemperature#3`, and `FanSpeed#2`. A new file is created for each collection session. Names use a millisecond suffix, `sensors_YYYYMMDD_HHmmss_fff.csv` (the retired WPF format `sensors_YYYYMMDD_HHmmss.csv` remains readable). If hardware disappears, its column remains and the row contains an empty cell to preserve table alignment.
 
 `WriteMarker()` adds `#marker,<timestamp>,<label>` to the active CSV. Resetting session statistics creates a marker such as `reset (inventory)` without disrupting spreadsheet columns.
 

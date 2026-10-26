@@ -59,3 +59,7 @@ Internally, `AppConfig` remains the read/write boundary. Normalization and overl
 In source, configuration types and normalization are grouped under `PhantomMonitor.Core/Services/Configuration/`; namespaces and serialized names remain unchanged.
 
 In the desktop app, `SaveSettings()` coordinates validation, persistence, and application; sensor-service replacement, HTTP exporter lifecycle, and theme-change handling live in dedicated ViewModel partials.
+
+## Null list entries
+Null graph/template entries are removed before ID normalization. They do not
+discard unrelated settings from an otherwise valid configuration.

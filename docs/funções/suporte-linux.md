@@ -175,3 +175,12 @@ Os arquivos CSV/JSON/JSONL e o `errors.log` ficam em
 para NVIDIA, inclui driver, NVML, hwmon e métricas publicadas. O exportador HTTP
 é opcional, desativado por padrão e restrito ao loopback; ativar `listenAll`
 expõe os endpoints na rede sem TLS ou autenticação.
+
+## Coleta, inicialização e empacotamento atualizados
+Os totais de rede acumulam deltas de bytes, incluindo intervalos ociosos. Discos
+são identificados por `/sys/block`, incluindo virtio, Xen, eMMC e nomes SCSI longos;
+partições, loop/RAM e agregadores dm/md são excluídos para evitar dupla contagem.
+Autostart respeita `XDG_CONFIG_HOME` e usa o arquivo `APPIMAGE` persistente quando
+disponível. O pacote `.deb` aponta de `/usr/bin` para `../lib/phantom-monitor`.
+Vulkan pode ser compilado separadamente com `-DPHANTOM_BUILD_OPENGL=OFF`; o preload
+OpenGL exige headers/bibliotecas GLX e EGL. Ambos continuam ativados por padrão.

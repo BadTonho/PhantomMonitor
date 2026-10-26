@@ -29,14 +29,14 @@
             <TextBlock Text="A aparência e a composição dos blocos são ajustadas no editor visual." Classes="muted" FontSize="10" TextWrapping="Wrap" />
             <Button Classes="action accent" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
             <StackPanel IsVisible="{Binding IsOverlayInGameModeSelected}" Spacing="8">
-              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O PhantomMonitor detecta globalmente aplicações apresentando frames enquanto estiver aberto e tenta instalar o hook, sem cadastro de executável. A detecção usa ETW/PresentMon e pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O PhantomMonitor detecta globalmente aplicações apresentando frames enquanto estiver aberto e tenta instalar o hook, sem cadastro de executável. A detecção usa ETW/PresentMon e pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook. Para jogos D3D12 em que o overlay não aparece, adicione o executável abaixo e use Iniciar." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
               <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="No Linux, adicione um executável para iniciá-lo com Vulkan e, se instalado, o preload OpenGL GLX/EGL. Para Steam, cole a opção gerada abaixo nas propriedades do jogo." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-              <Grid IsVisible="{Binding IsLinuxPlatform}" ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
+              <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
                 <TextBox Text="{Binding OverlayTargetPathText, Mode=TwoWay}" PlaceholderText="Caminho do executável" />
                 <TextBox Grid.Column="1" Text="{Binding OverlayTargetArgumentsText, Mode=TwoWay}" PlaceholderText="Argumentos (opcional)" />
                 <Button Grid.Column="2" Content="Adicionar" Click="OnAddOverlayTargetClick" />
               </Grid>
-              <ItemsControl IsVisible="{Binding IsLinuxPlatform}" ItemsSource="{Binding OverlayInGameTargets}">
+              <ItemsControl ItemsSource="{Binding OverlayInGameTargets}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,2">
@@ -51,7 +51,7 @@
                 <TextBox Text="{Binding SteamOverlayLaunchOption}" IsReadOnly="True" MinWidth="260" />
                 <Button Content="Copiar opção Steam" Click="OnCopySteamOverlayOptionClick" />
               </StackPanel>
-              <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Border>

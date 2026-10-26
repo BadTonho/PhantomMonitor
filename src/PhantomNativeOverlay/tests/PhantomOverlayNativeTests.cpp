@@ -8,6 +8,12 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#endif
 
 namespace {
 int failures = 0;
@@ -80,6 +86,17 @@ int main() {
     check(TryParseFrameSnapshot(bytes.data(), bytes.size(), now, snapshot_frame, sequence, snapshot_error)
           && sequence == 2 && snapshot_frame.blocks.size() == 1,
           "complete stable shared-memory snapshot accepted");
+#if defined(_WIN32)
+    auto* readonly = static_cast<unsigned char*>(VirtualAlloc(nullptr, bytes.size(), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+    if (readonly) {
+        std::memcpy(readonly, bytes.data(), bytes.size());
+        DWORD old = 0;
+        const bool protected_page = VirtualProtect(readonly, bytes.size(), PAGE_READONLY, &old) != 0;
+        check(protected_page && TryParseFrameSnapshot(readonly, bytes.size(), now, snapshot_frame, sequence, snapshot_error),
+              "Windows read-only mapping can be read without a write access violation");
+        VirtualFree(readonly, 0, MEM_RELEASE);
+    } else check(false, "allocate read-only mapping test");
+#endif
     check(!TryParseFrameSnapshot(bytes.data(), bytes.size() - 1, now,
           snapshot_frame, sequence, snapshot_error), "partial snapshot rejected");
     bytes = snapshot(valid_payload(), now, 3);

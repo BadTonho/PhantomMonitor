@@ -1,5 +1,8 @@
 # Análise técnica do Phantom Monitor — 25/10/2026
 
+> Registro histórico. Os 21 achados receberam correções no ciclo de 26/10;
+> veja [implementação, testes e limites](correcoes-analise-2026-10-26.md).
+
 Base analisada: commit `471b775`, com árvore de trabalho inicialmente limpa.
 
 A aplicação .NET e os componentes nativos Windows x64 compilam, mas existem falhas funcionais importantes no overlay, nos atalhos globais e na atualização automática. Foram identificados **21 achados: 10 de prioridade alta (P1) e 11 de prioridade média (P2)**. Não foi identificado um problema P0, independente de configuração e que bloqueie toda a aplicação.

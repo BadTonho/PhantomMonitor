@@ -21,9 +21,11 @@ namespace PhantomMonitor.Services;
 public sealed class BackgroundSnapshotWriter : IDisposable
 {
     private readonly Channel<SensorData> _channel =
-        Channel.CreateUnbounded<SensorData>(new UnboundedChannelOptions { SingleReader = true });
+        Channel.CreateBounded<SensorData>(new BoundedChannelOptions(256)
+        { SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
     private readonly Thread _thread;
     private readonly List<Action<SensorData>> _writers = [];
+    private volatile bool _abandon;
 
     public BackgroundSnapshotWriter()
     {
@@ -38,7 +40,17 @@ public sealed class BackgroundSnapshotWriter : IDisposable
     /// <summary>Registra um consumidor na fila compartilhada. Chame antes do uso.</summary>
     public void AddWriter(Action<SensorData> writer) => _writers.Add(writer);
 
-    public void Write(SensorData data) => _channel.Writer.TryWrite(data);
+    private long _dropped;
+    public long DroppedSnapshots => Interlocked.Read(ref _dropped);
+    public void Write(SensorData data)
+    {
+        if (!_channel.Writer.TryWrite(data))
+        {
+            var dropped = Interlocked.Increment(ref _dropped);
+            if (dropped == 1 || dropped % 100 == 0)
+                ErrorLog.Write("SnapshotWriter", $"Fila de 256 amostras cheia; {dropped} snapshots descartados. Verifique o disco.");
+        }
+    }
 
     private void Run()
     {
@@ -53,8 +65,10 @@ public sealed class BackgroundSnapshotWriter : IDisposable
 
                 while (_channel.Reader.TryRead(out var data))
                 {
+                    if (_abandon) return;
                     foreach (var writer in _writers)
                     {
+                        if (_abandon) return;
                         try
                         {
                             writer(data);
@@ -80,6 +94,9 @@ public sealed class BackgroundSnapshotWriter : IDisposable
         // é descartado (falhas contínuas de escrita já são registradas pelos writers).
         _channel.Writer.TryComplete();
         if (!_thread.Join(TimeSpan.FromSeconds(3)))
+        {
+            _abandon = true;
             ErrorLog.Write("SnapshotWriter", "Drenagem não concluiu no teto de 3 s ao encerrar.");
+        }
     }
 }

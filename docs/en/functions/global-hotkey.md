@@ -22,3 +22,7 @@ Examples: `Ctrl+Shift+O`, `Ctrl+Alt+F10`, `F9`, `Win+Shift+P`.
 The Avalonia frontend does not expose a WndProc for the main window, so the behavior is provided by `GlobalHotkeyService` in `Core/Services/Hotkeys/Windows/`: a **message-only** window on a dedicated thread is created with `HWND_MESSAGE` (`-3`), receives `WM_HOTKEY`, and publishes each callback to the UI dispatcher (the retired WPF used the main window's `HwndSource`). It reuses `HotkeyParser`, the same default/pause hotkey IDs as the WPF (`0x5048`/`0x5049`), `MOD_NOREPEAT`, and re-registers a changed combination with the same ID on reconfiguration. Failures (invalid spec, combination already in use by another application) are logged to `logs/errors.log` without stopping the app.
 
 These hotkeys are Windows-specific; the unified app does not register them on Linux yet (X11/XWayland is the future path; pure Wayland does not allow global hotkeys by design).
+
+## Window ownership
+Registration and removal are marshalled to the message-only window's owning
+thread. Callback failures are logged without terminating the message loop.

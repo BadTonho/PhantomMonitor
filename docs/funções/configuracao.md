@@ -87,3 +87,7 @@ Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da me
 Internamente, `AppConfig` continua sendo a fronteira de leitura e gravação. A normalização e a migração do overlay ficam em partials próprias; os modelos de configuração estão separados por domínio em arquivos de overlay, sensores e demais opções, sem alterar os nomes JSON nem os padrões existentes.
 
 Na aplicação desktop, `SaveSettings()` coordena validação, gravação e aplicação; a troca do serviço de sensores, o ciclo do exportador HTTP e a reação à mudança de tema ficam em partials dedicadas do ViewModel.
+
+## Tolerância a entradas nulas
+Elementos `null` nas listas `overlay.graphs` e `overlay.templates` são removidos
+antes de normalizar IDs. Eles não invalidam opções independentes da configuração.

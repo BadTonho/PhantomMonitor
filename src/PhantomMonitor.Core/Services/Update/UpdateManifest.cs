@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace PhantomMonitor.Services.Update;
 
 /// <summary>Arquivo anexado à release (asset), com nome e URL de download.</summary>
-public sealed record GitHubReleaseAsset(string Name, string Url, long Size);
+public sealed record GitHubReleaseAsset(string Name, string Url, long Size, string? Digest = null);
 
 /// <summary>
 /// Uma release do GitHub já analisada (tag, título, notas e assets). O parser
@@ -36,7 +36,7 @@ public sealed record GitHubReleaseInfo(
                 var size = asset.TryGetProperty("size", out var sizeElement)
                            && sizeElement.ValueKind == JsonValueKind.Number
                            && sizeElement.TryGetInt64(out var parsedSize) ? parsedSize : 0;
-                assets.Add(new GitHubReleaseAsset(name, url, size));
+                assets.Add(new GitHubReleaseAsset(name, url, size, GetText(asset, "digest")));
             }
         }
 

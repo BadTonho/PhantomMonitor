@@ -8,6 +8,7 @@
         "implementation_version": "1",
         "description": "PhantomMonitor Native Vulkan Frametime & FPS Telemetry Layer",
         "functions": {
+            "vkNegotiateLoaderLayerInterfaceVersion": "Phantom_vkNegotiateLoaderLayerInterfaceVersion",
             "vkGetInstanceProcAddr": "Phantom_vkGetInstanceProcAddr",
             "vkGetDeviceProcAddr": "Phantom_vkGetDeviceProcAddr"
         },

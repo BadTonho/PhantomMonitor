@@ -62,3 +62,7 @@ The popup is topmost and does not take focus; a new alert replaces the current o
 Alert events and script launch failures are written to `logs/errors.log` (the unified app tags `[AlertActions]`; the retired WPF tagged `[AlertService]`); failures do not stop monitoring. The editor preserves existing sound and shutdown fields when saving. Evaluation uses the value in each snapshot, so peaks between samples are not observed. `allowShutdown` guards schedule-shutdown on Windows; on Linux shutdown is never executed, and WHEA is a Windows-only counter.
 
 In Avalonia, the toast lasts six seconds; a new native D-Bus notification replaces the previous desktop notification, while both alerts remain in the 50-entry in-memory history. Script parsing rejects an unmatched quote or a trailing escape character. Script paths that do not exist, non-executable non-`.sh` files, and process-start failures are logged without suppressing the history entry or ending collection.
+
+## Independent rules
+Each rule has its own activation/cooldown state. Rules sharing the same condition
+can execute different actions in the same sample without suppressing each other.

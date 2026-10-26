@@ -158,3 +158,9 @@ Invoke-RestMethod http://127.0.0.1:7317/values | % { "$($_.series['GpuCore'])" }
 dotnet run --project tools/TelemetrySdkReader           # 500 ms
 dotnet run --project tools/TelemetrySdkReader -- 250    # intervalo custom
 ```
+
+## Limites do exportador HTTP atual
+O listener aceita no máximo 16 handlers simultâneos. O excesso recebe HTTP 503;
+escritas assíncronas têm prazo de cinco segundos e respostas lentas são abortadas.
+A publicação do snapshot não bloqueia a coleta. O acesso LAN continua opt-in e sem
+autenticação/TLS, conforme o contrato existente.

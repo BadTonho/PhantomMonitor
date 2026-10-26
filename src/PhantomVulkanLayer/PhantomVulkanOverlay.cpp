@@ -1,4 +1,5 @@
 #include "PhantomVulkanOverlay.h"
+#include "PhantomVulkanDispatch.h"
 
 #include "OverlayFrameReader.h"
 #include "OverlayImGuiDraw.h"
@@ -49,6 +50,10 @@ struct DeviceFunctions {
     PFN_vkDestroySemaphore destroy_semaphore = nullptr;
     PFN_vkQueueSubmit queue_submit = nullptr;
     PFN_vkDeviceWaitIdle device_wait_idle = nullptr;
+    PFN_vkCreateFence create_fence = nullptr;
+    PFN_vkDestroyFence destroy_fence = nullptr;
+    PFN_vkWaitForFences wait_for_fences = nullptr;
+    PFN_vkResetFences reset_fences = nullptr;
 };
 
 struct SwapchainState {
@@ -61,11 +66,15 @@ struct SwapchainState {
     std::vector<VkFramebuffer> framebuffers;
     std::vector<VkCommandBuffer> commands;
     std::vector<VkSemaphore> render_complete;
+    std::vector<VkFence> submitted;
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VkCommandPool command_pool = VK_NULL_HANDLE;
     ImGuiContext* imgui = nullptr;
     FrameReader reader;
     bool initialized = false;
+    bool supported = true;
+    bool submission_failed = false;
+    std::uint32_t initialized_family = UINT32_MAX;
     std::string last_error;
     std::mutex render_mutex;
 };
@@ -75,16 +84,20 @@ struct DeviceState {
     VkPhysicalDevice physical = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     DeviceFunctions fn;
+    PFN_vkGetInstanceProcAddr gipa = nullptr;
+    PFN_vkSetDeviceLoaderData set_loader_data = nullptr;
     VkAllocationCallbacks allocator_copy{};
     bool has_allocator = false;
     std::unordered_set<std::uint32_t> requested_families;
     std::unordered_map<std::uint32_t, bool> graphics_families;
-    std::unordered_map<void*, std::uint32_t> queue_families;
-    std::unordered_map<std::uint64_t, std::unique_ptr<SwapchainState>> swapchains;
+    std::unordered_map<VkQueue, std::uint32_t> queue_families;
+    std::unordered_map<std::uint64_t, std::shared_ptr<SwapchainState>> swapchains;
     std::mutex family_mutex;
 };
 
 std::mutex g_mutex;
+// The ImGui backend's function pointers and current context are process-global.
+std::mutex g_imgui_mutex;
 std::unordered_map<void*, std::shared_ptr<DeviceState>> g_devices;
 StatusPublisher g_status(StatusProducer::Vulkan);
 
@@ -115,7 +128,7 @@ bool query_graphics_family(DeviceState& state, std::uint32_t family) {
     }
 
     auto get_properties = reinterpret_cast<PFN_vkGetPhysicalDeviceQueueFamilyProperties>(
-        vkGetInstanceProcAddr(state.instance, "vkGetPhysicalDeviceQueueFamilyProperties"));
+        state.gipa(state.instance, "vkGetPhysicalDeviceQueueFamilyProperties"));
     if (!get_properties) {
         state.graphics_families[family] = false;
         return false;
@@ -138,7 +151,21 @@ void update_status(RenderState state, const std::string& message) noexcept {
     catch (...) { }
 }
 
+bool load_backend_functions(DeviceState& device) {
+    return ImGui_ImplVulkan_LoadFunctions(VK_API_VERSION_1_0,
+        [](const char* name, void* user) -> PFN_vkVoidFunction {
+            auto& state = *static_cast<DeviceState*>(user);
+            // Instance/physical-device queries must use GIPA. Device functions
+            // stay below this layer, including backend-owned command buffers.
+            if (std::strstr(name, "PhysicalDevice") || std::strcmp(name, "vkEnumeratePhysicalDevices") == 0)
+                return state.gipa(state.instance, name);
+            auto result = state.fn.gdpa(state.device, name);
+            return result ? result : state.gipa(state.instance, name);
+        }, &device);
+}
+
 void destroy_swapchain(DeviceState& device, SwapchainState& swapchain) {
+    load_backend_functions(device);
     if (swapchain.imgui != nullptr) {
         ImGui::SetCurrentContext(swapchain.imgui);
         if (swapchain.initialized) ImGui_ImplVulkan_Shutdown();
@@ -148,6 +175,9 @@ void destroy_swapchain(DeviceState& device, SwapchainState& swapchain) {
     for (const auto semaphore : swapchain.render_complete)
         if (semaphore && device.fn.destroy_semaphore)
             device.fn.destroy_semaphore(device.device, semaphore, nullptr);
+    for (const auto fence : swapchain.submitted)
+        if (fence && device.fn.destroy_fence) device.fn.destroy_fence(device.device, fence, nullptr);
+    swapchain.submitted.clear();
     if (!swapchain.commands.empty() && swapchain.command_pool && device.fn.free_command_buffers)
         device.fn.free_command_buffers(device.device, swapchain.command_pool,
             static_cast<std::uint32_t>(swapchain.commands.size()), swapchain.commands.data());
@@ -169,6 +199,7 @@ void destroy_swapchain(DeviceState& device, SwapchainState& swapchain) {
     swapchain.render_complete.clear();
     swapchain.images.clear();
     swapchain.initialized = false;
+    swapchain.initialized_family = UINT32_MAX;
 }
 
 struct SwapchainInitializationGuard {
@@ -228,7 +259,8 @@ bool initialize_swapchain(DeviceState& device, SwapchainState& swapchain,
         || !device.fn.create_framebuffer || !device.fn.create_command_pool || !device.fn.allocate_command_buffers
         || !device.fn.create_semaphore || !device.fn.reset_command_buffer || !device.fn.begin_command_buffer
         || !device.fn.end_command_buffer || !device.fn.cmd_begin_render_pass || !device.fn.cmd_end_render_pass
-        || !device.fn.queue_submit) {
+        || !device.fn.queue_submit || !device.fn.create_fence || !device.fn.destroy_fence
+        || !device.fn.wait_for_fences || !device.fn.reset_fences) {
         swapchain.last_error = "Vulkan loader did not provide all rendering entry points";
         return false;
     }
@@ -301,6 +333,16 @@ bool initialize_swapchain(DeviceState& device, SwapchainState& swapchain,
             return false;
         }
         swapchain.render_complete.push_back(semaphore);
+        VkFenceCreateInfo fence_info{};
+        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        VkFence fence = VK_NULL_HANDLE;
+        result = device.fn.create_fence(device.device, &fence_info, allocator, &fence);
+        if (result != VK_SUCCESS) {
+            swapchain.last_error = "vkCreateFence failed";
+            return false;
+        }
+        swapchain.submitted.push_back(fence);
     }
 
     VkCommandPoolCreateInfo pool_info{};
@@ -321,6 +363,11 @@ bool initialize_swapchain(DeviceState& device, SwapchainState& swapchain,
     result = device.fn.allocate_command_buffers(device.device, &command_info, swapchain.commands.data());
     if (result != VK_SUCCESS) {
         swapchain.last_error = "vkAllocateCommandBuffers failed: " + std::to_string(result);
+        return false;
+    }
+    if (!InitializeCommandDispatch(device.device, swapchain.commands.data(),
+            static_cast<std::uint32_t>(swapchain.commands.size()), device.set_loader_data)) {
+        swapchain.last_error = "Vulkan loader rejected command buffer dispatch initialization";
         return false;
     }
 
@@ -348,6 +395,7 @@ bool initialize_swapchain(DeviceState& device, SwapchainState& swapchain,
         return false;
     }
     swapchain.initialized = true;
+    swapchain.initialized_family = queue_family;
     if (!ImGui_ImplVulkan_CreateFontsTexture()) {
         swapchain.last_error = "Dear ImGui font texture upload failed";
         return false;
@@ -361,6 +409,14 @@ bool initialize_swapchain(DeviceState& device, SwapchainState& swapchain,
 bool draw_present(DeviceState& device, SwapchainState& swapchain, VkQueue queue,
                   std::uint32_t queue_family, const VkPresentInfoKHR* present_info,
                   PFN_vkQueuePresentKHR next_present, VkResult* result_out) {
+    if (!swapchain.supported || swapchain.submission_failed || (swapchain.initialized && swapchain.initialized_family != queue_family)) {
+        update_status(RenderState::Unsupported, "Swapchain Vulkan protegida, sem color attachment, em camadas ou com mudança de família; overlay ignorado.");
+        return false;
+    }
+    if (!load_backend_functions(device)) {
+        update_status(RenderState::Unsupported, "A cadeia Vulkan não oferece as funções exigidas pelo renderer.");
+        return false;
+    }
     if (present_info->swapchainCount != 1 || present_info->pImageIndices == nullptr) {
         update_status(RenderState::Unsupported, "Vulkan presenta múltiplas swapchains no mesmo quadro; o overlay foi ignorado.");
         return false;
@@ -392,6 +448,12 @@ bool draw_present(DeviceState& device, SwapchainState& swapchain, VkQueue queue,
         return false;
     }
 
+    // Acquiring an image index need not mean its acquire semaphore has already
+    // signaled. Drain our previous submission before resetting any CPU resources.
+    if (device.fn.wait_for_fences(device.device, 1, &swapchain.submitted[image_index], VK_TRUE, 1'000'000'000) != VK_SUCCESS) {
+        update_status(RenderState::Failed, "Timeout aguardando comandos Vulkan anteriores; apresentação preservada.");
+        return false;
+    }
     ImGui::SetCurrentContext(swapchain.imgui);
     ImGui_ImplVulkan_SetFrameIndex(image_index);
     ImGui_ImplVulkan_NewFrame();
@@ -443,8 +505,11 @@ bool draw_present(DeviceState& device, SwapchainState& swapchain, VkQueue queue,
     submit.pCommandBuffers = &command_buffer;
     submit.signalSemaphoreCount = 1;
     submit.pSignalSemaphores = &swapchain.render_complete[image_index];
-    result = device.fn.queue_submit(queue, 1, &submit, VK_NULL_HANDLE);
+    result = device.fn.reset_fences(device.device, 1, &swapchain.submitted[image_index]);
+    if (result != VK_SUCCESS) return false;
+    result = device.fn.queue_submit(queue, 1, &submit, swapchain.submitted[image_index]);
     if (result != VK_SUCCESS) {
+        swapchain.submission_failed = true;
         update_status(RenderState::Failed, "vkQueueSubmit do overlay falhou: " + std::to_string(result));
         return false;
     }
@@ -485,13 +550,16 @@ std::shared_ptr<DeviceState> find_device(VkDevice device) {
 void RegisterDevice(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device,
                     const VkDeviceCreateInfo* create_info,
                     PFN_vkGetInstanceProcAddr next_gipa,
-                    PFN_vkGetDeviceProcAddr next_gdpa) {
+                    PFN_vkGetDeviceProcAddr next_gdpa,
+                    PFN_vkSetDeviceLoaderData set_loader_data) {
     if (!device || !next_gdpa) return;
     auto state = std::make_shared<DeviceState>();
     state->instance = instance;
     state->physical = physical_device;
     state->device = device;
     state->fn.gdpa = next_gdpa;
+    state->gipa = next_gipa;
+    state->set_loader_data = set_loader_data;
     state->fn.get_swapchain_images = device_proc<PFN_vkGetSwapchainImagesKHR>(next_gdpa, device, "vkGetSwapchainImagesKHR");
     state->fn.create_image_view = device_proc<PFN_vkCreateImageView>(next_gdpa, device, "vkCreateImageView");
     state->fn.destroy_image_view = device_proc<PFN_vkDestroyImageView>(next_gdpa, device, "vkDestroyImageView");
@@ -512,6 +580,10 @@ void RegisterDevice(VkInstance instance, VkPhysicalDevice physical_device, VkDev
     state->fn.destroy_semaphore = device_proc<PFN_vkDestroySemaphore>(next_gdpa, device, "vkDestroySemaphore");
     state->fn.queue_submit = device_proc<PFN_vkQueueSubmit>(next_gdpa, device, "vkQueueSubmit");
     state->fn.device_wait_idle = device_proc<PFN_vkDeviceWaitIdle>(next_gdpa, device, "vkDeviceWaitIdle");
+    state->fn.create_fence = device_proc<PFN_vkCreateFence>(next_gdpa, device, "vkCreateFence");
+    state->fn.destroy_fence = device_proc<PFN_vkDestroyFence>(next_gdpa, device, "vkDestroyFence");
+    state->fn.wait_for_fences = device_proc<PFN_vkWaitForFences>(next_gdpa, device, "vkWaitForFences");
+    state->fn.reset_fences = device_proc<PFN_vkResetFences>(next_gdpa, device, "vkResetFences");
     if (create_info != nullptr) {
         for (std::uint32_t i = 0; i < create_info->queueCreateInfoCount; ++i)
             state->requested_families.insert(create_info->pQueueCreateInfos[i].queueFamilyIndex);
@@ -525,7 +597,7 @@ void RegisterQueue(VkDevice device, VkQueue queue, std::uint32_t queue_family) {
     auto state = find_device(device);
     if (!state || !queue) return;
     std::lock_guard<std::mutex> lock(g_mutex);
-    state->queue_families[dispatch_key(queue)] = queue_family;
+    state->queue_families[queue] = queue_family;
 }
 
 void RegisterSwapchain(VkDevice device, VkSwapchainKHR swapchain,
@@ -533,11 +605,14 @@ void RegisterSwapchain(VkDevice device, VkSwapchainKHR swapchain,
                        const VkAllocationCallbacks* allocator) {
     auto state = find_device(device);
     if (!state || !swapchain || !create_info) return;
-    auto entry = std::make_unique<SwapchainState>();
+    auto entry = std::make_shared<SwapchainState>();
     entry->handle = swapchain;
     entry->format = create_info->imageFormat;
     entry->extent = create_info->imageExtent;
     entry->min_image_count = create_info->minImageCount;
+    entry->supported = (create_info->imageUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0
+        && create_info->imageArrayLayers == 1
+        && (create_info->flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR) == 0;
     (void)allocator; // Renderer-owned objects always use Vulkan's default allocator.
     std::lock_guard<std::mutex> lock(g_mutex);
     state->swapchains[handle_key(swapchain)] = std::move(entry);
@@ -547,7 +622,7 @@ void DestroySwapchain(VkDevice device, VkSwapchainKHR swapchain,
                       const VkAllocationCallbacks* allocator) {
     auto state = find_device(device);
     if (!state) return;
-    std::unique_ptr<SwapchainState> entry;
+    std::shared_ptr<SwapchainState> entry;
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         auto found = state->swapchains.find(handle_key(swapchain));
@@ -557,6 +632,8 @@ void DestroySwapchain(VkDevice device, VkSwapchainKHR swapchain,
     }
     if (state->fn.device_wait_idle) state->fn.device_wait_idle(device);
     (void)allocator;
+    std::lock_guard<std::mutex> imgui_lock(g_imgui_mutex);
+    std::lock_guard<std::mutex> render_lock(entry->render_mutex);
     destroy_swapchain(*state, *entry);
 }
 
@@ -570,6 +647,7 @@ void DestroyDevice(VkDevice device) {
         g_devices.erase(found);
     }
     if (state->fn.device_wait_idle) state->fn.device_wait_idle(device);
+    std::lock_guard<std::mutex> imgui_lock(g_imgui_mutex);
     for (auto& item : state->swapchains)
         destroy_swapchain(*state, *item.second);
     state->swapchains.clear();
@@ -581,10 +659,10 @@ bool TryPresent(VkDevice device, VkQueue queue, const VkPresentInfoKHR* present_
     auto state = find_device(device);
     if (!state) return false;
     std::uint32_t queue_family = 0;
-    SwapchainState* swapchain = nullptr;
+    std::shared_ptr<SwapchainState> swapchain;
     {
         std::lock_guard<std::mutex> lock(g_mutex);
-        const auto queue_found = state->queue_families.find(dispatch_key(queue));
+        const auto queue_found = state->queue_families.find(queue);
         if (queue_found == state->queue_families.end()) {
             update_status(RenderState::Unsupported, "Fila Vulkan de apresentação não registrada por vkGetDeviceQueue/2.");
             return false;
@@ -600,12 +678,13 @@ bool TryPresent(VkDevice device, VkQueue queue, const VkPresentInfoKHR* present_
             update_status(RenderState::Waiting, "A apresentação Vulkan ainda não tem uma swapchain registrada.");
             return false;
         }
-        swapchain = found->second.get();
+        swapchain = found->second;
     }
     if (!query_graphics_family(*state, queue_family)) {
         update_status(RenderState::Unsupported, "A fila Vulkan de apresentação não aceita comandos gráficos; overlay ignorado.");
         return false;
     }
+    std::lock_guard<std::mutex> imgui_lock(g_imgui_mutex);
     std::lock_guard<std::mutex> render_lock(swapchain->render_mutex);
     return draw_present(*state, *swapchain, queue, queue_family, present_info, next_present, result);
 }

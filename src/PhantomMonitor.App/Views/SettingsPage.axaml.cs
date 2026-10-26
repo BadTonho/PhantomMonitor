@@ -24,10 +24,10 @@ public partial class SettingsPage : UserControl
         if (sender is Button { DataContext: OverlayLaunchTargetConfig target })
             ViewModel.RemoveOverlayInGameTarget(target);
     }
-    private void OnLaunchOverlayTargetClick(object? sender, RoutedEventArgs e)
+    private async void OnLaunchOverlayTargetClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: OverlayLaunchTargetConfig target })
-            ViewModel.LaunchOverlayTarget(target);
+            await ViewModel.LaunchOverlayTargetAsync(target);
     }
     private async void OnCopySteamOverlayOptionClick(object? sender, RoutedEventArgs e)
     {

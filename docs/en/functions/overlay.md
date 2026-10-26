@@ -135,3 +135,14 @@ Profile `opacity` overrides the global `overlayOpacity` and is normalized to 0.1
 For templates, a placeholder without an explicit series can use the canonical value or the first available instance. A wildcard placeholder resolves to the first matching `SensorKey`. A template line is placed at the bottom of the panel, after the dynamic instance-series block. Template font size is the base OSD size minus one point.
 
 For history graphs, a flat series receives a small automatic vertical range (±0.5) so it remains visible. Automatic-axis graphs use the current window's minimum and maximum; explicit `min`/`max` values give a stable benchmark scale. Missing series hide the graph without clearing its circular history. At most 12 graphs are retained by normalization.
+
+## Renderer robustness and D3D12
+Windows frame reads never write to read-only pages. Vulkan initializes dispatch
+data on layer-owned command buffers, resolves ImGui through the next chain,
+serializes the global context and uses per-image fences and per-queue handle keys.
+Protected/layered swapchains, missing color-attachment usage and queue-family
+changes are rejected while preserving presentation. Windows manifests and x86
+exports are loader-compatible; no Vulkan import library is required. Settings can
+launch Windows games early. Late D3D12 discovery observes command submissions and
+uses only an unambiguous DIRECT queue; multiple-queue games should use early launch.
+Both Present and Present1 are hooked. Real game/API compatibility still needs testing.

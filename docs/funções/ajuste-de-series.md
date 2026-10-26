@@ -93,3 +93,7 @@ coleta está ativa, a recriação inicia uma nova sessão de sensores e zera sua
 estatísticas. O mesmo bloco `sensorTuning` do `config.json` é consumido pelo app
 único nos dois sistemas (o WPF aposentado usava o mesmo bloco, sem mudança de
 formato).
+
+## Ausência e retorno de uma série
+Quando a série desaparece do snapshot, sua cadência, último valor e janela de
+suavização são descartados. Ao reaparecer, a primeira leitura é sempre fresca.

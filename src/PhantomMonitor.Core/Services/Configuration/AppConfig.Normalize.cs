@@ -84,10 +84,12 @@ public sealed partial class AppConfig
         }
         Overlay.Layout = normalizedOverlayLayout;
         Overlay.Graphs ??= [];
+        Overlay.Graphs.RemoveAll(graph => graph is null);
         var graphIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var graph in Overlay.Graphs)
             if (string.IsNullOrWhiteSpace(graph.Id) || !graphIds.Add(graph.Id)) graph.Id = Guid.NewGuid().ToString("N");
         Overlay.Templates ??= [];
+        Overlay.Templates.RemoveAll(template => template is null);
         var templateIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var template in Overlay.Templates)
             if (string.IsNullOrWhiteSpace(template.Id) || !templateIds.Add(template.Id)) template.Id = Guid.NewGuid().ToString("N");

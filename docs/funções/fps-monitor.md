@@ -67,3 +67,17 @@ Detalhes de robustez:
   do Avg/Min; o `FpsP1` coincide com o `Fps1Low` já existente (mesmo índice da
   janela), e as séries novas ganham as counterparts P99 e os percentis de frametime
   que antes só existiam visualmente no gráfico. Janelas independentes para FPS e frametime.
+
+## Telemetria Vulkan Linux v2
+A camada publica um ring de 4.096 frames com sequência de escrita e identificador
+de sessão. `LinuxVulkanTelemetryReader` drena todos os frames ainda disponíveis
+entre polls de 100 ms. Se a leitura atrasar além da capacidade, o diagnóstico
+informa a lacuna. A janela estatística contém até 3.600 frames reais, não polls.
+O leitor preserva o jogo atual enquanto recebe frames recentes; objetos ociosos
+por mais de dois segundos não bloqueiam outro processo. Troca de PID, sessão ou
+reinício do contador limpa todas as métricas. Dados expirados tornam `HasData=false`.
+O formato v1 continua legível em modo aproximado, com orientação para reinstalar
+a camada. O v2 tem 98.424 bytes: prefixo legado de 100, capacidade em 100,
+sequência uint64 em 104, sessão uint64 em 112 e 4.096 registros de 24 bytes em 120.
+Cada registro contém número uint64, timestamp monotônico uint64, frametime float e
+FPS float. Reinstale com `install_layer.sh` após atualizar a aplicação.

@@ -25,3 +25,13 @@ The Windows rolling window holds up to 3600 frame samples (about 60 seconds at 6
 On Windows, optional CSV columns are matched case-insensitively by substring because PresentMon versions use names such as `GpuBusy%`, `GPU Busy %`, `MsUntilDisplayed`, or `PresentLatency`. Busy and wait percentages are accepted only from 0 to 100%; latency is constrained to a plausible range of 0–2000 ms. If the installed PresentMon does not provide a column, its series is unavailable (some older versions publish zero, which consumers treat as unavailable for these optional metrics). `FpsP1` uses the same rolling-window percentile as `Fps1Low`; P99 FPS and frametime expose the other tail of their respective windows.
 
 The WPF service parses quoted CSV fields dynamically, falls back among the available frametime columns, and checks the foreground process periodically. The Linux dashboard displays a clear prompt to enable the Phantom layer when no Vulkan frames have arrived.
+
+## Linux Vulkan telemetry v2
+The native layer publishes a sequence-protected 4,096-frame ring with a session
+identifier. Polling drains every retained frame, including spikes between polls;
+overflow is reported. Statistics use up to 3,600 actual frames. Idle entries older
+than two seconds cannot block an active game. PID/session/counter restarts reset
+all metrics; stale readings clear `HasData`. Legacy v1 remains readable with an
+approximation warning. Reinstall the layer after updating. The v2 layout is 98,424
+bytes: legacy prefix 100, capacity at 100, uint64 sequence at 104, uint64 session
+at 112, and 4,096 24-byte frame records at 120 (number, timestamp, float ms/FPS).

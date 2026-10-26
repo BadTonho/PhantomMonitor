@@ -13,8 +13,31 @@ public sealed class LinuxStartupManager : IStartupManager
 {
     public static LinuxStartupManager Shared { get; } = new();
 
-    private static string AutostartDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "autostart");
+    private static string AutostartDirectory => Path.Combine(ResolveConfigRoot(
+        Environment.GetEnvironmentVariable("XDG_CONFIG_HOME"),
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)), "autostart");
+
+    internal static string ResolveConfigRoot(string? configured, string home) =>
+        !string.IsNullOrWhiteSpace(configured) && Path.IsPathFullyQualified(configured)
+            ? configured : Path.Combine(home, ".config");
+
+    internal static string? ResolveExecutable(string? appImage, string? processPath) =>
+        !string.IsNullOrWhiteSpace(appImage) && Path.IsPathFullyQualified(appImage) && File.Exists(appImage)
+            ? appImage : processPath;
+
+    private static string? Executable => ResolveExecutable(Environment.GetEnvironmentVariable("APPIMAGE"), Environment.ProcessPath);
+
+    internal static string FormatExec(string path)
+    {
+        if (path.Any(char.IsControl)) throw new ArgumentException("O caminho do executável contém caracteres de controle.");
+        // Exec quoting followed by Desktop Entry string escaping; no shell.
+        var quoted = path.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("$", "\\$", StringComparison.Ordinal)
+            .Replace("`", "\\`", StringComparison.Ordinal)
+            .Replace("%", "%%", StringComparison.Ordinal);
+        return "\"" + quoted.Replace("\\", "\\\\", StringComparison.Ordinal) + "\"";
+    }
 
     private static string DesktopFilePath => Path.Combine(AutostartDirectory, "phantom-monitor.desktop");
 
@@ -22,7 +45,7 @@ public sealed class LinuxStartupManager : IStartupManager
     {
         try
         {
-            var exe = Environment.ProcessPath;
+            var exe = Executable;
             if (string.IsNullOrEmpty(exe)) return false;
 
             if (!File.Exists(DesktopFilePath)) return false;
@@ -31,8 +54,8 @@ public sealed class LinuxStartupManager : IStartupManager
                 if (!line.StartsWith("Exec=", StringComparison.Ordinal)) continue;
 
                 // A entrada escrita aqui é Exec="<exe>" (sem argumentos); compara sem aspas.
-                var registered = line["Exec=".Length..].Trim().Trim('"');
-                return string.Equals(registered, exe, StringComparison.Ordinal);
+                var registered = line["Exec=".Length..].Trim();
+                return string.Equals(registered, FormatExec(exe), StringComparison.Ordinal);
             }
             return false;
         }
@@ -53,7 +76,7 @@ public sealed class LinuxStartupManager : IStartupManager
                 return true;
             }
 
-            var exe = Environment.ProcessPath;
+            var exe = Executable;
             if (string.IsNullOrEmpty(exe) || !File.Exists(exe)) return false;
 
             Directory.CreateDirectory(AutostartDirectory);
@@ -63,7 +86,7 @@ public sealed class LinuxStartupManager : IStartupManager
                 Type=Application
                 Name=Phantom Monitor
                 Comment=Monitor de hardware ao vivo com OSD, alertas e gravação
-                Exec="{exe}"
+                Exec={FormatExec(exe)}
                 Terminal=false
                 Categories=System;Utility;
                 """;

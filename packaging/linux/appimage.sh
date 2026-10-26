@@ -1,5 +1,6 @@
 #!/bin/sh
-# Phantom Monitor: empacotador EXPERIMENTAL de AppImage — NÃO TESTADO.
+# Phantom Monitor: empacotador EXPERIMENTAL de AppImage — AppDir coberto por regressão;
+# geração/execução do AppImage real exige appimagetool e validação em desktop.
 #
 # Requisitos (rode no Linux): appimagetool no PATH (AppImageKit) + o publish
 # linux-x64 do frontend Avalonia gerado antes (scripts/release.ps1 ou
@@ -13,7 +14,7 @@ PUBLISH_DIR=${1:?Uso: appimage.sh <dir-do-publish-linux> <saida>.AppImage}
 OUTPUT_APPIMAGE=${2:?Uso: appimage.sh <dir-do-publish-linux> <saida>.AppImage}
 APPNAME=PhantomMonitor
 
-[ -x "$PUBLISH_DIR/$APPNAME" ] || {
+[ -f "$PUBLISH_DIR/$APPNAME" ] || {
     echo "ERROR: $PUBLISH_DIR/$APPNAME not found/not executable. Publish first." >&2
     exit 1
 }
@@ -30,12 +31,14 @@ trap 'rm -rf "$APPDIR"' EXIT
 # Conteúdo do publish vai para usr/bin (AppImage convenção).
 mkdir -p "$APPDIR/usr/bin"
 cp -r "$PUBLISH_DIR/." "$APPDIR/usr/bin/"
+chmod +x "$APPDIR/usr/bin/$APPNAME"
 
 # Ícone provisório (fantasma.png do repo); substitua quando houver ícone oficial.
 REPO_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp "$REPO_ROOT/fantasma.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/phantom-monitor.png"
 cp "$REPO_ROOT/fantasma.png" "$APPDIR/.DirIcon"
+cp "$REPO_ROOT/fantasma.png" "$APPDIR/phantom-monitor.png"
 
 # AppRun mínimo: executa o binário .NET junto dos assets empacotados.
 cat > "$APPDIR/AppRun" <<EOF

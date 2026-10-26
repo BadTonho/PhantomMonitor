@@ -92,6 +92,12 @@ public sealed class SensorTuningEngine
 
         foreach (var rule in _rules)
         {
+            foreach (var missing in rule.LastPublished.Keys.Where(key => !raws.ContainsKey(key)).ToArray())
+            {
+                rule.NextDue.Remove(missing);
+                rule.LastPublished.Remove(missing);
+                rule.Window.Remove(missing);
+            }
             foreach (var key in keys)
             {
                 if (!key.MatchesPattern(rule.Series)) continue;

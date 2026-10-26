@@ -107,7 +107,16 @@ Builds publicados ficam na [página de Releases](https://github.com/BadTonho/Pha
 | `phantom-monitor_<versão>_amd64.deb` | Linux (pacote .deb) |
 | `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan para FPS/frametime (instalação manual com `install_layer.sh`; não entra na troca automática) |
 
-Releases são geradas localmente por mantenedores (`scripts/release.ps1`, sem CI); detalhes na [documentação de atualizações](docs/funções/atualizações.md) e nos empacotadores em `packaging/`. Como os pacotes são binários independentes assinados por nós, o Windows pode exibir o aviso do **SmartScreen** ("editor desconhecido") e o Linux pode pedir confirmação de execução na primeira abertura.
+Releases são geradas localmente por mantenedores (`scripts/release.ps1`, sem CI); detalhes na [documentação de atualizações](docs/funções/atualizações.md) e nos empacotadores em `packaging/`. Os scripts não assinam os binários. O Windows pode exibir o aviso do **SmartScreen** ("editor desconhecido") e o Linux pode pedir confirmação na primeira abertura. O download automático exige o SHA-256 publicado pela API do GitHub; a troca inclui subpastas, conserva backups de recuperação e restaura o conjunto alterado em falhas de cópia tratadas. Feche jogos que usam os hooks Windows antes de atualizar.
+
+## Validação das correções
+
+O tarball Linux usa `tools/ReleasePackager` para gravar permissões POSIX explícitas,
+inclusive quando a release é empacotada no Windows.
+
+Execute `dotnet run --project tests/PhantomMonitor.OverlayRegressionTests -c Release`; o runner é um console e precisa ser executado, mesmo estando na solução. `dotnet test` sozinho não o executa. Para C++, use `cmake -S src/PhantomVulkanLayer -B build/native -DBUILD_TESTING=ON`, `cmake --build build/native --config Release` e `ctest --test-dir build/native -C Release --output-on-failure`. No Linux, `sh tests/linux-regression.sh` verifica atualização, rollback e pacote `.deb`.
+
+A camada Vulkan resolve funções dinamicamente e exige apenas os headers do SDK, sem biblioteca de importação de 32 ou 64 bits. O preload OpenGL exige os pacotes de desenvolvimento EGL/GLX; `-DPHANTOM_BUILD_OPENGL=OFF` permite compilar Vulkan e seus testes independentemente. Reinstale a camada Linux para usar o ring v2 com 4.096 quadros. No Windows, o lançamento antecipado está disponível em Configurações para capturar a fila exata de jogos D3D12 com múltiplas filas.
 
 ## Configuração e dados
 

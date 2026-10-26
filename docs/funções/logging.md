@@ -23,9 +23,19 @@ quando definido).
 - O timestamp da sessão inclui milissegundos para evitar colisão ao
   parar e iniciar novamente dentro do mesmo segundo
 - Hardware que desaparece depois (USB desligada, SSD removido) mantém sua coluna
-  na tabela; a célula fica em zero — o alinhamento de planilhas não quebra
+  na tabela; a célula fica vazia — o alinhamento de planilhas não quebra
 - Formato: `sensors_YYYYMMDD_HHmmss_fff.csv` (o formato antigo do WPF aposentado,
   `_YYYYMMDD_HHmmss.csv`, permanece legível por quem consome as colunas)
+
+## Rotação do CSV e limite de escrita
+
+Quando surge uma série nova (por exemplo, FPS depois do início), o CSV abre
+`.part002.csv`, `.part003.csv` etc. com a união das colunas. Os segmentos
+anteriores permanecem intactos; consumidores devem ler todos os segmentos.
+
+A fila de escrita é limitada a 256 snapshots. Se o disco não acompanhar a
+coleta, novas amostras são descartadas com diagnóstico no `ErrorLog` e contador
+`DroppedSnapshots`, preservando a ordem das amostras aceitas e a memória do app.
 
 ## JsonLogger
 

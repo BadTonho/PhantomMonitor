@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -25,11 +26,13 @@ public sealed class GlobalHotkeyService : IDisposable
     private const uint ModNoRepeat = 0x4000;
     private const uint WmClose = 0x0010;
     private const uint WmDestroy = 0x0002;
+    private const uint WmWork = 0x8001;
 
     private static readonly IntPtr ClassName = Marshal.StringToHGlobalUni("PhantomMonitorHotkeys");
     private static readonly object ClassLock = new();
     private static ushort _classAtom;
-    private static GlobalHotkeyService? _instance; // um serviço por processo; o WndProc estático o encontra
+    private static readonly ConcurrentDictionary<IntPtr, GlobalHotkeyService> Owners = new();
+    private readonly ConcurrentQueue<(Func<bool> Action, TaskCompletionSource<bool> Completion)> _work = new();
 
     private sealed record Registration(Action Callback);
 
@@ -41,7 +44,6 @@ public sealed class GlobalHotkeyService : IDisposable
 
     public GlobalHotkeyService()
     {
-        _instance = this;
         EnsureWindowThread();
     }
 
@@ -69,6 +71,11 @@ public sealed class GlobalHotkeyService : IDisposable
             return false;
         }
 
+        return InvokeOnWindow(() => RegisterCore(hotkeyId, spec, modifiers, virtualKey, callback));
+    }
+
+    private bool RegisterCore(int hotkeyId, string spec, uint modifiers, uint virtualKey, Action callback)
+    {
         lock (_registrations)
         {
             if (_registrations.TryGetValue(hotkeyId, out _))
@@ -88,6 +95,9 @@ public sealed class GlobalHotkeyService : IDisposable
     }
 
     public void UnregisterAll()
+        => InvokeOnWindow(() => { UnregisterCore(); return true; });
+
+    private void UnregisterCore()
     {
         lock (_registrations)
         {
@@ -95,6 +105,32 @@ public sealed class GlobalHotkeyService : IDisposable
                 foreach (var hotkeyId in _registrations.Keys)
                     UnregisterHotKey(_hwnd, hotkeyId);
             _registrations.Clear();
+        }
+    }
+
+    private bool InvokeOnWindow(Func<bool> action)
+    {
+        if (!_windowReady.Wait(TimeSpan.FromSeconds(3)) || _hwnd == IntPtr.Zero) return false;
+        if (Thread.CurrentThread == _messageThread) return action();
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _work.Enqueue((action, completion));
+        if (!PostMessageW(_hwnd, WmWork, IntPtr.Zero, IntPtr.Zero)) completion.TrySetCanceled();
+        try { return completion.Task.WaitAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult(); }
+        catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
+        {
+            completion.TrySetCanceled();
+            ErrorLog.Write("GlobalHotkey", "A thread de atalhos não respondeu ao comando.");
+            return false;
+        }
+    }
+
+    private void DrainWork()
+    {
+        while (_work.TryDequeue(out var work))
+        {
+            if (work.Completion.Task.IsCompleted) continue;
+            try { work.Completion.TrySetResult(work.Action()); }
+            catch (Exception ex) { ErrorLog.Write("GlobalHotkey.Command", ex); work.Completion.TrySetResult(false); }
         }
     }
 
@@ -127,6 +163,7 @@ public sealed class GlobalHotkeyService : IDisposable
                 return;
             }
 
+            Owners[_hwnd] = this;
             _windowReady.Set();
             while (GetMessageW(out var msg, IntPtr.Zero, 0, 0) > 0)
             {
@@ -136,7 +173,10 @@ public sealed class GlobalHotkeyService : IDisposable
         }
         finally
         {
+            Owners.TryRemove(_hwnd, out _);
             _hwnd = IntPtr.Zero;
+            _windowReady.Set();
+            while (_work.TryDequeue(out var work)) work.Completion.TrySetCanceled();
         }
     }
 
@@ -175,11 +215,17 @@ public sealed class GlobalHotkeyService : IDisposable
     {
         if (msg == WmHotkey)
         {
-            _instance?.Dispatch((int)wParam);
+            if (Owners.TryGetValue(hwnd, out var owner)) owner.Dispatch((int)wParam);
+            return IntPtr.Zero;
+        }
+        if (msg == WmWork)
+        {
+            if (Owners.TryGetValue(hwnd, out var owner)) owner.DrainWork();
             return IntPtr.Zero;
         }
         if (msg == WmClose)
         {
+            if (Owners.TryGetValue(hwnd, out var owner)) owner.UnregisterCore();
             DestroyWindow(hwnd);
             return IntPtr.Zero;
         }
@@ -201,17 +247,19 @@ public sealed class GlobalHotkeyService : IDisposable
             else
                 return;
         }
-        callback();
+        try { callback(); }
+        catch (Exception ex) { ErrorLog.Write("GlobalHotkey.Callback", ex); }
     }
 
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
-        UnregisterAll();
+        _windowReady.Wait(TimeSpan.FromSeconds(3));
         if (_hwnd != IntPtr.Zero)
             PostMessageW(_hwnd, WmClose, IntPtr.Zero, IntPtr.Zero);
-        _windowReady.Dispose();
+        if (_messageThread != Thread.CurrentThread && _messageThread?.Join(TimeSpan.FromSeconds(3)) == true)
+            _windowReady.Dispose();
     }
 
     // ---------------- Win32 ----------------
@@ -228,6 +276,7 @@ public sealed class GlobalHotkeyService : IDisposable
         public int Time;
         public int X;
         public int Y;
+        public uint Private;
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

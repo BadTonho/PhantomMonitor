@@ -29,6 +29,8 @@ namespace {
 using namespace phantom::overlay;
 
 using PresentFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT);
+using Present1Fn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain1*, UINT, UINT, const DXGI_PRESENT_PARAMETERS*);
+using ExecuteListsFn = void(STDMETHODCALLTYPE*)(ID3D12CommandQueue*, UINT, ID3D12CommandList* const*);
 using ResizeBuffersFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
 using D3D9PresentFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*);
 using D3D9ResetFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
@@ -39,6 +41,9 @@ using CreateSwapChainForHwndFn = HRESULT(STDMETHODCALLTYPE*)(IDXGIFactory2*, IUn
     const DXGI_SWAP_CHAIN_DESC1*, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC*, IDXGIOutput*, IDXGISwapChain1**);
 
 PresentFn g_present = nullptr;
+Present1Fn g_present1 = nullptr;
+ExecuteListsFn g_execute_lists = nullptr;
+std::unordered_map<ID3D12Device*, std::vector<ID3D12CommandQueue*>> g_observed_queues;
 ResizeBuffersFn g_resize_buffers = nullptr;
 D3D9PresentFn g_d3d9_present = nullptr;
 D3D9ResetFn g_d3d9_reset = nullptr;
@@ -534,12 +539,14 @@ void render_d3d11(IDXGISwapChain* swapchain) {
         static_cast<float>(desc.BufferDesc.Width) / frame.reference_width,
         static_cast<float>(desc.BufferDesc.Height) / frame.reference_height, &draw_data);
     if (!draw_data) return;
-    ID3D11RenderTargetView* old_target = nullptr;
-    g_d3d11_context->OMGetRenderTargets(1, &old_target, nullptr);
+    ID3D11RenderTargetView* old_targets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT]{};
+    ID3D11DepthStencilView* old_depth = nullptr;
+    g_d3d11_context->OMGetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, old_targets, &old_depth);
     g_d3d11_context->OMSetRenderTargets(1, &g_d3d11_target, nullptr);
     ImGui_ImplDX11_RenderDrawData(draw_data);
-    g_d3d11_context->OMSetRenderTargets(1, &old_target, nullptr);
-    if (old_target) old_target->Release();
+    g_d3d11_context->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, old_targets, old_depth);
+    for (auto* target : old_targets) if (target) target->Release();
+    if (old_depth) old_depth->Release();
     set_status(RenderApi::Direct3D11, RenderState::Active, "Renderer Direct3D 11 desenhando o quadro aplicado.");
 }
 
@@ -607,9 +614,40 @@ void render_d3d12(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue) {
 ID3D12CommandQueue* find_queue(IDXGISwapChain* swapchain) {
     std::lock_guard<std::mutex> lock(g_swapchain_mutex);
     const auto found = g_queues.find(swapchain);
-    if (found == g_queues.end()) return nullptr;
+    if (found == g_queues.end()) {
+        ID3D12Device* device = nullptr;
+        if (FAILED(swapchain->GetDevice(IID_PPV_ARGS(&device)))) return nullptr;
+        const auto observed = g_observed_queues.find(device);
+        device->Release();
+        // Multiple DIRECT queues are ambiguous. Never submit into an arbitrary
+        // queue: the early launcher captures the exact swapchain association.
+        if (observed == g_observed_queues.end() || observed->second.size() != 1) return nullptr;
+        observed->second[0]->AddRef();
+        return observed->second[0];
+    }
     found->second->AddRef();
     return found->second;
+}
+
+void STDMETHODCALLTYPE detour_execute_lists(ID3D12CommandQueue* queue, UINT count, ID3D12CommandList* const* lists) {
+    ID3D12Device* device = nullptr;
+    try {
+    if (queue->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) {
+        if (SUCCEEDED(queue->GetDevice(IID_PPV_ARGS(&device)))) {
+            {
+                std::lock_guard<std::mutex> lock(g_swapchain_mutex);
+                if (g_observed_queues.size() < 64 || g_observed_queues.find(device) != g_observed_queues.end()) {
+                    auto& known = g_observed_queues[device];
+                    if (known.size() < 8 && std::find(known.begin(), known.end(), queue) == known.end()) {
+                        known.push_back(queue); queue->AddRef();
+                    }
+                }
+            }
+        }
+    }
+    } catch (...) { }
+    if (device) device->Release();
+    g_execute_lists(queue, count, lists);
 }
 
 void observe_swapchain(IDXGISwapChain* swapchain, IUnknown* device_or_queue) {
@@ -659,7 +697,7 @@ HRESULT STDMETHODCALLTYPE detour_resize_buffers(IDXGISwapChain* swapchain, UINT 
     return result;
 }
 
-HRESULT STDMETHODCALLTYPE detour_present(IDXGISwapChain* swapchain, UINT sync, UINT flags) {
+void render_present(IDXGISwapChain* swapchain, UINT flags) {
     if ((flags & DXGI_PRESENT_TEST) == 0) {
       try {
         std::lock_guard<std::mutex> lock(g_render_mutex);
@@ -697,7 +735,24 @@ HRESULT STDMETHODCALLTYPE detour_present(IDXGISwapChain* swapchain, UINT sync, U
         set_status(RenderApi::Unknown, RenderState::Failed, "Exceção desconhecida no hook DXGI.");
       }
     }
+}
+
+thread_local unsigned int g_present_depth = 0;
+struct PresentScope {
+    bool outer = g_present_depth++ == 0;
+    ~PresentScope() { --g_present_depth; }
+};
+
+HRESULT STDMETHODCALLTYPE detour_present(IDXGISwapChain* swapchain, UINT sync, UINT flags) {
+    PresentScope scope;
+    if (scope.outer) render_present(swapchain, flags);
     return g_present(swapchain, sync, flags);
+}
+
+HRESULT STDMETHODCALLTYPE detour_present1(IDXGISwapChain1* swapchain, UINT sync, UINT flags, const DXGI_PRESENT_PARAMETERS* parameters) {
+    PresentScope scope;
+    if (scope.outer) render_present(swapchain, flags);
+    return g_present1(swapchain, sync, flags, parameters);
 }
 
 ULONG STDMETHODCALLTYPE detour_release(IUnknown* object) {
@@ -771,6 +826,24 @@ DWORD WINAPI initialize_hooks(void*) {
     success = hook_address(swapchain_vtable[8], reinterpret_cast<void*>(detour_present), reinterpret_cast<void**>(&g_present)) && success;
     success = hook_address(swapchain_vtable[13], reinterpret_cast<void*>(detour_resize_buffers),
         reinterpret_cast<void**>(&g_resize_buffers)) && success;
+    IDXGISwapChain1* swapchain1 = nullptr;
+    if (SUCCEEDED(swapchain->QueryInterface(IID_PPV_ARGS(&swapchain1)))) {
+        auto** vtable1 = *reinterpret_cast<void***>(swapchain1);
+        success = hook_address(vtable1[22], reinterpret_cast<void*>(detour_present1), reinterpret_cast<void**>(&g_present1)) && success;
+        swapchain1->Release();
+    }
+    ID3D12Device* probe12 = nullptr;
+    ID3D12CommandQueue* queue12 = nullptr;
+    if (SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&probe12)))) {
+        D3D12_COMMAND_QUEUE_DESC queue_desc{};
+        queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        if (SUCCEEDED(probe12->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&queue12)))) {
+            auto** queue_vtable = *reinterpret_cast<void***>(queue12);
+            hook_address(queue_vtable[10], reinterpret_cast<void*>(detour_execute_lists), reinterpret_cast<void**>(&g_execute_lists));
+            queue12->Release();
+        }
+        probe12->Release();
+    }
     IDXGIDevice* dxgi_device = nullptr;
     IDXGIAdapter* adapter = nullptr;
     IDXGIFactory* factory = nullptr;

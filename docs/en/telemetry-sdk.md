@@ -79,3 +79,8 @@ dotnet run --project tools/TelemetrySdkReader -- 250
 ```
 
 Consumers should check the `version` before parsing. A breaking layout change requires a new map name (for example, `_v2`) and a version increment.
+
+## Current HTTP exporter limits
+The listener permits 16 concurrent handlers. Excess requests receive HTTP 503;
+asynchronous response writes have a five-second deadline. Snapshot publication
+does not block collection. LAN access remains opt-in without authentication/TLS.

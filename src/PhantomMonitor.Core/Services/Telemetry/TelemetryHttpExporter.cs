@@ -33,6 +33,7 @@ public sealed class TelemetryHttpExporter : IDisposable
     private readonly int _port;
     private readonly bool _listenAll;
     private readonly HttpListener _listener = new();
+    private readonly SemaphoreSlim _handlers = new(16, 16);
     private CancellationTokenSource? _cts;
     private Task? _serveLoop;
     private volatile SensorData? _latest;
@@ -102,7 +103,13 @@ public sealed class TelemetryHttpExporter : IDisposable
                 break; // listener quebrado (ex.: URL sem permissão) — nada adianta continuar
             }
 
-            _ = Task.Run(() => Handle(context), CancellationToken.None);
+            if (!_handlers.Wait(0))
+            {
+                context.Response.StatusCode = 503;
+                context.Response.Close();
+                continue;
+            }
+            _ = HandleBoundedAsync(context);
         }
     }
 
@@ -120,7 +127,13 @@ public sealed class TelemetryHttpExporter : IDisposable
         catch (Exception ex) { ErrorLog.Write("HttpExporter.StateChanged", ex); }
     }
 
-    private void Handle(HttpListenerContext context)
+    private async Task HandleBoundedAsync(HttpListenerContext context)
+    {
+        try { await HandleAsync(context).ConfigureAwait(false); }
+        finally { _handlers.Release(); }
+    }
+
+    private async Task HandleAsync(HttpListenerContext context)
     {
         try
         {
@@ -134,12 +147,12 @@ public sealed class TelemetryHttpExporter : IDisposable
 
             if (body == null)
             {
-                WriteText(context, 404, "text/plain; charset=utf-8", $"Use {ValuesPath} ou {HealthPath}.\n");
+                await WriteTextAsync(context, 404, "text/plain; charset=utf-8", $"Use {ValuesPath} ou {HealthPath}.\n").ConfigureAwait(false);
             }
             else
             {
                 context.Response.Headers[HttpResponseHeader.CacheControl] = "no-store";
-                WriteText(context, 200, "application/json; charset=utf-8", body);
+                await WriteTextAsync(context, 200, "application/json; charset=utf-8", body).ConfigureAwait(false);
             }
 
             context.Response.Close();
@@ -151,13 +164,13 @@ public sealed class TelemetryHttpExporter : IDisposable
         }
     }
 
-    private static void WriteText(HttpListenerContext context, int status, string contentType, string text)
+    private static async Task WriteTextAsync(HttpListenerContext context, int status, string contentType, string text)
     {
         context.Response.StatusCode = status;
         context.Response.ContentType = contentType;
         var bytes = Encoding.UTF8.GetBytes(text);
         context.Response.ContentLength64 = bytes.Length;
-        context.Response.OutputStream.Write(bytes);
+        await context.Response.OutputStream.WriteAsync(bytes).AsTask().WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
     }
 
     public void Dispose()

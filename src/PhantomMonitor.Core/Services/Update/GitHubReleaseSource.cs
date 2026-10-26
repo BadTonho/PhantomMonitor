@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace PhantomMonitor.Services.Update;
@@ -57,6 +58,8 @@ public static class GitHubReleaseSource
     public static async Task DownloadFileAsync(
         GitHubReleaseAsset asset, string destinationPath, Action<double>? progress = null, CancellationToken cancellation = default)
     {
+        if (string.IsNullOrWhiteSpace(asset.Digest))
+            throw new IOException("A release não publica SHA-256; baixe e verifique o pacote manualmente.");
         using var response = await SharedClient
             .GetAsync(asset.Url, HttpCompletionOption.ResponseHeadersRead, cancellation)
             .ConfigureAwait(false);
@@ -67,12 +70,14 @@ public static class GitHubReleaseSource
         await using var destination = File.Create(destinationPath);
 
         var buffer = new byte[64 * 1024];
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         long written = 0;
         int read;
 
         while ((read = await source.ReadAsync(buffer, cancellation).ConfigureAwait(false)) > 0)
         {
             await destination.WriteAsync(buffer.AsMemory(0, read), cancellation).ConfigureAwait(false);
+            hash.AppendData(buffer, 0, read);
             written += read;
             if (progress is not null && total > 0)
                 progress(Math.Clamp(written * 100.0 / total, 0, 100));
@@ -80,6 +85,19 @@ public static class GitHubReleaseSource
 
         if (total > 0 && written != total)
             throw new IOException($"Download truncado: {written} de {total} bytes recebidos.");
+        ValidateDigest(asset.Digest, hash.GetHashAndReset());
+    }
+
+    internal static void ValidateDigest(string? digest, byte[] actual)
+    {
+        if (string.IsNullOrWhiteSpace(digest))
+            throw new IOException("A release não publica SHA-256; baixe e verifique o pacote manualmente.");
+        if (!digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) throw new IOException("Algoritmo de integridade não suportado.");
+        byte[] expected;
+        try { expected = Convert.FromHexString(digest[7..]); }
+        catch (FormatException) { throw new IOException("SHA-256 da release é inválido."); }
+        if (expected.Length != 32 || !CryptographicOperations.FixedTimeEquals(expected, actual))
+            throw new IOException("SHA-256 do download não corresponde à release. A atualização foi rejeitada.");
     }
 
     private static HttpClient CreateSharedClient()

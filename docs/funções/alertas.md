@@ -99,3 +99,8 @@ seguem o número do sensor no hardware). A mensagem usa o sensor com sufixo
   executam com paridade integral, incluindo o guard `allowShutdown`.
 - A avaliação usa o valor do snapshot no momento da atualização; picos entre amostras não são capturados.
 - O desligamento depende do `shutdown.exe` do Windows (políticas restritas podem impedi-lo; a falha fica no log).
+
+## Independência das regras
+Cada objeto de regra possui estado de ativação e cooldown próprio. Regras com o
+mesmo sensor, comparação e limite podem executar ações diferentes no mesmo ciclo;
+uma não suprime a outra. Salvar recria o avaliador com o novo conjunto de regras.

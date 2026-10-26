@@ -6,6 +6,7 @@
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <emmintrin.h>
 #else
 #include <cerrno>
 #include <fcntl.h>
@@ -38,8 +39,13 @@ std::uint64_t read_u64(const unsigned char* bytes) {
 
 std::uint64_t atomic_sequence(const unsigned char* address) {
 #if defined(_WIN32)
-    return static_cast<std::uint64_t>(InterlockedCompareExchange64(
-        reinterpret_cast<volatile LONG64*>(const_cast<unsigned char*>(address)), 0, 0));
+    // CMPXCHG requires a writable page even when the comparison fails. MOVQ is
+    // an aligned atomic load on the supported x86/x64 CPUs and never writes.
+    alignas(16) std::uint64_t value = 0;
+    const auto loaded = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(address));
+    _mm_storel_epi64(reinterpret_cast<__m128i*>(&value), loaded);
+    _ReadWriteBarrier();
+    return value;
 #else
     return __atomic_load_n(reinterpret_cast<const std::uint64_t*>(address), __ATOMIC_ACQUIRE);
 #endif

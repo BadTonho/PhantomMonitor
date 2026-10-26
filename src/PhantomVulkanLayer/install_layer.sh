@@ -41,6 +41,7 @@ cat <<EOF > "${MANIFEST}"
         "implementation_version": "1",
         "description": "PhantomMonitor in-game overlay and Vulkan FPS/frametime layer",
         "functions": {
+            "vkNegotiateLoaderLayerInterfaceVersion": "Phantom_vkNegotiateLoaderLayerInterfaceVersion",
             "vkGetInstanceProcAddr": "Phantom_vkGetInstanceProcAddr",
             "vkGetDeviceProcAddr": "Phantom_vkGetDeviceProcAddr"
         },

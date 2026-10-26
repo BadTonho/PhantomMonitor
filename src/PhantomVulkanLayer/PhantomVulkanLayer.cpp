@@ -73,6 +73,7 @@ uint64_t get_time_ns() {
 std::shared_mutex g_shm_access;
 
 std::mutex g_shm_mutex;
+std::mutex g_present_mutex;
 
 void init_shared_memory() {
     std::lock_guard<std::mutex> lock(g_shm_mutex);
@@ -98,12 +99,15 @@ void init_shared_memory() {
     }
 
     if (g_shm_fd >= 0) {
-        size_t size = sizeof(PhantomVulkanTelemetryHeader);
+        size_t size = sizeof(PhantomVulkanTelemetry);
         if (ftruncate(g_shm_fd, size) == 0) {
             void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, g_shm_fd, 0);
             if (addr != MAP_FAILED) {
                 auto* shm = static_cast<PhantomVulkanTelemetryHeader*>(addr);
-                std::memset(shm, 0, sizeof(PhantomVulkanTelemetryHeader));
+                std::memset(shm, 0, sizeof(PhantomVulkanTelemetry));
+                auto* ring = reinterpret_cast<PhantomVulkanTelemetry*>(shm);
+                ring->capacity = PHANTOM_FRAME_CAPACITY;
+                ring->session = static_cast<uint64_t>(std::chrono::system_clock::now().time_since_epoch().count());
                 shm->magic = PHANTOM_TELEMETRY_MAGIC;
                 shm->version = PHANTOM_TELEMETRY_VERSION;
                 shm->pid = static_cast<uint32_t>(pid);
@@ -146,7 +150,7 @@ void cleanup_shared_memory() {
         std::unique_lock<std::shared_mutex> access(g_shm_access);
     }
     if (shm != nullptr) {
-        munmap(shm, sizeof(PhantomVulkanTelemetryHeader));
+        munmap(shm, sizeof(PhantomVulkanTelemetry));
     }
     if (g_shm_fd >= 0) {
         close(g_shm_fd);
@@ -197,6 +201,8 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
     }
 
     // exchange atÃ´mico: seguro com vÃ¡rios threads/filas chamando present ao mesmo tempo.
+    {
+    std::lock_guard<std::mutex> telemetry_writer(g_present_mutex);
     uint64_t now_ns = get_time_ns();
     uint64_t prev_ns = g_last_present_ns.exchange(now_ns);
     if (prev_ns > 0 && now_ns > prev_ns) {
@@ -210,13 +216,22 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
         PhantomVulkanTelemetryHeader* shm = g_telemetry_shm.load();
         if (shm != nullptr) {
             uint64_t frame = ++g_frame_counter;
+#if !defined(_WIN32)
+            auto* ring = reinterpret_cast<PhantomVulkanTelemetry*>(shm);
+            __atomic_store_n(&ring->sequence, frame * 2 - 1, __ATOMIC_SEQ_CST);
+            ring->frames[(frame - 1) % PHANTOM_FRAME_CAPACITY] = {frame, now_ns, ft_ms, fps};
+#endif
             shm->frame_count = frame;
             shm->timestamp_ns = now_ns;
             shm->frametime_ms = ft_ms;
             shm->instant_fps = fps;
+#if !defined(_WIN32)
+            __atomic_store_n(&ring->sequence, frame * 2, __ATOMIC_RELEASE);
+#endif
         }
     } else if (prev_ns == 0) {
         init_shared_memory();
+    }
     }
     if (next_present != nullptr) {
         VkDevice device = VK_NULL_HANDLE;
@@ -401,15 +416,29 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
 
         PFN_vkGetInstanceProcAddr next_gipa = layer_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
         PFN_vkGetDeviceProcAddr next_gdpa = layer_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+        PFN_vkSetDeviceLoaderData set_loader_data = nullptr;
+        for (auto* node = reinterpret_cast<const VkBaseInStructure*>(pCreateInfo->pNext); node; node = node->pNext) {
+            if (node->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO) {
+                const auto* loader = reinterpret_cast<const VkLayerDeviceCreateInfo*>(node);
+                if (loader->function == VK_LOADER_DATA_CALLBACK)
+                    set_loader_data = loader->u.pfnSetDeviceLoaderData;
+            }
+        }
         if (next_gdpa == nullptr) return VK_ERROR_INITIALIZATION_FAILED;
         VkInstance parent_instance = VK_NULL_HANDLE;
         {
             std::lock_guard<std::mutex> lock(g_mutex);
             auto found = g_physical_device_instances.find(get_dispatch_key(physicalDevice));
             if (found != g_physical_device_instances.end()) parent_instance = found->second;
+            else {
+                // Device-group enumeration can return physical handles without
+                // visiting our vkEnumeratePhysicalDevices interception.
+                auto parent = g_instance_dispatch.find(get_dispatch_key(physicalDevice));
+                if (parent != g_instance_dispatch.end()) parent_instance = parent->second.instance;
+            }
         }
         PFN_vkCreateDevice next_create = reinterpret_cast<PFN_vkCreateDevice>(
-            next_gipa(VK_NULL_HANDLE, "vkCreateDevice"));
+            next_gipa(parent_instance, "vkCreateDevice"));
         if (next_create == nullptr) return VK_ERROR_INITIALIZATION_FAILED;
 
         const_cast<VkLayerDeviceCreateInfo*>(layer_info)->u.pLayerInfo =
@@ -436,7 +465,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
                 next_gdpa(*pDevice, "vkDestroySwapchainKHR"));
             g_device_dispatch[key] = disp;
             phantom::vulkan_overlay::RegisterDevice(parent_instance, physicalDevice, *pDevice,
-                pCreateInfo, next_gipa, next_gdpa);
+                pCreateInfo, next_gipa, next_gdpa, set_loader_data);
         }
         return res;
     }
@@ -607,7 +636,9 @@ PHANTOM_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetInstancePro
         std::lock_guard<std::mutex> lock(g_mutex);
         auto it = g_instance_dispatch.find(key);
         if (it != g_instance_dispatch.end() && it->second.get_instance_proc_addr) {
-            return it->second.get_instance_proc_addr(instance, pName);
+            auto available = it->second.get_instance_proc_addr(instance, pName);
+            auto hook = Phantom_vkGetDeviceProcAddr(VK_NULL_HANDLE, pName);
+            return available && hook ? hook : available;
         }
     }
     catch (...)
@@ -622,6 +653,17 @@ PHANTOM_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetDeviceProcA
     const char* pName)
 {
     if (pName == nullptr) return nullptr;
+    if (device != VK_NULL_HANDLE) {
+        PFN_vkGetDeviceProcAddr next = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(g_mutex);
+            auto found = g_device_dispatch.find(get_dispatch_key(device));
+            if (found != g_device_dispatch.end()) next = found->second.get_device_proc_addr;
+        }
+        auto available = next ? next(device, pName) : nullptr;
+        auto hook = Phantom_vkGetDeviceProcAddr(VK_NULL_HANDLE, pName);
+        return available && hook ? hook : available;
+    }
     if (std::strcmp(pName, "vkGetDeviceProcAddr") == 0)
         return reinterpret_cast<PFN_vkVoidFunction>(Phantom_vkGetDeviceProcAddr);
     if (std::strcmp(pName, "vkDestroyDevice") == 0)

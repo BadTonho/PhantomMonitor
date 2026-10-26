@@ -6,6 +6,16 @@ namespace PhantomMonitor.Services.Linux;
 
 internal sealed class LinuxDiskNetworkReader
 {
+    private readonly string _procRoot;
+    private readonly string _blockRoot;
+    private readonly Func<DateTime> _clock;
+    internal LinuxDiskNetworkReader(string procRoot = "/proc", string blockRoot = "/sys/block", Func<DateTime>? clock = null)
+    {
+        _procRoot = procRoot;
+        _blockRoot = blockRoot;
+        _clock = clock ?? (() => DateTime.UtcNow);
+        _prevDiskTimestamp = _clock();
+    }
 
     private long _prevDiskReadSectors;
     private long _prevDiskWriteSectors;
@@ -15,23 +25,23 @@ internal sealed class LinuxDiskNetworkReader
     private readonly Dictionary<string, int> _nicSlots = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (long Rx, long Tx)> _prevPerNic = new(StringComparer.Ordinal);
     private DateTime _prevNetTimestamp = DateTime.MinValue;
-    private DateTime? _lastNetSampleUtc;
     private double _netDownSessionBytes;
     private double _netUpSessionBytes;
     internal void ReadDiskStats(SensorData data)
     {
         try
         {
-            if (!File.Exists("/proc/diskstats")) return;
+            var diskPath = Path.Combine(_procRoot, "diskstats");
+            if (!File.Exists(diskPath)) return;
 
-            var now = DateTime.UtcNow;
+            var now = _clock();
             var elapsedSec = (now - _prevDiskTimestamp).TotalSeconds;
 
             long totalReadSectors = 0;
             long totalWriteSectors = 0;
             var devices = new List<string>();
 
-            foreach (var line in File.ReadLines("/proc/diskstats"))
+            foreach (var line in File.ReadLines(diskPath))
             {
                 var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 // Coluna 2: nome do dispositivo (nvme0n1, sda, etc.)
@@ -89,11 +99,16 @@ internal sealed class LinuxDiskNetworkReader
         }
     }
 
-    /// <summary>Discos físicos principais (sda..sdz, nvme0n1); ignora partições/loop/ram/usb flash?</summary>
+    /// <summary>Dispositivos inteiros de sysfs; exclui loop/RAM e agregadores para evitar dupla contagem.</summary>
 
-    private static bool IsPhysicalDisk(string devName) =>
-        (devName.StartsWith("sd", StringComparison.Ordinal) && devName.Length == 3 && char.IsAsciiLetter(devName[2])) ||
-        (devName.StartsWith("nvme", StringComparison.Ordinal) && devName.Length > 4 && char.IsAsciiDigit(devName[4]) && devName.Contains('n') && !devName.Contains('p'));
+    internal bool IsPhysicalDisk(string devName) =>
+        devName == Path.GetFileName(devName) && !devName.Contains('/') && !devName.Contains('\\')
+        && Directory.Exists(Path.Combine(_blockRoot, devName))
+        && !devName.StartsWith("loop", StringComparison.Ordinal)
+        && !devName.StartsWith("ram", StringComparison.Ordinal)
+        && !devName.StartsWith("zram", StringComparison.Ordinal)
+        && !devName.StartsWith("dm-", StringComparison.Ordinal)
+        && !devName.StartsWith("md", StringComparison.Ordinal);
 
     /// <summary>
     /// Lê tráfego de rede por interface a partir de /proc/net/dev (↑/↓ + totais da sessão).
@@ -103,10 +118,10 @@ internal sealed class LinuxDiskNetworkReader
     {
         try
         {
-            const string netDevPath = "/proc/net/dev";
+            var netDevPath = Path.Combine(_procRoot, "net", "dev");
             if (!File.Exists(netDevPath)) return;
 
-            var now = DateTime.UtcNow;
+            var now = _clock();
             if (_prevNetTimestamp == DateTime.MinValue) _prevNetTimestamp = now;
             var elapsedSec = (now - _prevNetTimestamp).TotalSeconds;
 
@@ -136,10 +151,14 @@ internal sealed class LinuxDiskNetworkReader
             {
                 if (!_nicSlots.TryGetValue(name, out var slot)) slot = _nicSlots[name] = _nicSlots.Count + 1;
 
-                if (elapsedSec > 0 && _prevPerNic.TryGetValue(name, out var prev))
+                if (_prevPerNic.TryGetValue(name, out var prev))
                 {
-                    double rxBps = Math.Max(0, rx - prev.Rx) / elapsedSec;
-                    double txBps = Math.Max(0, tx - prev.Tx) / elapsedSec;
+                    var rxDelta = Math.Max(0, rx - prev.Rx);
+                    var txDelta = Math.Max(0, tx - prev.Tx);
+                    _netDownSessionBytes += rxDelta;
+                    _netUpSessionBytes += txDelta;
+                    double rxBps = elapsedSec > 0 ? rxDelta / elapsedSec : 0;
+                    double txBps = elapsedSec > 0 ? txDelta / elapsedSec : 0;
                     downBps += rxBps;
                     upBps += txBps;
                     data.SetValue(new SensorKey(SensorType.NetworkDown, slot), rxBps, name);
@@ -148,23 +167,13 @@ internal sealed class LinuxDiskNetworkReader
                 _prevPerNic[name] = (rx, tx);
             }
 
-            if (downBps > 0 || upBps > 0)
-            {
+            foreach (var missing in _prevPerNic.Keys.Except(interfaces.Select(item => item.Name)).ToArray())
+                _prevPerNic.Remove(missing);
                 data.SetValue(SensorType.NetworkDown, downBps, "Rede ↓ (todas as interfaces)");
                 data.SetValue(SensorType.NetworkUp, upBps, "Rede ↑ (todas as interfaces)");
 
-                // Totais da sessão: velocidade observada x tempo desde a amostra anterior.
-                if (_lastNetSampleUtc is { } last)
-                {
-                    var dt = (now - last).TotalSeconds;
-                    _netDownSessionBytes += downBps * dt;
-                    _netUpSessionBytes += upBps * dt;
-                }
-                _lastNetSampleUtc = now;
-
                 data.SetValue(SensorType.NetworkDownTotal, _netDownSessionBytes, "Total recebido (sessão)");
                 data.SetValue(SensorType.NetworkUpTotal, _netUpSessionBytes, "Total enviado (sessão)");
-            }
         }
         catch (Exception ex)
         {

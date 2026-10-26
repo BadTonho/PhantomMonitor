@@ -50,6 +50,12 @@ internal static class WindowsOverlayHookService
         return await RunAsync(launcher, ["--inject", processId.ToString(), library]);
     }
 
+    internal static async Task<Result> LaunchAsync(string executablePath, string arguments)
+    {
+        if (!TryResolve(executablePath, out var launcher, out var library, out var error)) return new(false, error);
+        return await RunAsync(launcher, ["--launch", library, Path.GetFullPath(executablePath), arguments]);
+    }
+
     private static bool TryResolve(string executablePath, out string launcher, out string library, out string error)
     {
         launcher = library = error = "";
@@ -115,9 +121,11 @@ internal static class WindowsOverlayHookService
             foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
             using var process = Process.Start(startInfo);
             if (process is null) return new Result(false, "Não foi possível iniciar o launcher nativo.");
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(40));
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
+            var output = await outputTask;
+            var error = await errorTask;
             var detail = string.Join(" ", new[] { output.Trim(), error.Trim() }.Where(text => text.Length > 0));
             return process.ExitCode == 0
                 ? new Result(true, detail.Length == 0 ? "Hook instalado." : detail)

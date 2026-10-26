@@ -6,6 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/PhantomMonitor.App/PhantomMonitor.App.csproj" SetTargetFramework="TargetFramework=net10.0" />
+    <ProjectReference Include="../../src/PhantomMonitor.App/PhantomMonitor.App.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="UpdateTransaction.Tests.ps1" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

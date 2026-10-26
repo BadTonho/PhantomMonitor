@@ -16,7 +16,7 @@ public sealed partial class MainWindowViewModel
     public string OverlayTargetMessage { get => _overlayTargetMessage; private set => Set(ref _overlayTargetMessage, value); }
     public bool IsLinuxPlatform => OperatingSystem.IsLinux();
     public bool IsWindowsPlatform => OperatingSystem.IsWindows();
-    public bool IsOverlayTargetLaunchVisible => IsOverlayInGameModeSelected && IsLinuxPlatform;
+    public bool IsOverlayTargetLaunchVisible => IsOverlayInGameModeSelected && (IsLinuxPlatform || IsWindowsPlatform);
     public bool IsOverlayInGameModeSelected => OverlayRenderModeIndex == 1;
     public string SteamOverlayLaunchOption
     {
@@ -79,9 +79,9 @@ public sealed partial class MainWindowViewModel
             OverlayTargetMessage = "Executável removido. Use Salvar e aplicar para gravar a lista.";
     }
 
-    public void LaunchOverlayTarget(OverlayLaunchTargetConfig? target)
+    public async Task LaunchOverlayTargetAsync(OverlayLaunchTargetConfig? target)
     {
-        if (target is null || !OperatingSystem.IsLinux()) return;
+        if (target is null || (!OperatingSystem.IsLinux() && !OperatingSystem.IsWindows())) return;
         if (!File.Exists(target.ExecutablePath))
         {
             OverlayTargetMessage = "O executável não foi encontrado no caminho salvo.";
@@ -90,6 +90,12 @@ public sealed partial class MainWindowViewModel
 
         try
         {
+            if (OperatingSystem.IsWindows())
+            {
+                var result = await Services.Overlay.WindowsOverlayHookService.LaunchAsync(target.ExecutablePath, target.Arguments);
+                OverlayTargetMessage = result.Message;
+                return;
+            }
             var startInfo = new ProcessStartInfo
             {
                 FileName = target.ExecutablePath,
@@ -108,7 +114,7 @@ public sealed partial class MainWindowViewModel
                     ? openGlLibrary
                     : openGlLibrary + ":" + existingPreload;
             }
-            Process.Start(startInfo);
+            Process.Start(startInfo)?.Dispose();
             OverlayTargetMessage = File.Exists(openGlLibrary)
                 ? $"Iniciado: {Path.GetFileName(target.ExecutablePath)} com Vulkan e preload GLX/EGL."
                 : $"Iniciado: {Path.GetFileName(target.ExecutablePath)}. Vulkan pode funcionar; instale a biblioteca OpenGL para jogos GLX/EGL.";

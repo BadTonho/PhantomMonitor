@@ -16,4 +16,8 @@
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.13" />
     <PackageReference Include="System.Management" Version="10.0.13" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Services/Update/Scripts/windows.ps1" LogicalName="PhantomMonitor.UpdateScripts.windows.ps1" />
+    <EmbeddedResource Include="Services/Update/Scripts/linux.sh" LogicalName="PhantomMonitor.UpdateScripts.linux.sh" />
+  </ItemGroup>
 </Project>

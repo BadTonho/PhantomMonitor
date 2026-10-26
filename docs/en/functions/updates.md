@@ -27,37 +27,33 @@ The same elements serve Windows and Linux (the WPF details were ported during th
 - **"ATUALIZAÇÕES (GITHUB RELEASES)" card** on the Settings page: automatic-check and beta-channel toggles, a "Repository" field (empty uses the official one), installed version, last check and the "Buscar agora" (Check now), "Abrir página de releases" and — when the swap is possible — "Atualizar e reiniciar" buttons. The preferences go through the page's own "Salvar e aplicar" (Save and apply) button (validation: `owner/repo` or a GitHub URL).
 - On a development build (`0.0.0-dev`), the card states that checking is disabled.
 
-## Applying the update automatically (Windows)
+## Transactional application
 
-The "Atualizar e reiniciar" button runs the full cycle:
+Downloads require the GitHub API SHA-256 `digest` and reject missing or mismatched
+hashes. Trust still rests on HTTPS and the selected repository; a digest is not a
+maintainer signature. See the [GitHub asset API](https://docs.github.com/en/rest/releases/assets).
 
-1. Downloads the convention asset `PhantomMonitor-<version>-win-x64.zip` (the portable zip — the same payload used by the per-user installer; in both cases the updater swaps the folder contents).
-2. Extracts to `%LOCALAPPDATA%\PhantomMonitor\UpdateStaging\<version>\` (older stagings are cleaned before each preparation).
-3. Launches the one-shot updater (`apply_update.cmd` generated into staging): waits for the app process to exit (up to 30 s), swaps files with **backups** (`*.bak`), relaunches the executable and deletes the backups. On a failed copy, the `.bak` is restored immediately — the app never relaunches with half-swapped files.
-4. The app closes and reopens on the new version. The user config (`%APPDATA%\PhantomMonitor\config.json`) and logs live outside the swapped folder and are untouched.
+Windows extracts the full directory tree and runs `apply_update.ps1` through
+system PowerShell. Close games using the native hooks before updating. The app
+checks native DLL locks before shutdown; the script waits up to 60 seconds for
+exit, prepares all copies and updates renderer subfolders as well as root files.
+Handled failures restore the full changed set and remove newly added files.
 
-During the visual unification transition (Phase 2) the payload became the unified app **under the same name**: the executable is still called `PhantomMonitor.exe`, so `apply_update.cmd` swaps it in place (the old WPF exe becomes a `.bak` and is removed after the copy) — the desktop shortcut, Start Menu, Run key and post-update relaunch stay valid, with no reinstall needed. The payload is three files: `PhantomMonitor.exe` (unified Avalonia app), `PresentMon.exe` and `config.example.json`.
+Linux extracts tarballs through .NET without shell interpolation or an external
+tar command. AppImage preparation/application share a single version-directory
+path. The POSIX script prepares the tree before swapping entries and restores
+all changed entries on a handled failure. AppImage replacement uses a prepared
+file and rename on the target filesystem. Spaces and apostrophes are supported.
 
-Honest limits:
+Recovery backups `.phantom-update-backup-*` are retained. Windows backups contain
+`status`, `journal.json` and `original/`; portable Linux includes installed/original
+entry lists. Remove backups manually only after verifying the new installation
+with the app closed. Power loss or failure during rollback may require manual
+recovery; previous backups are not erased at the start of an attempt.
 
-- Before swapping, the app probes its own install folder; if it is protected (a portable extracted into `Program Files`, for example), the swap is not offered and only the notify-with-link mode remains.
-- If the release has no asset in the expected format, the button does not appear and the card explains why ("this release does not have the expected file; download manually").
-- The executable closes during the swap: the overlay and monitoring stop and resume when the app reopens.
-
-## Applying the update automatically (Linux)
-
-On Linux the flow is detected at startup in two formats:
-
-- **Portable (tarball)** — asset `PhantomMonitor-<version>-linux-x64.tar.gz`: downloads, extracts with the system `tar` into `$XDG_DATA_HOME/PhantomMonitor/UpdateStaging/<version>/` and the one-shot `apply_update.sh` waits for the process to exit (up to 60 s, `kill -0`), swaps files with backups (`*.bak`) — restored on a failed copy — and relaunches the executable with `nohup` when the swap completes.
-- **AppImage** (`$APPIMAGE` set) — asset `PhantomMonitor-<version>-linux-x64.AppImage`: the script just replaces the AppImage file, runs `chmod +x` and relaunches it.
-
-Unification transition (Phase 2): the portable binary went from `PhantomMonitor.App` to `PhantomMonitor`. The transition tarball carries an **extra hardlink** `PhantomMonitor.App` pointing to the new binary (zero cost in the tar), so the `apply_update.sh` generated by old versions — which relaunches by the legacy name — boots the new app during the same swap; in following releases the canonical name is `PhantomMonitor` and the shim can be retired.
-
-Limits and fallbacks:
-
-- The install is tested with a write probe (AppImage: the folder containing the file; portable: the install folder). When swapping is not possible — a `.deb` or other system-package install in a protected directory — the button does not appear and the app stays in notify-with-link mode; the update is done through the system package manager.
-- The user config (`~/.config/PhantomMonitor/config.json`) and logs live outside the swapped folder and are untouched.
-- The Vulkan layer is not part of the app file swap: after updating, reinstall it with `install_layer.sh` from the new version (see [linux-support.md](linux-support.md)).
+`Applying` is published only after updater launch succeeds. User config/logs stay
+outside the installation. System packages/protected folders remain link-only;
+the Linux Vulkan layer must still be reinstalled separately.
 
 ## Asset convention and publishing (maintainers)
 

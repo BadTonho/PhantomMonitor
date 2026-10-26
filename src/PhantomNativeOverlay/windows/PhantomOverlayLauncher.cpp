@@ -131,8 +131,10 @@ bool inject_library(DWORD process_id, const std::wstring& library) {
         ? CreateRemoteThread(process, nullptr, 0, load_library, remote_path, 0, nullptr)
         : nullptr;
     bool loaded = false;
+    bool thread_finished = !thread;
     if (thread) {
         const auto wait = WaitForSingleObject(thread, 15000);
+        thread_finished = wait == WAIT_OBJECT_0;
         DWORD module = 0;
         loaded = wait == WAIT_OBJECT_0 && GetExitCodeThread(thread, &module) && module != 0;
         if (!loaded) std::wcerr << L"Remote LoadLibrary failed or timed out: " << GetLastError() << L"\n";
@@ -140,7 +142,9 @@ bool inject_library(DWORD process_id, const std::wstring& library) {
     } else {
         std::wcerr << L"CreateRemoteThread failed: " << GetLastError() << L"\n";
     }
-    VirtualFreeEx(process, remote_path, 0, MEM_RELEASE);
+    // A timed-out remote LoadLibrary may still be reading this path. Its small
+    // allocation is released with the process instead of risking use-after-free.
+    if (thread_finished) VirtualFreeEx(process, remote_path, 0, MEM_RELEASE);
     CloseHandle(process);
     if (!loaded) {
         CloseHandle(ready_event);

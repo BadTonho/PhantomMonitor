@@ -103,8 +103,9 @@ try {
 
         Write-Step "Empacotando tarball do Linux..."
         $tarball = Join-Path $OutDirectory ("PhantomMonitor-{0}-linux-x64.tar.gz" -f $Version)
-        tar.exe -czf $tarball -C (Join-Path $stage "linux") .
-        if ($LASTEXITCODE -ne 0) { throw "tar.exe falhou ao montar o tarball." }
+        dotnet run --project (Join-Path $repoRoot "tools\ReleasePackager") -c Release -- `
+            (Join-Path $stage "linux") $tarball
+        if ($LASTEXITCODE -ne 0) { throw "ReleasePackager falhou ao montar o tarball Linux." }
 
         Write-Host ""
         Write-Host "Opcional (rodar em Linux): AppImage e .deb com os empacotadores" -ForegroundColor DarkGray

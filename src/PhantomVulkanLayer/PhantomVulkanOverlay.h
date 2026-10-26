@@ -9,7 +9,8 @@ namespace phantom::vulkan_overlay {
 void RegisterDevice(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device,
                     const VkDeviceCreateInfo* create_info,
                     PFN_vkGetInstanceProcAddr next_gipa,
-                    PFN_vkGetDeviceProcAddr next_gdpa);
+                    PFN_vkGetDeviceProcAddr next_gdpa,
+                    PFN_vkSetDeviceLoaderData set_loader_data);
 void RegisterQueue(VkDevice device, VkQueue queue, std::uint32_t queue_family);
 void RegisterSwapchain(VkDevice device, VkSwapchainKHR swapchain,
                        const VkSwapchainCreateInfoKHR* create_info,

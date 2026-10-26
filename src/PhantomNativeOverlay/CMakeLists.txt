@@ -23,6 +23,8 @@ target_include_directories(PhantomOverlayCommon PUBLIC
 if(UNIX AND NOT APPLE)
     target_link_libraries(PhantomOverlayCommon PUBLIC rt)
 
+    option(PHANTOM_BUILD_OPENGL "Build the optional GLX/EGL preload renderer" ON)
+    if(PHANTOM_BUILD_OPENGL)
     find_package(OpenGL REQUIRED COMPONENTS OpenGL GLX EGL)
     find_package(Threads REQUIRED)
     add_library(PhantomOpenGLOverlay SHARED
@@ -34,6 +36,7 @@ if(UNIX AND NOT APPLE)
         PhantomOverlayCommon OpenGL::GLX OpenGL::EGL Threads::Threads ${CMAKE_DL_LIBS}
     )
     set_target_properties(PhantomOpenGLOverlay PROPERTIES OUTPUT_NAME PhantomOpenGLOverlay)
+    endif()
 endif()
 
 if(WIN32)

@@ -111,3 +111,11 @@ Windows validation.
 The floating overlay follows `showOverlay` and existing `OverlayConfig` fields. Each Linux block remains a separate Topmost window. After a window opens or changes size, the app measures it and recalculates its position in physical pixels using the screen scale. **Diagnostics → Summary** records the desktop session, Avalonia backend, requested and observed positions, and each window's size; identical diagnostic lines are not repeated. A Wayland desktop session alone does not show that the app uses the native Wayland backend: this project's default setup uses X11/XWayland. When the native Wayland backend is identified and the position differs, diagnostics explains that the compositor may ignore absolute positions; transparency and fullscreen stacking also depend on compositor support. On Windows, the Avalonia overlay is a true click-through OSD that follows the focused app (30 ms) with a Topmost reinforcement (500 ms); on Linux, the overlay remains interactive and draggable with fixed Topmost — click-through, follow, and the per-app profile matcher are Windows-only behaviors.
 
 Linux telemetry CSV/JSON/JSONL files and `errors.log` are stored under `~/.local/share/PhantomMonitor/logs/`, respecting `XDG_DATA_HOME`. The **Diagnostics** page shows recent records, Linux overlay positions and sizes in **Summary**, current warnings for unavailable GPU metrics in **Errors**, and detailed source status in **Sensors**; for NVIDIA it includes the bound driver, NVML, hwmon, and metrics reported by each source. The HTTP exporter is disabled by default and binds to loopback; `listenAll` exposes it on all interfaces without TLS or authentication. See [configuration](configuration.md), [logging](logging.md), [diagnostics](diagnostics.md), [alerts](alerts.md), and the [Telemetry SDK](../telemetry-sdk.md) for details.
+
+## Collection and packaging updates
+Network totals accumulate byte deltas across idle periods. Whole disks are
+selected through `/sys/block`, including virtio/Xen/eMMC and long SCSI names;
+partitions, loop/RAM and dm/md aggregators are excluded to avoid double counting.
+Autostart respects `XDG_CONFIG_HOME` and prefers the persistent `APPIMAGE` file.
+The deb launcher targets `../lib/phantom-monitor`. Vulkan-only builds can use
+`-DPHANTOM_BUILD_OPENGL=OFF`; the default GLX/EGL preload needs development headers.

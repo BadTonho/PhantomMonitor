@@ -28,3 +28,8 @@ Converte a especificação textual do `config.json` (`toggleOverlayHotkey`) em m
 - `pauseMonitorHotkey` (string, padrão `"Ctrl+Alt+P"` = ativo): atalho global que **pausa/retoma o monitoramento** (P6.7) — ciclos param, CSV/JSON/SDK congelam no último valor e o overlay exibe o último snapshot; estado aceita não sobreviva ao reinício do app. Vazio = desativado.
 - Editáveis no `config.json` (a seção "ATALHO GLOBAL" era do Editor Visual do WPF, aposentado na Fase 2); não requerem privilégios administrativos e funcionam independente do aplicativo em foco.
 - O atalho de overlay apenas alterna a visibilidade do overlay — o OSD continua sendo desenhado pela janela topmost do próprio Phantom Monitor.
+
+## Registro na thread proprietária
+`GlobalHotkeyService` envia comandos à thread que criou a janela message-only.
+Registro, remoção e callbacks são tratados nessa thread; a UI continua responsável
+pelo seu próprio dispatcher. Falhas de callbacks são registradas sem encerrar a bomba.

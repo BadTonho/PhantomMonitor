@@ -19,6 +19,7 @@ using PhantomMonitor.Services;
     ("modo e executáveis do overlay persistem no config.json", TestOverlayRenderModePersistence),
     ("protocolo nativo rejeita quadros parciais e desatualizados", TestInGameFrameProtocol),
     ("diagnóstico nativo valida sequência, versão, idade e UTF-8", TestNativeOverlayStatusProtocol),
+    ("estado Vulkan não impede instalar hook OpenGL do mesmo processo", TestWindowsHookProducerFiltering),
     ("canal POSIX publica leitura estável e somente leitura", TestPosixInGameFramePublisher),
     ("PresentMon descobre múltiplos PIDs e ignora linhas inválidas", TestPresentMonProcessDiscovery),
     ("PIDs sem novos frames expiram da descoberta", TestPresentMonProcessExpiration),
@@ -462,6 +463,19 @@ static void TestNativeOverlayStatusProtocol()
     malformedUtf8[36] = 0xFF;
     Assert(!InGameOverlayNativeStatusReader.TryParseSnapshot(malformedUtf8, out _),
         "Mensagem de diagnóstico com UTF-8 inválido deve ser rejeitada.");
+}
+
+static void TestWindowsHookProducerFiltering()
+{
+    var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    var vulkan = new InGameOverlayNativeStatus(42, 1, 4, now, "Vulkan não suportado") { Producer = "vulkan" };
+    var unrelatedHook = new InGameOverlayNativeStatus(43, 4, 1, now, "OpenGL ativo") { Producer = "windows" };
+    var detected = InGameOverlayNativeStatusReader.WindowsHookProcessIds([vulkan, unrelatedHook]);
+    Assert(!detected.Contains(42), "Uma camada Vulkan carregada não prova que o hook OpenGL foi instalado.");
+    Assert(detected.Contains(43), "O canal do hook Windows deve evitar injeções duplicadas.");
+    var actualHook = vulkan with { Api = 4, Producer = "windows" };
+    Assert(InGameOverlayNativeStatusReader.WindowsHookProcessIds([vulkan, actualHook]).Contains(42),
+        "Um processo com Vulkan e hook Windows deve reconhecer o hook já carregado.");
 }
 
 static byte[] CreateNativeStatusSnapshot(long timestamp, long sequence = 2)

@@ -130,8 +130,10 @@ public sealed partial class MainWindowViewModel
                 _windowsOverlayInjectionAttemptedProcessIds.Remove(item.Key);
             }
 
-            var alreadyPublished = InGameOverlayNativeStatusReader.ReadWindows(livePids)
-                .Select(status => status.ProcessId).ToHashSet();
+            // A Vulkan status alone does not mean that the Windows OpenGL/D3D hook
+            // is installed: a process can load Vulkan and present through OpenGL.
+            var alreadyPublished = InGameOverlayNativeStatusReader.WindowsHookProcessIds(
+                InGameOverlayNativeStatusReader.ReadWindows(livePids));
             _windowsOverlayInjectedProcessIds.UnionWith(alreadyPublished);
             foreach (var candidate in candidates)
             {
@@ -227,7 +229,7 @@ public sealed partial class MainWindowViewModel
                 ? "API detectada: nenhum processo Vulkan publicou estado. Inicie o jogo com ENABLE_PHANTOM_OVERLAY=1."
                 : "API detectada: nenhum processo detectado apresentando frames publicou estado do hook."
             : string.Join("\n", statuses.Select(status =>
-                $"PID {status.ProcessId} · {status.ApiName} · {status.StateName}: {status.Message}"));
+                $"PID {status.ProcessId} · {status.Producer} · {status.ApiName} · {status.StateName}: {status.Message}"));
         var etwDiagnostic = OperatingSystem.IsWindows()
             ? (_sensorService as IOverlayProcessDiscovery)?.OverlayDiscoveryDiagnostic
             : null;

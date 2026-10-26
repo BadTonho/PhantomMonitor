@@ -11,6 +11,8 @@ internal sealed record InGameOverlayNativeStatus(
     long UpdatedUnixMilliseconds,
     string Message)
 {
+    // The producer identifies the channel, not the API currently reported by it.
+    internal string Producer { get; init; } = "";
     internal string ApiName => Api switch
     {
         1 => "Vulkan",
@@ -74,7 +76,7 @@ internal static class InGameOverlayNativeStatusReader
                 var sequenceAfter = BinaryPrimitives.ReadInt64LittleEndian(sequenceBytes);
                 if (TryParseSnapshot(bytes, sequenceBefore, sequenceAfter, out var status)
                     && status.ProcessId == pid)
-                    statuses.Add(status);
+                    statuses.Add(status with { Producer = suffix[(separator + 1)..] });
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
@@ -93,6 +95,9 @@ internal static class InGameOverlayNativeStatusReader
         }
         return statuses.OrderBy(status => status.ProcessId).ToArray();
     }
+
+    internal static HashSet<int> WindowsHookProcessIds(IEnumerable<InGameOverlayNativeStatus> statuses) =>
+        statuses.Where(status => status.Producer == "windows").Select(status => status.ProcessId).ToHashSet();
 
     internal static bool TryParseSnapshot(ReadOnlySpan<byte> bytes, out InGameOverlayNativeStatus status)
     {
@@ -152,8 +157,10 @@ internal static class InGameOverlayNativeStatusReader
                 Marshal.Copy(view, bytes, 0, bytes.Length);
                 Thread.MemoryBarrier();
                 var sequenceAfter = Marshal.ReadInt64(view, 8);
-                return TryParseSnapshot(bytes, sequenceBefore, sequenceAfter, out status)
-                    && status.ProcessId == pid;
+                if (!TryParseSnapshot(bytes, sequenceBefore, sequenceAfter, out status)
+                    || status.ProcessId != pid) return false;
+                status = status with { Producer = producer };
+                return true;
             }
             finally { UnmapViewOfFile(view); }
         }

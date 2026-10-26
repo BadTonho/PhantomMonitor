@@ -18,6 +18,7 @@ public sealed class OverlayConfig
     public int Width { get; set; } = 220;
     public bool ShowCpu { get; set; } = true;
     public bool ShowGpu { get; set; } = true;
+    public bool ShowGpuModel { get; set; } = false;
     public bool ShowRam { get; set; } = true;
     public bool ShowDisk { get; set; } = true;
     public bool ShowNetwork { get; set; } = false;

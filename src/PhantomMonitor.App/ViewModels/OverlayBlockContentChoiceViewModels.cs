@@ -63,24 +63,25 @@ public sealed class OverlayBlockItemChoiceViewModel : INotifyPropertyChanged
 
 public sealed class OverlayMetricEditChoiceViewModel : INotifyPropertyChanged, IDisposable
 {
-    public OverlayMetricEditChoiceViewModel(OverlayMetricViewModel source)
+    public OverlayMetricEditChoiceViewModel(OverlayBlockMetricViewModel metric)
     {
-        Source = source;
-        Source.PropertyChanged += OnSourcePropertyChanged;
+        Metric = metric;
+        Metric.PropertyChanged += OnSourcePropertyChanged;
     }
 
-    public OverlayMetricViewModel Source { get; }
-    public string Label => $"{Source.Name} · {Source.Value}";
-    public string Identity => Source.OverrideIdentity;
-    public bool SupportsPrecision => Source.SeriesKey.HasValue;
+    public OverlayBlockMetricViewModel Metric { get; }
+    public OverlayMetricViewModel Source => Metric.Source;
+    public string Label => $"{Metric.Name} · {Metric.Value}";
+    public string Identity => Metric.Identity;
+    public bool SupportsPrecision => Metric.SupportsPrecision;
 
     private void OnSourcePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(OverlayMetricViewModel.Name) or nameof(OverlayMetricViewModel.Value))
+        if (e.PropertyName is nameof(OverlayBlockMetricViewModel.Name) or nameof(OverlayBlockMetricViewModel.Value))
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public void Dispose() => Source.PropertyChanged -= OnSourcePropertyChanged;
+    public void Dispose() => Metric.PropertyChanged -= OnSourcePropertyChanged;
 }

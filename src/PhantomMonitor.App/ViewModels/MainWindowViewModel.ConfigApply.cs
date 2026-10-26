@@ -121,6 +121,7 @@ public sealed partial class MainWindowViewModel
         var oldOverlayFontFamily = _config.Overlay.FontFamily;
         var oldOverlayFontSize = _config.Overlay.FontSize;
         var oldOverlayCompactMode = _config.Overlay.CompactMode;
+        var oldOverlayShowGpuModel = _config.Overlay.ShowGpuModel;
         var oldOverlayRenderMode = _config.Overlay.RenderMode;
         var oldOverlayTargets = _config.Overlay.InGameTargets.Select(CloneOverlayTarget).ToList();
         var oldOverlayBlocks = (_config.Overlay.Blocks ?? []).Select(CloneOverlayBlock).ToList();
@@ -148,7 +149,8 @@ public sealed partial class MainWindowViewModel
             || !string.Equals(borderColor, oldOverlayBorderColor ?? "", StringComparison.OrdinalIgnoreCase);
         var overlayAppearanceChanged = Math.Abs(overlayFontSize - oldOverlayFontSize) > 0.000001
             || !string.Equals(fontFamily, oldOverlayFontFamily ?? "", StringComparison.Ordinal)
-            || OverlayCompactModeSetting != oldOverlayCompactMode;
+            || OverlayCompactModeSetting != oldOverlayCompactMode
+            || OverlayShowGpuModelSetting != oldOverlayShowGpuModel;
         var overlayLayoutChanged = OverlayLayoutHasChanges();
         var overlayRenderModeChanged = (OverlayRenderModeIndex == 1 ? "inGame" : "floating") != oldOverlayRenderMode;
         var overlayTargetsChanged = OverlayInGameTargetsChanged(oldOverlayTargets);
@@ -223,6 +225,7 @@ public sealed partial class MainWindowViewModel
         _config.Overlay.FontFamily = fontFamily;
         _config.Overlay.FontSize = overlayFontSize;
         _config.Overlay.CompactMode = OverlayCompactModeSetting;
+        _config.Overlay.ShowGpuModel = OverlayShowGpuModelSetting;
         _config.Overlay.RenderMode = OverlayRenderModeIndex == 1 ? "inGame" : "floating";
         _config.Overlay.InGameTargets = OverlayInGameTargets.Select(CloneOverlayTarget).ToList();
         CopyOverlayLayoutToConfig();
@@ -251,6 +254,7 @@ public sealed partial class MainWindowViewModel
             _config.Overlay.FontFamily = oldOverlayFontFamily ?? "";
             _config.Overlay.FontSize = oldOverlayFontSize;
             _config.Overlay.CompactMode = oldOverlayCompactMode;
+            _config.Overlay.ShowGpuModel = oldOverlayShowGpuModel;
             _config.Overlay.RenderMode = oldOverlayRenderMode;
             _config.Overlay.InGameTargets = oldOverlayTargets;
             LoadOverlayInGameTargets();

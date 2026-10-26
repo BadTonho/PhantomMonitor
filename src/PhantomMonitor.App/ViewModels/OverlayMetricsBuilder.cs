@@ -12,7 +12,7 @@ internal static class OverlayMetricsBuilder
     public readonly record struct OverlayRowPlan(
         string Identity, string Name, string Value, bool ShowFrametimeGraph,
         string? OverrideIdentity = null, SensorKey? SeriesKey = null, double? NumericValue = null,
-        bool? ShowNameOverride = null, bool IsIndividualSeries = false);
+        bool? ShowNameOverride = null, bool IsIndividualSeries = false, string? DeviceLabel = null);
 
     public static IReadOnlyList<OverlayRowPlan> Plan(
         SensorData? data,
@@ -142,7 +142,7 @@ internal static class OverlayMetricsBuilder
                     : $"{formatted} · {label}";
                 var identity = key.ToString();
                 rows.Add(new OverlayRowPlan(identity, identity, description, false, identity, key, data.Series[key],
-                    IsIndividualSeries: true));
+                    IsIndividualSeries: true, DeviceLabel: string.Equals(label, identity, StringComparison.OrdinalIgnoreCase) ? null : label));
             }
         }
 

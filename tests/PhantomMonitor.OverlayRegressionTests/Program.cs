@@ -15,6 +15,9 @@ using PhantomMonitor.Services;
 [
     ("coordenadas do canvas acompanham resolução e escala da tela", TestCanvasToScreenCoordinates),
     ("layout aplicado preserva itens e o filtro de séries do preview", TestAppliedContentParity),
+    ("nomes de métricas são personalizados por bloco e voltam ao padrão", TestOverlayMetricNames),
+    ("modelo da GPU é opcional sem afetar outros dispositivos", TestOverlayGpuModel),
+    ("configuração de nomes e modelo da GPU sobrevive ao reinício", TestOverlayNamesPersistence),
     ("modo do overlay migra configs antigas para janela flutuante", TestOverlayRenderModeMigration),
     ("modo e executáveis do overlay persistem no config.json", TestOverlayRenderModePersistence),
     ("protocolo nativo rejeita quadros parciais e desatualizados", TestInGameFrameProtocol),
@@ -42,6 +45,85 @@ foreach (var test in tests)
     catch (Exception ex) { failed++; Console.Error.WriteLine($"FAIL: {test.Name}: {ex}"); }
 }
 Environment.ExitCode = failed > 0 ? 1 : 0;
+
+static void TestOverlayMetricNames()
+{
+    var source = new OverlayMetricViewModel("GPU", "GPU") { Value = "34%" };
+    using var first = new OverlayBlockMetricViewModel(source, null);
+    using var second = new OverlayBlockMetricViewModel(source, null);
+    using var choice = new OverlayMetricEditChoiceViewModel(first);
+    Assert(!first.ShowName, "O nome padrão da categoria é oculto.");
+    var notifications = new List<string?>();
+    first.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
+    first.UpdateOverride(new OverlayMetricOverrideConfig { Identity = "GPU", DisplayName = "Minha GPU" });
+    Assert(first.ShowName && first.Name == "Minha GPU" && choice.Label == "Minha GPU · 34%",
+        "Nome personalizado deve aparecer inclusive na categoria e no editor.");
+    Assert(notifications.Contains(nameof(first.ShowName)), "A interface deve ser notificada ao mostrar o nome.");
+    Assert(!second.ShowName && second.Name == "GPU", "Outro bloco não deve herdar o nome.");
+    source.Value = "35%";
+    Assert(choice.Label == "Minha GPU · 35%", "Atualização do sensor deve preservar o nome personalizado.");
+    first.UpdateOverride(new OverlayMetricOverrideConfig { Identity = "GPU", Decimals = 2, Color = "#FFFFFF" });
+    Assert(!first.ShowName && first.Name == "GPU" && choice.Label == "GPU · 35%",
+        "Limpar o nome deve restaurar a apresentação padrão sem depender dos demais ajustes.");
+}
+
+static void TestOverlayGpuModel()
+{
+    var data = new SensorData();
+    var gpu1 = new SensorKey(SensorType.GpuCore, 1);
+    var gpu2 = new SensorKey(SensorType.GpuCore, 2);
+    var disk = new SensorKey(SensorType.DiskRead, 1);
+    data.SetValue(gpu1, 0, "GPU Alpha");
+    data.SetValue(gpu2, 42, "GPU Beta");
+    data.SetValue(disk, 1024, "Disco Alpha");
+    var selection = new OverlayConfigSelection(false, false, false, false, false, false, false, false, false);
+    var plans = OverlayMetricsBuilder.Plan(data, selection, ["*"], includePrimarySeries: true);
+    OverlayBlockMetricViewModel CreateMetric(SensorKey key)
+    {
+        var plan = plans.Single(row => row.SeriesKey == key);
+        var source = new OverlayMetricViewModel(plan.Identity, plan.Name) { Value = plan.Value };
+        source.UpdateSensorFormatting(plan.OverrideIdentity, plan.SeriesKey, plan.NumericValue,
+            plan.ShowNameOverride, plan.IsIndividualSeries, plan.DeviceLabel);
+        return new OverlayBlockMetricViewModel(source, null);
+    }
+    using var first = CreateMetric(gpu1);
+    using var second = CreateMetric(gpu2);
+    using var diskMetric = CreateMetric(disk);
+    Assert(first.Name == "GpuCore#1" && second.Name == "GpuCore#2", "Identidades devem distinguir as GPUs.");
+    Assert(!first.Value.Contains("GPU Alpha") && !second.Value.Contains("GPU Beta") && first.Value.Contains('0'),
+        "Modelo deve estar oculto por padrão, sem ocultar zero válido.");
+    Assert(diskMetric.Value.Contains("Disco Alpha"), "Rótulos de outros dispositivos devem permanecer.");
+    first.SetShowGpuModel(true);
+    second.SetShowGpuModel(true);
+    Assert(first.Value.Contains("GPU Alpha") && second.Value.Contains("GPU Beta"), "Opção deve recuperar cada modelo.");
+    first.UpdateOverride(new OverlayMetricOverrideConfig { Identity = gpu1.ToString(), DisplayName = "Uso", Decimals = 2 });
+    using var choice = new OverlayMetricEditChoiceViewModel(first);
+    Assert(choice.Label.StartsWith("Uso · ") && choice.Label.Contains("GPU Alpha"), "A lista deve refletir nome e modelo.");
+    first.SetShowGpuModel(false);
+    Assert(!choice.Label.Contains("GPU Alpha") && first.Name == "Uso", "A prévia deve atualizar sem perder o nome.");
+}
+
+static void TestOverlayNamesPersistence()
+{
+    var path = Path.Combine(Path.GetTempPath(), $"phantom-overlay-names-{Guid.NewGuid():N}.json");
+    try
+    {
+        Assert(!new AppConfig().Overlay.ShowGpuModel, "Configurações antigas devem ocultar modelos por padrão.");
+        var config = new AppConfig { Overlay = new OverlayConfig { ShowGpuModel = true, Blocks =
+        [new OverlayBlockConfig { Id = "one", Items = [new() { Kind = "series", Value = "Gpu*" }],
+            MetricOverrides = [new() { Identity = "GpuCore#1", DisplayName = "Uso da GPU", Decimals = 2, Color = "#FFFFFF" }] }] } };
+        Assert(config.Save(path), "Configuração deve ser salva.");
+        var loaded = AppConfig.Load(path);
+        var metric = loaded.Overlay.Blocks!.Single().MetricOverrides.Single();
+        Assert(loaded.Overlay.ShowGpuModel && metric.Identity == "GpuCore#1" && metric.DisplayName == "Uso da GPU"
+            && metric.Decimals == 2 && metric.Color == "#FFFFFF", "Modelo e ajustes devem sobreviver à carga.");
+    }
+    finally
+    {
+        if (File.Exists(path)) File.Delete(path);
+        if (File.Exists(path + ".tmp")) File.Delete(path + ".tmp");
+    }
+}
 
 static void TestMotherboardTemperatureAvailability()
 {

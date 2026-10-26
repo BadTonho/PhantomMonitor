@@ -119,11 +119,12 @@ public sealed partial class OverlayBlockContentDialogViewModel
         };
         return rows.Where(row => !_owner.IsOverlayMetricHiddenInDraft(row.OverrideIdentity)).Select(row =>
         {
+            var metric = _block.GetMetricViewModel(row);
             if (_metricEditChoices.TryGetValue(row.OverrideIdentity, out var existing)
-                && ReferenceEquals(existing.Source, row))
+                && ReferenceEquals(existing.Metric, metric))
                 return existing;
             existing?.Dispose();
-            var choice = new OverlayMetricEditChoiceViewModel(row);
+            var choice = new OverlayMetricEditChoiceViewModel(metric);
             _metricEditChoices[row.OverrideIdentity] = choice;
             return choice;
         });

@@ -8,6 +8,7 @@ public sealed partial class MainWindowViewModel
     private double _overlayBackgroundOpacityPercent = 100;
     private string _overlayBackgroundColorText = "";
     private bool _overlayBorderEnabled = true;
+    private bool _overlayShowGpuModelSetting;
     private string _overlayBorderColorText = "";
     private string _overlayFontFamilySelection = "Padrão do app";
     private string _overlayFontFamilyCustomText = "";
@@ -48,6 +49,17 @@ public sealed partial class MainWindowViewModel
                 RaiseOverlayPreviewProperties();
         }
     }
+
+    public bool OverlayShowGpuModelSetting
+    {
+        get => _overlayShowGpuModelSetting;
+        set
+        {
+            if (Set(ref _overlayShowGpuModelSetting, value)) UpdateOverlayRows(_latestSensorData);
+        }
+    }
+
+    public bool OverlayShowGpuModel => _config.Overlay.ShowGpuModel;
 
     public string OverlayBorderColorText
     {
@@ -180,6 +192,7 @@ public sealed partial class MainWindowViewModel
         _overlayBackgroundOpacityPercent = _config.Overlay.BackgroundOpacity * 100;
         _overlayBackgroundColorText = _config.Overlay.BackgroundColor ?? "";
         _overlayBorderEnabled = _config.Overlay.BorderEnabled;
+        _overlayShowGpuModelSetting = _config.Overlay.ShowGpuModel;
         _overlayBorderColorText = _config.Overlay.BorderColor ?? "";
         SetOverlayFontFamilyDraft(_config.Overlay.FontFamily);
     }
@@ -194,6 +207,7 @@ public sealed partial class MainWindowViewModel
         OverlayBorderColorText = _config.Overlay.BorderColor ?? "";
         OverlayFontSizeSlider = _config.Overlay.FontSize;
         OverlayCompactModeSetting = _config.Overlay.CompactMode;
+        OverlayShowGpuModelSetting = _config.Overlay.ShowGpuModel;
         SetOverlayFontFamilyDraft(_config.Overlay.FontFamily);
         RaiseOverlayPreviewProperties();
     }

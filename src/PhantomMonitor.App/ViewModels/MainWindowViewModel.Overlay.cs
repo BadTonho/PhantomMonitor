@@ -101,7 +101,7 @@ public sealed partial class MainWindowViewModel
             row.Value = entry.Value;
             row.ShowFrametimeGraph = entry.ShowFrametimeGraph;
             row.UpdateSensorFormatting(entry.OverrideIdentity, entry.SeriesKey, entry.NumericValue,
-                entry.ShowNameOverride, entry.IsIndividualSeries);
+                entry.ShowNameOverride, entry.IsIndividualSeries, entry.DeviceLabel);
             position++;
         }
 

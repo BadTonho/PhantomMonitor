@@ -134,13 +134,19 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         var identity = source.OverrideIdentity;
         var metricOverride = Config.MetricOverrides.FirstOrDefault(item =>
             item.Identity.Equals(identity, StringComparison.OrdinalIgnoreCase));
+        var showGpuModel = IsPreview ? Owner.OverlayShowGpuModelSetting : Owner.OverlayShowGpuModel;
         if (_metricViewModels.TryGetValue(identity, out var existing))
         {
-            existing.UpdateOverride(metricOverride);
-            return existing;
+            if (ReferenceEquals(existing.Source, source))
+            {
+                existing.UpdateOverride(metricOverride);
+                existing.SetShowGpuModel(showGpuModel);
+                return existing;
+            }
+            existing.Dispose();
         }
 
-        var created = new OverlayBlockMetricViewModel(source, metricOverride);
+        var created = new OverlayBlockMetricViewModel(source, metricOverride, showGpuModel);
         _metricViewModels[identity] = created;
         return created;
     }
@@ -200,7 +206,8 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
             if (Content[^1] is OverlayBlockMetricViewModel metric)
             {
                 metric.Dispose();
-                _metricViewModels.Remove(metric.Identity);
+                if (_metricViewModels.TryGetValue(metric.Identity, out var cached) && ReferenceEquals(cached, metric))
+                    _metricViewModels.Remove(metric.Identity);
             }
             Content.RemoveAt(Content.Count - 1);
         }

@@ -3,34 +3,34 @@
             x:Class="PhantomMonitor.App.Views.AlertsPage">
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsAlerts}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+        <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Alertas" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Configure limites e acompanhe os disparos durante a coleta." Classes="muted" FontSize="11" />
           </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action accent" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action accent" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action accent" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
           </StackPanel>
         </Grid>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="12">
-            <TextBlock Text="CONFIGURAÇÃO GERAL" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="CONFIGURAÇÃO GERAL" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <CheckBox Content="Ativar avaliação de alertas" IsChecked="{Binding AlertsEnabled, Mode=TwoWay}" />
             <StackPanel Spacing="5">
               <TextBlock Text="Cooldown global (segundos)" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" />
               <TextBox Classes="settings-input" Text="{Binding AlertsCooldownText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-              <TextBlock Text="Use de 1 a 3.600 segundos. Cooldown 0 em uma regra usa este valor." Classes="muted" FontSize="10" />
+              <TextBlock Text="Use de 1 a 3.600 segundos. Cooldown 0 em uma regra usa este valor." Classes="muted" FontSize="11" />
             </StackPanel>
           </StackPanel>
         </Border>
 
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="4">
-            <TextBlock Text="REGRAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-            <TextBlock Text="A notificação aparece quando a condição é atendida; regras sem notificação continuam no histórico." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="REGRAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+            <TextBlock Text="A notificação aparece quando a condição é atendida; regras sem notificação continuam no histórico." Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
           <Button Grid.Column="1" Classes="action accent" Content="Adicionar regra" Click="OnAddAlertRuleClick" />
         </Grid>
@@ -38,7 +38,7 @@
         <ItemsControl ItemsSource="{Binding AlertRules}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+              <Border Classes="desktop-card" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="11">
                   <Grid ColumnDefinitions="*,Auto,Auto">
                     <CheckBox Content="Regra ativa" IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center" />
@@ -47,40 +47,40 @@
                   </Grid>
                   <Grid ColumnDefinitions="1.4*,*,*,*" ColumnSpacing="10">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="SENSOR" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SENSOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <ComboBox ItemsSource="{Binding SensorOptions}" SelectedItem="{Binding SensorKey, Mode=TwoWay}" />
-                      <TextBlock Text="{Binding SensorUnit}" Classes="muted" FontSize="9" />
+                      <TextBlock Text="{Binding SensorUnit}" Classes="muted" FontSize="11" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5">
-                      <TextBlock Text="COMPARAÇÃO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="COMPARAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <ComboBox ItemsSource="{Binding Comparisons}" SelectedItem="{Binding Comparison, Mode=TwoWay}" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="5">
-                      <TextBlock Text="LIMITE" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="LIMITE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <TextBox Text="{Binding ThresholdText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Grid.Column="3" Spacing="5">
-                      <TextBlock Text="COOLDOWN (S)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="COOLDOWN (S)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <TextBox Text="{Binding CooldownText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                   </Grid>
                   <StackPanel Spacing="5">
-                    <TextBlock Text="MENSAGEM (OPCIONAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Text="MENSAGEM (OPCIONAL)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                     <TextBox Text="{Binding Message, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Sensor {sensor}: {value} (limite: {threshold})" />
-                    <TextBlock Text="Placeholders: {sensor}, {value}, {threshold}." Classes="muted" FontSize="10" />
+                    <TextBlock Text="Placeholders: {sensor}, {value}, {threshold}." Classes="muted" FontSize="11" />
                   </StackPanel>
                   <StackPanel Spacing="5">
-                    <TextBlock Text="SCRIPT (OPCIONAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Text="SCRIPT (OPCIONAL)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                       <TextBox Text="{Binding Script, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="/caminho/para/script.sh" />
                       <Button Grid.Column="1" Content="Escolher arquivo…" Click="OnSelectAlertScriptClick" />
                     </Grid>
-                    <TextBlock Text="Scripts .sh usam /bin/sh; outros arquivos precisam ser executáveis." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+                    <TextBlock Text="Scripts .sh usam /bin/sh; outros arquivos precisam ser executáveis." Classes="muted" FontSize="11" TextWrapping="Wrap" />
                   </StackPanel>
                   <StackPanel Spacing="5">
-                    <TextBlock Text="ARGUMENTOS DO SCRIPT" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                    <TextBlock Text="ARGUMENTOS DO SCRIPT" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                     <TextBox Text="{Binding ScriptArguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="--valor {value} --sensor &quot;{sensor}&quot;" />
-                    <TextBlock Text="Separe por espaços; use aspas ou barra invertida para agrupar/escapar. Placeholders: {value}, {sensor}. Pipes e redirecionamentos não são interpretados." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+                    <TextBlock Text="Separe por espaços; use aspas ou barra invertida para agrupar/escapar. Placeholders: {value}, {sensor}. Pipes e redirecionamentos não são interpretados." Classes="muted" FontSize="11" TextWrapping="Wrap" />
                   </StackPanel>
                 </StackPanel>
               </Border>
@@ -88,19 +88,19 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border Classes="desktop-card" Padding="16">
           <StackPanel Spacing="10">
-            <TextBlock Text="HISTÓRICO RECENTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="HISTÓRICO RECENTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <TextBlock IsVisible="{Binding !HasAlertHistory}" Text="Nenhum alerta disparado nesta execução." Classes="muted" FontSize="11" />
             <ItemsControl ItemsSource="{Binding AlertHistory}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
-                      <TextBlock Text="{Binding Time}" Classes="muted" FontSize="10" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="1" Text="{Binding Sensor}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="10" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="3" Text="{Binding Value}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Time}" Classes="muted" FontSize="11" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Sensor}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="11" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Value}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" VerticalAlignment="Center" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -114,7 +114,7 @@
           <TextBlock Grid.Column="1" Text="{Binding AlertsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
 
-        <TextBlock Text="No Avalonia, scripts configurados são executados quando a regra dispara. Som e desligamento são preservados no arquivo, mas não executados." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+        <TextBlock Text="No Avalonia, scripts configurados são executados quando a regra dispara. Som e desligamento são preservados no arquivo, mas não executados." Classes="muted" FontSize="11" TextWrapping="Wrap" />
       </StackPanel>
     </ScrollViewer>
 </UserControl>

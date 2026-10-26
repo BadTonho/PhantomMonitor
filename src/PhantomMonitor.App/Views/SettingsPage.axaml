@@ -8,29 +8,29 @@
           <TextBlock Text="Ajuste a coleta, o overlay e os arquivos de telemetria." Classes="muted" FontSize="11" />
         </StackPanel>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="12">
-            <TextBlock Text="COLETA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="COLETA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <TextBlock Text="Intervalo global (milissegundos)" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" />
             <TextBox Classes="settings-input" Text="{Binding UpdateIntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Text="Use um valor entre 100 e 60.000 ms. Um intervalo menor atualiza o painel com mais frequência." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Use um valor entre 100 e 60.000 ms. Um intervalo menor atualiza o painel com mais frequência." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="12">
-            <TextBlock Text="MODO DO OVERLAY" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="MODO DO OVERLAY" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <ComboBox ItemsSource="{Binding OverlayRenderModeOptions}"
                       SelectedIndex="{Binding OverlayRenderModeIndex, Mode=TwoWay}"
                       HorizontalAlignment="Left" MinWidth="240" />
-            <TextBlock Text="Janela flutuante mantém os blocos em janelas separadas. Dentro do jogo usa um renderer nativo para desenhar no quadro apresentado pelo jogo; a opção depende de suporte para a API gráfica e pode ser bloqueada por anti-cheat." Classes="muted" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock IsVisible="{Binding IsOverlayInGameModeSelected}" Text="{Binding InGameOverlayCapabilityNotice}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock Text="A aparência e a composição dos blocos são ajustadas no editor visual." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Janela flutuante mantém os blocos em janelas separadas. Dentro do jogo usa um renderer nativo para desenhar no quadro apresentado pelo jogo; a opção depende de suporte para a API gráfica e pode ser bloqueada por anti-cheat." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding IsOverlayInGameModeSelected}" Text="{Binding InGameOverlayCapabilityNotice}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock Text="A aparência e a composição dos blocos são ajustadas no editor visual." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <Button Classes="action accent" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
             <StackPanel IsVisible="{Binding IsOverlayInGameModeSelected}" Spacing="8">
-              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O PhantomMonitor detecta globalmente aplicações apresentando frames enquanto estiver aberto e tenta instalar o hook, sem cadastro de executável. A detecção usa ETW/PresentMon e pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook. Para jogos D3D12 em que o overlay não aparece, adicione o executável abaixo e use Iniciar." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
-              <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="No Linux, adicione um executável para iniciá-lo com Vulkan e, se instalado, o preload OpenGL GLX/EGL. Para Steam, cole a opção gerada abaixo nas propriedades do jogo." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O PhantomMonitor detecta globalmente aplicações apresentando frames enquanto estiver aberto e tenta instalar o hook, sem cadastro de executável. A detecção usa ETW/PresentMon e pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook. Para jogos D3D12 em que o overlay não aparece, adicione o executável abaixo e use Iniciar." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="No Linux, adicione um executável para iniciá-lo com Vulkan e, se instalado, o preload OpenGL GLX/EGL. Para Steam, cole a opção gerada abaixo nas propriedades do jogo." Classes="muted" FontSize="11" TextWrapping="Wrap" />
               <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
                 <TextBox Text="{Binding OverlayTargetPathText, Mode=TwoWay}" PlaceholderText="Caminho do executável" />
                 <TextBox Grid.Column="1" Text="{Binding OverlayTargetArgumentsText, Mode=TwoWay}" PlaceholderText="Argumentos (opcional)" />
@@ -40,7 +40,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,2">
-                      <TextBlock Text="{Binding ExecutablePath}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding ExecutablePath}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                       <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].DataContext.IsOverlayTargetLaunchVisible}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
                       <Button Grid.Column="2" Content="Remover" Click="OnRemoveOverlayTargetClick" />
                     </Grid>
@@ -51,75 +51,75 @@
                 <TextBox Text="{Binding SteamOverlayLaunchOption}" IsReadOnly="True" MinWidth="260" />
                 <Button Content="Copiar opção Steam" Click="OnCopySteamOverlayOptionClick" />
               </StackPanel>
-              <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="12">
-            <TextBlock Text="INTERFACE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="INTERFACE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <StackPanel Spacing="5">
-              <TextBlock Text="TEMA VISUAL" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="TEMA VISUAL" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <ComboBox SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}" ItemsSource="{Binding ThemeOptions}" MinWidth="260" HorizontalAlignment="Left" />
                 <Button Content="Personalizar paleta" Click="OnOpenThemePaletteEditorClick" />
               </StackPanel>
             </StackPanel>
-            <TextBlock Text="Neptune = visual original do Avalonia; Slate = porta verbatim do visual do WPF. Escolha um tema e personalize suas cores; as alterações entram em vigor em &quot;Salvar e aplicar&quot;, sem reiniciar o app." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Neptune = visual original do Avalonia; Slate = porta verbatim do visual do WPF. Escolha um tema e personalize suas cores; as alterações entram em vigor em &quot;Salvar e aplicar&quot;, sem reiniciar o app." Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="12">
-            <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <CheckBox Content="Exportar CSV" IsChecked="{Binding LogToCsv, Mode=TwoWay}" />
             <CheckBox Content="Snapshot JSON mais recente" IsChecked="{Binding LogToJson, Mode=TwoWay}" />
             <CheckBox Content="Journal JSON contínuo (JSONL)" IsChecked="{Binding LogToJsonJournal, Mode=TwoWay}" />
             <StackPanel Spacing="4" Margin="0,6,0,0">
-              <TextBlock Text="PASTA DOS ARQUIVOS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="PASTA DOS ARQUIVOS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <TextBlock Text="{Binding LogDirectoryText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="12">
-            <TextBlock Text="EXPORTADOR HTTP" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="EXPORTADOR HTTP" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <CheckBox Content="Ativar endpoints de telemetria" IsChecked="{Binding TelemetryExportEnabled, Mode=TwoWay}" />
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
               <StackPanel Spacing="5">
-                <TextBlock Text="PORTA (1024–65535)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="PORTA (1024–65535)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <TextBox Text="{Binding TelemetryExportPortText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="7317" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
-                <TextBlock Text="ENDPOINTS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-                <TextBlock Text="{Binding TelemetryExportEndpointText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <TextBlock Text="ENDPOINTS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+                <TextBlock Text="{Binding TelemetryExportEndpointText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
               </StackPanel>
             </Grid>
             <CheckBox Content="Escutar em todas as interfaces (LAN)" IsChecked="{Binding TelemetryExportListenAll, Mode=TwoWay}" />
-            <TextBlock Text="A opção LAN permite acesso por outros dispositivos da rede e não usa TLS nem autenticação. Ative somente em uma rede confiável." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="A opção LAN permite acesso por outros dispositivos da rede e não usa TLS nem autenticação. Ative somente em uma rede confiável." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
             <StackPanel Spacing="4">
-              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-              <TextBlock Text="{Binding TelemetryExportStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="{Binding TelemetryExportStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
-            <TextBlock Text="GET /values retorna o último snapshot JSON; GET /health verifica o listener. O servidor funciona enquanto a coleta estiver ativa e mantém o último snapshot durante a pausa." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="GET /values retorna o último snapshot JSON; GET /health verifica o listener. O servidor funciona enquanto a coleta estiver ativa e mantém o último snapshot durante a pausa." Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="12">
-            <TextBlock Text="ATUALIZAÇÕES (GITHUB RELEASES)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="ATUALIZAÇÕES (GITHUB RELEASES)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <CheckBox Content="Verificar automaticamente (no arranque e a cada 24h)" IsChecked="{Binding UpdateAutoCheck, Mode=TwoWay}" />
             <CheckBox Content="Canal beta (aceitar pré-releases do GitHub)" IsChecked="{Binding UpdateBetaChannel, Mode=TwoWay}" />
             <StackPanel Spacing="5">
-              <TextBlock Text="REPOSITÓRIO (VAZIO USA O OFICIAL)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+              <TextBlock Text="REPOSITÓRIO (VAZIO USA O OFICIAL)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <TextBox Text="{Binding UpdateRepositoryText, Mode=TwoWay}" PlaceholderText="BadTonho/PhantomMonitor" />
             </StackPanel>
             <StackPanel Spacing="4">
-              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
-              <TextBlock Text="{Binding UpdateVersionText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding UpdateStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="ESTADO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="{Binding UpdateVersionText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding UpdateStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="action accent" Content="Buscar agora" Click="OnCheckUpdatesClick" />
@@ -127,7 +127,7 @@
               <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"
                       IsVisible="{Binding CanApplyUpdate}" IsEnabled="{Binding CanApplyUpdateEnabled}" />
             </StackPanel>
-            <TextBlock Text="A troca baixa a nova versão, aguarda o app encerrar e reabre sozinho. Config (config.json) e logs ficam fora da pasta trocada. Em instalação por pacote do sistema, a troca não é oferecida e o card fica apenas na notificação." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="A troca baixa a nova versão, aguarda o app encerrar e reabre sozinho. Config (config.json) e logs ficam fora da pasta trocada. Em instalação por pacote do sistema, a troca não é oferecida e o card fica apenas na notificação." Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 

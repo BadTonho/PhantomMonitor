@@ -6,6 +6,9 @@
         Width="940" Height="720" MinWidth="760" MinHeight="600"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
+  <Window.Styles>
+    <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
+  </Window.Styles>
   <Grid RowDefinitions="Auto,*,Auto" Margin="22" RowSpacing="14">
     <StackPanel Spacing="4">
       <TextBlock Text="PERSONALIZAR PALETA" Foreground="{DynamicResource TextPrimaryBrush}"

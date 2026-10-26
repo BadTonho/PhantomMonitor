@@ -8,6 +8,9 @@
         Width="1120" Height="820" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
+  <Window.Styles>
+    <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
+  </Window.Styles>
   <Grid x:Name="EditorCanvasViewport" ColumnDefinitions="*,Auto" SizeChanged="OnEditorCanvasViewportSizeChanged">
     <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <Grid x:Name="EditorCanvasSurface" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"

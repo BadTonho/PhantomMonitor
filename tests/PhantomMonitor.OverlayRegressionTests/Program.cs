@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.Win32;
 using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.App.ViewModels;
+using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 
 (string Name, Action Run)[] tests =
@@ -20,6 +21,7 @@ using PhantomMonitor.Services;
     ("PIDs sem novos frames expiram da descoberta", TestPresentMonProcessExpiration),
     ("sessão PresentMon continua ativa para descoberta com coleta parada", TestPresentMonSessionDemand),
     ("registro Vulkan x86/x64 pode ser ativado e removido sem Registro real", TestVulkanLayerRegistration),
+    ("temperatura da placa-mae distingue ausencia de zero", TestMotherboardTemperatureAvailability),
     .. CoreRegressionTests.Cases
 ];
 
@@ -31,6 +33,14 @@ foreach (var test in tests)
     catch (Exception ex) { failed++; Console.Error.WriteLine($"FAIL: {test.Name}: {ex}"); }
 }
 Environment.ExitCode = failed > 0 ? 1 : 0;
+
+static void TestMotherboardTemperatureAvailability()
+{
+    var data = new SensorData();
+    Assert(MainWindowViewModel.FormatMotherboardTemperature(data) == "Indispon\u00edvel", "Leitura ausente deve ser indicada.");
+    data.SetValue(SensorType.MotherboardTemp, 0);
+    Assert(MainWindowViewModel.FormatMotherboardTemperature(data) == "0 \u00b0C", "Zero e uma leitura valida.");
+}
 
 static void TestCanvasToScreenCoordinates()
 {

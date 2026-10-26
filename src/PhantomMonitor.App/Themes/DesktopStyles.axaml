@@ -1,0 +1,36 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Estilos das janelas de configuracao; o OSD nao os inclui. -->
+  <Style Selector="Border.desktop-card">
+    <Setter Property="Background" Value="{DynamicResource BgCardBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="18" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.action">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="14,9" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.action:not(.accent)">
+    <Setter Property="Background" Value="{DynamicResource BgChipBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.action:not(.accent):pointerover">
+    <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.action:disabled">
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+</Styles>

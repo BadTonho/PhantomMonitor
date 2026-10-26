@@ -8,17 +8,11 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BgWindowBrush}">
   <Window.Styles>
-    <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
-    </Style>
+    <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
+
     <Style Selector="TextBlock.metric">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="FontSize" Value="28" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Button.action">
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Padding" Value="14,9" />
+      <Setter Property="FontSize" Value="30" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.diagnostic-tab">
@@ -45,13 +39,17 @@
     <Style Selector="Button.nav">
       <Setter Property="CornerRadius" Value="7" />
       <Setter Property="Padding" Value="10,9" />
-      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="FontSize" Value="12" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="Background" Value="{DynamicResource NavBrush}" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource NavForegroundBrush}" />
       <Setter Property="Template">
         <ControlTemplate>
           <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
                   Padding="{TemplateBinding Padding}">
             <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
               <Border x:Name="Indicator" Width="3" Height="14" CornerRadius="1.5" Margin="-2,0,7,0"
@@ -64,6 +62,9 @@
     </Style>
     <Style Selector="Button.nav /template/ Border#Indicator">
       <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="Button.nav:focus-visible">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
     </Style>
     <Style Selector="Button.nav:pointerover">
       <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
@@ -97,36 +98,72 @@
     </Style>
   </Window.Styles>
 
-  <Grid ColumnDefinitions="210,*">
+  <Grid ColumnDefinitions="230,*">
     <Border Grid.Column="0" Background="{DynamicResource BgSidebarBrush}" BorderBrush="{DynamicResource BgSidebarBorderBrush}" BorderThickness="0,0,1,0">
-      <Grid RowDefinitions="Auto,*,Auto" Margin="18,22">
+      <Grid RowDefinitions="Auto,*,Auto" Margin="16,22">
         <StackPanel Spacing="3">
           <TextBlock Text="PHANTOM" Foreground="{DynamicResource TextBrightBrush}" FontSize="19" FontWeight="Bold" />
-          <TextBlock Text="HARDWARE MONITOR" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+          <TextBlock Text="HARDWARE MONITOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Margin="0,38,0,0" Spacing="10">
-          <TextBlock Text="MONITORAMENTO" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="Bold" Margin="8,0,0,4" />
-          <Button x:Name="NavOverview" Classes="nav" Content="◉   Visão geral" Click="OnOverviewClick" />
-          <Button x:Name="NavInventory" Classes="nav" Content="▦   Inventário" Click="OnInventoryClick" />
-          <Button x:Name="NavCustomSensors" Classes="nav" Content="ƒ   Sensores customizados" Click="OnCustomSensorsClick" />
-          <Button x:Name="NavSensorTuning" Classes="nav" Content="↻   Ajuste por série" Click="OnSensorTuningClick" />
-          <Button x:Name="NavAlerts" Classes="nav" Content="♧   Alertas" Click="OnAlertsClick" />
-          <Button x:Name="NavDiagnostics" Classes="nav" Content="ⓘ   Diagnóstico" Click="OnDiagnosticsClick" />
-          <Button x:Name="NavSettings" Classes="nav" Content="⚙   Configurações" Click="OnSettingsClick" />
-          <TextBlock Text="CPU · GPU · MEMÓRIA · FPS" Foreground="{DynamicResource TextDimBrush}" FontSize="9" Margin="8,13,0,0" />
+        <ScrollViewer Grid.Row="1" Margin="0,28,0,8" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="6">
+          <TextBlock Text="MONITORAMENTO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" Margin="8,0,0,4" />
+          <Button x:Name="NavOverview" Classes="nav" Click="OnOverviewClick" ToolTip.Tip="Visão geral">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Data="M 2,8 L 8,2 L 14,8 L 14,14 L 2,14 Z M 6,14 L 6,9 L 10,9 L 10,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
+              <TextBlock Text="Visão geral" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="NavInventory" Classes="nav" Click="OnInventoryClick" ToolTip.Tip="Inventário">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Data="M 2,2 L 14,2 L 14,14 L 2,14 Z M 2,6 L 14,6 M 6,6 L 6,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
+              <TextBlock Text="Inventário" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="NavCustomSensors" Classes="nav" Click="OnCustomSensorsClick" ToolTip.Tip="Sensores customizados">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Data="M 2,12 L 5,8 L 8,10 L 12,3 L 14,4" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
+              <TextBlock Text="Sensores customizados" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="NavSensorTuning" Classes="nav" Click="OnSensorTuningClick" ToolTip.Tip="Ajuste por série">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Data="M 2,4 L 14,4 M 2,8 L 14,8 M 2,12 L 14,12 M 5,2 L 5,6 M 11,6 L 11,10 M 7,10 L 7,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
+              <TextBlock Text="Ajuste por série" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="NavAlerts" Classes="nav" Click="OnAlertsClick" ToolTip.Tip="Alertas">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Data="M 8,2 L 14,13 L 2,13 Z M 8,6 L 8,9 M 8,11 L 8,11.5" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
+              <TextBlock Text="Alertas" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="NavDiagnostics" Classes="nav" Click="OnDiagnosticsClick" ToolTip.Tip="Diagnóstico">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Data="M 8,2 A 6,6 0 1 1 7.99,2 M 8,7 L 8,11 M 8,4.5 L 8,5" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
+              <TextBlock Text="Diagnóstico" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="NavSettings" Classes="nav" Click="OnSettingsClick" ToolTip.Tip="Configurações">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Data="M 2,4 L 14,4 M 2,8 L 14,8 M 2,12 L 14,12 M 5,2 L 5,6 M 10,6 L 10,10 M 6,10 L 6,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
+              <TextBlock Text="Configurações" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
         </StackPanel>
+        </ScrollViewer>
 
         <Border Grid.Row="2" Background="{DynamicResource BgCardBrush}" CornerRadius="9" Padding="11">
           <StackPanel Spacing="5">
-            <TextBlock Text="ESTADO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+            <TextBlock Text="ESTADO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextStatusBrush}" FontSize="12" />
             <Button Classes="update-badge" IsVisible="{Binding UpdateBadgeVisible}" Click="OnUpdateBadgeClick">
-              <TextBlock Text="{Binding UpdateBadgeText}" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="10" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Left" />
+              <TextBlock Text="{Binding UpdateBadgeText}" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Left" />
             </Button>
             <CheckBox IsVisible="{Binding StartupSupported}" Content="Iniciar com o sistema"
                       IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
-                      Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10"
+                      Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"
                       ToolTip.Tip="Registra o aplicativo para iniciar com o sistema (Run do Windows / entrada autostart no Linux)." />
           </StackPanel>
         </Border>
@@ -135,155 +172,155 @@
 
     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsOverview}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+        <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Visão geral do sistema" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="{Binding LastUpdateText}" Classes="muted" FontSize="11" />
           </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action accent" Content="{Binding OverlayButtonText}" Click="OnToggleOverlayClick" />
-            <Button Classes="action accent" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action accent" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action accent" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="{Binding OverlayButtonText}" Click="OnToggleOverlayClick" />
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
           </StackPanel>
         </Grid>
 
         <!-- Banner de elevação (porta do AdminWarning do WPF; tints quentes da pílula) -->
-        <Border IsVisible="{Binding IsAdminBannerVisible}" Background="{DynamicResource BgTintHotBrush}" BorderBrush="{DynamicResource BorderTintHotBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+        <Border IsVisible="{Binding IsAdminBannerVisible}" Background="{DynamicResource BgTintWarmBrush}" BorderBrush="{DynamicResource BorderTintWarmBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel VerticalAlignment="Center">
-              <TextBlock Text="Privilégios administrativos necessários" Foreground="{DynamicResource AccentHotSoftBrush}" FontSize="12" FontWeight="SemiBold" />
-              <TextBlock Text="Leituras de temperatura e clock por núcleo da CPU e FPS via PresentMon podem exigir elevação. Sem ela, o clock geral pode ser aproximado pelo Windows." Foreground="{DynamicResource AccentHotBodyBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="Privilégios administrativos necessários" Foreground="{DynamicResource AccentWarningBrush}" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Text="Algumas leituras de CPU e FPS podem exigir privilégios de administrador." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" />
             </StackPanel>
             <Button Grid.Column="1" Classes="action accent" Content="Executar como admin" Click="OnRestartAsAdminClick" VerticalAlignment="Center" />
           </Grid>
         </Border>
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-          <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <Border Classes="desktop-card">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="PROCESSADOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="PROCESSADOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <Border Grid.Column="1" Background="{DynamicResource BgChipBrush}" CornerRadius="8" Padding="8,3">
-                  <TextBlock Text="CPU" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="CPU" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="11" FontWeight="Bold" />
                 </Border>
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
                 <StackPanel>
                   <TextBlock Text="{Binding CpuUsageText}" Classes="metric" Foreground="{Binding CpuUsageBrush}" />
-                  <TextBlock Text="Utilização total" Classes="muted" FontSize="10" />
+                  <TextBlock Text="Utilização total" Classes="muted" FontSize="11" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
                   <Border Background="{Binding CpuTempPillBrush}" BorderBrush="{Binding CpuTempPillBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,3" HorizontalAlignment="Right">
                     <TextBlock Text="{Binding CpuTempText}" Foreground="{Binding CpuTempBrush}" FontSize="12" FontWeight="SemiBold" />
                   </Border>
-                  <TextBlock Text="{Binding CpuClockText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
+                  <TextBlock Text="{Binding CpuClockText}" Classes="muted" FontSize="11" HorizontalAlignment="Right" />
                 </StackPanel>
               </Grid>
-              <charts:HistoryChart Grid.Row="2" Values="{Binding CpuSamples}" Stroke="{DynamicResource AccentLightBrush}" Height="42" />
-              <TextBlock Grid.Row="3" Text="{Binding CpuDetailText}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextTrimming="CharacterEllipsis" />
+              <charts:HistoryChart Grid.Row="2" Values="{Binding CpuSamples}" Stroke="{DynamicResource AccentLightBrush}" Height="52" />
+              <TextBlock Grid.Row="3" Text="{Binding CpuDetailText}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Border>
 
-          <Border Grid.Column="1" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <Border Grid.Column="1" Classes="desktop-card">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="PLACA DE VÍDEO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="PLACA DE VÍDEO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <Border Grid.Column="1" Background="{DynamicResource BgChipBrush}" CornerRadius="8" Padding="8,3">
-                  <TextBlock Text="GPU" Foreground="{DynamicResource AccentPurpleChipBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="GPU" Foreground="{DynamicResource AccentPurpleChipBrush}" FontSize="11" FontWeight="Bold" />
                 </Border>
               </Grid>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
                 <StackPanel>
                   <TextBlock Text="{Binding GpuUsageText}" Classes="metric" Foreground="{Binding GpuUsageBrush}" />
-                  <TextBlock Text="Utilização do núcleo" Classes="muted" FontSize="10" />
+                  <TextBlock Text="Utilização do núcleo" Classes="muted" FontSize="11" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="5">
                   <Border Background="{Binding GpuTempPillBrush}" BorderBrush="{Binding GpuTempPillBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8,3" HorizontalAlignment="Right">
                     <TextBlock Text="{Binding GpuTempText}" Foreground="{Binding GpuTempBrush}" FontSize="12" FontWeight="SemiBold" />
                   </Border>
-                  <TextBlock Text="{Binding GpuMemoryText}" Classes="muted" FontSize="10" HorizontalAlignment="Right" />
+                  <TextBlock Text="{Binding GpuMemoryText}" Classes="muted" FontSize="11" HorizontalAlignment="Right" />
                 </StackPanel>
               </Grid>
-              <charts:HistoryChart Grid.Row="2" Values="{Binding GpuSamples}" Stroke="{DynamicResource AccentPurpleSoftBrush}" Height="42" />
-              <TextBlock Grid.Row="3" Text="{Binding GpuDetailText}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextTrimming="CharacterEllipsis" />
+              <charts:HistoryChart Grid.Row="2" Values="{Binding GpuSamples}" Stroke="{DynamicResource AccentPurpleSoftBrush}" Height="52" />
+              <TextBlock Grid.Row="3" Text="{Binding GpuDetailText}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Border>
         </Grid>
 
-        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="14">
-          <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
+        <Grid x:Name="OverviewSecondaryCards" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" RowSpacing="14">
+          <Border Classes="desktop-card" Padding="17">
             <StackPanel Spacing="11">
-              <TextBlock Text="MEMÓRIA RAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="MEMÓRIA RAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <TextBlock Text="{Binding RamUsageText}" Classes="metric" />
               <TextBlock Text="{Binding RamDetailText}" Classes="muted" FontSize="11" />
               <charts:HistoryChart Values="{Binding RamSamples}" Stroke="{DynamicResource AccentGreenBrush}" Height="34" />
             </StackPanel>
           </Border>
-          <Border Grid.Column="1" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
+          <Border Grid.Column="1" Classes="desktop-card" Padding="17">
             <StackPanel Spacing="12">
-              <TextBlock Text="DISCO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="DISCO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <StackPanel Spacing="4">
-                <TextBlock Text="LEITURA" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="LEITURA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <TextBlock Text="{Binding DiskReadText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
               <StackPanel Spacing="4">
-                <TextBlock Text="GRAVAÇÃO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="GRAVAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <TextBlock Text="{Binding DiskWriteText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
             </StackPanel>
           </Border>
-          <Border Grid.Column="2" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
+          <Border Grid.Column="2" Classes="desktop-card" Padding="17">
             <StackPanel Spacing="12">
-              <TextBlock Text="REDE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="REDE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <StackPanel Spacing="4">
-                <TextBlock Text="DOWNLOAD" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="DOWNLOAD" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <TextBlock Text="{Binding NetworkDownText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
               <StackPanel Spacing="4">
-                <TextBlock Text="UPLOAD" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                <TextBlock Text="UPLOAD" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <TextBlock Text="{Binding NetworkUpText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
               </StackPanel>
             </StackPanel>
           </Border>
-          <Border Grid.Column="3" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="17">
+          <Border Grid.Column="3" Classes="desktop-card" Padding="17">
             <StackPanel Spacing="11">
-              <TextBlock Text="PLACA-MÃE &amp; VENTOINHAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <TextBlock Text="PLACA-MÃE &amp; VENTOINHAS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <TextBlock Text="{Binding MotherboardTempText}" Foreground="{Binding MbTempBrush}" FontSize="22" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding FanSummaryText}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding FanSummaryText}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </Grid>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="4">
-                <TextBlock Text="FPS EM JOGO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-                <TextBlock Text="{Binding FpsHint}" Classes="muted" FontSize="10" />
+                <TextBlock Text="FPS EM JOGO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+                <TextBlock Text="{Binding FpsHint}" Classes="muted" FontSize="11" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="22" VerticalAlignment="Center">
                 <StackPanel>
-                  <TextBlock Text="FPS" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="FPS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                   <TextBlock Text="{Binding FpsText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="25" FontWeight="SemiBold" />
                 </StackPanel>
                 <StackPanel>
-                  <TextBlock Text="FRAMETIME" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                  <TextBlock Text="FRAMETIME" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                   <TextBlock Text="{Binding FrametimeText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="16" />
                 </StackPanel>
               </StackPanel>
             </Grid>
-            <charts:HistoryChart Grid.Row="1" Values="{Binding FrametimeSamples}" Stroke="{DynamicResource AccentWarningBrush}" Height="56" />
-            <TextBlock Grid.Row="2" Text="{Binding FpsStatsText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" />
+            <charts:HistoryChart Grid.Row="1" IsVisible="{Binding HasFpsData}" Values="{Binding FrametimeSamples}" Stroke="{DynamicResource AccentWarningBrush}" Height="56" />
+            <TextBlock Grid.Row="2" IsVisible="{Binding HasFpsData}" Text="{Binding FpsStatsText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" />
           </Grid>
         </Border>
 
         <!-- Porta do card de processos na GPU do WPF (nome + uso % à direita) -->
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Border Classes="desktop-card">
           <StackPanel Spacing="10">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="PROCESSOS ATIVOS NA GPU" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-              <TextBlock Grid.Column="1" Text="Relatado pelo Windows via WMI (GPUEngine)" Classes="muted" FontSize="9" />
+              <TextBlock Text="PROCESSOS ATIVOS NA GPU" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock Grid.Column="1" Text="Relatado pelo Windows via WMI (GPUEngine)" Classes="muted" FontSize="11" />
             </Grid>
             <ItemsControl ItemsSource="{Binding GpuProcessRows}">
               <ItemsControl.ItemTemplate>
@@ -301,24 +338,24 @@
           </StackPanel>
         </Border>
 
-        <TextBlock Text="Os valores de temperatura, clock e utilização dependem dos sensores expostos pelo kernel e pelo driver." Classes="muted" FontSize="10" TextWrapping="Wrap" Margin="2,0,0,0" />
+        <TextBlock Text="Os valores de temperatura, clock e utilização dependem dos sensores expostos pelo kernel e pelo driver." Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="2,0,0,0" />
       </StackPanel>
     </ScrollViewer>
 
     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsInventory}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+        <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Inventário de sensores" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="{Binding InventorySummaryText}" Classes="muted" FontSize="11" />
-            <TextBlock Text="{Binding InventoryUpdatedText}" Classes="muted" FontSize="10" />
-            <TextBlock IsVisible="{Binding HasInventoryActionStatus}" Text="{Binding InventoryActionStatusText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" />
+            <TextBlock Text="{Binding InventoryUpdatedText}" Classes="muted" FontSize="11" />
+            <TextBlock IsVisible="{Binding HasInventoryActionStatus}" Text="{Binding InventoryActionStatusText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
           </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action accent" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action accent" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action accent" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
-            <Button Classes="action accent" Content="Resetar estatísticas" Click="OnResetStatsClick"
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+            <Button Classes="action" Content="Resetar estatísticas" Click="OnResetStatsClick"
                     ToolTip.Tip="Zera as colunas Mín/Máx/Média da sessão e grava um marcador no CSV/journal ativo (#marker), como no WPF." />
           </StackPanel>
         </Grid>
@@ -331,13 +368,13 @@
           <StackPanel Spacing="0" HorizontalAlignment="Stretch">
             <Border Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,0,0,1" Padding="10,6" HorizontalAlignment="Stretch">
               <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch">
-                <TextBlock Text="Sensor" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="Sensor" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,2">
-                  <TextBlock Text="Atual" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" TextAlignment="Right" />
+                  <TextBlock Text="Atual" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" />
                 </Border>
-                <TextBlock Grid.Column="2" Text="Mínimo" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="3" Text="Máximo" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="4" Text="Média" Foreground="{DynamicResource TextLabelBrush}" FontSize="10" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="Mínimo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Text="Máximo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="4" Text="Média" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
               </Grid>
             </Border>
             <ItemsControl ItemsSource="{Binding InventoryGroups}" HorizontalAlignment="Stretch">
@@ -368,16 +405,16 @@
                                               Click="OnInventoryRowToggleClick"
                                               Width="10" Height="16" Padding="0" BorderThickness="0"
                                               Background="Transparent" Foreground="{DynamicResource TextBodyBrush}"
-                                              FontSize="10" FontWeight="SemiBold"
+                                              FontSize="11" FontWeight="SemiBold"
                                               HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                                               HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-10,0,0,0" />
                                     </Grid>
                                   <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
-                                    <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   </Border>
-                                  <TextBlock Grid.Column="2" Text="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                  <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                  <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="2" Text="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   </Grid>
                                   <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding ShowChildren}" HorizontalAlignment="Stretch">
                                     <ItemsControl.ItemTemplate>
@@ -385,11 +422,11 @@
                                         <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch" Margin="0,1,0,0">
                                           <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="18,0,0,0" />
                                           <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
-                                            <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                           </Border>
-                                          <TextBlock Grid.Column="2" Text="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                          <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                          <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="10" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                          <TextBlock Grid.Column="2" Text="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                          <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                          <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                         </Grid>
                                       </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -411,7 +448,7 @@
         <Button Content="Hardware detectado…" HorizontalAlignment="Left" Margin="0,0,0,14"
                 IsVisible="{Binding HasInventorySnapshot}" Click="OnOpenHardwareInventoryClick" />
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasMonitors}">
+        <Border Classes="desktop-card" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasMonitors}">
           <StackPanel Spacing="10">
             <TextBlock Text="Monitores (EDID)" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
             <ItemsControl ItemsSource="{Binding Monitors}">
@@ -421,7 +458,7 @@
                     <StackPanel Spacing="3">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="{Binding InstanceName}" Foreground="{DynamicResource TextMonoBrush}" FontFamily="monospace" FontSize="11" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="PRIMÁRIO" IsVisible="{Binding Primary}" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="PRIMÁRIO" IsVisible="{Binding Primary}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
                       </Grid>
                       <StackPanel Orientation="Horizontal" Spacing="12">
                         <TextBlock Text="{Binding Manufacturer}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" MinWidth="48" />
@@ -439,7 +476,7 @@
           </StackPanel>
         </Border>
 
-        <TextBlock Text="Os sensores indisponíveis dependem do hardware, dos drivers e dos dados expostos pelo kernel." Classes="muted" FontSize="10" TextWrapping="Wrap" Margin="2,0,0,0" />
+        <TextBlock Text="Os sensores indisponíveis dependem do hardware, dos drivers e dos dados expostos pelo kernel." Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="2,0,0,0" />
       </StackPanel>
     </ScrollViewer>
 
@@ -450,31 +487,31 @@
 
     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSensorTuning}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,3">
+        <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Ajuste por série" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Configure a cadência de publicação e a suavização das leituras." Classes="muted" FontSize="11" />
           </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action accent" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action accent" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action accent" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
           </StackPanel>
         </Grid>
 
-        <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border Classes="desktop-card" Padding="16">
           <StackPanel Spacing="7">
-            <TextBlock Text="COMO AS REGRAS SE APLICAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+            <TextBlock Text="COMO AS REGRAS SE APLICAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <TextBlock Text="Intervalo 0 usa cada tick global; valores positivos são limitados a 100–3.600.000 ms e elevados ao intervalo global quando necessário. Suavização 0 ou 1 desliga o filtro; 2–60 usa uma média móvel das amostras frescas." Classes="muted" FontSize="11" TextWrapping="Wrap" />
-            <TextBlock Text="Padrões podem sobrepor várias séries. A última regra correspondente na lista prevalece; use as setas para mudar a ordem. Série ausente fica preservada e será ajustada quando aparecer." Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" TextWrapping="Wrap" />
-            <TextBlock Text="Salvar recria a sessão de sensores e zera as estatísticas. Coleta parada permanece parada; coleta pausada continua pausada." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Padrões podem sobrepor várias séries. A última regra correspondente na lista prevalece; use as setas para mudar a ordem. Série ausente fica preservada e será ajustada quando aparecer." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock Text="Salvar recria a sessão de sensores e zera as estatísticas. Coleta parada permanece parada; coleta pausada continua pausada." Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="4">
-            <TextBlock Text="REGRAS DE AJUSTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-            <TextBlock Text="Até 64 regras. Selecione uma série detectada/salva ou digite uma série/padrão." Classes="muted" FontSize="10" />
+            <TextBlock Text="REGRAS DE AJUSTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+            <TextBlock Text="Até 64 regras. Selecione uma série detectada/salva ou digite uma série/padrão." Classes="muted" FontSize="11" />
           </StackPanel>
           <Button Grid.Column="1" Classes="action accent" Content="Adicionar regra" Click="OnAddSensorTuningClick" />
         </Grid>
@@ -482,7 +519,7 @@
         <ItemsControl ItemsSource="{Binding SensorTuningEditors}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+              <Border Classes="desktop-card" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="10">
                   <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                     <TextBlock Text="{Binding SeriesLabel}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -492,21 +529,21 @@
                   </Grid>
                   <Grid ColumnDefinitions="1.3*,*" ColumnSpacing="10">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="SÉRIE OU PADRÃO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SÉRIE OU PADRÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <TextBox Text="{Binding Series, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="GpuTemperature ou Gpu*" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5">
-                      <TextBlock Text="SUGESTÕES DO INVENTÁRIO" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SUGESTÕES DO INVENTÁRIO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <ComboBox ItemsSource="{Binding SeriesOptions}" SelectedItem="{Binding SelectedSeriesOption, Mode=TwoWay}" />
                     </StackPanel>
                   </Grid>
                   <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="INTERVALO (MS)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="INTERVALO (MS)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <TextBox Text="{Binding IntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="0 = global" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5">
-                      <TextBlock Text="SUAVIZAÇÃO (AMOSTRAS)" Foreground="{DynamicResource TextLabelBrush}" FontSize="9" FontWeight="Bold" />
+                      <TextBlock Text="SUAVIZAÇÃO (AMOSTRAS)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                       <TextBox Text="{Binding SmoothingText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="0 = desativada" />
                     </StackPanel>
                   </Grid>
@@ -530,7 +567,7 @@
     <!-- Toast de alerta (paridade estrutural do AlertPopupWindow do WPF; cores via tokens AlertToast*). -->
     <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding AlertToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,18,0" MaxWidth="420" Background="{DynamicResource AlertToastBackgroundBrush}" BorderBrush="{DynamicResource AlertToastBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16">
       <StackPanel Spacing="5">
-        <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="{DynamicResource AlertToastHeaderBrush}" FontSize="9" FontWeight="Bold" />
+        <TextBlock Text="PHANTOM MONITOR · ALERTA" Foreground="{DynamicResource AlertToastHeaderBrush}" FontSize="11" FontWeight="Bold" />
         <TextBlock Text="{Binding AlertToastMessage}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
@@ -538,7 +575,7 @@
     <!-- Update update: same pattern as the alerts toast, in the top-right corner of the dashboard. -->
     <Border Grid.Column="1" ZIndex="10" IsVisible="{Binding UpdateToastVisible}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,60,18,0" MaxWidth="440" Background="{DynamicResource BgToastUpdateBrush}" BorderBrush="{DynamicResource AccentGreenBrush}" BorderThickness="1" CornerRadius="10" Padding="16">
       <StackPanel Spacing="8">
-        <TextBlock Text="PHANTOM MONITOR · ATUALIZAÇÃO" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="9" FontWeight="Bold" />
+        <TextBlock Text="PHANTOM MONITOR · ATUALIZAÇÃO" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="11" FontWeight="Bold" />
         <TextBlock Text="{Binding UpdateToastText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Button Content="Abrir GitHub" Click="OnOpenReleasesPageClick" />

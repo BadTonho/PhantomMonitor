@@ -32,12 +32,12 @@ public sealed partial class MainWindowViewModel
     }
 
     /// <summary>
-    /// Faixa de temperatura do WPF (GetTempColor): ≤0 desconhecido (muted),
+    /// Faixa de temperatura: leitura ausente (muted),
     /// ≤65 verde, ≤80 morno (âmbar), acima = quente (vermelho). A pílula usa o
     /// mesmo tom translúcido do par bg/borda do tema.
     /// </summary>
-    private static (IBrush Text, IBrush Pill, IBrush Border) TempVisual(double temp) =>
-        temp <= 0 ? (ResolveBrush("TextMutedBrush"), ResolveBrush("BgChipBrush"), ResolveBrush("BgCardBorderBrush"))
+    private static (IBrush Text, IBrush Pill, IBrush Border) TempVisual(double? temp) =>
+        temp is null ? (ResolveBrush("TextMutedBrush"), ResolveBrush("BgChipBrush"), ResolveBrush("BgCardBorderBrush"))
         : temp <= 65 ? (ResolveBrush("AccentGreenBrush"), ResolveBrush("BgTintGreenBrush"), ResolveBrush("BorderTintGreenBrush"))
         : temp <= 80 ? (ResolveBrush("AccentWarningBrush"), ResolveBrush("BgTintWarmBrush"), ResolveBrush("BorderTintWarmBrush"))
         : (ResolveBrush("AccentHotBrush"), ResolveBrush("BgTintHotBrush"), ResolveBrush("BorderTintHotBrush"));
@@ -57,7 +57,7 @@ public sealed partial class MainWindowViewModel
 
     // ---- Card Placa-mãe & ventoinhas ----
     public string MotherboardTempText { get => _motherboardTempText; private set => Set(ref _motherboardTempText, value); }
-    private string _motherboardTempText = "--°C";
+    private string _motherboardTempText = "Indisponível";
 
     public string FanSummaryText { get => _fanSummaryText; private set => Set(ref _fanSummaryText, value); }
     private string _fanSummaryText = "Ventoinhas: --";
@@ -177,14 +177,14 @@ public sealed partial class MainWindowViewModel
         GpuDetailText = SensorFormatter.BuildGpuDetail(data)
             ?? "VRAM, clocks e hotspot indisponíveis";
 
-        SetTempState(data.GetValue(SensorType.CpuTemperature));
-        SetGpuTempState(data.GetValue(SensorType.GpuTemperature));
+        SetTempState(Has(data, SensorType.CpuTemperature) ? data.GetValue(SensorType.CpuTemperature) : null);
+        SetGpuTempState(Has(data, SensorType.GpuTemperature) ? data.GetValue(SensorType.GpuTemperature) : null);
         SetUsageStates(data);
         SetMotherboard(data);
         SetGpuProcesses(data);
     }
 
-    private void SetTempState(double temp)
+    private void SetTempState(double? temp)
     {
         var (text, pill, border) = TempVisual(temp);
         CpuTempBrush = text;
@@ -192,7 +192,7 @@ public sealed partial class MainWindowViewModel
         CpuTempPillBorderBrush = border;
     }
 
-    private void SetGpuTempState(double temp)
+    private void SetGpuTempState(double? temp)
     {
         var (text, pill, border) = TempVisual(temp);
         GpuTempBrush = text;
@@ -210,10 +210,13 @@ public sealed partial class MainWindowViewModel
     private void SetMotherboard(SensorData data)
     {
         var mbTemp = data.GetValue(SensorType.MotherboardTemp);
-        MotherboardTempText = mbTemp > 0 ? $"{mbTemp:F0}°C" : "--°C";
-        MbTempBrush = TempVisual(mbTemp).Text;
+        MotherboardTempText = FormatMotherboardTemperature(data);
+        MbTempBrush = TempVisual(Has(data, SensorType.MotherboardTemp) ? mbTemp : null).Text;
         FanSummaryText = SensorFormatter.BuildFanSummary(data);
     }
+
+    internal static string FormatMotherboardTemperature(SensorData data) =>
+        Has(data, SensorType.MotherboardTemp) ? $"{data.GetValue(SensorType.MotherboardTemp):F0} °C" : "Indisponível";
 
     private void SetGpuProcesses(SensorData data)
     {

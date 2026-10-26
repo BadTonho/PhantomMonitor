@@ -14,11 +14,13 @@ public sealed partial class MainWindow : Window
     private ThemePaletteEditorWindow? _themePaletteEditorWindow;
     private HardwareInventoryWindow? _hardwareInventoryWindow;
     private TrayIconService? _tray;
+    private bool _overviewCompact;
 
     public MainWindow()
     {
         InitializeComponent();
         SyncNavPage("overview");
+        OverviewSecondaryCards.SizeChanged += (_, _) => ArrangeOverviewCards();
         Opened += (_, _) =>
         {
             if (Screens.Primary is { } screen)
@@ -52,6 +54,21 @@ public sealed partial class MainWindow : Window
             _hardwareInventoryWindow?.Close();
             ViewModel.Dispose();
         };
+    }
+
+    private void ArrangeOverviewCards()
+    {
+        var grid = OverviewSecondaryCards;
+        var compact = grid.Bounds.Width < 760;
+        if (compact == _overviewCompact) return;
+        _overviewCompact = compact;
+        grid.ColumnDefinitions = ColumnDefinitions.Parse(compact ? "*,*" : "*,*,*,*");
+        grid.RowDefinitions = RowDefinitions.Parse(compact ? "Auto,Auto" : "Auto");
+        for (var i = 0; i < grid.Children.Count; i++)
+        {
+            Grid.SetColumn(grid.Children[i], compact ? i % 2 : i);
+            Grid.SetRow(grid.Children[i], compact ? i / 2 : 0);
+        }
     }
 
     private void EnsureOverlayWindow()

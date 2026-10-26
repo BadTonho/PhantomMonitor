@@ -5,6 +5,9 @@
         Width="620" Height="520" MinWidth="480" MinHeight="360"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
+  <Window.Styles>
+    <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
+  </Window.Styles>
   <Grid Margin="20" RowDefinitions="Auto,*,Auto" RowSpacing="12">
     <StackPanel Spacing="4">
       <TextBlock Text="LINHAS OCULTADAS" Foreground="{DynamicResource TextPrimaryBrush}"

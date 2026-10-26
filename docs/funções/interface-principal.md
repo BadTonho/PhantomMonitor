@@ -8,14 +8,17 @@ Na implementação, a janela principal mantém a sidebar, a navegação e os ele
 
 ## Funcionalidades
 
-- **Sidebar:** estado da execução (`Monitorando` / `Parado` / `Pausado` (P6.7)), tempo ativo, contagem de sensores, navegação entre as páginas (visão geral, inventário, sensores customizados, ajuste por série, alertas, configurações e diagnóstico), toggle `Overlay no Jogo`, controles de exportação (CSV/JSON/Journal JSONL — P8.3) e opção `Iniciar com o Windows` (registro `Run`, aplicada na hora).
+- **Sidebar:** navegação com ícones, indicador da página selecionada, estado do monitoramento, badge de atualização e opção de iniciar com o sistema. A lista de navegação rola em janelas de altura reduzida.
 - **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Resetar estatísticas, Pausar monitoramento, seção de perfis do OSD e Sair) — portada da bandeja do WPF na F1.5; ver [tray.md](tray.md).
 - **Cards de Métricas Clean:** Cards dedicados para Processador (CPU), Placa de Vídeo (GPU), Taxa de Quadros (FPS), Memória RAM, Armazenamento (Disco), Rede (↓/↑) e Placa-mãe & Ventoinhas (maior temperatura + ventoinhas GPU/Sistema).
 - **Linhas de Detalhes:** Os cards de CPU (clock, potência, voltagem) e GPU (VRAM usada/total, clock, potência, hotspot e temp de VRAM — P8.6) exibem uma linha secundária com os valores avançados disponíveis; quando nenhum sensor existe, informam a indisponibilidade.
-- **Indicadores Visuais Sutis:** Barras de progresso horizontais finas (5px) e badges em pílula com borda translúcida para temperatura e frametime (sem efeitos neon ou círculos exagerados).
+- **Indicadores visuais:** gráficos de histórico e pílulas discretas de temperatura. Sem dados de FPS, o gráfico e as estatísticas ficam ocultos; voltam a aparecer quando há leitura. Uma temperatura ausente é indicada como indisponível, enquanto zero continua sendo um valor válido.
 - **Lista de Processos Ativos:** Visualização limpa em tabela de processos consumindo a GPU.
 - **Diagnóstico:** view no próprio app com os sensores detectados em tempo real e os erros recentes (port do `DebugWindow`) — ver [diagnostico.md](diagnostico.md).
-- **Aviso de Elevação:** Alerta discreto quando a aplicação não possui privilégios administrativos.
+- **Aviso de elevação:** aviso em âmbar com a ação de reiniciar como administrador, quando aplicável.
+
+
+A interface desktop usa estilos compartilhados para ações, campos e textos secundários. Os controles de monitoramento são secundários às ações principais. Os quatro cards menores passam de quatro para duas colunas quando o espaço disponível fica abaixo de 760 unidades lógicas; o conteúdo da página continua rolável. Esses estilos não são incluídos nas janelas do overlay em jogo.
 
 ## Auto-inicialização
 
@@ -24,7 +27,7 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
 ## Cores e Tipografia
 
 - **Paleta Base:** Neutros escuros (`#0F1117` para fundo, `#141720` para sidebar, `#181B24` para cards com borda 1px `#232734`).
-- **Tipografia Principal:** Textos em `#F1F5F9` (alto contraste sem saturação agressiva), rótulos em `#94A3B8` e legendas em `#64748B`.
+- **Tipografia Principal:** Textos em `#F1F5F9` (alto contraste sem saturação agressiva), rótulos e legendas secundárias em `#94A3B8`.
 - **Acentos Funcionais:** Azul royal (`#2563EB` / `#3B82F6`) para ações principais e barras de progresso.
 - **Faixas de Temperatura e Uso Dinâmico:**
   - Uso < 75%: Branco/Slate neutro (`#F1F5F9`) para uso normal.
@@ -35,8 +38,8 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
   views moram em dicionários de tema (`src/PhantomMonitor.App/Themes/Tokens.*.axaml`,
   49 chaves espelhadas entre os dois temas) e são consumidas via `{DynamicResource}`
   (as faixas dinâmicas usam brushes resolvidos por chave no ViewModel — mesmo
-  catálogo). A F1.6 fecha os dois temas builtin: `Neptune` preserva o visual
-  original do Avalonia e `Slate` porta verbatim o visual do WPF aposentado
+  catálogo). A F1.6 fecha os dois temas builtin: `Neptune` deriva da paleta
+  original do Avalonia e `Slate` da paleta do WPF aposentado
   (`Styles.xaml`, banners/pílulas do shell `MainWindow.xaml` e painel do OSD
   `#CC070A0F`/`#25FFFFFF` do WPF — arquivos removidos na Fase 2 da unificação,
   proveniência por linha no dicionário). A escolha fica no

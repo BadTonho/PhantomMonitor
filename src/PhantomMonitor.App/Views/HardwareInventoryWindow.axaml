@@ -5,6 +5,9 @@
         Width="760" Height="680" MinWidth="420" MinHeight="320"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
+  <Window.Styles>
+    <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
+  </Window.Styles>
   <Grid Margin="18" RowDefinitions="Auto,*" RowSpacing="12">
     <StackPanel Spacing="4">
       <TextBlock Text="HARDWARE DETECTADO" Foreground="{DynamicResource TextPrimaryBrush}"

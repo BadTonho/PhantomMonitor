@@ -48,7 +48,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private string _fpsText = "—";
     private string _frametimeText = "—";
     private string _fpsStatsText = "Mín —   Média —   1% low —   0,1% low —";
-    private string _fpsHint = "Aguardando jogo Vulkan com a camada Phantom ativada.";
+    private string _fpsHint = "Aguardando dados de FPS de um jogo.";
     private string _inventorySummaryText = "Aguardando primeira leitura dos sensores…";
     private string _inventoryUpdatedText = "";
     // Cascas persistentes do inventário: os 8 grupos fixos existem desde o arranque;
@@ -139,6 +139,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     public string DiskWriteText { get => _diskWriteText; private set => Set(ref _diskWriteText, value); }
     public string NetworkDownText { get => _networkDownText; private set => Set(ref _networkDownText, value); }
     public string NetworkUpText { get => _networkUpText; private set => Set(ref _networkUpText, value); }
+    public bool HasFpsData { get => _hasFpsData; private set => Set(ref _hasFpsData, value); }
+    private bool _hasFpsData;
     public string FpsText { get => _fpsText; private set => Set(ref _fpsText, value); }
     public string FrametimeText { get => _frametimeText; private set => Set(ref _frametimeText, value); }
     public string FpsStatsText { get => _fpsStatsText; private set => Set(ref _fpsStatsText, value); }
@@ -485,6 +487,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         UpdateTelemetryExportStatus();
         DisposeLoggers();
         StatusText = "Parado";
+        HasFpsData = false;
         FpsHint = "Monitoramento parado. Inicie novamente para continuar.";
         Raise(nameof(IsRunning));
         Raise(nameof(IsPaused));
@@ -689,14 +692,15 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
 
         var fps = data.GetValue(SensorType.Fps);
         var frametime = data.GetValue(SensorType.FrametimeMs);
-        FpsText = Has(data, SensorType.Fps) ? $"{fps:F0}" : "—";
+        HasFpsData = Has(data, SensorType.Fps);
+        FpsText = HasFpsData ? $"{fps:F0}" : "—";
         FrametimeText = Has(data, SensorType.FrametimeMs) ? $"{frametime:F2} ms" : "—";
         FpsStatsText = Has(data, SensorType.Fps)
             ? $"Mín {data.FpsMin:F0}   Média {data.FpsAvg:F0}   1% low {data.Fps1Low:F0}   0,1% low {data.Fps01Low:F0}"
             : "Mín —   Média —   1% low —   0,1% low —";
         FpsHint = Has(data, SensorType.Fps)
-            ? "FPS recebido pela camada Phantom Vulkan."
-            : "Aguardando jogo Vulkan com ENABLE_PHANTOM_OVERLAY=1 nas opções de inicialização.";
+            ? "Dados de FPS disponíveis."
+            : "Aguardando dados de FPS de um jogo.";
 
         AddHistory(_cpuHistory, data.GetValue(SensorType.CpuTotal), Has(data, SensorType.CpuTotal));
         AddHistory(_gpuHistory, data.GetValue(SensorType.GpuCore), Has(data, SensorType.GpuCore));

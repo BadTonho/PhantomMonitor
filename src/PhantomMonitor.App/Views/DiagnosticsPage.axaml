@@ -3,13 +3,15 @@
             x:Class="PhantomMonitor.App.Views.DiagnosticsPage">
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsDiagnostics}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
-        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+        <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Diagnóstico" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
             <TextBlock Text="Resumo, erros e fontes de sensores detectadas neste sistema." Classes="muted" FontSize="11" />
           </StackPanel>
-          <Button Grid.Column="1" Classes="action accent" Content="Atualizar" Click="OnRefreshDiagnosticsClick" VerticalAlignment="Center" />
-          <Button Grid.Column="2" Classes="action accent" Content="Abrir arquivo de erros" Click="OnOpenErrorLogClick" VerticalAlignment="Center" />
+          <WrapPanel Grid.Row="1">
+            <Button Classes="action accent" Content="Atualizar" Click="OnRefreshDiagnosticsClick" Margin="0,0,8,8" />
+            <Button Classes="action" Content="Abrir arquivo de erros" Click="OnOpenErrorLogClick" Margin="0,0,8,8" />
+          </WrapPanel>
         </Grid>
 
         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -19,21 +21,21 @@
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsDiagnosticSummary}" Spacing="12">
-          <Border IsVisible="{Binding IsInGameOverlayDiagnosticsVisible}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+          <Border IsVisible="{Binding IsInGameOverlayDiagnosticsVisible}" Classes="desktop-card" Padding="16">
             <StackPanel Spacing="7">
-              <TextBlock Text="OVERLAY DENTRO DO JOGO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-              <TextBlock Text="{Binding InGameOverlayDiagnosticText}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="OVERLAY DENTRO DO JOGO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="{Binding InGameOverlayDiagnosticText}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
-          <Border IsVisible="{Binding IsLinuxOverlayDiagnosticsVisible}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+          <Border IsVisible="{Binding IsLinuxOverlayDiagnosticsVisible}" Classes="desktop-card" Padding="16">
             <StackPanel Spacing="8">
-              <TextBlock Text="GEOMETRIA DO OVERLAY LINUX" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-              <TextBlock Text="As posições e dimensões abaixo comparam o pedido do app com o estado observado após a janela abrir. Em Wayland nativo, o compositor pode ignorar posições absolutas." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+              <TextBlock Text="GEOMETRIA DO OVERLAY LINUX" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="As posições e dimensões abaixo comparam o pedido do app com o estado observado após a janela abrir. Em Wayland nativo, o compositor pode ignorar posições absolutas." Classes="muted" FontSize="11" TextWrapping="Wrap" />
               <ItemsControl ItemsSource="{Binding LinuxOverlayDiagnosticLines}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,6">
-                      <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="11" TextWrapping="Wrap" />
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -42,39 +44,39 @@
           </Border>
 
           <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-            <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+            <Border Classes="desktop-card" Padding="16">
               <StackPanel Spacing="7">
-                <TextBlock Text="ESTADO DO MONITORAMENTO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="ESTADO DO MONITORAMENTO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextStatusBrush}" FontSize="18" FontWeight="SemiBold" />
               </StackPanel>
             </Border>
-            <Border Grid.Column="1" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+            <Border Grid.Column="1" Classes="desktop-card" Padding="16">
               <StackPanel Spacing="7">
-                <TextBlock Text="ERROS RECENTES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <TextBlock Text="ERROS RECENTES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
                 <TextBlock Text="{Binding DiagnosticErrorCountText}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="18" FontWeight="SemiBold" />
               </StackPanel>
             </Border>
           </Grid>
 
-          <Border Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+          <Border Classes="desktop-card" Padding="16">
             <StackPanel Spacing="8">
-              <TextBlock Text="OCORRÊNCIA MAIS RECENTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-              <TextBlock IsVisible="{Binding HasDiagnosticEntries}" Text="{Binding DiagnosticLatestErrorHeader}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="10" />
+              <TextBlock Text="OCORRÊNCIA MAIS RECENTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock IsVisible="{Binding HasDiagnosticEntries}" Text="{Binding DiagnosticLatestErrorHeader}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="11" />
               <TextBlock IsVisible="{Binding HasDiagnosticEntries}" Text="{Binding DiagnosticLatestErrorMessage}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" />
               <TextBlock IsVisible="{Binding !HasDiagnosticEntries}" Text="Nenhum erro registrado. Novas ocorrências aparecerão aqui automaticamente." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </StackPanel>
 
-        <Border IsVisible="{Binding IsDiagnosticSensors}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border IsVisible="{Binding IsDiagnosticSensors}" Classes="desktop-card" Padding="16">
           <StackPanel Spacing="8">
-            <TextBlock Text="FONTES E SENSORES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-            <TextBlock Text="Os estados descrevem o que o kernel e os drivers reportaram. Sensor não exposto não significa falha do app." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="FONTES E SENSORES" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+            <TextBlock Text="Os estados descrevem o que o kernel e os drivers reportaram. Sensor não exposto não significa falha do app." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding DiagnosticSensorLines}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,6">
-                    <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="10" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="11" TextWrapping="Wrap" />
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -82,24 +84,24 @@
           </StackPanel>
         </Border>
 
-        <Border IsVisible="{Binding IsDiagnosticErrors}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border IsVisible="{Binding IsDiagnosticErrors}" Classes="desktop-card" Padding="16">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="AVISOS ATUAIS DE SENSORES GPU" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-              <TextBlock Grid.Column="1" Text="{Binding DiagnosticSensorWarningsSummary}" Classes="muted" FontSize="10" />
+              <TextBlock Text="AVISOS ATUAIS DE SENSORES GPU" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock Grid.Column="1" Text="{Binding DiagnosticSensorWarningsSummary}" Classes="muted" FontSize="11" />
             </Grid>
-            <TextBlock Text="Indisponibilidades são estados atuais do driver e não são gravadas como erros do aplicativo." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="Indisponibilidades são estados atuais do driver e não são gravadas como erros do aplicativo." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding DiagnosticSensorWarnings}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <StackPanel Spacing="3">
                       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                        <TextBlock Text="{Binding Device}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="10" TextWrapping="Wrap" />
-                        <TextBlock Grid.Column="1" Text="{Binding Metric}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="10" />
+                        <TextBlock Text="{Binding Device}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="11" TextWrapping="Wrap" />
+                        <TextBlock Grid.Column="1" Text="{Binding Metric}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" />
                       </Grid>
-                      <TextBlock Text="{Binding Reason}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" TextWrapping="Wrap" />
-                      <TextBlock Text="{Binding SourceLabel}" Classes="muted" FontFamily="monospace" FontSize="9" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Reason}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding SourceLabel}" Classes="muted" FontFamily="monospace" FontSize="11" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>
@@ -108,13 +110,13 @@
           </StackPanel>
         </Border>
 
-        <Border IsVisible="{Binding IsDiagnosticErrors}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+        <Border IsVisible="{Binding IsDiagnosticErrors}" Classes="desktop-card" Padding="16">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="ERROS REGISTRADOS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-              <TextBlock Grid.Column="1" Text="{Binding DiagnosticEntriesSummary}" Classes="muted" FontSize="10" />
+              <TextBlock Text="ERROS REGISTRADOS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBlock Grid.Column="1" Text="{Binding DiagnosticEntriesSummary}" Classes="muted" FontSize="11" />
             </Grid>
-            <TextBlock Text="{Binding ErrorLogPathText}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorLogPathText}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <TextBlock IsVisible="{Binding !HasDiagnosticEntries}" Text="Nenhuma falha registrada. A lista é atualizada automaticamente quando o app registra uma nova ocorrência." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding DiagnosticEntries}">
               <ItemsControl.ItemTemplate>
@@ -122,16 +124,16 @@
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <StackPanel Spacing="3">
                       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                        <TextBlock Text="{Binding TimestampText}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="10" />
-                        <TextBlock Grid.Column="1" Text="{Binding Context}" Foreground="{DynamicResource AccentWarningBrush}" FontFamily="monospace" FontSize="10" />
+                        <TextBlock Text="{Binding TimestampText}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="11" />
+                        <TextBlock Grid.Column="1" Text="{Binding Context}" Foreground="{DynamicResource AccentWarningBrush}" FontFamily="monospace" FontSize="11" />
                       </Grid>
-                      <TextBlock Text="{Binding Message}" Foreground="{DynamicResource TextBodyBrush}" FontSize="10" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Message}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="{Binding DiagnosticsMessage}" Classes="muted" FontSize="10" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding DiagnosticsMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </StackPanel>

@@ -39,5 +39,6 @@ Esta é a documentação em português do Phantom Monitor. Os guias em inglês f
 - [Roadmap de paridade funcional](roadmap-paridade.md)
 - [Roadmap de unificação visual (frontend único + temas)](roadmap-unificacao-visual.md)
 - [Fase 1 — Mapa de equivalência WPF → Avalonia](unificacao-fase1-mapa.md)
+- [Análise técnica de erros e compatibilidade — 25/10/2026](analise-tecnica-2026-10-25.md)
 
 <p align="right"><a href="en/README.md">English</a> | Português (Brasil)</p>

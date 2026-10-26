@@ -96,6 +96,52 @@
       <Setter Property="HorizontalAlignment" Value="Left" />
       <Setter Property="Padding" Value="10,8" />
     </Style>
+    <Style Selector="ToggleButton.inventory-group">
+      <Setter Property="Background" Value="{DynamicResource BgChipBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextBodyBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+            <Grid ColumnDefinitions="*,Auto">
+              <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
+              <TextBlock x:Name="Arrow" Grid.Column="1" Foreground="{TemplateBinding Foreground}"
+                         FontSize="15" VerticalAlignment="Center" Margin="12,0,2,0" />
+            </Grid>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="ToggleButton.inventory-group /template/ TextBlock#Arrow">
+      <Setter Property="Text" Value="⌄" />
+    </Style>
+    <Style Selector="ToggleButton.inventory-group:checked /template/ TextBlock#Arrow">
+      <Setter Property="Text" Value="⌃" />
+    </Style>
+    <Style Selector="ToggleButton.inventory-group:pointerover">
+      <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.inventory-group:focus-visible">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+    </Style>
+    <Style Selector="Button.inventory-row-toggle">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="Button.inventory-row-toggle:pointerover">
+      <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+    </Style>
+    <Style Selector="Button.inventory-row-toggle:focus-visible">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+    </Style>
   </Window.Styles>
 
   <Grid ColumnDefinitions="230,*">
@@ -351,86 +397,85 @@
         <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Inventário de sensores" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding InventorySummaryText}" Classes="muted" FontSize="11" />
+            <TextBlock Text="{Binding InventorySummaryText}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <TextBlock Text="{Binding InventoryUpdatedText}" Classes="muted" FontSize="11" />
-            <TextBlock IsVisible="{Binding HasInventoryActionStatus}" Text="{Binding InventoryActionStatusText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
+            <TextBlock IsVisible="{Binding HasInventoryActionStatus}" Text="{Binding InventoryActionStatusText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
-          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
-            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
-            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+          <WrapPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" Margin="0,0,8,8" />
+            <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" Margin="0,0,8,8" />
+            <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" Margin="0,0,8,8" />
             <Button Classes="action" Content="Resetar estatísticas" Click="OnResetStatsClick"
+                    Margin="0,0,8,8"
                     ToolTip.Tip="Zera as colunas Mín/Máx/Média da sessão e grava um marcador no CSV/journal ativo (#marker), como no WPF." />
-          </StackPanel>
+          </WrapPanel>
         </Grid>
 
         <Border IsVisible="{Binding IsWaitingForInventorySnapshot}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="18">
           <TextBlock Text="Aguardando a primeira leitura dos sensores…" Classes="muted" FontSize="12" />
         </Border>
 
-        <Border IsVisible="{Binding HasInventorySnapshot}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Stretch">
+        <ScrollViewer IsVisible="{Binding HasInventorySnapshot}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <Border MinWidth="640" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Stretch">
           <StackPanel Spacing="0" HorizontalAlignment="Stretch">
             <Border Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,0,0,1" Padding="10,6" HorizontalAlignment="Stretch">
-              <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch">
-                <TextBlock Text="Sensor" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <Grid ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch">
+                <TextBlock Text="Sensor" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="20,0,0,0" />
                 <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,2">
-                  <TextBlock Text="Atual" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" />
+                  <TextBlock Text="Atual" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" />
                 </Border>
-                <TextBlock Grid.Column="2" Text="Mínimo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="3" Text="Máximo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="4" Text="Média" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="Mínimo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Text="Máximo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="4" Text="Média" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
               </Grid>
             </Border>
             <ItemsControl ItemsSource="{Binding InventoryGroups}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" HorizontalAlignment="Stretch">
-                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                      <Expander.Header>
-                        <Border Padding="10,5" HorizontalAlignment="Stretch">
-                          <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" FontWeight="SemiBold" />
-                        </Border>
-                      </Expander.Header>
-                      <Expander.Content>
-                        <ItemsControl ItemsSource="{Binding Rows}" HorizontalAlignment="Stretch">
+                    <StackPanel>
+                        <ToggleButton Classes="inventory-group" Content="{Binding Title}" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Title}" />
+                        <ItemsControl ItemsSource="{Binding Rows}" IsVisible="{Binding IsExpanded}" HorizontalAlignment="Stretch">
                           <ItemsControl.ItemTemplate>
                             <DataTemplate>
                               <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="10,2" HorizontalAlignment="Stretch">
                                 <StackPanel Spacing="0" HorizontalAlignment="Stretch">
-                                  <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch">
-                                    <Grid>
+                                  <Grid ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch">
+                                    <Grid ColumnDefinitions="20,*">
                                       <TextBlock Text="{Binding SensorName}"
+                                                 Grid.Column="1" FontWeight="SemiBold"
                                                  ToolTip.Tip="{Binding SensorNameTooltip}"
                                                  ToolTip.ShowDelay="2000"
                                                  Foreground="{DynamicResource TextBodyBrush}"
-                                                 FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                      <Button Content="{Binding ExpansionGlyph}"
+                                                 FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                      <Button Classes="inventory-row-toggle" Content="{Binding ExpansionGlyph}"
                                               IsVisible="{Binding CanCollapseChildren}"
                                               Click="OnInventoryRowToggleClick"
-                                              Width="10" Height="16" Padding="0" BorderThickness="0"
-                                              Background="Transparent" Foreground="{DynamicResource TextBodyBrush}"
-                                              FontSize="11" FontWeight="SemiBold"
+                                              Width="20" Height="22" Foreground="{DynamicResource TextBodyBrush}"
+                                              FontSize="12" FontWeight="SemiBold"
                                               HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                              HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-10,0,0,0" />
+                                              HorizontalAlignment="Left" VerticalAlignment="Center"
+                                              ToolTip.Tip="Expandir ou recolher sensores" AutomationProperties.Name="{Binding SensorName}" />
                                     </Grid>
                                   <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
-                                    <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Current}" ToolTip.Tip="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   </Border>
-                                  <TextBlock Grid.Column="2" Text="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                  <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                  <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="2" Text="{Binding Min}" ToolTip.Tip="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="3" Text="{Binding Max}" ToolTip.Tip="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="4" Text="{Binding Avg}" ToolTip.Tip="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                   </Grid>
                                   <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding ShowChildren}" HorizontalAlignment="Stretch">
                                     <ItemsControl.ItemTemplate>
                                       <DataTemplate>
-                                        <Grid ColumnDefinitions="*,90,90,90,90" ColumnSpacing="8" HorizontalAlignment="Stretch" Margin="0,1,0,0">
-                                          <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding Key}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="18,0,0,0" />
+                                        <Grid ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch" Margin="0,1,0,0">
+                                          <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding SensorName}" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="38,0,0,0" />
                                           <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
-                                            <TextBlock Text="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Current}" ToolTip.Tip="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                           </Border>
-                                          <TextBlock Grid.Column="2" Text="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                          <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                          <TextBlock Grid.Column="4" Text="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="11" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                          <TextBlock Grid.Column="2" Text="{Binding Min}" ToolTip.Tip="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                          <TextBlock Grid.Column="3" Text="{Binding Max}" ToolTip.Tip="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                          <TextBlock Grid.Column="4" Text="{Binding Avg}" ToolTip.Tip="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                         </Grid>
                                       </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -440,14 +485,14 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                      </Expander.Content>
-                    </Expander>
+                    </StackPanel>
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
         </Border>
+        </ScrollViewer>
 
         <Button Content="Hardware detectado…" HorizontalAlignment="Left" Margin="0,0,0,14"
                 IsVisible="{Binding HasInventorySnapshot}" Click="OnOpenHardwareInventoryClick" />
@@ -455,7 +500,8 @@
         <Border Classes="desktop-card" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasMonitors}">
           <StackPanel Spacing="10">
             <TextBlock Text="Monitores (EDID)" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
-            <ItemsControl ItemsSource="{Binding Monitors}">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Monitors}" MinWidth="620">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
@@ -477,6 +523,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </ScrollViewer>
           </StackPanel>
         </Border>
 

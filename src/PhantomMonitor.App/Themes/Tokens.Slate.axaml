@@ -26,8 +26,8 @@
     <SolidColorBrush x:Key="BgSidebarBorderBrush" Color="#232734" />    <!-- sidebar = BorderBrush(=Divider) -->
     <SolidColorBrush x:Key="BgCardBrush" Color="#181B24" />             <!-- Styles.xaml BgCard -->
     <SolidColorBrush x:Key="BgCardBorderBrush" Color="#232734" />       <!-- CardBorder usa BorderBrush(=Divider) -->
-    <SolidColorBrush x:Key="InventoryValueCellBrush" Color="#1B2A42" />
-    <SolidColorBrush x:Key="InventoryValueCellBorderBrush" Color="#2B4161" />
+    <SolidColorBrush x:Key="InventoryValueCellBrush" Color="#1C2230" />
+    <SolidColorBrush x:Key="InventoryValueCellBorderBrush" Color="#293344" />
     <SolidColorBrush x:Key="BgChipBrush" Color="#1E293B" />             <!-- estimate = AccentDim -->
     <SolidColorBrush x:Key="BgDividerBrush" Color="#232734" />          <!-- Styles.xaml Divider -->
     <SolidColorBrush x:Key="BgOverlayPanelBrush" Color="#CC070A0F" />   <!-- OverlayWindow MainBorder verbatim -->

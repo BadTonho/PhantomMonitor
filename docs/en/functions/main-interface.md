@@ -16,6 +16,8 @@ The cards use history charts and restrained temperature badges. CPU/GPU details 
 
 Monitoring starts automatically. The runtime pause control is available from the tray or global hotkey; restarting the app resumes collection.
 
+The sensor inventory has compact expandable category headers, indented sensor instances, and aligned current, minimum, maximum, and average columns. Tooltips expose long names and values; the table and monitor list scroll horizontally in narrow windows. Colors follow the selected theme and custom palette.
+
 
 Desktop windows share styles for actions, inputs, and secondary text. The four smaller dashboard cards use two columns below 760 logical units of available width. When FPS is unavailable, the chart and statistics are hidden until a reading arrives. Missing board temperature is shown as unavailable; a zero reading remains valid. The in-game overlay windows do not include the desktop styles.
 

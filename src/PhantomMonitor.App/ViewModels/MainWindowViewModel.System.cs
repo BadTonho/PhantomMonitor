@@ -56,10 +56,8 @@ public sealed partial class MainWindowViewModel
     }
 
     /// <summary>
-    /// Hotkeys globais (P6.7, Windows): overlay (0x5048) e pausa (0x5049) conforme o
-    /// config. Chamar em arranque e na reconfiguração — Registrar da mesma id troca a
-    /// combinação, como o ApplyHotkey do WPF. Callbacks chegam na thread do serviço e
-    /// são publicados no dispatcher da UI.
+    /// Registra a pausa no Windows. O atalho do overlay é gerenciado separadamente
+    /// para permitir troca e restauração sem remover o atalho de pausa.
     /// </summary>
     public void ApplyHotkeys()
     {
@@ -69,8 +67,6 @@ public sealed partial class MainWindowViewModel
         try
         {
             _hotkeys ??= new GlobalHotkeyService();
-            _hotkeys.Register(GlobalHotkeyService.DefaultHotkeyId, _config.ToggleOverlayHotkey,
-                () => Dispatcher.UIThread.Post(ToggleOverlay));
             _hotkeys.Register(GlobalHotkeyService.PauseHotkeyId, _config.PauseMonitorHotkey,
                 () => Dispatcher.UIThread.Post(TogglePause));
         }

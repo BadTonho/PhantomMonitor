@@ -1,4 +1,5 @@
 using System.Globalization;
+using PhantomMonitor.App.Services.Hotkeys;
 using PhantomMonitor.Services;
 using PhantomMonitor.Services.Update;
 
@@ -7,7 +8,15 @@ namespace PhantomMonitor.App.ViewModels;
 // Orquestra validação, persistência e aplicação das configurações da interface.
 public sealed partial class MainWindowViewModel
 {
-    public void SaveSettings()
+    public async Task SaveSettingsAsync()
+    {
+        if (IsSavingSettings) return;
+        IsSavingSettings = true;
+        try { await SaveSettingsCoreAsync(); }
+        finally { IsSavingSettings = false; }
+    }
+
+    private async Task SaveSettingsCoreAsync()
     {
         if (!double.TryParse(OverlayFontSizeText, NumberStyles.Float, CultureInfo.CurrentCulture, out var overlayFontSize)
             || !double.IsFinite(overlayFontSize)
@@ -88,6 +97,10 @@ public sealed partial class MainWindowViewModel
         }
 
         var oldInterval = _config.UpdateIntervalMs;
+        var oldOverlayHotkey = _config.ToggleOverlayHotkey;
+        var oldActiveOverlayHotkey = _activeOverlayHotkey;
+        var hotkeyChanged = !string.Equals(_overlayHotkeyDraft, oldOverlayHotkey, StringComparison.OrdinalIgnoreCase);
+        var hotkeyTransition = new HotkeyTransition(oldActiveOverlayHotkey, ApplyOverlayHotkeyAsync);
         var oldTheme = _config.Theme;
         var oldThemePalettes = CloneThemePalettes(_config.ThemePalettes);
         var oldCsv = _config.LogToCsv;
@@ -145,15 +158,51 @@ public sealed partial class MainWindowViewModel
             || overlayRenderModeChanged
             || overlayTargetsChanged;
 
+        // A failed startup registration must not prevent unrelated settings from being saved.
+        // Saving with no other changes retries the configured shortcut explicitly.
+        var otherSettingsChanged = intervalChanged || loggingChanged || telemetryChanged || overlayChanged
+            || updateChanged || themeAppearanceChanged;
+        var hotkeyNeedsApply = !string.Equals(_overlayHotkeyDraft, oldActiveOverlayHotkey, StringComparison.OrdinalIgnoreCase)
+            && (hotkeyChanged || !otherSettingsChanged);
+        if (hotkeyChanged || hotkeyNeedsApply)
+        {
+            if (_overlayHotkeyDraft.Length > 0 && !HotkeyParser.TryParse(_overlayHotkeyDraft, out _, out _))
+            {
+                OverlayHotkeyStatus = "A combinação do overlay é inválida.";
+                SettingsMessage = OverlayHotkeyStatus;
+                return;
+            }
+            if (HotkeyCapture.SameCombination(_overlayHotkeyDraft, _config.PauseMonitorHotkey))
+            {
+                OverlayHotkeyStatus = "Esta combinação já está configurada para pausar o monitoramento.";
+                SettingsMessage = OverlayHotkeyStatus;
+                return;
+            }
+        }
+
+        if (hotkeyNeedsApply)
+        {
+            OverlayHotkeyStatus = "Configurando atalho global…";
+            var result = await hotkeyTransition.StageAsync(_overlayHotkeyDraft);
+            if (!result.Success)
+            {
+                OverlayHotkeyStatus = result.Message;
+                SettingsMessage = result.Message;
+                return;
+            }
+            OverlayHotkeyStatus = _overlayHotkeyDraft.Length == 0 ? "Atalho desativado." : $"Atalho ativo: {result.Display}.";
+        }
+
         if (!intervalChanged && !loggingChanged && !telemetryChanged && !overlayChanged && !updateChanged
-            && !themeAppearanceChanged)
+            && !themeAppearanceChanged && !hotkeyChanged)
         {
             ConfigureTelemetryExporter();
-            SettingsMessage = "Nenhuma alteração para salvar.";
+            SettingsMessage = hotkeyNeedsApply ? "Atalho aplicado." : "Nenhuma alteração para salvar.";
             return;
         }
 
         if (newInterval.HasValue) _config.UpdateIntervalMs = newInterval.Value;
+        _config.ToggleOverlayHotkey = _overlayHotkeyDraft;
         _config.LogToCsv = LogToCsv;
         _config.LogToJson = LogToJson;
         _config.LogToJsonJournal = LogToJsonJournal;
@@ -181,6 +230,7 @@ public sealed partial class MainWindowViewModel
         if (!_config.Save(ConfigPaths.ConfigFile))
         {
             _config.UpdateIntervalMs = oldInterval;
+            _config.ToggleOverlayHotkey = oldOverlayHotkey;
             _config.LogToCsv = oldCsv;
             _config.LogToJson = oldJson;
             _config.LogToJsonJournal = oldJournal;
@@ -209,6 +259,18 @@ public sealed partial class MainWindowViewModel
             _config.Overlay.Graphs = oldOverlayGraphs;
             _config.Overlay.Templates = oldOverlayTemplates;
             ReloadOverlayLayoutDraft();
+            if (hotkeyNeedsApply)
+            {
+                var restored = await hotkeyTransition.RollbackAsync();
+                OverlayHotkeyStatus = restored.Success
+                    ? "Não foi possível salvar. O atalho anterior foi restaurado."
+                    : $"Não foi possível salvar nem restaurar o atalho anterior. Atalho ativo: {(_activeOverlayHotkeyDisplay.Length == 0 ? "nenhum" : _activeOverlayHotkeyDisplay)}.";
+                if (!restored.Success)
+                {
+                    SettingsMessage = OverlayHotkeyStatus;
+                    return;
+                }
+            }
             SettingsMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
             return;
         }
@@ -233,7 +295,7 @@ public sealed partial class MainWindowViewModel
 
         // Tema mudou sozinho: nada mais a reconfigurar; mensagem dedicada.
         if (themeAppearanceChanged && !intervalChanged && !loggingChanged && !telemetryChanged
-            && !updateChanged && !overlayChanged)
+            && !updateChanged && !overlayChanged && !hotkeyChanged)
         {
             SettingsMessage = themePalettesChanged && !themeChanged
                 ? "Paleta salva e aplicada sem reiniciar."
@@ -299,10 +361,13 @@ public sealed partial class MainWindowViewModel
                         : "Opções de log salvas para a próxima coleta.";
 
         if (updateChanged && !intervalChanged && !loggingChanged && !telemetryChanged
-            && !overlayChanged && !themeAppearanceChanged)
+            && !overlayChanged && !themeAppearanceChanged && !hotkeyChanged)
         {
             SettingsMessage = "Preferências de atualização salvas.";
         }
+        else if (hotkeyChanged && !intervalChanged && !loggingChanged && !telemetryChanged
+            && !overlayChanged && !themeAppearanceChanged && !updateChanged)
+            SettingsMessage = "Atalho do overlay salvo e aplicado.";
     }
 
 }

@@ -29,6 +29,7 @@ public sealed partial class MainWindow : Window
                 ViewModel.SetOverlayCanvasSize(screen.Bounds.Width / scale, screen.Bounds.Height / scale);
             }
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            ViewModel.InitializeOverlayHotkey();
             SyncOverlayVisibility();
             RefreshWindowPresentationState();
             ViewModel.Start();

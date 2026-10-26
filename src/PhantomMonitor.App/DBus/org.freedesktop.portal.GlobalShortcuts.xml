@@ -1,0 +1,33 @@
+<node>
+  <interface name="org.freedesktop.portal.GlobalShortcuts">
+    <method name="CreateSession">
+      <arg direction="in" name="options" type="a{sv}" />
+      <arg direction="out" name="handle" type="o" />
+    </method>
+    <method name="BindShortcuts">
+      <arg direction="in" name="session_handle" type="o" />
+      <arg direction="in" name="shortcuts" type="a(sa{sv})" />
+      <arg direction="in" name="parent_window" type="s" />
+      <arg direction="in" name="options" type="a{sv}" />
+      <arg direction="out" name="handle" type="o" />
+    </method>
+    <signal name="Activated">
+      <arg name="session_handle" type="o" />
+      <arg name="shortcut_id" type="s" />
+      <arg name="timestamp" type="t" />
+      <arg name="options" type="a{sv}" />
+    </signal>
+  </interface>
+  <interface name="org.freedesktop.portal.Request">
+    <signal name="Response">
+      <arg name="response" type="u" />
+      <arg name="results" type="a{sv}" />
+    </signal>
+  </interface>
+  <interface name="org.freedesktop.portal.Session">
+    <method name="Close" />
+    <signal name="Closed">
+      <arg name="details" type="a{sv}" />
+    </signal>
+  </interface>
+</node>

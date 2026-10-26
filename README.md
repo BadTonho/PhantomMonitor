@@ -85,6 +85,8 @@ Run the app:
 dotnet run --project src/PhantomMonitor.App
 ```
 
+The overlay visibility hotkey can be captured in **Settings → Overlay mode**; it is disabled by default. Windows is supported, and X11/Wayland implementations await validation on Linux. See [global hotkeys](docs/en/functions/global-hotkey.md).
+
 Pick the built-in theme with `theme` in `config.json` (`neptune` = Avalonia-derived palette, `slate` = WPF-derived palette; the legacy `uiTheme` key still loads and migrates), then customize its colors through **INTERFACE → Personalizar paleta** in Settings. Palette edits apply after **Salvar e aplicar** succeeds. The theme selector also works at runtime without restarting, and `--theme=<name>` is available for comparison (legacy `--ui-theme=` accepted).
 
 Local release build of the Windows binary:

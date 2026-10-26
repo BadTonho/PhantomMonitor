@@ -1,28 +1,19 @@
+# Global hotkeys
+
 > **Language:** English · [Português (Brasil)](../../funções/hotkey.md)
 
-# Global hotkeys (`HotkeyService` / `HotkeyParser`)
+In **Settings → Overlay mode**, select **Definir atalho**, press a combination, and choose **Salvar e aplicar**. The shortcut toggles the floating or in-game overlay even while another application has focus. **Limpar atalho** disables it; `Esc` cancels capture. The default is disabled.
 
-The unified app registers global hotkeys with Win32 `RegisterHotKey` on Windows, so the overlay can be toggled from another application without injecting a DLL or installing a keyboard hook. The hotkey message is delivered through a message-only window via `WM_HOTKEY` (Linux does not register global hotkeys yet; X11/XWayland is the future path).
+Supported keys are `A–Z` and `0–9` with at least one modifier (`Ctrl`, `Alt`, `Shift`, or `Win`), or `F1–F24` with or without modifiers. Conflicts with the pause shortcut or another application are shown in the interface. Changes take effect after saving; if saving fails, the app attempts to restore the previous registration and reports restoration failures.
 
-## Supported syntax
+## Platforms
 
-`HotkeyParser` reads the string from `config.json`. Modifiers are `Ctrl`/`Control`, `Alt`, `Shift`, and `Win`/`Windows`, separated by `+` or spaces. Keys can be `A`–`Z`, `0`–`9`, or `F1`–`F24`. A combination must include a modifier or a function key to prevent capturing a bare letter or digit globally.
+- **Windows:** `RegisterHotKey` sends events to a message-only window on a dedicated thread. Changing the overlay shortcut preserves the pause shortcut; no keyboard hook is installed.
+- **Linux X11:** a dedicated XCB connection registers the combination with Caps Lock, Num Lock, and Scroll Lock variations. It requires `libxcb` and retains the previous registration on conflict.
+- **Linux Wayland:** uses `org.freedesktop.portal.GlobalShortcuts` on the session D-Bus. The desktop may ask for confirmation or select another combination; the interface displays the effective description returned by the portal. Availability depends on the portal and compositor. XWayland is not treated as a global Wayland fallback.
 
-Examples: `Ctrl+Shift+O`, `Ctrl+Alt+F10`, `F9`, `Win+Shift+P`.
+The Linux implementations still need validation in real X11 and Wayland sessions. The pause hotkey remains Windows-only. The existing interface and tray controls remain available when global shortcuts are unavailable.
 
-## Configuration and lifecycle
+## Configuration
 
-- `toggleOverlayHotkey` defaults to an empty string (disabled) and toggles OSD visibility.
-- `pauseMonitorHotkey` defaults to `Ctrl+Alt+P` and pauses/resumes sensor collection. Paused output and overlays retain the last snapshot; the state is runtime-only and does not persist across restarts. Empty disables it.
-- Each hotkey is registered by `GlobalHotkeyService` (message-only `WM_HOTKEY` window). Invalid or already-claimed combinations fail and are logged to `logs/errors.log`.
-- `GlobalHotkeyService` uses separate Win32 hotkey IDs for overlay (`0x5048`) and pause (`0x5049`) — the same IDs the retired WPF used. Registration is updated when settings are applied and removed when the app closes.
-
-## Unified app (Windows, F1.5)
-
-The Avalonia frontend does not expose a WndProc for the main window, so the behavior is provided by `GlobalHotkeyService` in `Core/Services/Hotkeys/Windows/`: a **message-only** window on a dedicated thread is created with `HWND_MESSAGE` (`-3`), receives `WM_HOTKEY`, and publishes each callback to the UI dispatcher (the retired WPF used the main window's `HwndSource`). It reuses `HotkeyParser`, the same default/pause hotkey IDs as the WPF (`0x5048`/`0x5049`), `MOD_NOREPEAT`, and re-registers a changed combination with the same ID on reconfiguration. Failures (invalid spec, combination already in use by another application) are logged to `logs/errors.log` without stopping the app.
-
-These hotkeys are Windows-specific; the unified app does not register them on Linux yet (X11/XWayland is the future path; pure Wayland does not allow global hotkeys by design).
-
-## Window ownership
-Registration and removal are marshalled to the message-only window's owning
-thread. Callback failures are logged without terminating the message loop.
+`toggleOverlayHotkey` stores the preferred combination in `config.json`, for example `Ctrl+Shift+O`, and remains empty by default. It can also be selected in Settings. `pauseMonitorHotkey` remains configurable in the file and defaults to `Ctrl+Alt+P` on Windows; an empty value disables it. Existing configurations are preserved.

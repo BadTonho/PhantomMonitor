@@ -27,6 +27,12 @@
             <TextBlock Text="Janela flutuante mantém os blocos em janelas separadas. Dentro do jogo usa um renderer nativo para desenhar no quadro apresentado pelo jogo; a opção depende de suporte para a API gráfica e pode ser bloqueada por anti-cheat." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <TextBlock IsVisible="{Binding IsOverlayInGameModeSelected}" Text="{Binding InGameOverlayCapabilityNotice}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
             <TextBlock Text="A aparência e a composição dos blocos são ajustadas no editor visual." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock Text="ATALHO GLOBAL DO OVERLAY" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+            <WrapPanel>
+              <Button x:Name="OverlayHotkeyButton" Content="{Binding OverlayHotkeyButtonText}" Click="OnCaptureOverlayHotkeyClick" IsEnabled="{Binding !IsSavingSettings}" Margin="0,0,8,8" />
+              <Button Content="Limpar atalho" Click="OnClearOverlayHotkeyClick" IsEnabled="{Binding !IsSavingSettings}" Margin="0,0,8,8" />
+            </WrapPanel>
+            <TextBlock Text="{Binding OverlayHotkeyStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <Button Classes="action accent" Content="Abrir editor do overlay" Click="OnOpenOverlayEditorClick" />
             <StackPanel IsVisible="{Binding IsOverlayInGameModeSelected}" Spacing="8">
               <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O PhantomMonitor detecta globalmente aplicações apresentando frames enquanto estiver aberto e tenta instalar o hook, sem cadastro de executável. A detecção usa ETW/PresentMon e pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook. Para jogos D3D12 em que o overlay não aparece, adicione o executável abaixo e use Iniciar." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />

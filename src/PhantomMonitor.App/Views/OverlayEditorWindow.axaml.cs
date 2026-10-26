@@ -276,7 +276,7 @@ public partial class OverlayEditorWindow : Window
         }
     }
 
-    private void OnSaveSettingsClick(object? sender, RoutedEventArgs e) => ViewModel.SaveSettings();
+    private async void OnSaveSettingsClick(object? sender, RoutedEventArgs e) => await ViewModel.SaveSettingsAsync();
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
     protected override void OnClosed(EventArgs e)

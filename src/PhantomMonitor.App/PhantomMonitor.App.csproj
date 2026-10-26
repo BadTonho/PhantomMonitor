@@ -35,6 +35,9 @@
     <AdditionalFiles Include="DBus\org.freedesktop.Notifications.xml"
                      Namespace="PhantomMonitor.App.Linux.DBus"
                      DBusGeneratorMode="Proxy" />
+    <AdditionalFiles Include="DBus\org.freedesktop.portal.GlobalShortcuts.xml"
+                     Namespace="PhantomMonitor.App.Linux.DBus"
+                     DBusGeneratorMode="Proxy" />
     <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Namespace" />
     <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="DBusGeneratorMode" />
   </ItemGroup>

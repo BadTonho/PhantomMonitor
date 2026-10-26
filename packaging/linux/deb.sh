@@ -39,7 +39,7 @@ Package: phantom-monitor
 Version: $PACKAGE_VERSION
 Architecture: amd64
 Maintainer: BadTonho
-Depends: libc6, libstdc++6, zlib1g, libssl3t64 | libssl3, libicu78 | libicu77 | libicu76 | libicu74 | libicu72 | libicu70, libfontconfig1, libfreetype6, libx11-6, libxext6, libxrender1, libxrandr2, libxcursor1, libxi6
+Depends: libc6, libstdc++6, zlib1g, libssl3t64 | libssl3, libicu78 | libicu77 | libicu76 | libicu74 | libicu72 | libicu70, libfontconfig1, libfreetype6, libx11-6, libxcb1, libxext6, libxrender1, libxrandr2, libxcursor1, libxi6
 Section: utils
 Priority: optional
 Description: Hardware, FPS and frametime local monitor (Avalonia dashboard for Linux)

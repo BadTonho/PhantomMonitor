@@ -5,7 +5,10 @@ using System.Text.Json;
 using Microsoft.Win32;
 using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.App.ViewModels;
+using PhantomMonitor.App.Services.Hotkeys;
 using PhantomMonitor.Models;
+using Avalonia.Input;
+using Tmds.DBus.Protocol;
 using PhantomMonitor.Services;
 
 (string Name, Action Run)[] tests =
@@ -22,6 +25,11 @@ using PhantomMonitor.Services;
     ("sessão PresentMon continua ativa para descoberta com coleta parada", TestPresentMonSessionDemand),
     ("registro Vulkan x86/x64 pode ser ativado e removido sem Registro real", TestVulkanLayerRegistration),
     ("temperatura da placa-mae distingue ausencia de zero", TestMotherboardTemperatureAvailability),
+    ("captura de atalhos valida teclas e modificadores", TestHotkeyCapture),
+    ("X11 considera combinacoes de travas do teclado", TestX11HotkeyMasks),
+    ("portal Wayland interpreta preferencias e respostas", TestWaylandHotkeyResponses),
+    ("falha ao salvar restaura a combinacao anterior", TestHotkeyRollback),
+    ("troca de atalho Windows preserva pausa e combinacao anterior", TestOverlayHotkeyWindows),
     .. CoreRegressionTests.Cases
 ];
 
@@ -40,6 +48,75 @@ static void TestMotherboardTemperatureAvailability()
     Assert(MainWindowViewModel.FormatMotherboardTemperature(data) == "Indispon\u00edvel", "Leitura ausente deve ser indicada.");
     data.SetValue(SensorType.MotherboardTemp, 0);
     Assert(MainWindowViewModel.FormatMotherboardTemperature(data) == "0 \u00b0C", "Zero e uma leitura valida.");
+}
+
+static void TestHotkeyCapture()
+{
+    Assert(HotkeyCapture.TryFormat(Key.O, KeyModifiers.Control | KeyModifiers.Shift, out var key)
+        && key == "Ctrl+Shift+O", "Combinação capturada incorretamente.");
+    Assert(HotkeyCapture.TryFormat(Key.F24, KeyModifiers.None, out key) && key == "F24", "F24 deve ser aceito.");
+    Assert(!HotkeyCapture.TryFormat(Key.A, KeyModifiers.None, out _), "Letra isolada deve ser recusada.");
+    Assert(!HotkeyCapture.TryFormat(Key.Enter, KeyModifiers.Control, out _), "Tecla não suportada deve ser recusada.");
+    Assert(HotkeyCapture.SameCombination("Shift+Ctrl+O", "Ctrl+Shift+O"), "Ordem dos modificadores não altera a combinação.");
+}
+
+static void TestX11HotkeyMasks()
+{
+    var masks = X11OverlayHotkeyBackend.BuildMasks(4, [2, 16, 128]);
+    Assert(masks.SequenceEqual(new ushort[] { 4, 6, 20, 22, 132, 134, 148, 150 }), "Travas X11 devem incluir todas as combinações.");
+    Assert(X11OverlayHotkeyBackend.BuildMasks(4, [0, 2, 2]).SequenceEqual(new ushort[] { 4, 6 }), "Máscaras repetidas não devem duplicar registros.");
+    var repeat = new X11KeyRepeatFilter();
+    Assert(repeat.Press(10), "Primeiro pressionamento deve ativar.");
+    repeat.Release(20, 0);
+    Assert(!repeat.Press(20), "Repetição automática não deve alternar novamente.");
+    repeat.Release(30, 100);
+    repeat.FlushRelease(161);
+    Assert(repeat.Press(40), "Um novo pressionamento deve ativar após soltar a tecla.");
+}
+
+static void TestWaylandHotkeyResponses()
+{
+    Assert(WaylandOverlayHotkeyBackend.ToPortalTrigger(HotkeyParser.ModControl | HotkeyParser.ModShift, 'O') == "CTRL+SHIFT+o", "Formato do portal inválido.");
+    Assert(WaylandOverlayHotkeyBackend.ToPortalTrigger(HotkeyParser.ModWin, 0x87) == "LOGO+F24", "Tecla de função inválida.");
+    Assert(!WaylandOverlayHotkeyBackend.ReadBinding(1, new Dictionary<string, VariantValue>()).Success, "Cancelamento não pode ativar atalho.");
+    Assert(!WaylandOverlayHotkeyBackend.SelectBinding(0, []).Success, "Lista vazia não confirma registro.");
+    var accepted = WaylandOverlayHotkeyBackend.SelectBinding(0, [("toggle-overlay", "Meta+F10")]);
+    Assert(accepted.Success && accepted.Display == "Meta+F10", "Descrição efetiva do portal deve ser exibida.");
+}
+
+static void TestOverlayHotkeyWindows()
+{
+    if (!OperatingSystem.IsWindows()) throw new TestSkippedException("Requer Windows.");
+    using var service = new GlobalHotkeyService();
+    using var other = new GlobalHotkeyService();
+    using var backend = new WindowsOverlayHotkeyBackend(service, () => { });
+    const string first = "Ctrl+Alt+Shift+F22";
+    const string conflict = "Ctrl+Alt+Shift+F23";
+    const string pause = "Ctrl+Alt+Shift+F24";
+    Assert(service.Register(GlobalHotkeyService.PauseHotkeyId, pause, () => { }), "Não foi possível registrar pausa de teste.");
+    Assert(backend.ApplyAsync(first).GetAwaiter().GetResult().Success, "Registro inicial falhou.");
+    Assert(other.Register(1, conflict, () => { }), "Não foi possível preparar conflito de teste.");
+    Assert(!backend.ApplyAsync(conflict).GetAwaiter().GetResult().Success, "Conflito deveria ser informado.");
+    Assert(!other.Register(2, first, () => { }), "Atalho anterior deve permanecer registrado.");
+    Assert(backend.ApplyAsync("").GetAwaiter().GetResult().Success, "Limpeza falhou.");
+    Assert(other.Register(2, first, () => { }), "Atalho removido deve ficar disponível.");
+    Assert(!other.Register(3, pause, () => { }), "Limpar overlay não pode remover atalho de pausa.");
+}
+
+static void TestHotkeyRollback()
+{
+    var active = "Ctrl+F10";
+    Task<HotkeyResult> Apply(string value)
+    {
+        if (value == "Ctrl+F12") return Task.FromResult(HotkeyResult.Failed("ocupado"));
+        active = value;
+        return Task.FromResult(HotkeyResult.Active(value));
+    }
+    var failed = new HotkeyTransition(active, Apply);
+    Assert(!failed.StageAsync("Ctrl+F12").GetAwaiter().GetResult().Success && active == "Ctrl+F10", "Conflito deve manter atalho anterior.");
+    var staged = new HotkeyTransition(active, Apply);
+    Assert(staged.StageAsync("Ctrl+F11").GetAwaiter().GetResult().Success && active == "Ctrl+F11", "Novo atalho deveria ficar ativo.");
+    Assert(staged.RollbackAsync().GetAwaiter().GetResult().Success && active == "Ctrl+F10", "Falha na gravação deve restaurar o anterior.");
 }
 
 static void TestCanvasToScreenCoordinates()

@@ -1,35 +1,19 @@
-# Atalho Global (HotkeyService / HotkeyParser)
+# Atalhos globais
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/global-hotkey.md)
 
-Permite mostrar/ocultar o overlay OSD a partir de qualquer aplicativo — inclusive com um jogo em foco — sem injeção de DLL nem hooks de teclado: usa o `RegisterHotKey` do Win32 no Windows (o Linux ainda não registra atalhos globais; X11/XWayland é o caminho futuro).
+Em **Configurações → Modo do overlay**, selecione **Definir atalho**, pressione a combinação e clique em **Salvar e aplicar**. A combinação alterna a visibilidade do overlay mesmo com outro aplicativo em foco, tanto no modo flutuante quanto dentro do jogo. **Limpar atalho** desativa a função; `Esc` cancela a captura. O padrão é desativado.
 
-## HotkeyParser
+São aceitas letras `A–Z` e números `0–9` com pelo menos um modificador (`Ctrl`, `Alt`, `Shift` ou `Win`), ou teclas `F1–F24` com ou sem modificador. Conflitos com o atalho de pausa ou outra aplicação são informados na interface. A mudança passa a valer após salvar; quando a gravação falha, o app tenta restaurar a combinação anterior e informa se a restauração falhar.
 
-Converte a especificação textual do `config.json` (`toggleOverlayHotkey`) em modificadores e virtual-key do Win32:
+## Plataformas
 
-- Modificadores aceitos: `Ctrl`/`Control`, `Alt`, `Shift`, `Win`/`Windows` (separados por `+` ou espaço).
-- Teclas aceitas: `A–Z`, `0–9` e `F1–F24`.
-- Regra de segurança: a combinação precisa ter pelo menos um modificador **ou** ser uma tecla de função — evita capturar teclas soltas como `A` ou `5` globalmente.
-- Exemplos válidos: `Ctrl+Shift+O`, `Ctrl+Alt+F10`, `F9`, `Win+Shift+P`.
+- **Windows:** `RegisterHotKey` entrega as ações a uma janela message-only em thread dedicada. A troca do overlay preserva o registro de pausa; não há hook de teclado.
+- **Linux X11:** usa uma conexão XCB dedicada e registra as variações para Caps Lock, Num Lock e Scroll Lock. Requer `libxcb`; em caso de conflito o registro anterior permanece ativo.
+- **Linux Wayland:** usa o portal `org.freedesktop.portal.GlobalShortcuts` pela sessão D-Bus. O ambiente gráfico pode abrir uma confirmação e escolher uma combinação diferente da solicitada; a interface mostra a descrição devolvida pelo sistema. A disponibilidade depende do portal e do compositor. XWayland não é usado como substituto para atalhos globais Wayland.
 
-## HotkeyService
-
-- No **app unificado no Windows (F1.5)** o comportamento é prestado pelo `GlobalHotkeyService` em `Core/Services/Hotkeys/Windows/`: uma janela *message-only* numa thread dedicada, criada com `HWND_MESSAGE` (`-3`), recebe os `WM_HOTKEY` (o Avalonia não expõe o WndProc da janela principal) e as ações são publicadas no dispatcher da UI. O WPF aposentado usava o `HwndSource` da janela; os IDs são os mesmos: overlay (`0x5048`) e pausa (`0x5049`).
-- **Linux:** os atalhos globais ainda não são registrados (X11/XWayland é o caminho futuro; Wayland puro não permite atalhos globais por design — quando houver suporte X11, a limitação do Wayland puro fica documentada).
-- Mensagens `WM_HOTKEY` chegam ao WndProc da janela message-only e disparam o callback que alterna o toggle "Overlay" (mesmo caminho do clique manual).
-- `Register()` retorna `false` (e grava em `logs/errors.log`) quando a especificação é inválida ou a combinação já está em uso por outro aplicativo.
-- Registro/remoção acontecem na carga do app e ao aplicar as configurações da página; a janela message-only vive junto ao app.
-- **Múltiplos atalhos (P6.7):** o service aceita um `hotkeyId` Win32 por instância — o app roda **duas** instâncias na mesma thread: overlay (`0x5048`, default) e pausa do monitoramento (`0x5049`), cada um com `WM_HOTKEY` próprio, sem colisão.
+No Linux, o suporte foi implementado, mas ainda precisa de validação em sessões reais X11 e Wayland. O atalho de pausa continua disponível apenas no Windows. Quando o serviço global não está disponível, a interface e a bandeja continuam permitindo alternar o overlay.
 
 ## Configuração
 
-- `toggleOverlayHotkey` (string, padrão `""` = desativado): atalho global para mostrar/ocultar o OSD.
-- `pauseMonitorHotkey` (string, padrão `"Ctrl+Alt+P"` = ativo): atalho global que **pausa/retoma o monitoramento** (P6.7) — ciclos param, CSV/JSON/SDK congelam no último valor e o overlay exibe o último snapshot; estado aceita não sobreviva ao reinício do app. Vazio = desativado.
-- Editáveis no `config.json` (a seção "ATALHO GLOBAL" era do Editor Visual do WPF, aposentado na Fase 2); não requerem privilégios administrativos e funcionam independente do aplicativo em foco.
-- O atalho de overlay apenas alterna a visibilidade do overlay — o OSD continua sendo desenhado pela janela topmost do próprio Phantom Monitor.
-
-## Registro na thread proprietária
-`GlobalHotkeyService` envia comandos à thread que criou a janela message-only.
-Registro, remoção e callbacks são tratados nessa thread; a UI continua responsável
-pelo seu próprio dispatcher. Falhas de callbacks são registradas sem encerrar a bomba.
+`toggleOverlayHotkey` mantém a combinação preferida no `config.json`, por exemplo `Ctrl+Shift+O`, e continua vazio por padrão. Ela também pode ser escolhida pela interface. `pauseMonitorHotkey` continua configurável no arquivo e usa `Ctrl+Alt+P` por padrão no Windows; vazio desativa a pausa por atalho. Configurações antigas são preservadas.

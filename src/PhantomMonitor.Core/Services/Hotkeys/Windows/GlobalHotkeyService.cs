@@ -97,6 +97,18 @@ public sealed class GlobalHotkeyService : IDisposable
     public void UnregisterAll()
         => InvokeOnWindow(() => { UnregisterCore(); return true; });
 
+    /// <summary>Remove apenas um atalho, preservando as demais ações registradas.</summary>
+    public bool Unregister(int hotkeyId) => InvokeOnWindow(() =>
+    {
+        lock (_registrations)
+        {
+            if (!_registrations.ContainsKey(hotkeyId)) return true;
+            if (!UnregisterHotKey(_hwnd, hotkeyId)) return false;
+            _registrations.Remove(hotkeyId);
+            return true;
+        }
+    });
+
     private void UnregisterCore()
     {
         lock (_registrations)

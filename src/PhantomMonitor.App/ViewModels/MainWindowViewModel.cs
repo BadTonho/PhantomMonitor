@@ -411,6 +411,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     {
         _config = AppConfig.Load(ConfigPaths.ConfigFile);
         _config.Normalize();
+        _overlayHotkeyDraft = _config.ToggleOverlayHotkey;
         _themePalettesDraft = CloneThemePalettes(_config.ThemePalettes);
         _overlayFontEffective = _config.Overlay.FontSize;
         _overlayWidthEffective = _config.Overlay.Width;
@@ -837,6 +838,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         ErrorLog.EntryWritten -= OnDiagnosticEntryWritten;
         App.ThemeChanged -= OnThemeChanged;
         DetachSensorService(_sensorService);
+        _overlayHotkeyBackend?.Dispose();
         if (OperatingSystem.IsWindows()) _hotkeys?.Dispose();
         if (IsRunning)
         {

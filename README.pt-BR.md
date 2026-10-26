@@ -85,6 +85,8 @@ Inicie o app:
 dotnet run --project src/PhantomMonitor.App
 ```
 
+O atalho para mostrar ou ocultar o overlay pode ser definido em **Configurações → Modo do overlay**; ele vem desativado. O suporte a X11 e Wayland ainda aguarda validação no Linux. Veja [atalhos globais](docs/funções/hotkey.md).
+
 O tema builtin é escolhido com `theme` no `config.json` (`neptune` = paleta derivada do Avalonia, `slate` = paleta derivada do WPF; a chave legada `uiTheme` continua sendo lida e migra), pelo card **INTERFACE** em Configurações (trocado na interface em execução, sem reiniciar) ou pela linha de comando com `--theme=<nome>` (o `--ui-theme=` legado segue aceito).
 
 Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.

@@ -3,8 +3,18 @@
 #include "imgui.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 namespace phantom::overlay {
 namespace {
@@ -19,7 +29,7 @@ ImU32 color(std::uint32_t argb, float opacity) {
 
 float measure_wrapped(ImFont* font, float size, const std::string& text, float width) {
     if (text.empty()) return size;
-    const auto measured = font->CalcTextSizeA(size, width, 0.0f, text.c_str(), text.c_str() + text.size());
+    const auto measured = font->CalcTextSizeA(size, FLT_MAX, width, text.c_str(), text.c_str() + text.size());
     return std::max(size, measured.y);
 }
 
@@ -51,6 +61,38 @@ void draw_graph(ImDrawList* draw, const Element& element, ImVec2 origin,
 }
 
 } // namespace
+
+void ConfigureOverlayFonts() {
+    auto& io = ImGui::GetIO();
+    std::vector<std::filesystem::path> candidates;
+#if defined(_WIN32)
+    wchar_t windows_directory[MAX_PATH]{};
+    const auto length = GetWindowsDirectoryW(windows_directory, MAX_PATH);
+    if (length > 0 && length < MAX_PATH) {
+        const auto fonts = std::filesystem::path(windows_directory) / L"Fonts";
+        candidates.push_back(fonts / L"segoeui.ttf");
+        candidates.push_back(fonts / L"arial.ttf");
+    }
+#elif defined(__linux__)
+    candidates.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    candidates.emplace_back("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf");
+    candidates.emplace_back("/usr/share/fonts/dejavu/DejaVuSans.ttf");
+#endif
+    ImFontConfig config{};
+    config.OversampleH = 2;
+    config.OversampleV = 2;
+    for (const auto& path : candidates) {
+        std::error_code error;
+        if (!std::filesystem::is_regular_file(path, error)) continue;
+        const auto utf8 = path.u8string();
+        if (auto* font = io.Fonts->AddFontFromFileTTF(utf8.c_str(), 20.0f, &config,
+                                                       io.Fonts->GetGlyphRangesDefault())) {
+            io.FontDefault = font;
+            return;
+        }
+    }
+    io.FontDefault = io.Fonts->AddFontDefault();
+}
 
 void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
                std::uint32_t framebuffer_height, float display_scale_x,
@@ -85,16 +127,18 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
         const float row_bottom = frame.row_margin.bottom * sy;
         const float inner_width = std::max(1.0f, width - pad_left - pad_right);
         const float text_width = std::max(1.0f, inner_width - row_left - row_right);
-        const float title_size = std::max(1.0f, frame.name_font_size * sy);
-        const float title_height = font->CalcTextSizeA(title_size, text_width, 0.0f,
-            block.title.c_str(), block.title.c_str() + block.title.size()).y;
+        // A modest scale compensates for the smaller native rasterization while
+        // preserving the user's configured size and relative sizes.
+        constexpr float text_scale = 1.25f;
+        const float title_size = std::max(1.0f, frame.name_font_size * sy * text_scale);
+        const float title_height = measure_wrapped(font, title_size, block.title, text_width);
         float content_height = title_height;
         for (const auto& element : block.elements) {
             if (element.kind == Element::Kind::Graph) {
                 content_height += element.graph_height * sy + row_top + row_bottom;
                 continue;
             }
-            const float text_size = std::max(1.0f, (element.font_size > 0 ? element.font_size : frame.font_size) * sy);
+            const float text_size = std::max(1.0f, (element.font_size > 0 ? element.font_size : frame.font_size) * sy * text_scale);
             content_height += measure_wrapped(font, text_size, element.text, text_width) + row_top + row_bottom;
             if (element.kind == Element::Kind::Name) content_height += 2.0f * sy;
         }
@@ -122,7 +166,7 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
                     graph_height, opacity);
                 cursor_y += graph_height;
             } else {
-                const float text_size = std::max(1.0f, (element.font_size > 0 ? element.font_size : frame.font_size) * sy);
+                const float text_size = std::max(1.0f, (element.font_size > 0 ? element.font_size : frame.font_size) * sy * text_scale);
                 draw->AddText(font, text_size,
                     ImVec2(content_start.x + row_left, cursor_y), color(element.color, opacity),
                     element.text.c_str(), element.text.c_str() + element.text.size(), text_width);

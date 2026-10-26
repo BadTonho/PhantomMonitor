@@ -25,6 +25,8 @@ O código nativo desenha o quadro aplicado com uma apresentação comum baseada 
 
 O diagnóstico também aparece em tempo real em **Configurações → Modo do overlay → Diagnóstico do overlay**. Cada estado identifica o processo, o produtor (`vulkan`, `windows` ou `opengl`), a API e o resultado. No Windows, uma mensagem da camada Vulkan não é considerada confirmação de que o hook OpenGL/Direct3D está instalado: um mesmo processo pode carregar Vulkan e apresentar quadros por outra API.
 
+O renderizador nativo mede títulos e linhas usando a mesma quebra de texto aplicada no desenho, para que valores longos não se sobreponham. Para facilitar a leitura em jogo, ele usa uma fonte de sistema disponível (com fallback para a fonte interna) e desenha os tamanhos configurados com escala de 1,25. Os tamanhos continuam ajustáveis no editor; a escolha da família de fonte do editor ainda não é aplicada ao renderizador nativo.
+
 O renderer aplica tamanho de fonte, cores e geometria. A família selecionada no editor é enviada no quadro interno, mas ainda não é carregada pelo renderer nativo, que usa a fonte padrão do Dear ImGui.
 
 Internamente, o roteamento de posicionamento fica separado das implementações de Windows e Linux (`OverlayWindow.Positioning.cs`, `OverlayWindow.Windows.cs` e `OverlayWindow.Linux.cs`). Isso mantém as regras de foco e clique-through do Windows isoladas do posicionamento limitado pelo compositor no Linux.

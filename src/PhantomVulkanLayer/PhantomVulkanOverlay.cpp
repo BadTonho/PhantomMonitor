@@ -379,6 +379,7 @@ bool initialize_swapchain(DeviceState& device, SwapchainState& swapchain,
         return false;
     }
     ImGui::SetCurrentContext(swapchain.imgui);
+    phantom::overlay::ConfigureOverlayFonts();
     ImGui_ImplVulkan_InitInfo imgui_info{};
     imgui_info.ApiVersion = VK_API_VERSION_1_0;
     imgui_info.Instance = device.instance;

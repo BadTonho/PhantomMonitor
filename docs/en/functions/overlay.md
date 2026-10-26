@@ -62,6 +62,8 @@ The native code draws the applied frame through a shared presentation model, ini
 
 The same live diagnostic is available in **Settings → Overlay mode → Overlay diagnostics**. Each status identifies the process, producer (`vulkan`, `windows`, or `opengl`), API, and result. On Windows, a Vulkan status does not confirm that the OpenGL/Direct3D hook is installed: one process may load Vulkan while presenting through another API.
 
+The native renderer measures titles and rows using the same text wrapping used to draw them, preventing long values from overlapping. For in-game readability it uses an available system font (falling back to the built-in font) and draws configured sizes at a scale of 1.25. Sizes remain adjustable in the editor; the editor's font-family selection is not yet applied to the native renderer.
+
 The renderer applies font size, colors, and geometry. The font family selected in the editor is sent in the internal frame, but the native renderer still uses Dear ImGui's built-in default font.
 
 On Windows, while Phantom Monitor or Explorer is focused, overlay positions continue to use the last valid external window as their reference. Before an external window is available, the primary screen is used.

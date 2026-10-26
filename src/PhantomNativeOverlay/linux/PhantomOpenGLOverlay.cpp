@@ -67,6 +67,7 @@ void draw(std::uintptr_t native_context, std::uint32_t width, std::uint32_t heig
             return;
         }
         ImGui::SetCurrentContext(g_state.context);
+        ConfigureOverlayFonts();
         if (!ImGui_ImplOpenGL3_Init(gles ? "#version 300 es" : "#version 130")) {
             set_status(RenderState::Failed, "Dear ImGui não inicializou o backend OpenGL3.");
             return;

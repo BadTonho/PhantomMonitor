@@ -189,6 +189,7 @@ bool ensure_d3d11(IDXGISwapChain* swapchain) {
         g_d3d11_device = device;
         g_d3d11_device->GetImmediateContext(&g_d3d11_context);
         g_imgui = ImGui::CreateContext();
+        if (g_imgui) { ImGui::SetCurrentContext(g_imgui); ConfigureOverlayFonts(); }
         if (!g_imgui || !ImGui_ImplDX11_Init(g_d3d11_device, g_d3d11_context)) {
             shutdown_imgui();
             set_status(RenderApi::Direct3D11, RenderState::Failed, "Dear ImGui não inicializou no Direct3D 11.");
@@ -224,6 +225,7 @@ bool ensure_d3d10(IDXGISwapChain* swapchain) {
         reset_renderer_devices();
         g_d3d10_device = device;
         g_imgui = ImGui::CreateContext();
+        if (g_imgui) { ImGui::SetCurrentContext(g_imgui); ConfigureOverlayFonts(); }
         g_api = RenderApi::Direct3D10;
         if (!g_imgui || !ImGui_ImplDX10_Init(g_d3d10_device)) {
             shutdown_imgui();
@@ -255,6 +257,7 @@ bool ensure_d3d9(IDirect3DDevice9* device) {
         device->AddRef();
         g_d3d9_device = device;
         g_imgui = ImGui::CreateContext();
+        if (g_imgui) { ImGui::SetCurrentContext(g_imgui); ConfigureOverlayFonts(); }
         g_api = RenderApi::Direct3D9;
         if (!g_imgui || !ImGui_ImplDX9_Init(g_d3d9_device)) {
             shutdown_imgui();
@@ -277,6 +280,7 @@ bool ensure_opengl(HGLRC current) {
     reset_renderer_devices();
     g_gl_context = current;
     g_imgui = ImGui::CreateContext();
+    if (g_imgui) { ImGui::SetCurrentContext(g_imgui); ConfigureOverlayFonts(); }
     g_api = RenderApi::OpenGL;
     if (!g_imgui || !ImGui_ImplOpenGL3_Init("#version 130")) {
         shutdown_imgui();
@@ -491,6 +495,8 @@ bool ensure_d3d12(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue) {
             set_status(RenderApi::Direct3D12, RenderState::Failed, "Não foi possível criar o contexto Dear ImGui para D3D12.");
             return false;
         }
+        ImGui::SetCurrentContext(g_imgui);
+        ConfigureOverlayFonts();
         ImGui_ImplDX12_InitInfo init{};
         init.Device = g_d3d12_device;
         init.CommandQueue = g_d3d12_queue;

@@ -1,5 +1,8 @@
 #include "OverlayFrame.h"
+#include "OverlayImGuiDraw.h"
+#include "imgui.h"
 
+#include <algorithm>
 #include <cmath>
 #include <chrono>
 #include <cstdint>
@@ -10,6 +13,7 @@
 #include <vector>
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
 #else
 #include <sys/mman.h>
@@ -76,6 +80,58 @@ int main() {
         check(std::abs(at_1440p.x - 493.3333f) < 0.02f && std::abs(at_1440p.y - 653.3333f) < 0.02f,
               "normalized coordinates and dimensions scale at 1440p");
     }
+
+    // Inspect the actual ImGui vertices: wrapped titles and rows must fit in the
+    // background and leave room for the next row, without a graphics backend.
+    auto* context = ImGui::CreateContext();
+    ConfigureOverlayFonts();
+    unsigned char* pixels = nullptr;
+    int atlas_width = 0, atlas_height = 0;
+    ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &atlas_width, &atlas_height);
+    ImGui::GetIO().Fonts->SetTexID(1);
+    Frame layout;
+    layout.visible = true;
+    layout.width = 120;
+    layout.reference_width = 800;
+    layout.reference_height = 600;
+    layout.font_size = 12;
+    layout.name_font_size = 12;
+    layout.opacity = 1;
+    layout.background_color = 0xFF000000;
+    layout.accent_color = 0xFF0000FF;
+    layout.border_enabled = false;
+    layout.padding = {6, 6, 6, 6};
+    layout.content_spacing = 4;
+    layout.row_margin = {0, 2, 0, 2};
+    Block block;
+    block.title = "A title with enough words to wrap over multiple lines";
+    Element first;
+    first.kind = Element::Kind::Text;
+    first.font_size = 12;
+    first.color = 0xFFFF0000;
+    first.text = "A long metric value which must wrap onto several lines without overlap";
+    Element second;
+    second.kind = Element::Kind::Text;
+    second.font_size = 12;
+    second.color = 0xFF00FF00;
+    second.text = "Next row";
+    block.elements = {first, second};
+    layout.blocks = {block};
+    ImDrawData* drawn = nullptr;
+    DrawFrame(layout, 800, 600, 1, 1, &drawn);
+    float title_bottom = -1, first_top = 1e6f, first_bottom = -1, second_top = 1e6f, second_bottom = -1, background_bottom = -1;
+    if (drawn) for (int i = 0; i < drawn->CmdListsCount; ++i) {
+        for (const auto& vertex : drawn->CmdLists[i]->VtxBuffer) {
+            if (vertex.col == IM_COL32(0, 0, 255, 255)) title_bottom = std::max(title_bottom, vertex.pos.y);
+            if (vertex.col == IM_COL32(255, 0, 0, 255)) { first_top = std::min(first_top, vertex.pos.y); first_bottom = std::max(first_bottom, vertex.pos.y); }
+            if (vertex.col == IM_COL32(0, 255, 0, 255)) { second_top = std::min(second_top, vertex.pos.y); second_bottom = std::max(second_bottom, vertex.pos.y); }
+            if (vertex.col == IM_COL32(0, 0, 0, 255)) background_bottom = std::max(background_bottom, vertex.pos.y);
+        }
+    }
+    check(pixels && title_bottom >= 0 && first_bottom >= 0 && second_bottom >= 0
+          && first_top >= title_bottom && second_top >= first_bottom && background_bottom >= second_bottom,
+          "wrapped title and metric rows do not overlap or escape the background");
+    ImGui::DestroyContext(context);
 
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();

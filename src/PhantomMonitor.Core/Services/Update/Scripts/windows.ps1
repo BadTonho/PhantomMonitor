@@ -3,6 +3,7 @@ function Invoke-PhantomUpdateTransaction {
     param(
         [Parameter(Mandatory = $true)][string]$Payload,
         [Parameter(Mandatory = $true)][string]$Target,
+        [bool]$Installed = $false,
         [scriptblock]$CopyFile = { param($Source, $Destination) [System.IO.File]::Copy($Source, $Destination, $true) }
     )
     $ErrorActionPreference = 'Stop'
@@ -16,7 +17,10 @@ function Invoke-PhantomUpdateTransaction {
     foreach ($entry in @(Get-Item -LiteralPath $payloadRoot, $targetRoot) + @(Get-ChildItem -LiteralPath $payloadRoot -Recurse -Force)) {
         if (($entry.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Links are not allowed in the update payload.' }
     }
-    $names = @($files | ForEach-Object { $_.FullName.Substring($payloadRoot.Length) })
+    $names = @($files | ForEach-Object { $_.FullName.Substring($payloadRoot.Length) } | Where-Object {
+        $_ -ine 'config.json' -and $_ -ine 'phantom.installed' -and (-not $Installed -or $_ -ine 'phantom.portable')
+    })
+    if ($names.Count -eq 0) { throw 'The update has no application files.' }
     foreach ($name in $names) {
         if ($name.Split('\') | Where-Object { $_ -like '.phantom-update-*' }) { throw 'Reserved update path.' }
         $destination = [System.IO.Path]::GetFullPath((Join-Path $targetRoot $name))
@@ -96,7 +100,7 @@ if ($MyInvocation.InvocationName -ne '.') {
         if ($parent -and -not $parent.WaitForExit(60000)) { throw 'Application did not exit; installation was not changed.' }
     }
     try {
-        Invoke-PhantomUpdateTransaction -Payload $env:PHANTOM_UPDATE_PAYLOAD -Target $env:PHANTOM_UPDATE_TARGET | Out-Null
+        Invoke-PhantomUpdateTransaction -Payload $env:PHANTOM_UPDATE_PAYLOAD -Target $env:PHANTOM_UPDATE_TARGET -Installed ($env:PHANTOM_UPDATE_INSTALLED -eq '1') | Out-Null
         $executable = Join-Path $env:PHANTOM_UPDATE_TARGET $env:PHANTOM_UPDATE_EXE
         Start-Process -FilePath $executable -WorkingDirectory $env:PHANTOM_UPDATE_TARGET
     } catch {

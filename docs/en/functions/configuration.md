@@ -2,7 +2,7 @@
 
 # App configuration
 
-Phantom Monitor uses JSON configuration. In a development checkout, `config.json` is created in the repository root; installed builds use a per-user location.
+Phantom Monitor uses JSON configuration. The location of `config.json` depends on the distribution and is resolved automatically.
 
 ## Main settings
 
@@ -37,10 +37,13 @@ Series items can use keys or patterns such as `Gpu*`, `CpuTemperature#*`, `VrmTe
 
 `ConfigPaths.ConfigFile` resolves the path independently of the build output:
 
-1. **Development:** walk up from the executable to `PhantomMonitor.slnx` (or `.sln`) and use the repository-root `config.json`.
-2. **Installed:** `%AppData%\PhantomMonitor\config.json` on Windows; `$XDG_CONFIG_HOME/PhantomMonitor/config.json` on Linux, usually `~/.config/PhantomMonitor/config.json`.
+1. **Portable:** the `phantom.portable` marker in the Windows ZIP or Linux tar.gz places `config.json` beside the executable. For AppImage it is beside the `.AppImage` file, outside the mounted image.
+2. **Installed:** the Windows installer and `.deb` include `phantom.installed` and use `%AppData%\PhantomMonitor\config.json` on Windows or `$XDG_CONFIG_HOME/PhantomMonitor/config.json` on Linux, usually `~/.config/PhantomMonitor/config.json`. Older Windows installations are also recognized by their default location or installation registry entry.
+3. **Development:** without a portable marker, walk up from the executable to `PhantomMonitor.slnx` (or `.sln`) and use the repository-root `config.json`. Other unmarked publishes use per-user configuration.
 
 If the file is missing, `AppConfig.Load` copies `config.example.json` and creates the containing directory. `Normalize()` corrects invalid values, including a minimum 100 ms interval, opacity from 0.1 to 1, and overlay coordinates from −5000 to 5000. `AppConfig.Save()` writes atomically through a temporary file and reports success or failure. Errors are recorded in `logs/errors.log`.
+
+An updated portable without a local `config.json` starts with a new configuration; the old computer's configuration is neither copied nor deleted. An existing local file is preserved during updates and rollback. Copy it with the portable application to retain settings. The directory must be writable; the app reports read or write failures without silently switching locations. Logs and other data remain in their usual user locations.
 
 The `showOverlay` option controls the initial overlay toggle state. Settings for CSV, JSON, and JSONL persist in `config.json`. Legacy `overlay.show*`, `shownSeries`, and `layout` values are used when migrating to `overlay.blocks`. `overlay.compactMode`, `overlay.accentColor`, and `overlay.fontSize` control overlay density, accent, and base font. The `sensors.*` category switches are reserved by the model but are not currently consumed by the interface.
 

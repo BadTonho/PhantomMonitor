@@ -8,8 +8,8 @@
 ; Instala em %LOCALAPPDATA%\Programs\PhantomMonitor (per-user) — a MESMA pasta
 ; dos updates automáticos: o apply_update.cmd gerado pelo updater troca só os
 ; arquivos dessa pasta com backup/rollback, então o conjunto de arquivos
-; instalado precisa ser o mesmo do portable zip (exe + PresentMon.exe +
-; config.example.json). O config.json real do usuário fica em %APPDATA% e
+; instalado usa o mesmo payload base, com marcador de instalação em vez do
+; marcador portátil. O config.json real do usuário fica em %APPDATA% e
 ; todos os logs em %LOCALAPPDATA%\PhantomMonitor\logs, fora da troca.
 
 #ifndef VersionName
@@ -44,7 +44,8 @@ UninstallDisplayIcon={app}\PhantomMonitor.exe
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#ReleaseDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs replacesameversion ignoreversion
+Source: "{#ReleaseDir}\*"; DestDir: "{app}"; Excludes: "phantom.portable,config.json"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "phantom.installed"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Phantom Monitor"; Filename: "{app}\PhantomMonitor.exe"

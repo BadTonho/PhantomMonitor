@@ -12,6 +12,12 @@
     <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
   </Window.Styles>
   <Grid x:Name="EditorCanvasViewport" ColumnDefinitions="*,Auto" SizeChanged="OnEditorCanvasViewportSizeChanged">
+    <Border Grid.Column="0" ZIndex="30" IsVisible="{Binding HasConfigurationWarning}"
+            VerticalAlignment="Top" HorizontalAlignment="Stretch" Margin="12"
+            Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource AccentWarningBrush}"
+            BorderThickness="1" CornerRadius="6" Padding="10">
+      <TextBlock Text="{Binding ConfigurationWarning}" Foreground="{DynamicResource AccentWarningBrush}" TextWrapping="Wrap" />
+    </Border>
     <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <Grid x:Name="EditorCanvasSurface" Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}"
             Background="{DynamicResource BgOverlayPanelBrush}" PointerPressed="OnCanvasPointerPressed">

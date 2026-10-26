@@ -230,7 +230,7 @@ public sealed partial class MainWindowViewModel
         _config.Overlay.InGameTargets = OverlayInGameTargets.Select(CloneOverlayTarget).ToList();
         CopyOverlayLayoutToConfig();
 
-        if (!_config.Save(ConfigPaths.ConfigFile))
+        if (!SaveConfiguration())
         {
             _config.UpdateIntervalMs = oldInterval;
             _config.ToggleOverlayHotkey = oldOverlayHotkey;

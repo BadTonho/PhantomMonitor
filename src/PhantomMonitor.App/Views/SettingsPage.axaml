@@ -3,6 +3,10 @@
             x:Class="PhantomMonitor.App.Views.SettingsPage">
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSettings}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
+        <Border IsVisible="{Binding HasConfigurationWarning}" Background="{DynamicResource BgTintWarmBrush}"
+                BorderBrush="{DynamicResource BorderTintWarmBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+          <TextBlock Text="{Binding ConfigurationWarning}" Foreground="{DynamicResource AccentWarningBrush}" TextWrapping="Wrap" />
+        </Border>
         <StackPanel Spacing="4" Margin="0,0,0,3">
           <TextBlock Text="Configurações" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
           <TextBlock Text="Ajuste a coleta, o overlay e os arquivos de telemetria." Classes="muted" FontSize="11" />
@@ -139,7 +143,7 @@
               <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"
                       IsVisible="{Binding CanApplyUpdate}" IsEnabled="{Binding CanApplyUpdateEnabled}" />
             </StackPanel>
-            <TextBlock Text="A troca baixa a nova versão, aguarda o app encerrar e reabre sozinho. Config (config.json) e logs ficam fora da pasta trocada. Em instalação por pacote do sistema, a troca não é oferecida e o card fica apenas na notificação." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock Text="A troca baixa a nova versão, aguarda o app encerrar e reabre sozinho. A configuração e os logs são preservados. Em instalação por pacote do sistema, a troca não é oferecida e o card fica apenas na notificação." Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 

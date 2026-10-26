@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/configuration.md)
 
-Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz do projeto e é carregado automaticamente.
+Sistema de configuração baseado em JSON. O local do `config.json` depende da distribuição e é resolvido automaticamente.
 
 ## Modelos
 
@@ -53,10 +53,13 @@ Sistema de configuração baseado em JSON. O arquivo `config.json` fica na raiz 
 
 O caminho é resolvido por `ConfigPaths.ConfigFile` (independente da pasta de saída do build):
 
-1. **Desenvolvimento:** sobe a partir do executável até encontrar `PhantomMonitor.slnx` (ou `.sln`) e usa o `config.json` da raiz do repositório.
-2. **Publicado/instalado:** usa `%AppData%\PhantomMonitor\config.json` no Windows e `$XDG_CONFIG_HOME/PhantomMonitor/config.json` no Linux (normalmente `~/.config/PhantomMonitor/config.json`).
+1. **Portátil:** o marcador `phantom.portable` no ZIP Windows ou tar.gz Linux indica que `config.json` fica junto do executável. No AppImage, fica junto do próprio arquivo `.AppImage`, fora da imagem montada.
+2. **Instalado:** o instalador Windows e o `.deb` incluem `phantom.installed` e usam `%AppData%\PhantomMonitor\config.json` no Windows e `$XDG_CONFIG_HOME/PhantomMonitor/config.json` no Linux (normalmente `~/.config/PhantomMonitor/config.json`). Instalações Windows antigas também são reconhecidas pelo local padrão ou pelo registro da instalação.
+3. **Desenvolvimento:** sem marcador portátil, sobe a partir do executável até encontrar `PhantomMonitor.slnx` (ou `.sln`) e usa o `config.json` da raiz do repositório. Outras publicações sem marcador usam a configuração por usuário.
 
 Se o arquivo não existir, `AppConfig.Load` copia o `config.example.json` (da mesma pasta ou ao lado do executável — o `.csproj` o copia para a saída) e cria o diretório se necessário.
+
+Um portátil atualizado sem `config.json` local começa com uma configuração nova: o arquivo antigo do computador não é copiado nem apagado. Um arquivo local existente é preservado, inclusive em atualização e rollback. Copie-o junto com o portátil para levar as configurações. O diretório deve permitir gravação; o aplicativo informa erros de leitura ou gravação e não recorre silenciosamente a outra pasta. Os logs e demais dados continuam nos locais habituais do usuário.
 
 ## Validação e persistência
 

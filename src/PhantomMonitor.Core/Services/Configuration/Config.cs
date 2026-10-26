@@ -96,8 +96,11 @@ public sealed partial class AppConfig
     /// <summary>Perfis por aplicativo do OSD (aplicam overrides quando o executável em foco casa).</summary>
     public List<OverlayProfile> Profiles { get; set; } = [];
 
-    public static AppConfig Load(string path)
+    public static AppConfig Load(string path) => Load(path, out _);
+
+    public static AppConfig Load(string path, out string? error, bool createIfMissing = false, string? exampleDirectory = null)
     {
+        error = null;
         try
         {
             if (!File.Exists(path))
@@ -106,7 +109,7 @@ public sealed partial class AppConfig
                 var examplePath = new[]
                 {
                     Path.Combine(dir, "config.example.json"),
-                    Path.Combine(AppContext.BaseDirectory, "config.example.json")
+                    Path.Combine(exampleDirectory ?? AppContext.BaseDirectory, "config.example.json")
                 }.FirstOrDefault(File.Exists);
 
                 if (examplePath != null)
@@ -124,11 +127,15 @@ public sealed partial class AppConfig
                 return cfg;
             }
 
-            return new AppConfig();
+            var defaults = new AppConfig();
+            if (createIfMissing && !defaults.Save(path))
+                error = "Não foi possível criar o arquivo de configuração.";
+            return defaults;
         }
         catch (Exception ex)
         {
             ErrorLog.Write("Config.Load", ex);
+            error = "Não foi possível ler ou criar o arquivo de configuração.";
             return new AppConfig();
         }
     }

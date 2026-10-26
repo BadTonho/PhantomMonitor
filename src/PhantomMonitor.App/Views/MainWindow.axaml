@@ -172,6 +172,10 @@
 
     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsOverview}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
+        <Border IsVisible="{Binding HasConfigurationWarning}" Background="{DynamicResource BgTintWarmBrush}"
+                BorderBrush="{DynamicResource BorderTintWarmBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+          <TextBlock Text="{Binding ConfigurationWarning}" Foreground="{DynamicResource AccentWarningBrush}" TextWrapping="Wrap" />
+        </Border>
         <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Visão geral do sistema" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />

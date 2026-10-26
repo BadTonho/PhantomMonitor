@@ -97,7 +97,7 @@ public sealed partial class MainWindowViewModel
         var wasRunning = IsRunning;
         var wasPaused = IsPaused;
         _config.SensorTunings = candidate;
-        if (!_config.Save(ConfigPaths.ConfigFile))
+        if (!SaveConfiguration())
         {
             _config.SensorTunings = previous;
             SensorTuningMessage = "Não foi possível salvar o config.json. As regras em execução não foram alteradas.";

@@ -53,13 +53,17 @@ descrevem as entradas. Só remova backups após verificar a nova instalação, c
 aplicativo fechado. Falta de energia ou falha no próprio rollback pode exigir
 recuperação manual; a cópia antiga não é apagada antecipadamente.
 
-A UI só publica `Applying` depois de iniciar o atualizador com sucesso. Config
-e logs ficam fora da instalação. Pacotes de sistema/pastas protegidas continuam
+A UI só publica `Applying` depois de iniciar o atualizador com sucesso. O
+`config.json` portátil fica junto do aplicativo e não é substituído nem no
+rollback; logs continuam na pasta do usuário. O instalador mantém a configuração
+por usuário, inclusive ao receber uma atualização pelo ZIP portátil. Pacotes de sistema/pastas protegidas continuam
 em modo de notificação; a camada Linux deve ser reinstalada separadamente.
 
 ## Convenção de assets e publicação (mantenedor)
 
 As releases são geradas localmente (sem CI de publicação); o updater procura os nomes exatos abaixo:
+
+O ZIP Windows e o tar.gz Linux incluem `phantom.portable`, mas nunca um `config.json` pessoal. O instalador Windows exclui esse marcador e o `.deb` o remove; ambos incluem `phantom.installed`. O AppImage identifica sua própria localização pela variável `APPIMAGE`, sem gravar na imagem montada.
 
 | Asset | Uso |
 |---|---|

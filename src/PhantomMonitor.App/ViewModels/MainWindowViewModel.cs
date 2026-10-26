@@ -409,7 +409,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
 
     public MainWindowViewModel()
     {
-        _config = AppConfig.Load(ConfigPaths.ConfigFile);
+        _config = AppConfig.Load(ConfigPaths.ConfigFile, out var configurationLoadError, createIfMissing: ConfigPaths.IsPortable);
+        InitializeConfigurationWarning(configurationLoadError);
         _config.Normalize();
         _overlayHotkeyDraft = _config.ToggleOverlayHotkey;
         _themePalettesDraft = CloneThemePalettes(_config.ThemePalettes);

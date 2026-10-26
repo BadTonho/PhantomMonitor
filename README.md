@@ -110,7 +110,7 @@ Some hardware readings may require elevated permissions. FPS collection uses Pre
 
 ## Releases and auto-update
 
-Published builds live on the [Releases page](https://github.com/BadTonho/PhantomMonitor/releases). The app checks for newer versions at startup and every 24h and offers "Atualizar e reiniciar" (Update and restart): it downloads the platform package, swaps the files through a one-shot updater (with backup/rollback) and relaunches on its own — config and logs live outside the swapped folder. System-package installs (.deb) and protected folders stay in notify-with-link mode. Each release follows the convention:
+Published builds live on the [Releases page](https://github.com/BadTonho/PhantomMonitor/releases). The app checks for newer versions at startup and every 24h and offers "Atualizar e reiniciar" (Update and restart): it downloads the platform package, swaps the files through a one-shot updater (with backup/rollback) and relaunches on its own. Portable configuration is preserved during the swap; logs remain in the user's data directory. System-package installs (.deb) and protected folders stay in notify-with-link mode. Each release follows the convention:
 
 | Asset | Platform |
 | --- | --- |
@@ -132,7 +132,9 @@ Run `dotnet run --project tests/PhantomMonitor.OverlayRegressionTests -c Release
 
 ## Configuration and data
 
-On first launch, the app creates `config.json` from [`config.example.json`](config.example.json). During development, this file is placed in the repository root. For per-user installations, the usual locations are `%AppData%\PhantomMonitor\config.json` on Windows and `$XDG_CONFIG_HOME/PhantomMonitor/config.json` on Linux.
+On first launch, the app creates `config.json` from [`config.example.json`](config.example.json). The Windows portable ZIP and Linux portable tar.gz keep it beside the executable; an AppImage keeps it beside the `.AppImage` file. Move this file with the application to keep its settings. The directory must be writable: the app reports failures instead of silently switching locations. An updated portable without a local configuration starts fresh without copying or deleting the computer's old configuration.
+
+During development, the file is placed in the repository root. For the Windows installer and `.deb`, the usual per-user locations are `%AppData%\PhantomMonitor\config.json` on Windows and `$XDG_CONFIG_HOME/PhantomMonitor/config.json` on Linux. Logs remain in the user's data directories.
 
 On Linux, telemetry and error logs are stored in `~/.local/share/PhantomMonitor/logs/` (or under `$XDG_DATA_HOME` when set). Open **Diagnostics** in Avalonia to inspect recent errors and the detected sensor sources. The **Settings** page can change the sampling interval, logging formats, and overlay options. The HTTP exporter is disabled by default and listens on loopback; enabling other network interfaces exposes its endpoints without TLS or authentication.
 

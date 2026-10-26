@@ -74,6 +74,8 @@ try {
             Remove-Item -Force
 
         Write-Step "Empacotando zip do Windows..."
+        if (Test-Path -LiteralPath (Join-Path $stage "win\config.json")) { throw "O pacote não pode conter config.json pessoal." }
+        [System.IO.File]::WriteAllText((Join-Path $stage "win\phantom.portable"), "portable")
         $zip = Join-Path $OutDirectory ("PhantomMonitor-{0}-win-x64.zip" -f $Version)
         Compress-Archive -Path (Join-Path $stage "win\*") -DestinationPath $zip -Force
     }
@@ -102,6 +104,8 @@ try {
             Remove-Item -Force
 
         Write-Step "Empacotando tarball do Linux..."
+        if (Test-Path -LiteralPath (Join-Path $stage "linux\config.json")) { throw "O pacote não pode conter config.json pessoal." }
+        [System.IO.File]::WriteAllText((Join-Path $stage "linux\phantom.portable"), "portable")
         $tarball = Join-Path $OutDirectory ("PhantomMonitor-{0}-linux-x64.tar.gz" -f $Version)
         dotnet run --project (Join-Path $repoRoot "tools\ReleasePackager") -c Release -- `
             (Join-Path $stage "linux") $tarball

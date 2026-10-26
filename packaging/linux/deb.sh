@@ -30,6 +30,8 @@ trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/DEBIAN" "$WORK/usr/bin" "$WORK/usr/lib/phantom-monitor" "$WORK/usr/share/applications"
 
 cp -r "$PUBLISH_DIR/." "$WORK/usr/lib/phantom-monitor/"
+rm -f "$WORK/usr/lib/phantom-monitor/phantom.portable" "$WORK/usr/lib/phantom-monitor/config.json"
+printf '%s\n' 'Phantom Monitor installed distribution marker.' > "$WORK/usr/lib/phantom-monitor/phantom.installed"
 chmod +x "$WORK/usr/lib/phantom-monitor/$APPNAME"
 ln -s ../lib/phantom-monitor/$APPNAME "$WORK/usr/bin/phantom-monitor"
 

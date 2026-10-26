@@ -51,13 +51,17 @@ entry lists. Remove backups manually only after verifying the new installation
 with the app closed. Power loss or failure during rollback may require manual
 recovery; previous backups are not erased at the start of an attempt.
 
-`Applying` is published only after updater launch succeeds. User config/logs stay
-outside the installation. System packages/protected folders remain link-only;
+`Applying` is published only after updater launch succeeds. Portable `config.json`
+stays beside the application and is preserved through updates and rollback; logs
+remain in the user's directory. Installed builds keep per-user configuration even
+when updated using the portable ZIP. System packages/protected folders remain link-only;
 the Linux Vulkan layer must still be reinstalled separately.
 
 ## Asset convention and publishing (maintainers)
 
 Releases are generated locally (no publishing CI); the updater looks for these exact names:
+
+The Windows ZIP and Linux tar.gz include `phantom.portable`, never a personal `config.json`. The Windows installer excludes that marker and the `.deb` removes it; both include `phantom.installed`. AppImage uses the `APPIMAGE` environment variable to locate the file outside its mounted image.
 
 | Asset | Used by |
 |---|---|

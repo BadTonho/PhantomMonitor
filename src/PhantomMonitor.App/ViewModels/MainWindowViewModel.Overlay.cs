@@ -34,7 +34,7 @@ public sealed partial class MainWindowViewModel
     {
         var previous = _config.ShowOverlay;
         _config.ShowOverlay = visible;
-        if (!_config.Save(ConfigPaths.ConfigFile))
+        if (!SaveConfiguration())
         {
             _config.ShowOverlay = previous;
             SettingsMessage = "Não foi possível salvar showOverlay no config.json.";

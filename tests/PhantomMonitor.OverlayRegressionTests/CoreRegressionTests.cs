@@ -15,6 +15,7 @@ internal static class CoreRegressionTests
         ("alertas com a mesma condição preservam ações e cooldown independentes", Alerts),
         ("série que reaparece descarta cadência e suavização antigas", Tuning),
         ("configuração filtra gráficos/templates nulos antes de normalizar", Config),
+        ("configuração portátil usa diretório próprio e preserva instalações", ConfigLocations),
         ("CSV abre segmento com novas séries e preserva registros anteriores", Csv),
         ("fila de escrita permanece limitada quando o consumidor bloqueia", WriterQueue),
         ("rede Linux conta bytes sem multiplicar intervalos ociosos", Network),
@@ -31,6 +32,57 @@ internal static class CoreRegressionTests
 
     private static void Check(bool condition, string message)
     { if (!condition) throw new InvalidOperationException(message); }
+
+    private static void ConfigLocations()
+    {
+        using var directory = new TestDirectory();
+        var root = directory.Path;
+        var repo = System.IO.Path.Combine(root, "repo");
+        var output = System.IO.Path.Combine(repo, "build", "portable");
+        var user = System.IO.Path.Combine(root, "user");
+        Directory.CreateDirectory(output);
+        Directory.CreateDirectory(user);
+        File.WriteAllText(System.IO.Path.Combine(repo, "PhantomMonitor.slnx"), "");
+        var userConfig = System.IO.Path.Combine(user, "config.json");
+        File.WriteAllText(userConfig, "{\"theme\":\"neptune\"}");
+        ConfigurationLocation Resolve(string folder, string? appImage = null, bool windows = true,
+            string? legacy = null, bool registered = false) =>
+            ConfigPaths.ResolveFor(folder, user, appImage, windows, legacy, registered);
+        Check(Resolve(output).ConfigFile == System.IO.Path.Combine(repo, "config.json"), "Desenvolvimento deve usar raiz do repositório.");
+        File.WriteAllText(System.IO.Path.Combine(output, ConfigPaths.PortableMarker), "portable");
+        var portable = Resolve(output);
+        var localConfig = System.IO.Path.Combine(output, "config.json");
+        Check(portable.Kind == ConfigurationLocationKind.Portable && portable.ConfigFile == localConfig,
+            "Marcador portátil deve prevalecer sobre raiz de desenvolvimento.");
+        File.WriteAllText(System.IO.Path.Combine(output, "config.example.json"), "{\"theme\":\"slate\"}");
+        var config = AppConfig.Load(localConfig, out var error, createIfMissing: true, exampleDirectory: output);
+        Check(error is null && config.Theme == "slate" && File.Exists(localConfig), "Primeiro uso deve criar config local pelo exemplo.");
+        Check(File.ReadAllText(userConfig).Contains("neptune"), "Configuração antiga por usuário não pode ser alterada.");
+        config.Theme = "neptune";
+        Check(config.Save(localConfig), "Configuração portátil deve ser gravável.");
+        File.WriteAllText(System.IO.Path.Combine(output, "config.example.json"), "{\"theme\":\"slate\"}");
+        Check(AppConfig.Load(localConfig, out error, true, output).Theme == "neptune", "Arquivo local existente não pode ser substituído.");
+        Check(ConfigPaths.CanWritePortableConfig(localConfig) && !ConfigPaths.CanWritePortableConfig(localConfig,
+            _ => throw new UnauthorizedAccessException()), "Falha de permissão deve ser detectada sem trocar de diretório.");
+        var obstacle = System.IO.Path.Combine(root, "file");
+        File.WriteAllText(obstacle, "x");
+        AppConfig.Load(System.IO.Path.Combine(obstacle, "config.json"), out error, true, output);
+        Check(error is not null && File.ReadAllText(userConfig).Contains("neptune"), "Falha ao criar config não deve usar config por usuário.");
+        Check(Resolve(output, legacy: output).ConfigFile == userConfig, "Instalação antiga deve vencer marcador portátil de atualização.");
+        Check(Resolve(output, registered: true).ConfigFile == userConfig, "Instalação antiga registrada deve continuar por usuário.");
+        File.WriteAllText(System.IO.Path.Combine(output, ConfigPaths.InstalledMarker), "installed");
+        Check(Resolve(output).Kind == ConfigurationLocationKind.Installed && Resolve(output).ConfigFile == userConfig,
+            "Marcador instalado deve vencer marcador portátil.");
+        var image = System.IO.Path.Combine(root, "Phantom Monitor.AppImage");
+        File.WriteAllText(image, "image");
+        var appImage = Resolve(output, image, windows: false);
+        Check(appImage.Kind == ConfigurationLocationKind.Portable && appImage.ConfigFile == System.IO.Path.Combine(root, "config.json"),
+            "AppImage deve usar a pasta do arquivo externo, não a montagem interna.");
+        File.Delete(image);
+        Check(Resolve(output, image, windows: false).ConfigFile == System.IO.Path.Combine(root, "config.json"),
+            "AppImage não deve mudar silenciosamente de pasta quando o arquivo externo estiver inacessível.");
+        Check(Resolve(output, windows: false, legacy: output).ConfigFile == userConfig, "Pacote Linux instalado deve usar config por usuário.");
+    }
 
     private static void Alerts()
     {

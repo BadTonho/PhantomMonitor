@@ -31,6 +31,7 @@ trap 'rm -rf "$APPDIR"' EXIT
 # Conteúdo do publish vai para usr/bin (AppImage convenção).
 mkdir -p "$APPDIR/usr/bin"
 cp -r "$PUBLISH_DIR/." "$APPDIR/usr/bin/"
+rm -f "$APPDIR/usr/bin/phantom.portable" "$APPDIR/usr/bin/config.json"
 chmod +x "$APPDIR/usr/bin/$APPNAME"
 
 # Ícone provisório (fantasma.png do repo); substitua quando houver ícone oficial.

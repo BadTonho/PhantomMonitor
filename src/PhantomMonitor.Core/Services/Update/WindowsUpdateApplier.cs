@@ -46,6 +46,7 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
         start.Environment["PHANTOM_UPDATE_PAYLOAD"] = directory;
         start.Environment["PHANTOM_UPDATE_TARGET"] = AppContext.BaseDirectory;
         start.Environment["PHANTOM_UPDATE_EXE"] = "PhantomMonitor.exe";
+        start.Environment["PHANTOM_UPDATE_INSTALLED"] = ConfigPaths.IsPortable ? "0" : "1";
         using var process = Process.Start(start) ?? throw new IOException("Não foi possível iniciar o atualizador.");
     }
 

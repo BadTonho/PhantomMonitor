@@ -52,6 +52,7 @@ trap rollback HUP INT TERM
 for src in "$incoming"/* "$incoming"/.[!.]* "$incoming"/..?*; do
     [ -e "$src" ] || continue
     name=${src##*/}
+    case "$name" in config.json|phantom.installed) continue ;; esac
     case "$name" in .phantom-update-*|*'
 '*) rollback ;; esac
     if [ -e "$TARGET/$name" ] || [ -L "$TARGET/$name" ]; then

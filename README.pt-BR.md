@@ -100,7 +100,7 @@ Ainda é necessária validação em execução no Windows para cada API e game c
 
 ## Releases e atualização automática
 
-Builds publicados ficam na [página de Releases](https://github.com/BadTonho/PhantomMonitor/releases). O app checa novas versões no arranque e a cada 24h e oferece "Atualizar e reiniciar": baixa o pacote da plataforma, troca os arquivos via atualizador one-shot (com backup/rollback) e reabre sozinho — config e logs ficam fora da pasta trocada. Instalação por pacote de sistema (.deb) e pastas protegidas ficam em modo notificação com link. Cada release segue a convenção:
+Builds publicados ficam na [página de Releases](https://github.com/BadTonho/PhantomMonitor/releases). O app checa novas versões no arranque e a cada 24h e oferece "Atualizar e reiniciar": baixa o pacote da plataforma, troca os arquivos via atualizador one-shot (com backup/rollback) e reabre sozinho. A configuração portátil é preservada durante a troca; logs continuam na pasta de dados do usuário. Instalação por pacote de sistema (.deb) e pastas protegidas ficam em modo notificação com link. Cada release segue a convenção:
 
 | Asset | Plataforma |
 | --- | --- |
@@ -124,7 +124,9 @@ A camada Vulkan resolve funções dinamicamente e exige apenas os headers do SDK
 
 ## Configuração e dados
 
-Na primeira execução, o aplicativo cria `config.json` usando [`config.example.json`](config.example.json) como base. Durante o desenvolvimento, a configuração fica na raiz do repositório. Em instalações por usuário, o caminho usual é `%AppData%\PhantomMonitor\config.json` no Windows e `$XDG_CONFIG_HOME/PhantomMonitor/config.json` no Linux.
+Na primeira execução, o aplicativo cria `config.json` usando [`config.example.json`](config.example.json) como base. No ZIP portátil do Windows e no tar.gz portátil do Linux, ele fica junto do executável; no AppImage, junto do arquivo `.AppImage`. Leve esse arquivo com o aplicativo para manter suas configurações. A pasta precisa permitir gravação: se isso falhar, o aplicativo avisa e não muda silenciosamente de local. Um portátil atualizado sem configuração local começa com uma nova, sem copiar ou apagar a configuração antiga do computador.
+
+Durante o desenvolvimento, a configuração fica na raiz do repositório. No instalador Windows e no pacote `.deb`, o caminho usual é `%AppData%\PhantomMonitor\config.json` no Windows e `$XDG_CONFIG_HOME/PhantomMonitor/config.json` no Linux. Os logs continuam nos locais de dados do usuário.
 
 No Linux, os logs de telemetria e de erros ficam em `~/.local/share/PhantomMonitor/logs/` (ou em `$XDG_DATA_HOME` quando definido). Abra **Diagnóstico** no Avalonia para consultar erros recentes e as fontes de sensores detectadas. A página **Configurações** permite ajustar o intervalo, os formatos de log e opções do overlay. O exportador HTTP vem desativado e restrito a loopback; habilitar acesso a outras interfaces expõe os endpoints sem TLS ou autenticação.
 

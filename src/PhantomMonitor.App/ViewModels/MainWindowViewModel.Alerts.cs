@@ -91,7 +91,7 @@ public sealed partial class MainWindowViewModel
             Rules = candidateRules
         };
         _config.Alerts = candidate;
-        if (!_config.Save(ConfigPaths.ConfigFile))
+        if (!SaveConfiguration())
         {
             _config.Alerts = previous;
             AlertsMessage = "Não foi possível salvar o config.json. As regras em execução não foram alteradas.";

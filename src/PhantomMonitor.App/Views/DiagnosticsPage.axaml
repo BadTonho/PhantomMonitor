@@ -136,6 +136,7 @@
             <TextBlock Text="{Binding DiagnosticsMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
+        <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
       </StackPanel>
     </ScrollViewer>
 </UserControl>

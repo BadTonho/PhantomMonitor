@@ -125,7 +125,14 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
+    public string StatusText
+    {
+        get => _statusText;
+        private set
+        {
+            if (Set(ref _statusText, value)) OnNavigationStatusChanged();
+        }
+    }
     public string LastUpdateText { get => _lastUpdateText; private set => Set(ref _lastUpdateText, value); }
     public string CpuUsageText { get => _cpuUsageText; private set => Set(ref _cpuUsageText, value); }
     public string CpuTempText { get => _cpuTempText; private set => Set(ref _cpuTempText, value); }
@@ -449,6 +456,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _showAlertsInSidebar = _config.Beta.ShowAlertsInSidebar;
         _themeIndex = _config.Theme == "slate" ? 1 : 0;
         _navigationPosition = _config.NavigationPosition;
+        _navigationDisplayMode = _config.NavigationDisplayMode;
         _telemetryExportEnabled = _config.TelemetryExport.Enabled;
         _telemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);
         _telemetryExportListenAll = _config.TelemetryExport.ListenAll;

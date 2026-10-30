@@ -42,10 +42,24 @@ public sealed partial class MainWindowViewModel
 
     // Badge compacto no ESTADO (sidebar, porta do WPF — F1.2): resumo em uma linha,
     // clique leva ao card completo de atualizações nas Configurações.
-    public string UpdateBadgeText { get => _updateBadgeText; private set => Set(ref _updateBadgeText, value); }
+    public string UpdateBadgeText
+    {
+        get => _updateBadgeText;
+        private set
+        {
+            if (Set(ref _updateBadgeText, value)) OnNavigationStatusChanged();
+        }
+    }
     private string _updateBadgeText = "";
 
-    public bool UpdateBadgeVisible { get => _updateBadgeVisible; private set => Set(ref _updateBadgeVisible, value); }
+    public bool UpdateBadgeVisible
+    {
+        get => _updateBadgeVisible;
+        private set
+        {
+            if (Set(ref _updateBadgeVisible, value)) OnNavigationStatusChanged();
+        }
+    }
     private bool _updateBadgeVisible;
 
     /// <summary>Liga o serviço do Core: cria o updater, faz a checagem inicial e o timer 24h.</summary>

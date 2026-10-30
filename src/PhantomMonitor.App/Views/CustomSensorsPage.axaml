@@ -67,6 +67,7 @@
           <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveCustomSensorsClick" />
           <TextBlock Grid.Column="1" Text="{Binding CustomSensorsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
+        <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
       </StackPanel>
     </ScrollViewer>
 </UserControl>

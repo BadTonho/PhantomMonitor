@@ -39,9 +39,13 @@ public sealed partial class AppConfig
     [JsonPropertyName("theme")]
     public string Theme { get; set; } = "neptune";
 
-    /// <summary>Posição da navegação principal: <c>left</c> ou <c>bottom</c>.</summary>
+    /// <summary>Posição da navegação principal: <c>left</c>, <c>bottom</c> ou <c>dock</c>.</summary>
     [JsonPropertyName("navigationPosition")]
     public string NavigationPosition { get; set; } = "left";
+
+    /// <summary>Exibição da navegação principal: <c>iconsAndText</c> ou <c>iconsOnly</c>.</summary>
+    [JsonPropertyName("navigationDisplayMode")]
+    public string NavigationDisplayMode { get; set; } = "iconsAndText";
 
     /// <summary>Personalizações opcionais, separadas por tema builtin.</summary>
     [JsonPropertyName("themePalettes")]

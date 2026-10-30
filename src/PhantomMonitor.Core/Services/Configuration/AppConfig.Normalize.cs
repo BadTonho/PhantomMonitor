@@ -20,10 +20,15 @@ public sealed partial class AppConfig
         Theme = (Theme ?? "").Trim().ToLowerInvariant();
         if (Theme is not ("neptune" or "slate")) Theme = "neptune";
 
-        // A navegação inferior é uma preferência opcional; configurações antigas
-        // e valores desconhecidos preservam o layout lateral já conhecido.
+        // Preferências de navegação opcionais; configurações antigas preservam
+        // o layout lateral com ícones e rótulos.
         NavigationPosition = (NavigationPosition ?? "").Trim().ToLowerInvariant();
-        if (NavigationPosition is not ("left" or "bottom")) NavigationPosition = "left";
+        if (NavigationPosition is not ("left" or "bottom" or "dock")) NavigationPosition = "left";
+        NavigationDisplayMode = (NavigationDisplayMode ?? "").Trim().ToLowerInvariant() switch
+        {
+            "iconsonly" => "iconsOnly",
+            _ => "iconsAndText"
+        };
 
         var normalizedPalettes = new Dictionary<string, ThemePaletteConfig>(StringComparer.OrdinalIgnoreCase);
         foreach (var (themeKey, palette) in ThemePalettes ?? [])

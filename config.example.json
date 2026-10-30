@@ -5,6 +5,7 @@
   "logToJsonJournal": false,
   "theme": "neptune",
   "navigationPosition": "left",
+  "navigationDisplayMode": "iconsAndText",
   "themePalettes": {},
   "showOverlay": false,
   "toggleOverlayHotkey": "",

@@ -127,12 +127,17 @@
               <TextBlock Text="POSIÇÃO DA NAVEGAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <ComboBox SelectedIndex="{Binding NavigationPositionIndex, Mode=TwoWay}"
                         ItemsSource="{Binding NavigationPositionOptions}" MinWidth="220" HorizontalAlignment="Left" />
-              <TextBlock Text="{Binding NavigationPositionMessage}" IsVisible="{Binding HasNavigationPositionMessage}"
+            </StackPanel>
+            <StackPanel Spacing="5">
+              <TextBlock Text="EXIBIÇÃO DA NAVEGAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <ComboBox SelectedIndex="{Binding NavigationDisplayModeIndex, Mode=TwoWay}"
+                        ItemsSource="{Binding NavigationDisplayModeOptions}" MinWidth="220" HorizontalAlignment="Left" />
+              <TextBlock Text="{Binding NavigationSettingsMessage}" IsVisible="{Binding HasNavigationSettingsMessage}"
                          Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
             <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção INTERFACE">
               <ToolTip.Tip>
-                <TextBlock Text="Neptune usa o visual original do Avalonia; Slate reproduz o visual do WPF. Escolha um tema e personalize as cores; as mudanças são aplicadas em ‘Salvar e aplicar’, sem reiniciar. A posição da navegação é salva e aplicada imediatamente."
+                <TextBlock Text="Neptune usa o visual original do Avalonia; Slate reproduz o visual do WPF. Escolha um tema e personalize as cores; as mudanças são aplicadas em ‘Salvar e aplicar’, sem reiniciar. Posição e exibição da navegação são salvas imediatamente. O dock fica dentro da janela, centralizado no rodapé, sem arraste."
                            MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
               </ToolTip.Tip>
               <Grid Width="16" Height="16">
@@ -279,6 +284,7 @@
         </Border>
 
         <TextBlock Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+        <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
       </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -152,36 +152,60 @@ public sealed partial class MainWindow : Window
             SyncOverlayVisibility();
         else if (e.PropertyName == nameof(MainWindowViewModel.OverlayOpacity) && _overlayWindow is not null)
             _overlayWindow.Opacity = ViewModel.OverlayOpacity;
-        else if (e.PropertyName == nameof(MainWindowViewModel.NavigationPosition))
+        else if (e.PropertyName is nameof(MainWindowViewModel.NavigationPosition)
+            or nameof(MainWindowViewModel.NavigationDisplayMode))
             ApplyNavigationLayout();
     }
 
     private void ApplyNavigationLayout()
     {
-        var bottom = ViewModel.IsBottomNavigation;
-        MainLayout.ColumnDefinitions[0].Width = bottom ? new GridLength(0) : new GridLength(230);
-        Sidebar.IsVisible = !bottom;
-        Sidebar.BorderThickness = bottom ? new Thickness(0) : new Thickness(0, 0, 1, 0);
+        var left = ViewModel.IsLeftNavigation;
+        var compact = !ViewModel.ShowNavigationLabels;
+        MainLayout.ColumnDefinitions[0].Width = left
+            ? new GridLength(compact ? 76 : 230)
+            : new GridLength(0);
+        Sidebar.IsVisible = left;
+        Sidebar.BorderThickness = left ? new Thickness(0, 0, 1, 0) : new Thickness(0);
+        SidebarNavigationHeading.IsVisible = left && !compact;
 
-        if (bottom)
+        if (ReferenceEquals(SidebarNavigationScrollViewer.Content, NavigationItemsPanel))
+            SidebarNavigationScrollViewer.Content = null;
+        if (ReferenceEquals(BottomNavigationScrollViewer.Content, NavigationItemsPanel))
+            BottomNavigationScrollViewer.Content = null;
+        if (ReferenceEquals(DockNavigationScrollViewer.Content, NavigationItemsPanel))
+            DockNavigationScrollViewer.Content = null;
+
+        if (left)
         {
-            if (ReferenceEquals(SidebarNavigationScrollViewer.Content, NavigationItemsPanel))
-                SidebarNavigationScrollViewer.Content = null;
-            if (!ReferenceEquals(BottomNavigationScrollViewer.Content, NavigationItemsPanel))
-                BottomNavigationScrollViewer.Content = NavigationItemsPanel;
+            SidebarNavigationScrollViewer.Content = NavigationItemsPanel;
+            NavigationItemsPanel.Orientation = Orientation.Vertical;
+        }
+        else if (ViewModel.IsBottomNavigation)
+        {
+            BottomNavigationScrollViewer.Content = NavigationItemsPanel;
             NavigationItemsPanel.Orientation = Orientation.Horizontal;
-            SidebarNavigationHeading.IsVisible = false;
         }
         else
         {
-            if (ReferenceEquals(BottomNavigationScrollViewer.Content, NavigationItemsPanel))
-                BottomNavigationScrollViewer.Content = null;
-            if (!ReferenceEquals(SidebarNavigationScrollViewer.Content, NavigationItemsPanel))
-                SidebarNavigationScrollViewer.Content = NavigationItemsPanel;
-            NavigationItemsPanel.Orientation = Orientation.Vertical;
-            SidebarNavigationHeading.IsVisible = true;
+            DockNavigationScrollViewer.Content = NavigationItemsPanel;
+            NavigationItemsPanel.Orientation = Orientation.Horizontal;
+        }
+
+        foreach (var button in GetNavigationButtons())
+        {
+            button.Width = compact ? 44 : double.NaN;
+            button.MinWidth = compact ? 44 : 0;
+            button.HorizontalContentAlignment = compact ? Avalonia.Layout.HorizontalAlignment.Center : Avalonia.Layout.HorizontalAlignment.Left;
+            if (button.Content is StackPanel content)
+                content.HorizontalAlignment = compact ? Avalonia.Layout.HorizontalAlignment.Center : Avalonia.Layout.HorizontalAlignment.Stretch;
         }
     }
+
+    private Button[] GetNavigationButtons() =>
+    [
+        NavOverview, NavInventory, NavCustomSensors, NavSensorTuning,
+        NavAlerts, NavDiagnostics, NavSettings
+    ];
 
     private void SyncOverlayVisibility()
     {
@@ -327,6 +351,14 @@ public sealed partial class MainWindow : Window
     }
     private void OnRestartAsAdminClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestartAsAdmin();
     private void OnUpdateBadgeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSettings();
+    private void OnDockStatusClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (ViewModel.UpdateBadgeVisible)
+        {
+            SyncNavPage("settings");
+            ViewModel.ShowSettings();
+        }
+    }
     private void OnOpenReleasesPageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.OpenReleasesPage();
     private void OnApplyUpdateClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _ = ViewModel.ApplyUpdateAsync();
     private void OnDiagnosticsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

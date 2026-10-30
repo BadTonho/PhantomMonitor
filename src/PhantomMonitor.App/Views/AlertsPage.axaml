@@ -115,6 +115,7 @@
         </Grid>
 
         <TextBlock Text="No Avalonia, scripts configurados são executados quando a regra dispara. Som e desligamento são preservados no arquivo, mas não executados." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+        <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
       </StackPanel>
     </ScrollViewer>
 </UserControl>

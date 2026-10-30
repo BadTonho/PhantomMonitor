@@ -114,18 +114,24 @@ internal static class CoreRegressionTests
 
         var oldConfig = JsonSerializer.Deserialize<AppConfig>("{}")!;
         oldConfig.Normalize();
-        Check(oldConfig.NavigationPosition == "left", "Configuração antiga deve manter navegação lateral.");
-        var bottomConfig = JsonSerializer.Deserialize<AppConfig>("{\"navigationPosition\":\"bottom\"}")!;
-        bottomConfig.Normalize();
-        Check(bottomConfig.NavigationPosition == "bottom", "Configuração deve preservar a navegação inferior.");
+        Check(oldConfig.NavigationPosition == "left" && oldConfig.NavigationDisplayMode == "iconsAndText",
+            "Configuração antiga deve manter navegação lateral com ícones e textos.");
+        var dockConfig = JsonSerializer.Deserialize<AppConfig>("{\"navigationPosition\":\"dock\",\"navigationDisplayMode\":\"iconsOnly\"}")!;
+        dockConfig.Normalize();
+        Check(dockConfig.NavigationPosition == "dock" && dockConfig.NavigationDisplayMode == "iconsOnly",
+            "Configuração deve preservar dock flutuante e navegação somente com ícones.");
         using var directory = new TestDirectory();
         var configPath = Path.Combine(directory.Path, "config.json");
-        Check(bottomConfig.Save(configPath), "Configuração com navegação inferior deve ser gravada.");
+        Check(dockConfig.Save(configPath), "Configuração com dock e ícones deve ser gravada.");
         var reloadedConfig = AppConfig.Load(configPath, out var loadError);
-        Check(loadError is null && reloadedConfig.NavigationPosition == "bottom", "Navegação inferior deve persistir após recarregar a configuração.");
+        Check(loadError is null && reloadedConfig.NavigationPosition == "dock" && reloadedConfig.NavigationDisplayMode == "iconsOnly",
+            "Dock e navegação somente com ícones devem persistir após recarregar a configuração.");
         var invalidNavigation = JsonSerializer.Deserialize<AppConfig>("{\"navigationPosition\":\"unknown\"}")!;
         invalidNavigation.Normalize();
         Check(invalidNavigation.NavigationPosition == "left", "Posição inválida deve voltar à navegação lateral.");
+        var invalidDisplay = JsonSerializer.Deserialize<AppConfig>("{\"navigationDisplayMode\":\"labelsAndIcons\"}")!;
+        invalidDisplay.Normalize();
+        Check(invalidDisplay.NavigationDisplayMode == "iconsAndText", "Exibição inválida deve voltar a ícones e textos.");
     }
 
     private static void Csv()

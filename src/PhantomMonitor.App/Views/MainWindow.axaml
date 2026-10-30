@@ -82,6 +82,20 @@
     <Style Selector="Button.nav.selected /template/ Border#Indicator">
       <Setter Property="IsVisible" Value="True" />
     </Style>
+    <Style Selector="Button.dock-status">
+      <Setter Property="Width" Value="42" />
+      <Setter Property="Height" Value="42" />
+      <Setter Property="MinWidth" Value="42" />
+      <Setter Property="Padding" Value="6" />
+      <Setter Property="CornerRadius" Value="21" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="Button.dock-status:pointerover">
+      <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
     <!-- Badge de update (porta do chip verde do WPF na sidebar) -->
     <Style Selector="Button.update-badge">
       <Setter Property="Background" Value="{DynamicResource BgToastUpdateBrush}" />
@@ -147,68 +161,77 @@
   <Grid x:Name="MainLayout" ColumnDefinitions="230,*" RowDefinitions="Auto,*,Auto">
     <Border x:Name="Sidebar" Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource BgSidebarBrush}" BorderBrush="{DynamicResource BgSidebarBorderBrush}" BorderThickness="0,0,1,0">
       <Grid RowDefinitions="Auto,*,Auto" Margin="16,22">
-        <StackPanel Spacing="3" IsVisible="{Binding !IsBottomNavigation}">
-          <TextBlock Text="PHANTOM" Foreground="{DynamicResource TextBrightBrush}" FontSize="19" FontWeight="Bold" />
-          <TextBlock Text="HARDWARE MONITOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+        <StackPanel Spacing="3" IsVisible="{Binding IsLeftNavigation}">
+          <TextBlock Text="PHANTOM" IsVisible="{Binding ShowNavigationLabels}" Foreground="{DynamicResource TextBrightBrush}" FontSize="19" FontWeight="Bold" />
+          <TextBlock Text="P" IsVisible="{Binding !ShowNavigationLabels}" Foreground="{DynamicResource TextBrightBrush}" FontSize="23" FontWeight="Bold" HorizontalAlignment="Center" />
+          <TextBlock Text="HARDWARE MONITOR" IsVisible="{Binding ShowNavigationLabels}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
         </StackPanel>
 
         <ScrollViewer x:Name="SidebarNavigationScrollViewer" Grid.Row="1" Margin="0,28,0,8" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel x:Name="NavigationItemsPanel" Spacing="6">
           <TextBlock x:Name="SidebarNavigationHeading" Text="MONITORAMENTO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" Margin="8,0,0,4" />
-          <Button x:Name="NavOverview" Classes="nav" Click="OnOverviewClick" ToolTip.Tip="Visão geral">
+          <Button x:Name="NavOverview" Classes="nav" Click="OnOverviewClick" ToolTip.Tip="Visão geral" AutomationProperties.Name="Visão geral">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Path Data="M 2,8 L 8,2 L 14,8 L 14,14 L 2,14 Z M 6,14 L 6,9 L 10,9 L 10,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
-              <TextBlock Text="Visão geral" VerticalAlignment="Center" />
+              <TextBlock Text="Visão geral" IsVisible="{Binding ShowNavigationLabels}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button x:Name="NavInventory" Classes="nav" Click="OnInventoryClick" ToolTip.Tip="Inventário">
+          <Button x:Name="NavInventory" Classes="nav" Click="OnInventoryClick" ToolTip.Tip="Inventário" AutomationProperties.Name="Inventário">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Path Data="M 2,2 L 14,2 L 14,14 L 2,14 Z M 2,6 L 14,6 M 6,6 L 6,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
-              <TextBlock Text="Inventário" VerticalAlignment="Center" />
+              <TextBlock Text="Inventário" IsVisible="{Binding ShowNavigationLabels}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button x:Name="NavCustomSensors" Classes="nav" Click="OnCustomSensorsClick" ToolTip.Tip="Sensores customizados"
-                  IsVisible="{Binding ShowCustomSensorsInSidebar}">
+                  IsVisible="{Binding ShowCustomSensorsInSidebar}" AutomationProperties.Name="Sensores customizados">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Path Data="M 2,12 L 5,8 L 8,10 L 12,3 L 14,4" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
-              <TextBlock Text="Sensores customizados" VerticalAlignment="Center" />
+              <TextBlock Text="Sensores customizados" IsVisible="{Binding ShowNavigationLabels}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button x:Name="NavSensorTuning" Classes="nav" Click="OnSensorTuningClick" ToolTip.Tip="Ajuste por série"
-                  IsVisible="{Binding ShowSensorTuningInSidebar}">
+                  IsVisible="{Binding ShowSensorTuningInSidebar}" AutomationProperties.Name="Ajuste por série">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Path Data="M 2,4 L 14,4 M 2,8 L 14,8 M 2,12 L 14,12 M 5,2 L 5,6 M 11,6 L 11,10 M 7,10 L 7,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
-              <TextBlock Text="Ajuste por série" VerticalAlignment="Center" />
+              <TextBlock Text="Ajuste por série" IsVisible="{Binding ShowNavigationLabels}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button x:Name="NavAlerts" Classes="nav" Click="OnAlertsClick" ToolTip.Tip="Alertas"
-                  IsVisible="{Binding ShowAlertsInSidebar}">
+                  IsVisible="{Binding ShowAlertsInSidebar}" AutomationProperties.Name="Alertas">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Path Data="M 8,2 L 14,13 L 2,13 Z M 8,6 L 8,9 M 8,11 L 8,11.5" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
-              <TextBlock Text="Alertas" VerticalAlignment="Center" />
+              <TextBlock Text="Alertas" IsVisible="{Binding ShowNavigationLabels}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button x:Name="NavDiagnostics" Classes="nav" Click="OnDiagnosticsClick" ToolTip.Tip="Diagnóstico">
+          <Button x:Name="NavDiagnostics" Classes="nav" Click="OnDiagnosticsClick" ToolTip.Tip="Diagnóstico" AutomationProperties.Name="Diagnóstico">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Path Data="M 8,2 A 6,6 0 1 1 7.99,2 M 8,7 L 8,11 M 8,4.5 L 8,5" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
-              <TextBlock Text="Diagnóstico" VerticalAlignment="Center" />
+              <TextBlock Text="Diagnóstico" IsVisible="{Binding ShowNavigationLabels}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button x:Name="NavSettings" Classes="nav" Click="OnSettingsClick" ToolTip.Tip="Configurações">
+          <Button x:Name="NavSettings" Classes="nav" Click="OnSettingsClick" ToolTip.Tip="Configurações" AutomationProperties.Name="Configurações">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Path Data="M 2,4 L 14,4 M 2,8 L 14,8 M 2,12 L 14,12 M 5,2 L 5,6 M 10,6 L 10,10 M 6,10 L 6,14" Width="16" Height="16" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4" />
-              <TextBlock Text="Configurações" VerticalAlignment="Center" />
+              <TextBlock Text="Configurações" IsVisible="{Binding ShowNavigationLabels}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
         </StackPanel>
         </ScrollViewer>
 
-        <Border x:Name="SidebarStatusPanel" Grid.Row="2" Background="{DynamicResource BgCardBrush}" CornerRadius="9" Padding="11" IsVisible="{Binding !IsBottomNavigation}">
+        <Border x:Name="SidebarStatusPanel" Grid.Row="2" Background="{DynamicResource BgCardBrush}" CornerRadius="9" Padding="11" IsVisible="{Binding IsLeftNavigation}">
           <StackPanel Spacing="5">
-            <TextBlock Text="ESTADO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
-            <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextStatusBrush}" FontSize="12" />
-            <Button Classes="update-badge" IsVisible="{Binding UpdateBadgeVisible}" Click="OnUpdateBadgeClick">
-              <TextBlock Text="{Binding UpdateBadgeText}" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Left" />
+            <TextBlock Text="ESTADO" IsVisible="{Binding ShowNavigationLabels}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+            <TextBlock Text="{Binding StatusText}" IsVisible="{Binding ShowNavigationLabels}" Foreground="{DynamicResource TextStatusBrush}" FontSize="12" />
+            <Ellipse Width="12" Height="12" IsVisible="{Binding !ShowNavigationLabels}" Fill="{DynamicResource TextStatusBrush}" HorizontalAlignment="Center" />
+            <Button Classes="update-badge" IsVisible="{Binding UpdateBadgeVisible}" Click="OnUpdateBadgeClick" ToolTip.Tip="{Binding UpdateBadgeText}">
+              <Grid>
+                <TextBlock Text="{Binding UpdateBadgeText}" IsVisible="{Binding ShowNavigationLabels}" Foreground="{DynamicResource AccentGreenSoftBrush}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Left" />
+                <Border Width="18" Height="18" CornerRadius="9" IsVisible="{Binding !ShowNavigationLabels}"
+                        Background="{DynamicResource AccentWarningBrush}" HorizontalAlignment="Center">
+                  <TextBlock Text="!" Foreground="{DynamicResource BgWindowBrush}" FontSize="11" FontWeight="Bold"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0" />
+                </Border>
+              </Grid>
             </Button>
           </StackPanel>
         </Border>
@@ -216,7 +239,7 @@
     </Border>
 
     <StackPanel x:Name="BottomNavigationHeader" Grid.Column="1" Grid.Row="0" Margin="28,13,28,0" Spacing="1"
-                IsVisible="{Binding IsBottomNavigation}">
+                IsVisible="{Binding !IsLeftNavigation}">
       <TextBlock Text="PHANTOM" Foreground="{DynamicResource TextBrightBrush}" FontSize="17" FontWeight="Bold" />
       <TextBlock Text="HARDWARE MONITOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
     </StackPanel>
@@ -240,6 +263,30 @@
             </Button>
           </StackPanel>
         </Border>
+      </Grid>
+    </Border>
+
+    <Border x:Name="DockNavigationBar" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" ZIndex="15"
+            IsVisible="{Binding IsDockNavigation}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+            Margin="18,0,18,18" Padding="8,6" MaxWidth="780" Background="{DynamicResource BgSidebarBrush}"
+            BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="24">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+        <ScrollViewer x:Name="DockNavigationScrollViewer" Grid.Column="0" VerticalScrollBarVisibility="Disabled"
+                      HorizontalScrollBarVisibility="Auto" HorizontalContentAlignment="Left" VerticalAlignment="Center" MaxWidth="700">
+          <!-- NavigationItemsPanel é movido para cá no modo dock; os mesmos botões mantêm seleção e preferências BETA. -->
+        </ScrollViewer>
+        <Button Grid.Column="1" Classes="dock-status" Click="OnDockStatusClick"
+                ToolTip.Tip="{Binding DockStatusTooltip}"
+                AutomationProperties.Name="Estado do monitoramento e atualizações">
+          <Grid Width="22" Height="22">
+            <Ellipse Width="12" Height="12" Fill="{DynamicResource TextStatusBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Border Width="11" Height="11" CornerRadius="6" Background="{DynamicResource AccentWarningBrush}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding UpdateBadgeVisible}">
+              <TextBlock Text="!" Foreground="{DynamicResource BgWindowBrush}" FontSize="8" FontWeight="Bold"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0" />
+            </Border>
+          </Grid>
+        </Button>
       </Grid>
     </Border>
 
@@ -416,6 +463,7 @@
         </Border>
 
         <TextBlock Text="Os valores de temperatura, clock e utilização dependem dos sensores expostos pelo kernel e pelo driver." Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="2,0,0,0" />
+        <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
       </StackPanel>
     </ScrollViewer>
 
@@ -555,6 +603,7 @@
         </Border>
 
         <TextBlock Text="Os sensores indisponíveis dependem do hardware, dos drivers e dos dados expostos pelo kernel." Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="2,0,0,0" />
+        <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
       </StackPanel>
     </ScrollViewer>
 
@@ -635,6 +684,7 @@
           <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSensorTuningsClick" />
           <TextBlock Grid.Column="1" Text="{Binding SensorTuningMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
+        <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
       </StackPanel>
     </ScrollViewer>
 

@@ -12,7 +12,7 @@ using PhantomMonitor.Services.Telemetry;
 namespace PhantomMonitor.App.ViewModels;
 
 // ViewModel principal do dashboard Avalonia. Cada domínio vive em um arquivo partial
-// ao lado deste: Overlay, Diagnostics, CustomSensors, SensorTuning, Alerts, ConfigApply.
+// ao lado deste: Overlay, Diagnostics, Beta, CustomSensors, SensorTuning, Alerts, ConfigApply.
 public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private const int HistoryLength = 60;
@@ -429,6 +429,8 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _logToCsv = _config.LogToCsv;
         _logToJson = _config.LogToJson;
         _logToJsonJournal = _config.LogToJsonJournal;
+        _showCustomSensorsInSidebar = _config.Beta.ShowCustomSensorsInSidebar;
+        _showSensorTuningInSidebar = _config.Beta.ShowSensorTuningInSidebar;
         _themeIndex = _config.Theme == "slate" ? 1 : 0;
         _telemetryExportEnabled = _config.TelemetryExport.Enabled;
         _telemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);

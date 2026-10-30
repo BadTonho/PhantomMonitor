@@ -105,6 +105,9 @@ public sealed partial class AppConfig
         Update ??= new();
         Update.Repository = (Update.Repository ?? "").Trim();
 
+        // Preferências beta: configurações antigas mantêm os dois atalhos visíveis.
+        Beta ??= new();
+
         // Whitelist de séries por instância: config antigo sem a chave (ou com lista vazia)
         // volta ao padrão, senão o OSD ficaria sem multi-GPU/ventoinhas/discos extras.
         string[] defaultSeries = ["Gpu*", "FanSpeed*", "Disk*"];

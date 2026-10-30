@@ -88,6 +88,16 @@
 
         <Border Classes="desktop-card">
           <StackPanel Spacing="12">
+            <TextBlock Text="BETA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+            <CheckBox Content="Mostrar Sensores customizados na barra lateral"
+                      IsChecked="{Binding ShowCustomSensorsInSidebar, Mode=TwoWay}" />
+            <CheckBox Content="Mostrar Ajuste por série na barra lateral"
+                      IsChecked="{Binding ShowSensorTuningInSidebar, Mode=TwoWay}" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="desktop-card">
+          <StackPanel Spacing="12">
             <TextBlock Text="GRAVAÇÃO DE TELEMETRIA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <CheckBox Content="Exportar CSV" IsChecked="{Binding LogToCsv, Mode=TwoWay}" />
             <CheckBox Content="Snapshot JSON mais recente" IsChecked="{Binding LogToJson, Mode=TwoWay}" />

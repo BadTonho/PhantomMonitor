@@ -71,6 +71,10 @@ public sealed partial class AppConfig
     /// <summary>Verificação de atualizações via GitHub Releases (ver UpdateService, Services.Update).</summary>
     public UpdateConfig Update { get; set; } = new();
 
+    /// <summary>Preferências de visibilidade dos atalhos beta na barra lateral.</summary>
+    [JsonPropertyName("beta")]
+    public BetaConfig Beta { get; set; } = new();
+
     /// <summary>Sensores customizados (fórmulas sobre outras séries; ver CustomSensorEngine).</summary>
     public List<CustomSensorConfig> CustomSensors { get; set; } = [];
 

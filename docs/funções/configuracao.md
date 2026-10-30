@@ -68,6 +68,7 @@ Um portátil atualizado sem `config.json` local começa com uma configuração n
 - `AppConfig.Save()` grava de forma atômica (arquivo `.tmp` + substituição) e retorna `bool`; o app avisa (na página e em `logs/errors.log`) se a gravação falhar.
 - Falhas de leitura/gravação são registradas em `logs/errors.log` (ver [logging.md](logging.md)).
 - `showOverlay` define o estado inicial do toggle "Overlay".
+- **Ajuda das categorias:** as explicações dos cards de Configurações ficam no ícone de informação no canto inferior direito de cada card e aparecem ao passar o mouse. Avisos, estados, validações e o subtítulo da página continuam visíveis.
 - **Toggles persistentes:** os checkboxes da sidebar (`Overlay no Jogo`, `Exportar CSV`, `Exportar JSON`, `Journal JSON (jsonl)`) gravam o estado no `config.json` ao serem alternados — antes só mudavam o estado vivo entre sessões de monitoramento.
 - **Configurações → BETA:** os checkboxes para mostrar **Sensores customizados**, **Ajuste por série** e **Alertas** na barra lateral salvam cada preferência imediatamente; se a gravação falhar, o estado anterior é restaurado. Os três começam ocultos, inclusive em configurações antigas sem a seção `beta`.
 - No editor do overlay, clique direito em área vazia cria um bloco; botão esquerdo arrasta; duplo clique escolhe conteúdo; clique direito no bloco abre editar/remover. Conteúdo e posição ficam em rascunho até **Salvar e aplicar**. Categorias, séries, gráficos e templates podem ser combinados em um bloco.

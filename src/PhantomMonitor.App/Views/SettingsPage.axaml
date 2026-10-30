@@ -1,6 +1,24 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             x:Class="PhantomMonitor.App.Views.SettingsPage">
+    <UserControl.Styles>
+      <Style Selector="Button.settings-help-icon">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="MinWidth" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+      </Style>
+      <Style Selector="Button.settings-help-icon:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      </Style>
+    </UserControl.Styles>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSettings}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Border IsVisible="{Binding HasConfigurationWarning}" Background="{DynamicResource BgTintWarmBrush}"
@@ -17,8 +35,18 @@
             <TextBlock Text="COLETA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <TextBlock Text="Intervalo global (milissegundos)" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" />
             <TextBox Classes="settings-input" Text="{Binding UpdateIntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Text="Use um valor entre 100 e 60.000 ms. Um intervalo menor atualiza o painel com mais frequência." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <TextBlock IsVisible="{Binding IsLegacyIntervalOutOfRange}" Text="O config atual usa mais de 60.000 ms. Esse valor será mantido até você editar o intervalo." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção COLETA">
+              <ToolTip.Tip>
+                <TextBlock Text="Define o intervalo de coleta, de 100 a 60.000 ms. Intervalos menores atualizam o painel com mais frequência."
+                           MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 
@@ -28,9 +56,7 @@
             <ComboBox ItemsSource="{Binding OverlayRenderModeOptions}"
                       SelectedIndex="{Binding OverlayRenderModeIndex, Mode=TwoWay}"
                       HorizontalAlignment="Left" MinWidth="240" />
-            <TextBlock Text="Janela flutuante mantém os blocos em janelas separadas. Dentro do jogo usa um renderer nativo para desenhar no quadro apresentado pelo jogo; a opção depende de suporte para a API gráfica e pode ser bloqueada por anti-cheat." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <TextBlock IsVisible="{Binding IsOverlayInGameModeSelected}" Text="{Binding InGameOverlayCapabilityNotice}" Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
-            <TextBlock Text="A aparência e a composição dos blocos são ajustadas no editor visual." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <TextBlock Text="ATALHO GLOBAL DO OVERLAY" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <WrapPanel>
               <Button x:Name="OverlayHotkeyButton" Content="{Binding OverlayHotkeyButtonText}" Click="OnCaptureOverlayHotkeyClick" IsEnabled="{Binding !IsSavingSettings}" Margin="0,0,8,8" />
@@ -45,8 +71,6 @@
                   <TextBlock Text="{Binding InGameOverlayDiagnosticText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
-              <TextBlock IsVisible="{Binding IsWindowsPlatform}" Text="O PhantomMonitor detecta globalmente aplicações apresentando frames enquanto estiver aberto e tenta instalar o hook, sem cadastro de executável. A detecção usa ETW/PresentMon e pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook. Para jogos D3D12 em que o overlay não aparece, adicione o executável abaixo e use Iniciar." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
-              <TextBlock IsVisible="{Binding IsLinuxPlatform}" Text="No Linux, adicione um executável para iniciá-lo com Vulkan e, se instalado, o preload OpenGL GLX/EGL. Para Steam, cole a opção gerada abaixo nas propriedades do jogo." Classes="muted" FontSize="11" TextWrapping="Wrap" />
               <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
                 <TextBox Text="{Binding OverlayTargetPathText, Mode=TwoWay}" PlaceholderText="Caminho do executável" />
                 <TextBox Grid.Column="1" Text="{Binding OverlayTargetArgumentsText, Mode=TwoWay}" PlaceholderText="Argumentos (opcional)" />
@@ -69,6 +93,23 @@
               </StackPanel>
               <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção MODO DO OVERLAY">
+              <ToolTip.Tip>
+                <StackPanel MaxWidth="420" Spacing="6">
+                  <TextBlock Text="Janela flutuante mantém os blocos em janelas separadas. Dentro do jogo usa um renderer nativo e depende do suporte da API gráfica; anti-cheats podem bloqueá-lo. O atalho alterna o overlay e o editor ajusta os blocos."
+                             TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="No Windows, o app detecta globalmente aplicações apresentando frames enquanto está aberto e tenta instalar o hook sem cadastro de executável, usando ETW/PresentMon. Pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook. Para jogos D3D12 sem overlay, adicione o executável abaixo e use Iniciar."
+                             TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="No Linux, adicione um executável para iniciá-lo com Vulkan e, se instalado, o preload OpenGL GLX/EGL. Para Steam, cole a opção gerada abaixo nas propriedades do jogo."
+                             TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 
@@ -82,7 +123,17 @@
                 <Button Content="Personalizar paleta" Click="OnOpenThemePaletteEditorClick" />
               </StackPanel>
             </StackPanel>
-            <TextBlock Text="Neptune = visual original do Avalonia; Slate = porta verbatim do visual do WPF. Escolha um tema e personalize suas cores; as alterações entram em vigor em &quot;Salvar e aplicar&quot;, sem reiniciar o app." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção INTERFACE">
+              <ToolTip.Tip>
+                <TextBlock Text="Neptune usa o visual original do Avalonia; Slate reproduz o visual do WPF. Escolha um tema e personalize as cores; as mudanças são aplicadas em ‘Salvar e aplicar’, sem reiniciar."
+                           MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 
@@ -95,6 +146,17 @@
                       IsChecked="{Binding ShowSensorTuningInSidebar, Mode=TwoWay}" />
             <CheckBox Content="Mostrar Alertas na barra lateral"
                       IsChecked="{Binding ShowAlertsInSidebar, Mode=TwoWay}" />
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção BETA">
+              <ToolTip.Tip>
+                <TextBlock Text="Controla a exibição na barra lateral de Sensores customizados, Ajuste por série e Alertas. Cada escolha é salva imediatamente."
+                           MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 
@@ -108,6 +170,17 @@
               <TextBlock Text="PASTA DOS ARQUIVOS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <TextBlock Text="{Binding LogDirectoryText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção GRAVAÇÃO DE TELEMETRIA">
+              <ToolTip.Tip>
+                <TextBlock Text="Escolha os formatos de telemetria que serão gravados. A pasta dos arquivos aparece no card."
+                           MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 
@@ -131,7 +204,17 @@
               <TextBlock Text="ESTADO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
               <TextBlock Text="{Binding TelemetryExportStatusText}" Foreground="{DynamicResource TextMonoBrush}" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
-            <TextBlock Text="GET /values retorna o último snapshot JSON; GET /health verifica o listener. O servidor funciona enquanto a coleta estiver ativa e mantém o último snapshot durante a pausa." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção EXPORTADOR HTTP">
+              <ToolTip.Tip>
+                <TextBlock Text="GET /values retorna o snapshot JSON e GET /health verifica o listener. O serviço funciona durante a coleta e mantém o último snapshot durante a pausa."
+                           MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 
@@ -139,8 +222,18 @@
           <StackPanel Spacing="12">
             <TextBlock Text="INICIALIZAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
             <CheckBox Content="Iniciar com o sistema"
-                      IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
-                      ToolTip.Tip="Registra o aplicativo para iniciar com o sistema (Run do Windows / entrada autostart no Linux)." />
+                      IsChecked="{Binding StartWithWindows, Mode=TwoWay}" />
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção INICIALIZAÇÃO">
+              <ToolTip.Tip>
+                <TextBlock Text="Ativa ou desativa a inicialização automática do PhantomMonitor ao entrar no sistema. A mudança é aplicada imediatamente."
+                           MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 
@@ -164,7 +257,17 @@
               <Button Content="{Binding UpdateButtonText}" Click="OnApplyUpdateClick"
                       IsVisible="{Binding CanApplyUpdate}" IsEnabled="{Binding CanApplyUpdateEnabled}" />
             </StackPanel>
-            <TextBlock Text="A troca baixa a nova versão, aguarda o app encerrar e reabre sozinho. A configuração e os logs são preservados. Em instalação por pacote do sistema, a troca não é oferecida e o card fica apenas na notificação." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção ATUALIZAÇÕES">
+              <ToolTip.Tip>
+                <TextBlock Text="Configura a checagem automática, o canal de pré-lançamentos e o repositório. A atualização baixa a nova versão, reabre o app e preserva configurações e logs; instalações por pacote do sistema não oferecem essa troca."
+                           MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+              </ToolTip.Tip>
+              <Grid Width="16" Height="16">
+                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.2" />
+                <TextBlock Text="i" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,-1,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              </Grid>
+            </Button>
           </StackPanel>
         </Border>
 

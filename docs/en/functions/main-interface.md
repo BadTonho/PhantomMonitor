@@ -8,7 +8,7 @@ In the implementation, the main window owns the sidebar, navigation, and global 
 
 ## Dashboard
 
-The sidebar shows page navigation, the monitoring status, an update badge, and the startup option. It scrolls when the window is short. Monitoring controls are available in the page headers; the system-tray menu provides window visibility, overlay, startup, statistics reset, monitoring pause, OSD profiles, and exit.
+The sidebar shows page navigation, the monitoring status, and an update badge. It scrolls when the window is short. The startup option is in Settings. Monitoring controls are available in the page headers; the system-tray menu provides window visibility, overlay, startup, statistics reset, monitoring pause, OSD profiles, and exit.
 
 Metric cards cover CPU, GPU, FPS, RAM, disk, network, motherboard, and fans. CPU/GPU detail lines include available clocks, power, voltage, VRAM, hotspot, and VRAM temperature. A process list shows applications using the GPU. The in-app diagnostics view displays detected sensors, and a banner can indicate when elevated permissions are needed for some readings. When the user chooses to restart as administrator, the elevated process waits for the current instance to release the single-instance lock before opening its window.
 

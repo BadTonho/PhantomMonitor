@@ -64,7 +64,7 @@ O `StartupManagerFactory` (Core) devolve a implementação do SO:
 
 ## Interface
 
-- **Sidebar:** checkbox `Iniciar com o sistema` (aplicado na hora, estado lido do registro/autostart na abertura).
+- **Configurações → INICIALIZAÇÃO:** checkbox `Iniciar com o sistema` (aplicado na hora, estado lido do registro/autostart na abertura).
 - **Menu da bandeja:** itens `Overlay no Jogo` e `Iniciar com o sistema` com marcação de check do estado atual (no app único).
 
 ## Observações

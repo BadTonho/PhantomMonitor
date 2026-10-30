@@ -135,6 +135,15 @@
           </StackPanel>
         </Border>
 
+        <Border Classes="desktop-card" IsVisible="{Binding StartupSupported}">
+          <StackPanel Spacing="12">
+            <TextBlock Text="INICIALIZAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+            <CheckBox Content="Iniciar com o sistema"
+                      IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
+                      ToolTip.Tip="Registra o aplicativo para iniciar com o sistema (Run do Windows / entrada autostart no Linux)." />
+          </StackPanel>
+        </Border>
+
         <Border Classes="desktop-card">
           <StackPanel Spacing="12">
             <TextBlock Text="ATUALIZAÇÕES (GITHUB RELEASES)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />

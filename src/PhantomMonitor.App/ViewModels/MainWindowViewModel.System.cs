@@ -22,7 +22,7 @@ public sealed partial class MainWindowViewModel
         set => SetStartWithWindows(value);
     }
 
-    /// <summary>Suporte existe no SO atual (checkbox Some na sidebar e item Some no menu da bandeja).</summary>
+    /// <summary>Suporte existe no SO atual (checkbox em Configurações e item no menu da bandeja).</summary>
     public bool StartupSupported => _startupManager is not null;
 
     private void RefreshStartWithWindows()
@@ -40,7 +40,7 @@ public sealed partial class MainWindowViewModel
     }
 
     /// <summary>
-    /// Caminho do checkbox da sidebar (TwoWay) e do item da bandeja: aplica no SO e
+    /// Caminho do checkbox em Configurações (TwoWay) e do item da bandeja: aplica no SO e
     /// reflete o estado REAL (pode falhar sob política restrita — o check volta ao
     /// estado real, mesma conduta do checkbox do WPF).
     /// </summary>

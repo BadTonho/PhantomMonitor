@@ -8,7 +8,7 @@ Na implementação, a janela principal mantém a sidebar, a navegação e os ele
 
 ## Funcionalidades
 
-- **Sidebar:** navegação com ícones, indicador da página selecionada, estado do monitoramento, badge de atualização e opção de iniciar com o sistema. A lista de navegação rola em janelas de altura reduzida.
+- **Sidebar:** navegação com ícones, indicador da página selecionada, estado do monitoramento e badge de atualização. A lista de navegação rola em janelas de altura reduzida; a opção de iniciar com o sistema fica em Configurações.
 - **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Resetar estatísticas, Pausar monitoramento, seção de perfis do OSD e Sair) — portada da bandeja do WPF na F1.5; ver [tray.md](tray.md).
 - **Cards de Métricas Clean:** Cards dedicados para Processador (CPU), Placa de Vídeo (GPU), Taxa de Quadros (FPS), Memória RAM, Armazenamento (Disco), Rede (↓/↑) e Placa-mãe & Ventoinhas (maior temperatura + ventoinhas GPU/Sistema).
 - **Linhas de Detalhes:** Os cards de CPU (clock, potência, voltagem) e GPU (VRAM usada/total, clock, potência, hotspot e temp de VRAM — P8.6) exibem uma linha secundária com os valores avançados disponíveis; quando nenhum sensor existe, informam a indisponibilidade.

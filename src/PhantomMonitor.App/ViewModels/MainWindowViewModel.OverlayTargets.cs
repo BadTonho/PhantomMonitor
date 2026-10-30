@@ -68,6 +68,7 @@ public sealed partial class MainWindowViewModel
             ExecutablePath = path,
             Arguments = OverlayTargetArgumentsText.Trim()
         });
+        OnSettingsDraftChanged();
         OverlayTargetPathText = "";
         OverlayTargetArgumentsText = "";
         OverlayTargetMessage = "Executável adicionado. Use Salvar e aplicar para gravar a lista.";
@@ -76,7 +77,10 @@ public sealed partial class MainWindowViewModel
     public void RemoveOverlayInGameTarget(OverlayLaunchTargetConfig? target)
     {
         if (target is not null && OverlayInGameTargets.Remove(target))
+        {
+            OnSettingsDraftChanged();
             OverlayTargetMessage = "Executável removido. Use Salvar e aplicar para gravar a lista.";
+        }
     }
 
     public async Task LaunchOverlayTargetAsync(OverlayLaunchTargetConfig? target)

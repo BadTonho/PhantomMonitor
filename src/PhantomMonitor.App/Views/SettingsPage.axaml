@@ -271,10 +271,7 @@
           </StackPanel>
         </Border>
 
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
-          <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSettingsClick" />
-          <TextBlock Grid.Column="1" Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
-        </Grid>
+        <TextBlock Text="{Binding SettingsMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
       </StackPanel>
     </ScrollViewer>
 </UserControl>

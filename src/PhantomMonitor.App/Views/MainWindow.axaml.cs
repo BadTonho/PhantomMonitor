@@ -118,6 +118,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnSaveSettingsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => await ViewModel.SaveSettingsAsync();
+
     private void ActivateMainWindow()
     {
         Show();

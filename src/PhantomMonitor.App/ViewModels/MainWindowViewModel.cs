@@ -82,7 +82,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
     private string _telemetryExportPortText = "7317";
     private bool _telemetryExportListenAll;
     private string _telemetryExportStatusText = "Desativado";
-    private string _settingsMessage = "As alterações são aplicadas ao salvar.";
+    private string _settingsMessage = "";
     private string _overlayWidthText = "220";
     private double _overlayOpacityPercent = 85;
     private string _overlayFontSizeText = "11.5";
@@ -229,6 +229,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
                 && parsed == _config.UpdateIntervalMs;
             if (Set(ref _intervalEdited, !unchanged, nameof(IsIntervalEdited)))
                 Raise(nameof(IsLegacyIntervalOutOfRange));
+            OnSettingsDraftChanged();
         }
     }
     public bool IsIntervalEdited => _intervalEdited;
@@ -238,7 +239,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         get => _overlayWidthText;
         set
         {
-            if (Set(ref _overlayWidthText, value)) RaiseOverlayPreviewProperties();
+            if (!Set(ref _overlayWidthText, value)) return;
+            OnSettingsDraftChanged();
+            RaiseOverlayPreviewProperties();
         }
     }
     public string OverlayFontSizeText
@@ -247,6 +250,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         set
         {
             if (!Set(ref _overlayFontSizeText, value)) return;
+            OnSettingsDraftChanged();
             if (double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out var parsed)
                 && double.IsFinite(parsed) && parsed is >= 8 and <= 20
                 && Math.Abs(parsed * 2 - Math.Round(parsed * 2)) < 0.000001)
@@ -259,6 +263,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         set
         {
             if (!Set(ref _overlayFontSizeSlider, value)) return;
+            OnSettingsDraftChanged();
             OverlayFontSizeText = value.ToString("0.#", CultureInfo.CurrentCulture);
             RaiseOverlayPreviewProperties();
         }
@@ -269,7 +274,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         get => _overlayCompactModeSetting;
         set
         {
-            if (Set(ref _overlayCompactModeSetting, value)) RaiseOverlayPreviewProperties();
+            if (!Set(ref _overlayCompactModeSetting, value)) return;
+            OnSettingsDraftChanged();
+            RaiseOverlayPreviewProperties();
         }
     }
     public double OverlayOpacityPercent
@@ -279,6 +286,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         {
             if (Set(ref _overlayOpacityPercent, value) is var changed && changed)
             {
+                OnSettingsDraftChanged();
                 Raise(nameof(OverlayOpacityLabel));
                 RaiseOverlayPreviewProperties();
             }
@@ -297,21 +305,25 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         get => _themeIndex;
         set
         {
-            if (Set(ref _themeIndex, value)) Raise(nameof(SelectedThemeKey));
+            if (!Set(ref _themeIndex, value)) return;
+            OnSettingsDraftChanged();
+            Raise(nameof(SelectedThemeKey));
         }
     }
     private int _themeIndex;
 
-    public bool LogToCsv { get => _logToCsv; set => Set(ref _logToCsv, value); }
-    public bool LogToJson { get => _logToJson; set => Set(ref _logToJson, value); }
-    public bool LogToJsonJournal { get => _logToJsonJournal; set => Set(ref _logToJsonJournal, value); }
-    public bool TelemetryExportEnabled { get => _telemetryExportEnabled; set => Set(ref _telemetryExportEnabled, value); }
+    public bool LogToCsv { get => _logToCsv; set => SetSettingsDraft(ref _logToCsv, value); }
+    public bool LogToJson { get => _logToJson; set => SetSettingsDraft(ref _logToJson, value); }
+    public bool LogToJsonJournal { get => _logToJsonJournal; set => SetSettingsDraft(ref _logToJsonJournal, value); }
+    public bool TelemetryExportEnabled { get => _telemetryExportEnabled; set => SetSettingsDraft(ref _telemetryExportEnabled, value); }
     public string TelemetryExportPortText
     {
         get => _telemetryExportPortText;
         set
         {
-            if (Set(ref _telemetryExportPortText, value)) Raise(nameof(TelemetryExportEndpointText));
+            if (!Set(ref _telemetryExportPortText, value)) return;
+            OnSettingsDraftChanged();
+            Raise(nameof(TelemetryExportEndpointText));
         }
     }
     public bool TelemetryExportListenAll
@@ -319,7 +331,9 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         get => _telemetryExportListenAll;
         set
         {
-            if (Set(ref _telemetryExportListenAll, value)) Raise(nameof(TelemetryExportEndpointText));
+            if (!Set(ref _telemetryExportListenAll, value)) return;
+            OnSettingsDraftChanged();
+            Raise(nameof(TelemetryExportEndpointText));
         }
     }
     public string TelemetryExportStatusText { get => _telemetryExportStatusText; private set => Set(ref _telemetryExportStatusText, value); }
@@ -335,6 +349,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         set
         {
             if (!Set(ref _overlayRenderModeIndex, Math.Clamp(value, 0, 1))) return;
+            OnSettingsDraftChanged();
             Raise(nameof(IsOverlayInGameModeSelected));
             Raise(nameof(IsOverlayTargetLaunchVisible));
         }
@@ -463,6 +478,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         ErrorLog.EntryWritten += OnDiagnosticEntryWritten;
         App.ThemeChanged += OnThemeChanged;
         InitUpdateService();
+        FinishSettingsDraftInitialization();
     }
 
     public void Start()
@@ -853,6 +869,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         }
         DisposeTelemetryExporter();
         DisposeLoggers();
+        DisposeSettingsSaveConfirmationTimer();
         _updateTimer?.Stop();
         _updateTimer = null;
         _updates = null;

@@ -634,5 +634,18 @@
         </StackPanel>
       </StackPanel>
     </Border>
+
+    <Border Grid.Column="1" ZIndex="20" IsVisible="{Binding SettingsSavePanelVisible}"
+            HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="18,0,18,18" MaxWidth="500"
+            Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
+            BorderThickness="1" CornerRadius="10" Padding="12">
+      <StackPanel Spacing="7">
+        <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSettingsClick"
+                IsVisible="{Binding HasPendingSettingsChanges}" IsEnabled="{Binding !IsSavingSettings}"
+                HorizontalAlignment="Left" />
+        <TextBlock Text="{Binding SettingsSaveMessage}" IsVisible="{Binding HasSettingsSaveMessage}"
+                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" MaxWidth="460" />
+      </StackPanel>
+    </Border>
   </Grid>
 </Window>

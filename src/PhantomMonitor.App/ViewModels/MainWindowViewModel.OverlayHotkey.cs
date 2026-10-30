@@ -40,6 +40,7 @@ public sealed partial class MainWindowViewModel
     {
         _capturingOverlayHotkey = false;
         _overlayHotkeyDraft = shortcut;
+        OnSettingsDraftChanged();
         Raise(nameof(OverlayHotkeyButtonText));
         OverlayHotkeyStatus = shortcut.Length == 0 ? "O atalho será desativado ao salvar." : "Atalho escolhido. Selecione Salvar e aplicar.";
     }

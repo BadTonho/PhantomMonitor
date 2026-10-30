@@ -28,9 +28,9 @@ public sealed partial class MainWindowViewModel
     private bool _updateApplyVisible;
     private bool _updateApplyEnabled = true;
 
-    public bool UpdateAutoCheck { get => _updateAutoCheck; set => Set(ref _updateAutoCheck, value); }
-    public bool UpdateBetaChannel { get => _updateBetaChannel; set => Set(ref _updateBetaChannel, value); }
-    public string UpdateRepositoryText { get => _updateRepositoryText; set => Set(ref _updateRepositoryText, value); }
+    public bool UpdateAutoCheck { get => _updateAutoCheck; set => SetSettingsDraft(ref _updateAutoCheck, value); }
+    public bool UpdateBetaChannel { get => _updateBetaChannel; set => SetSettingsDraft(ref _updateBetaChannel, value); }
+    public string UpdateRepositoryText { get => _updateRepositoryText; set => SetSettingsDraft(ref _updateRepositoryText, value); }
 
     public string UpdateVersionText { get => _updateVersionText; private set => Set(ref _updateVersionText, value); }
     public string UpdateStatusText { get => _updateStatusText; private set => Set(ref _updateStatusText, value); }

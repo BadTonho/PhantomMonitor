@@ -90,5 +90,4 @@ public partial class SettingsPage : UserControl
     private void OnCheckUpdatesClick(object? sender, RoutedEventArgs e) => ViewModel.CheckUpdatesNow();
     private void OnOpenReleasesPageClick(object? sender, RoutedEventArgs e) => ViewModel.OpenReleasesPage();
     private void OnApplyUpdateClick(object? sender, RoutedEventArgs e) => _ = ViewModel.ApplyUpdateAsync();
-    private async void OnSaveSettingsClick(object? sender, RoutedEventArgs e) => await ViewModel.SaveSettingsAsync();
 }

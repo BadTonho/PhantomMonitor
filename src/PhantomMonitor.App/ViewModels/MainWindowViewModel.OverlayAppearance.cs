@@ -23,6 +23,7 @@ public sealed partial class MainWindowViewModel
         set
         {
             if (!Set(ref _overlayBackgroundOpacityPercent, value)) return;
+            OnSettingsDraftChanged();
             Raise(nameof(OverlayBackgroundOpacityLabel));
             RaiseOverlayPreviewProperties();
         }
@@ -35,8 +36,9 @@ public sealed partial class MainWindowViewModel
         get => _overlayBackgroundColorText;
         set
         {
-            if (Set(ref _overlayBackgroundColorText, value ?? ""))
-                RaiseOverlayPreviewProperties();
+            if (!Set(ref _overlayBackgroundColorText, value ?? "")) return;
+            OnSettingsDraftChanged();
+            RaiseOverlayPreviewProperties();
         }
     }
 
@@ -45,8 +47,9 @@ public sealed partial class MainWindowViewModel
         get => _overlayBorderEnabled;
         set
         {
-            if (Set(ref _overlayBorderEnabled, value))
-                RaiseOverlayPreviewProperties();
+            if (!Set(ref _overlayBorderEnabled, value)) return;
+            OnSettingsDraftChanged();
+            RaiseOverlayPreviewProperties();
         }
     }
 
@@ -55,7 +58,9 @@ public sealed partial class MainWindowViewModel
         get => _overlayShowGpuModelSetting;
         set
         {
-            if (Set(ref _overlayShowGpuModelSetting, value)) UpdateOverlayRows(_latestSensorData);
+            if (!Set(ref _overlayShowGpuModelSetting, value)) return;
+            OnSettingsDraftChanged();
+            UpdateOverlayRows(_latestSensorData);
         }
     }
 
@@ -66,8 +71,9 @@ public sealed partial class MainWindowViewModel
         get => _overlayBorderColorText;
         set
         {
-            if (Set(ref _overlayBorderColorText, value ?? ""))
-                RaiseOverlayPreviewProperties();
+            if (!Set(ref _overlayBorderColorText, value ?? "")) return;
+            OnSettingsDraftChanged();
+            RaiseOverlayPreviewProperties();
         }
     }
 
@@ -87,6 +93,7 @@ public sealed partial class MainWindowViewModel
             if (!Set(ref _overlayFontFamilySelection, value ?? "Padrão do app")) return;
             if (_overlayFontFamilyCustomText.Length > 0)
                 Set(ref _overlayFontFamilyCustomText, "", nameof(OverlayFontFamilyCustomText));
+            OnSettingsDraftChanged();
             RaiseOverlayPreviewProperties();
         }
     }
@@ -97,6 +104,7 @@ public sealed partial class MainWindowViewModel
         set
         {
             if (!Set(ref _overlayFontFamilyCustomText, value ?? "")) return;
+            OnSettingsDraftChanged();
             if (!string.IsNullOrWhiteSpace(_overlayFontFamilyCustomText)
                 && !string.Equals(_overlayFontFamilySelection, "Padrão do app", StringComparison.Ordinal))
                 Set(ref _overlayFontFamilySelection, "Padrão do app", nameof(OverlayFontFamilySelection));

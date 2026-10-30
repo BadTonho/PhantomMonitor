@@ -22,6 +22,7 @@ public sealed partial class MainWindowViewModel
             _themePalettesDraft.Remove(normalizedTheme);
         else
             _themePalettesDraft[normalizedTheme] = palette.Clone();
+        OnSettingsDraftChanged();
     }
 
     internal bool ThemePalettesDraftChanged => !ThemePalettesEqual(_themePalettesDraft, _config.ThemePalettes);

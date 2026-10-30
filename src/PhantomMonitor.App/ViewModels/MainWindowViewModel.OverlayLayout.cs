@@ -31,6 +31,7 @@ public sealed partial class MainWindowViewModel
         identity = (identity ?? "").Trim();
         if (identity.Length == 0 || !_overlayHiddenMetricsDraft.Add(identity)) return false;
         UpdateOverlayRows(_latestSensorData);
+        OnSettingsDraftChanged();
         return true;
     }
 
@@ -39,7 +40,11 @@ public sealed partial class MainWindowViewModel
         var changed = false;
         foreach (var identity in identities)
             changed |= _overlayHiddenMetricsDraft.Remove(identity);
-        if (changed) UpdateOverlayRows(_latestSensorData);
+        if (changed)
+        {
+            UpdateOverlayRows(_latestSensorData);
+            OnSettingsDraftChanged();
+        }
         return changed;
     }
 
@@ -73,7 +78,12 @@ public sealed partial class MainWindowViewModel
     private void SetOverlayBlockPosition(string id, double x, double y)
     {
         var block = _overlayBlocks.FirstOrDefault(item => item.Key.Equals(id, StringComparison.OrdinalIgnoreCase));
-        block?.SetNormalizedPosition(x, y);
+        if (block is null) return;
+        var oldX = block.X;
+        var oldY = block.Y;
+        block.SetNormalizedPosition(x, y);
+        if (block.X != oldX || block.Y != oldY)
+            OnSettingsDraftChanged();
     }
 
     public void ApplyOverlayBlockPosition(string id, double x, double y) => SetOverlayBlockPosition(id, x, y);
@@ -90,6 +100,7 @@ public sealed partial class MainWindowViewModel
         block.MarkAsPreview();
         block.SetCanvasSize(OverlayEditorCanvasWidth, OverlayEditorCanvasHeight);
         _overlayBlocks.Add(block);
+        OnSettingsDraftChanged();
         return block;
     }
 
@@ -98,6 +109,7 @@ public sealed partial class MainWindowViewModel
         if (!_overlayBlocks.Remove(block)) return;
         block.DisposeMetrics();
         UpdateOverlayRows(_latestSensorData);
+        OnSettingsDraftChanged();
     }
 
     public void SetOverlayBlockDefinition(OverlayCanvasBlockViewModel block, IEnumerable<OverlayBlockItemConfig> items,
@@ -121,6 +133,7 @@ public sealed partial class MainWindowViewModel
                 || item.Kind == "template" && !templateIds.Contains(item.Value));
         EnsureOverlayExtrasCurrent();
         UpdateOverlayRows(_latestSensorData);
+        OnSettingsDraftChanged();
     }
 
     public void CancelOverlayLayoutDraft() => ReloadOverlayLayoutDraft();
@@ -320,6 +333,7 @@ public sealed partial class MainWindowViewModel
         InitializeOverlayBlocks();
         EnsureOverlayExtrasCurrent();
         UpdateOverlayRows(_latestSensorData);
+        OnSettingsDraftChanged();
     }
 
     internal static OverlayBlockConfig CloneOverlayBlock(OverlayBlockConfig block) => new()

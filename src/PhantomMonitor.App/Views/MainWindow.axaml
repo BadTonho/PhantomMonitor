@@ -641,11 +641,11 @@
             BorderThickness="1" CornerRadius="10" Padding="12">
       <StackPanel Spacing="7">
         <Button Classes="action settings-save" Content="Salvar e aplicar" Click="OnSaveSettingsClick"
-                IsVisible="{Binding HasPendingSettingsChanges}" IsEnabled="{Binding !IsSavingSettings}"
+                IsVisible="{Binding SettingsSaveButtonVisible}" IsEnabled="{Binding !IsSavingSettings}"
                 HorizontalAlignment="Left"
-                Background="{DynamicResource AccentWarningBrush}"
+                Background="{Binding SettingsSaveButtonBrush}"
                 Foreground="{DynamicResource BgWindowBrush}"
-                BorderBrush="{DynamicResource AccentWarningBrush}"
+                BorderBrush="{Binding SettingsSaveButtonBrush}"
                 BorderThickness="1" />
         <TextBlock Text="{Binding SettingsSaveMessage}" IsVisible="{Binding HasSettingsSaveMessage}"
                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" MaxWidth="460" />

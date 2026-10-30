@@ -11,12 +11,19 @@ public sealed partial class MainWindowViewModel
     public async Task SaveSettingsAsync()
     {
         if (IsSavingSettings) return;
+        BeginSettingsSaveAttempt();
         IsSavingSettings = true;
-        try { await SaveSettingsCoreAsync(); }
+        try
+        {
+            if (await SaveSettingsCoreAsync())
+                ShowSettingsSaveConfirmation(SettingsSaveMessage);
+            else
+                ShowSettingsSaveFailure(SettingsSaveMessage);
+        }
         finally { IsSavingSettings = false; }
     }
 
-    private async Task SaveSettingsCoreAsync()
+    private async Task<bool> SaveSettingsCoreAsync()
     {
         if (!double.TryParse(OverlayFontSizeText, NumberStyles.Float, CultureInfo.CurrentCulture, out var overlayFontSize)
             || !double.IsFinite(overlayFontSize)
@@ -24,26 +31,26 @@ public sealed partial class MainWindowViewModel
             || Math.Abs(overlayFontSize * 2 - Math.Round(overlayFontSize * 2)) >= 0.000001)
         {
             SettingsSaveMessage = "O tamanho da fonte deve ficar entre 8 e 20 pt, em passos de 0,5 pt.";
-            return;
+            return false;
         }
 
         if (!int.TryParse(OverlayWidthText, NumberStyles.Integer, CultureInfo.CurrentCulture, out var overlayWidth)
             || overlayWidth is < 140 or > 700)
         {
             SettingsSaveMessage = "A largura do overlay deve ficar entre 140 e 700 pixels.";
-            return;
+            return false;
         }
 
         if (!double.IsFinite(OverlayOpacityPercent) || OverlayOpacityPercent is < 10 or > 100)
         {
             SettingsSaveMessage = "A opacidade do overlay deve ficar entre 10% e 100%.";
-            return;
+            return false;
         }
 
         if (!double.IsFinite(OverlayBackgroundOpacityPercent) || OverlayBackgroundOpacityPercent is < 0 or > 100)
         {
             SettingsSaveMessage = "A opacidade do fundo deve ficar entre 0% e 100%.";
-            return;
+            return false;
         }
 
         var backgroundColor = OverlayBackgroundColorText.Trim();
@@ -51,7 +58,7 @@ public sealed partial class MainWindowViewModel
             && (backgroundColor.Length != 7 || !OverlayBrushHelper.TryParseColor(backgroundColor, out _)))
         {
             SettingsSaveMessage = "A cor do fundo deve usar o formato hexadecimal #RRGGBB.";
-            return;
+            return false;
         }
 
         var borderColor = OverlayBorderColorText.Trim();
@@ -59,14 +66,14 @@ public sealed partial class MainWindowViewModel
             && (borderColor.Length != 7 || !OverlayBrushHelper.TryParseColor(borderColor, out _)))
         {
             SettingsSaveMessage = "A cor da borda deve usar o formato hexadecimal #RRGGBB.";
-            return;
+            return false;
         }
 
         var fontFamily = OverlayFontFamilyDraftValue;
         if (fontFamily.Length > 128 || fontFamily.Any(char.IsControl))
         {
             SettingsSaveMessage = "O nome da fonte deve ter até 128 caracteres.";
-            return;
+            return false;
         }
 
         int? newInterval = null;
@@ -76,7 +83,7 @@ public sealed partial class MainWindowViewModel
                 || parsed is < 100 or > 60_000)
             {
                 SettingsSaveMessage = "Informe um intervalo entre 100 e 60.000 ms.";
-                return;
+                return false;
             }
             newInterval = parsed;
         }
@@ -85,7 +92,7 @@ public sealed partial class MainWindowViewModel
             || telemetryPort is < 1024 or > 65_535)
         {
             SettingsSaveMessage = "A porta do exportador HTTP deve ficar entre 1024 e 65.535.";
-            return;
+            return false;
         }
 
         // Repository vazio usa o repositório oficial (decisão tomada no serviço).
@@ -93,7 +100,7 @@ public sealed partial class MainWindowViewModel
         if (updateRepository.Length > 0 && UpdateService.NormalizeRepository(updateRepository) is null)
         {
             SettingsSaveMessage = "O repositório deve estar como owner/repo ou em uma URL do GitHub.";
-            return;
+            return false;
         }
 
         var oldInterval = _config.UpdateIntervalMs;
@@ -172,13 +179,13 @@ public sealed partial class MainWindowViewModel
             {
                 OverlayHotkeyStatus = "A combinação do overlay é inválida.";
                 SettingsSaveMessage = OverlayHotkeyStatus;
-                return;
+                return false;
             }
             if (HotkeyCapture.SameCombination(_overlayHotkeyDraft, _config.PauseMonitorHotkey))
             {
                 OverlayHotkeyStatus = "Esta combinação já está configurada para pausar o monitoramento.";
                 SettingsSaveMessage = OverlayHotkeyStatus;
-                return;
+                return false;
             }
         }
 
@@ -190,7 +197,7 @@ public sealed partial class MainWindowViewModel
             {
                 OverlayHotkeyStatus = result.Message;
                 SettingsSaveMessage = result.Message;
-                return;
+                return false;
             }
             OverlayHotkeyStatus = _overlayHotkeyDraft.Length == 0 ? "Atalho desativado." : $"Atalho ativo: {result.Display}.";
         }
@@ -201,8 +208,7 @@ public sealed partial class MainWindowViewModel
             ConfigureTelemetryExporter();
             SettingsSaveMessage = hotkeyNeedsApply ? "Atalho aplicado." : "Nenhuma alteração para salvar.";
             RefreshSettingsPendingState();
-            ShowSettingsSaveConfirmation(SettingsSaveMessage);
-            return;
+            return true;
         }
 
         if (newInterval.HasValue) _config.UpdateIntervalMs = newInterval.Value;
@@ -273,12 +279,12 @@ public sealed partial class MainWindowViewModel
                 {
                     SettingsSaveMessage = OverlayHotkeyStatus;
                     RefreshSettingsPendingState();
-                    return;
+                    return false;
                 }
             }
             SettingsSaveMessage = "Não foi possível salvar o config.json. As opções em execução não foram alteradas.";
             RefreshSettingsPendingState();
-            return;
+            return false;
         }
 
         _config.Overlay.BlocksMigrated = false;
@@ -307,8 +313,7 @@ public sealed partial class MainWindowViewModel
                 ? "Paleta salva e aplicada sem reiniciar."
                 : "Tema e paleta salvos e aplicados sem reiniciar.";
             RefreshSettingsPendingState();
-            ShowSettingsSaveConfirmation(SettingsSaveMessage);
-            return;
+            return true;
         }
 
         if (intervalChanged)
@@ -378,7 +383,7 @@ public sealed partial class MainWindowViewModel
             SettingsSaveMessage = "Atalho do overlay salvo e aplicado.";
 
         RefreshSettingsPendingState();
-        ShowSettingsSaveConfirmation(SettingsSaveMessage);
+        return true;
     }
 
 }

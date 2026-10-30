@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Avalonia.Media;
 using Avalonia.Threading;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.Services.Update;
@@ -8,10 +9,13 @@ namespace PhantomMonitor.App.ViewModels;
 
 public sealed partial class MainWindowViewModel
 {
+    private enum SettingsSaveFeedbackState { Idle, Succeeded, Failed }
+
     private DispatcherTimer? _settingsSaveConfirmationTimer;
     private string _settingsSaveMessage = "";
     private bool _settingsSaveConfirmationVisible;
     private bool _settingsSaveConfirmedSinceLastEdit;
+    private SettingsSaveFeedbackState _settingsSaveFeedbackState;
     private bool _isInitializingSettingsDrafts = true;
     private bool? _hasPendingSettingsChanges;
 
@@ -62,7 +66,16 @@ public sealed partial class MainWindowViewModel
     }
 
     public bool HasSettingsSaveMessage => SettingsSaveMessage.Length > 0;
-    public bool SettingsSavePanelVisible => HasPendingSettingsChanges || _settingsSaveConfirmationVisible;
+    public bool SettingsSavePanelVisible
+        => HasPendingSettingsChanges || _settingsSaveConfirmationVisible || HasSettingsSaveMessage;
+    public bool SettingsSaveButtonVisible
+        => HasPendingSettingsChanges || _settingsSaveFeedbackState == SettingsSaveFeedbackState.Succeeded;
+    public IBrush SettingsSaveButtonBrush => ResolveBrush(_settingsSaveFeedbackState switch
+    {
+        SettingsSaveFeedbackState.Succeeded => "AccentGreenBrush",
+        SettingsSaveFeedbackState.Failed => "AccentHotBrush",
+        _ => "AccentWarningBrush"
+    });
 
     private bool IsOverlayFontSizeDraftDifferent()
     {
@@ -110,9 +123,9 @@ public sealed partial class MainWindowViewModel
     {
         if (_isInitializingSettingsDrafts) return;
         _settingsSaveConfirmedSinceLastEdit = false;
-        _settingsSaveConfirmationTimer?.Stop();
-        _settingsSaveConfirmationTimer = null;
+        StopSettingsSaveConfirmationTimer();
         if (_settingsSaveConfirmationVisible) _settingsSaveConfirmationVisible = false;
+        SetSettingsSaveFeedbackState(SettingsSaveFeedbackState.Idle);
         SettingsSaveMessage = "";
         RefreshSettingsPendingState();
     }
@@ -124,7 +137,18 @@ public sealed partial class MainWindowViewModel
         {
             _hasPendingSettingsChanges = hasPending;
             Raise(nameof(HasPendingSettingsChanges));
+            Raise(nameof(SettingsSaveButtonVisible));
         }
+        Raise(nameof(SettingsSavePanelVisible));
+    }
+
+    private void BeginSettingsSaveAttempt()
+    {
+        StopSettingsSaveConfirmationTimer();
+        _settingsSaveConfirmationVisible = false;
+        _settingsSaveConfirmedSinceLastEdit = false;
+        SetSettingsSaveFeedbackState(SettingsSaveFeedbackState.Idle);
+        SettingsSaveMessage = "";
         Raise(nameof(SettingsSavePanelVisible));
     }
 
@@ -135,29 +159,64 @@ public sealed partial class MainWindowViewModel
         {
             _hasPendingSettingsChanges = false;
             Raise(nameof(HasPendingSettingsChanges));
+            Raise(nameof(SettingsSaveButtonVisible));
         }
-        _settingsSaveConfirmationTimer?.Stop();
         SettingsSaveMessage = message;
         _settingsSaveConfirmationVisible = true;
+        SetSettingsSaveFeedbackState(SettingsSaveFeedbackState.Succeeded);
         Raise(nameof(SettingsSavePanelVisible));
-        _settingsSaveConfirmationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        StartSettingsSaveConfirmationTimer();
+    }
+
+    private void ShowSettingsSaveFailure(string message)
+    {
+        _settingsSaveConfirmedSinceLastEdit = false;
+        _settingsSaveConfirmationVisible = false;
+        SettingsSaveMessage = string.IsNullOrWhiteSpace(message)
+            ? "Não foi possível salvar as configurações."
+            : message;
+        SetSettingsSaveFeedbackState(SettingsSaveFeedbackState.Failed);
+        RefreshSettingsPendingState();
+        StartSettingsSaveConfirmationTimer();
+    }
+
+    private void StartSettingsSaveConfirmationTimer()
+    {
+        StopSettingsSaveConfirmationTimer();
+        _settingsSaveConfirmationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _settingsSaveConfirmationTimer.Tick += OnSettingsSaveConfirmationTimerTick;
         _settingsSaveConfirmationTimer.Start();
     }
 
     private void OnSettingsSaveConfirmationTimerTick(object? sender, EventArgs e)
     {
+        StopSettingsSaveConfirmationTimer();
+        SetSettingsSaveFeedbackState(SettingsSaveFeedbackState.Idle);
+        if (_settingsSaveConfirmedSinceLastEdit)
+        {
+            _settingsSaveConfirmationVisible = false;
+            SettingsSaveMessage = "";
+        }
+        Raise(nameof(SettingsSavePanelVisible));
+    }
+
+    private void SetSettingsSaveFeedbackState(SettingsSaveFeedbackState state)
+    {
+        if (_settingsSaveFeedbackState == state) return;
+        _settingsSaveFeedbackState = state;
+        Raise(nameof(SettingsSaveButtonBrush));
+        Raise(nameof(SettingsSaveButtonVisible));
+    }
+
+    private void StopSettingsSaveConfirmationTimer()
+    {
         _settingsSaveConfirmationTimer?.Stop();
         _settingsSaveConfirmationTimer = null;
-        _settingsSaveConfirmationVisible = false;
-        SettingsSaveMessage = "";
-        Raise(nameof(SettingsSavePanelVisible));
     }
 
     private void DisposeSettingsSaveConfirmationTimer()
     {
-        _settingsSaveConfirmationTimer?.Stop();
-        _settingsSaveConfirmationTimer = null;
+        StopSettingsSaveConfirmationTimer();
     }
 
     private void FinishSettingsDraftInitialization()

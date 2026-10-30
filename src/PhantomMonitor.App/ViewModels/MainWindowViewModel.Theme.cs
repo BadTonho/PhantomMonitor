@@ -11,6 +11,7 @@ public sealed partial class MainWindowViewModel
     {
         if (_disposed) return;
         DashboardBrushCache.Clear();
+        Raise(nameof(SettingsSaveButtonBrush));
         if (_latestSensorData is not null)
             UpdateDashboardExtras(_latestSensorData);
         ApplyOverlayProfile(_activeProfile);

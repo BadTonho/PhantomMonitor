@@ -2,13 +2,13 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/main-interface.md)
 
-Descrição da interface principal do app único do Phantom Monitor (Avalonia multiplataforma, Windows e Linux), com tema escuro e layout de sidebar + conteúdo. As diferenças operacionais no Linux (sensores nativos do kernel, D-Bus, Wayland, camada Vulkan) estão em [suporte-linux.md](suporte-linux.md); inventário, sensores customizados, ajuste por série, alertas e configurações são as mesmas páginas nos dois sistemas.
+Descrição da interface principal do app único do Phantom Monitor (Avalonia multiplataforma, Windows e Linux), com tema escuro e navegação lateral ou inferior. As diferenças operacionais no Linux (sensores nativos do kernel, D-Bus, Wayland, camada Vulkan) estão em [suporte-linux.md](suporte-linux.md); inventário, sensores customizados, ajuste por série, alertas e configurações são as mesmas páginas nos dois sistemas.
 
 Na implementação, a janela principal mantém a sidebar, a navegação e os elementos globais; Configurações, Sensores customizados, Alertas e Diagnóstico são controles de página próprios com o mesmo ViewModel compartilhado. Inventário, visão geral e ajuste por série continuam no XAML principal.
 
 ## Funcionalidades
 
-- **Sidebar:** navegação com ícones, indicador da página selecionada, estado do monitoramento e badge de atualização. A lista de navegação rola em janelas de altura reduzida; a opção de iniciar com o sistema fica em Configurações.
+- **Navegação:** em **Configurações → INTERFACE**, escolha **Lateral (esquerda)** ou **Inferior**. A lateral contém ícones, indicador da página selecionada, estado do monitoramento e badge de atualização; sua lista rola em janelas de altura reduzida. No modo inferior, a lateral desaparece, o conteúdo ocupa a janela e os mesmos atalhos aparecem em uma barra horizontal rolável no rodapé; a identificação PHANTOM fica no cabeçalho e o estado/badge acompanham a barra. A preferência é salva imediatamente; configurações antigas usam o modo lateral. A opção de iniciar com o sistema fica em Configurações.
 - **Bandeja do Sistema:** Ícone com menu de contexto (Mostrar janela, Overlay no Jogo, Iniciar com o Windows, Resetar estatísticas, Pausar monitoramento, seção de perfis do OSD e Sair) — portada da bandeja do WPF na F1.5; ver [tray.md](tray.md).
 - **Cards de Métricas Clean:** Cards dedicados para Processador (CPU), Placa de Vídeo (GPU), Taxa de Quadros (FPS), Memória RAM, Armazenamento (Disco), Rede (↓/↑) e Placa-mãe & Ventoinhas (maior temperatura + ventoinhas GPU/Sistema).
 - **Linhas de Detalhes:** Os cards de CPU (clock, potência, voltagem) e GPU (VRAM usada/total, clock, potência, hotspot e temp de VRAM — P8.6) exibem uma linha secundária com os valores avançados disponíveis; quando nenhum sensor existe, informam a indisponibilidade.

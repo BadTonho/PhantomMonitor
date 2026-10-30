@@ -2,13 +2,13 @@
 
 # Main interface
 
-The unified app (Avalonia, Windows and Linux) uses a dark dashboard with a sidebar and metric cards. Linux-specific behavior is described in [Linux support](linux-support.md).
+The unified app (Avalonia, Windows and Linux) uses a dark dashboard with switchable left or bottom navigation and metric cards. Linux-specific behavior is described in [Linux support](linux-support.md).
 
 In the implementation, the main window owns the sidebar, navigation, and global elements; Settings, Custom Sensors, Alerts, and Diagnostics are separate page controls that share the same ViewModel. Overview, Inventory, and Per-series tuning remain in the main XAML.
 
 ## Dashboard
 
-The sidebar shows page navigation, the monitoring status, and an update badge. It scrolls when the window is short. The startup option is in Settings. Monitoring controls are available in the page headers; the system-tray menu provides window visibility, overlay, startup, statistics reset, monitoring pause, OSD profiles, and exit.
+In **Settings → INTERFACE**, choose **Left** or **Bottom** navigation. The left sidebar contains page links, the selected-page indicator, monitoring status, and update badge; its links scroll when the window is short. Bottom mode hides the sidebar, lets content fill the window, and places the same links in a horizontally scrollable footer bar. App identity moves to the content header, with monitoring status and the update badge beside the footer links. The preference saves immediately; older configs use the left layout. The startup option is in Settings. Monitoring controls are available in the page headers; the system-tray menu provides window visibility, overlay, startup, statistics reset, monitoring pause, OSD profiles, and exit.
 
 Metric cards cover CPU, GPU, FPS, RAM, disk, network, motherboard, and fans. CPU/GPU detail lines include available clocks, power, voltage, VRAM, hotspot, and VRAM temperature. A process list shows applications using the GPU. The in-app diagnostics view displays detected sensors, and a banner can indicate when elevated permissions are needed for some readings. When the user chooses to restart as administrator, the elevated process waits for the current instance to release the single-instance lock before opening its window.
 

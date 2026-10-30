@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Text.Json;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 using PhantomMonitor.Services.Linux;
@@ -110,6 +111,21 @@ internal static class CoreRegressionTests
         config.Normalize();
         Check(config.Theme == "slate" && config.UpdateIntervalMs == 500, "Opções independentes foram alteradas.");
         Check(config.Overlay.Graphs.Count == 0 && config.Overlay.Templates.Count == 0, "Nulos não removidos.");
+
+        var oldConfig = JsonSerializer.Deserialize<AppConfig>("{}")!;
+        oldConfig.Normalize();
+        Check(oldConfig.NavigationPosition == "left", "Configuração antiga deve manter navegação lateral.");
+        var bottomConfig = JsonSerializer.Deserialize<AppConfig>("{\"navigationPosition\":\"bottom\"}")!;
+        bottomConfig.Normalize();
+        Check(bottomConfig.NavigationPosition == "bottom", "Configuração deve preservar a navegação inferior.");
+        using var directory = new TestDirectory();
+        var configPath = Path.Combine(directory.Path, "config.json");
+        Check(bottomConfig.Save(configPath), "Configuração com navegação inferior deve ser gravada.");
+        var reloadedConfig = AppConfig.Load(configPath, out var loadError);
+        Check(loadError is null && reloadedConfig.NavigationPosition == "bottom", "Navegação inferior deve persistir após recarregar a configuração.");
+        var invalidNavigation = JsonSerializer.Deserialize<AppConfig>("{\"navigationPosition\":\"unknown\"}")!;
+        invalidNavigation.Normalize();
+        Check(invalidNavigation.NavigationPosition == "left", "Posição inválida deve voltar à navegação lateral.");
     }
 
     private static void Csv()

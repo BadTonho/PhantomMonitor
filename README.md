@@ -91,6 +91,8 @@ In the overlay editor, **Add content → Add custom line** combines free text wi
 
 Pick the built-in theme with `theme` in `config.json` (`neptune` = Avalonia-derived palette, `slate` = WPF-derived palette; the legacy `uiTheme` key still loads and migrates), then customize its colors through **INTERFACE → Personalizar paleta** in Settings. Palette edits apply after **Salvar e aplicar** succeeds. The theme selector also works at runtime without restarting, and `--theme=<name>` is available for comparison (legacy `--ui-theme=` accepted).
 
+The **INTERFACE** settings also switch navigation between the left sidebar and a horizontally scrollable bottom bar. This choice is saved immediately as `navigationPosition` (`left` by default, including for older configs).
+
 Local release build of the Windows binary:
 
 ```powershell

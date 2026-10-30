@@ -39,6 +39,10 @@ public sealed partial class AppConfig
     [JsonPropertyName("theme")]
     public string Theme { get; set; } = "neptune";
 
+    /// <summary>Posição da navegação principal: <c>left</c> ou <c>bottom</c>.</summary>
+    [JsonPropertyName("navigationPosition")]
+    public string NavigationPosition { get; set; } = "left";
+
     /// <summary>Personalizações opcionais, separadas por tema builtin.</summary>
     [JsonPropertyName("themePalettes")]
     public Dictionary<string, ThemePaletteConfig> ThemePalettes { get; set; } = new(StringComparer.OrdinalIgnoreCase);

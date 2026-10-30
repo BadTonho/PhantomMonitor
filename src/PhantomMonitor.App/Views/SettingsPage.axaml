@@ -123,9 +123,16 @@
                 <Button Content="Personalizar paleta" Click="OnOpenThemePaletteEditorClick" />
               </StackPanel>
             </StackPanel>
+            <StackPanel Spacing="5">
+              <TextBlock Text="POSIÇÃO DA NAVEGAÇÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <ComboBox SelectedIndex="{Binding NavigationPositionIndex, Mode=TwoWay}"
+                        ItemsSource="{Binding NavigationPositionOptions}" MinWidth="220" HorizontalAlignment="Left" />
+              <TextBlock Text="{Binding NavigationPositionMessage}" IsVisible="{Binding HasNavigationPositionMessage}"
+                         Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            </StackPanel>
             <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção INTERFACE">
               <ToolTip.Tip>
-                <TextBlock Text="Neptune usa o visual original do Avalonia; Slate reproduz o visual do WPF. Escolha um tema e personalize as cores; as mudanças são aplicadas em ‘Salvar e aplicar’, sem reiniciar."
+                <TextBlock Text="Neptune usa o visual original do Avalonia; Slate reproduz o visual do WPF. Escolha um tema e personalize as cores; as mudanças são aplicadas em ‘Salvar e aplicar’, sem reiniciar. A posição da navegação é salva e aplicada imediatamente."
                            MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
               </ToolTip.Tip>
               <Grid Width="16" Height="16">
@@ -140,15 +147,15 @@
         <Border Classes="desktop-card">
           <StackPanel Spacing="12">
             <TextBlock Text="BETA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
-            <CheckBox Content="Mostrar Sensores customizados na barra lateral"
+            <CheckBox Content="Mostrar Sensores customizados na navegação"
                       IsChecked="{Binding ShowCustomSensorsInSidebar, Mode=TwoWay}" />
-            <CheckBox Content="Mostrar Ajuste por série na barra lateral"
+            <CheckBox Content="Mostrar Ajuste por série na navegação"
                       IsChecked="{Binding ShowSensorTuningInSidebar, Mode=TwoWay}" />
-            <CheckBox Content="Mostrar Alertas na barra lateral"
+            <CheckBox Content="Mostrar Alertas na navegação"
                       IsChecked="{Binding ShowAlertsInSidebar, Mode=TwoWay}" />
             <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção BETA">
               <ToolTip.Tip>
-                <TextBlock Text="Controla a exibição na barra lateral de Sensores customizados, Ajuste por série e Alertas. Cada escolha é salva imediatamente."
+                <TextBlock Text="Controla a exibição na navegação de Sensores customizados, Ajuste por série e Alertas. Cada escolha é salva imediatamente."
                            MaxWidth="420" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
               </ToolTip.Tip>
               <Grid Width="16" Height="16">

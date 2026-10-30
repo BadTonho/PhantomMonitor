@@ -448,6 +448,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         _showSensorTuningInSidebar = _config.Beta.ShowSensorTuningInSidebar;
         _showAlertsInSidebar = _config.Beta.ShowAlertsInSidebar;
         _themeIndex = _config.Theme == "slate" ? 1 : 0;
+        _navigationPosition = _config.NavigationPosition;
         _telemetryExportEnabled = _config.TelemetryExport.Enabled;
         _telemetryExportPortText = _config.TelemetryExport.Port.ToString(CultureInfo.InvariantCulture);
         _telemetryExportListenAll = _config.TelemetryExport.ListenAll;

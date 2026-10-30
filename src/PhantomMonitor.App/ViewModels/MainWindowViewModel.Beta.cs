@@ -47,12 +47,12 @@ public sealed partial class MainWindowViewModel
             field = previous;
             updateConfig(previous);
             Raise(propertyName);
-            SettingsMessage = "Não foi possível salvar a preferência Beta no config.json. A barra lateral foi restaurada.";
+            SettingsMessage = "Não foi possível salvar a preferência Beta no config.json. A navegação foi restaurada.";
             return;
         }
 
         SettingsMessage = value
-            ? $"{itemName} ativado na barra lateral."
-            : $"{itemName} ocultado da barra lateral.";
+            ? $"{itemName} ativado na navegação."
+            : $"{itemName} ocultado da navegação.";
     }
 }

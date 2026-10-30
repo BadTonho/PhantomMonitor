@@ -91,6 +91,8 @@ No editor do overlay, **Adicionar conteúdo → Adicionar linha personalizada** 
 
 O tema builtin é escolhido com `theme` no `config.json` (`neptune` = paleta derivada do Avalonia, `slate` = paleta derivada do WPF; a chave legada `uiTheme` continua sendo lida e migra), pelo card **INTERFACE** em Configurações (trocado na interface em execução, sem reiniciar) ou pela linha de comando com `--theme=<nome>` (o `--ui-theme=` legado segue aceito).
 
+O card **INTERFACE** também alterna a navegação entre a lateral esquerda e uma barra horizontal no rodapé, rolável quando necessário. A escolha é salva imediatamente em `navigationPosition` (`left` por padrão, inclusive em configurações antigas).
+
 Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.
 
 O pacote completo do renderer dentro do jogo é compilado por

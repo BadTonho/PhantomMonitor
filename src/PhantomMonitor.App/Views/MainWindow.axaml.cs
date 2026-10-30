@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using PhantomMonitor.App.Services;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Models;
@@ -29,6 +31,7 @@ public sealed partial class MainWindow : Window
                 ViewModel.SetOverlayCanvasSize(screen.Bounds.Width / scale, screen.Bounds.Height / scale);
             }
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            ApplyNavigationLayout();
             ViewModel.InitializeOverlayHotkey();
             SyncOverlayVisibility();
             RefreshWindowPresentationState();
@@ -149,6 +152,35 @@ public sealed partial class MainWindow : Window
             SyncOverlayVisibility();
         else if (e.PropertyName == nameof(MainWindowViewModel.OverlayOpacity) && _overlayWindow is not null)
             _overlayWindow.Opacity = ViewModel.OverlayOpacity;
+        else if (e.PropertyName == nameof(MainWindowViewModel.NavigationPosition))
+            ApplyNavigationLayout();
+    }
+
+    private void ApplyNavigationLayout()
+    {
+        var bottom = ViewModel.IsBottomNavigation;
+        MainLayout.ColumnDefinitions[0].Width = bottom ? new GridLength(0) : new GridLength(230);
+        Sidebar.IsVisible = !bottom;
+        Sidebar.BorderThickness = bottom ? new Thickness(0) : new Thickness(0, 0, 1, 0);
+
+        if (bottom)
+        {
+            if (ReferenceEquals(SidebarNavigationScrollViewer.Content, NavigationItemsPanel))
+                SidebarNavigationScrollViewer.Content = null;
+            if (!ReferenceEquals(BottomNavigationScrollViewer.Content, NavigationItemsPanel))
+                BottomNavigationScrollViewer.Content = NavigationItemsPanel;
+            NavigationItemsPanel.Orientation = Orientation.Horizontal;
+            SidebarNavigationHeading.IsVisible = false;
+        }
+        else
+        {
+            if (ReferenceEquals(BottomNavigationScrollViewer.Content, NavigationItemsPanel))
+                BottomNavigationScrollViewer.Content = null;
+            if (!ReferenceEquals(SidebarNavigationScrollViewer.Content, NavigationItemsPanel))
+                SidebarNavigationScrollViewer.Content = NavigationItemsPanel;
+            NavigationItemsPanel.Orientation = Orientation.Vertical;
+            SidebarNavigationHeading.IsVisible = true;
+        }
     }
 
     private void SyncOverlayVisibility()

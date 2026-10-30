@@ -10,6 +10,16 @@
   <Window.Styles>
     <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
 
+    <Style Selector="Button.action.accent.settings-save">
+      <Setter Property="Background" Value="{DynamicResource AccentGreenBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource BgWindowBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenSoftBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.action.accent.settings-save:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentGreenSoftBrush}" />
+    </Style>
+
     <Style Selector="TextBlock.metric">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="FontSize" Value="30" />
@@ -640,7 +650,7 @@
             Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
             BorderThickness="1" CornerRadius="10" Padding="12">
       <StackPanel Spacing="7">
-        <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSettingsClick"
+        <Button Classes="action accent settings-save" Content="Salvar e aplicar" Click="OnSaveSettingsClick"
                 IsVisible="{Binding HasPendingSettingsChanges}" IsEnabled="{Binding !IsSavingSettings}"
                 HorizontalAlignment="Left" />
         <TextBlock Text="{Binding SettingsSaveMessage}" IsVisible="{Binding HasSettingsSaveMessage}"

@@ -105,7 +105,7 @@ public sealed partial class AppConfig
         Update ??= new();
         Update.Repository = (Update.Repository ?? "").Trim();
 
-        // Preferências beta: configurações antigas mantêm os dois atalhos visíveis.
+        // Preferências beta: configs antigas sem esse bloco iniciam com os atalhos ocultos.
         Beta ??= new();
 
         // Whitelist de séries por instância: config antigo sem a chave (ou com lista vazia)

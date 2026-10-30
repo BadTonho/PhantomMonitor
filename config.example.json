@@ -52,8 +52,9 @@
   "customSensors": [],
   "sensorTuning": [],
   "beta": {
-    "showCustomSensorsInSidebar": true,
-    "showSensorTuningInSidebar": true
+    "showCustomSensorsInSidebar": false,
+    "showSensorTuningInSidebar": false,
+    "showAlertsInSidebar": false
   },
   "profiles": [],
   "telemetryExport": { "enabled": false, "port": 7317, "listenAll": false },

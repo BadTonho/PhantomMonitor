@@ -93,6 +93,8 @@
                       IsChecked="{Binding ShowCustomSensorsInSidebar, Mode=TwoWay}" />
             <CheckBox Content="Mostrar Ajuste por série na barra lateral"
                       IsChecked="{Binding ShowSensorTuningInSidebar, Mode=TwoWay}" />
+            <CheckBox Content="Mostrar Alertas na barra lateral"
+                      IsChecked="{Binding ShowAlertsInSidebar, Mode=TwoWay}" />
           </StackPanel>
         </Border>
 

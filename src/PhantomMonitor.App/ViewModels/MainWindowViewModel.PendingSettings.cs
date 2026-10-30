@@ -11,11 +11,14 @@ public sealed partial class MainWindowViewModel
     private DispatcherTimer? _settingsSaveConfirmationTimer;
     private string _settingsSaveMessage = "";
     private bool _settingsSaveConfirmationVisible;
+    private bool _settingsSaveConfirmedSinceLastEdit;
     private bool _isInitializingSettingsDrafts = true;
     private bool? _hasPendingSettingsChanges;
 
     public bool HasPendingSettingsChanges
-        => _hasPendingSettingsChanges ??= CalculateHasPendingSettingsChanges();
+        => _settingsSaveConfirmedSinceLastEdit
+            ? false
+            : _hasPendingSettingsChanges ??= CalculateHasPendingSettingsChanges();
 
     private bool CalculateHasPendingSettingsChanges()
         => IsIntervalEdited
@@ -106,6 +109,7 @@ public sealed partial class MainWindowViewModel
     private void OnSettingsDraftChanged()
     {
         if (_isInitializingSettingsDrafts) return;
+        _settingsSaveConfirmedSinceLastEdit = false;
         _settingsSaveConfirmationTimer?.Stop();
         _settingsSaveConfirmationTimer = null;
         if (_settingsSaveConfirmationVisible) _settingsSaveConfirmationVisible = false;
@@ -115,7 +119,7 @@ public sealed partial class MainWindowViewModel
 
     private void RefreshSettingsPendingState()
     {
-        var hasPending = CalculateHasPendingSettingsChanges();
+        var hasPending = !_settingsSaveConfirmedSinceLastEdit && CalculateHasPendingSettingsChanges();
         if (_hasPendingSettingsChanges != hasPending)
         {
             _hasPendingSettingsChanges = hasPending;
@@ -126,6 +130,12 @@ public sealed partial class MainWindowViewModel
 
     private void ShowSettingsSaveConfirmation(string message)
     {
+        _settingsSaveConfirmedSinceLastEdit = true;
+        if (_hasPendingSettingsChanges != false)
+        {
+            _hasPendingSettingsChanges = false;
+            Raise(nameof(HasPendingSettingsChanges));
+        }
         _settingsSaveConfirmationTimer?.Stop();
         SettingsSaveMessage = message;
         _settingsSaveConfirmationVisible = true;

@@ -31,9 +31,9 @@ The unified app offers templates, per-instance series, application profiles, gra
 
 Internally, positioning dispatch is separate from the Windows and Linux implementations (`OverlayWindow.Positioning.cs`, `OverlayWindow.Windows.cs`, and `OverlayWindow.Linux.cs`). This keeps Windows focus tracking and click-through rules separate from compositor-limited Linux placement.
 
-Run the regression checks for canvas-to-screen conversion and applied content copying/filtering with `dotnet run --project tests/PhantomMonitor.OverlayRegressionTests --configuration Release`.
+Run the regression checks for canvas-to-screen conversion and applied content copying/filtering with `dotnet test tests/PhantomMonitor.OverlayRegressionTests -c Release`.
 
-The content editor and add-content picker are dedicated AXAML windows with state and editing operations in `OverlayBlockContentDialogViewModel`; their Views forward control actions. The picker opens an isolated copy of the draft: **Add content** confirms its choices into the main list, while **Cancel** discards them. Graphs, templates, and multi-selection remain a draft until the user applies the main window and then saves the layout.
+The content editor and add-content picker are dedicated AXAML windows with state and editing operations in `OverlayBlockContentDialogViewModel` (split into `OverlayBlockContentDialogViewModel.cs`, `.Ordering.cs`, `.GraphsAndTemplates.cs`, `.SeriesCatalog.cs`, `.Metrics.cs`, and `.CustomLines.cs`); their Views forward control actions. The picker opens an isolated copy of the draft: **Add content** confirms its choices into the main list, while **Cancel** discards them. Graphs, templates, and multi-selection remain a draft until the user applies the main window and then saves the layout.
 
 ## Game OSD layout (inherited from the WPF)
 
@@ -162,3 +162,11 @@ exports are loader-compatible; no Vulkan import library is required. Settings ca
 launch Windows games early. Late D3D12 discovery observes command submissions and
 uses only an unambiguous DIRECT queue; multiple-queue games should use early launch.
 Both Present and Present1 are hooked. Real game/API compatibility still needs testing.
+
+
+## Performance optimizations
+
+- **Follow window (Windows):** the positioning timer runs at 30 ms while the focused window is moving and switches to 150 ms after 20 stable ticks, returning to 30 ms immediately when a change is detected.
+- **In-game process scan:** once hooks are installed, scanning for presenting processes is throttled to at most once every 3 s (1 s while no hook is active).
+- **In-game graphs:** frame serialization avoids allocating a copy of graph samples when there are 1200 or fewer points.
+- **Publishing:** `release.ps1` enables `PublishReadyToRun`, and the App project enables `TieredPGO` and `AvaloniaUseCompiledBindingsByDefault`.

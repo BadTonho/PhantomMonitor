@@ -4,6 +4,8 @@
         xmlns:vm="using:PhantomMonitor.App.ViewModels"
         xmlns:views="using:PhantomMonitor.App.Views"
         x:Class="PhantomMonitor.App.Views.OverlayEditorWindow"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:DataType="vmroot:MainWindowViewModel"
         Title="Editor do overlay flutuante"
         Width="1120" Height="820" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner"
@@ -26,7 +28,7 @@
         <ItemsControl x:Name="EditorBlockCanvas" ItemsSource="{Binding OverlayBlocks}"
                       Width="{Binding OverlayEditorCanvasWidth}" Height="{Binding OverlayEditorCanvasHeight}">
             <ItemsControl.ItemContainerTheme>
-              <ControlTheme TargetType="ContentPresenter">
+              <ControlTheme TargetType="ContentPresenter" x:DataType="vmroot:OverlayCanvasBlockViewModel">
                 <Setter Property="Canvas.Left" Value="{Binding CanvasX}" />
                 <Setter Property="Canvas.Top" Value="{Binding CanvasY}" />
               </ControlTheme>
@@ -35,10 +37,10 @@
               <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vmroot:OverlayCanvasBlockViewModel">
                 <Viewbox Width="{Binding PreviewBlockWidth}" Height="{Binding PreviewBlockHeight}"
                          IsVisible="{Binding IsEditorVisible}" Stretch="Fill"
-                         Opacity="{Binding $parent[Window].DataContext.OverlayPreviewOpacity}"
+                         Opacity="{Binding $parent[Window].((vmroot:MainWindowViewModel)DataContext).OverlayPreviewOpacity}"
                          PointerPressed="OnBlockPointerPressed" PointerMoved="OnBlockPointerMoved"
                          PointerReleased="OnBlockPointerReleased" PointerCaptureLost="OnBlockPointerCaptureLost"
                          DoubleTapped="OnBlockDoubleTapped" Cursor="SizeAll">

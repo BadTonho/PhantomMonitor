@@ -9,7 +9,7 @@ São aceitas letras `A–Z` e números `0–9` com pelo menos um modificador (`C
 ## Plataformas
 
 - **Windows:** `RegisterHotKey` entrega as ações a uma janela message-only em thread dedicada. A troca do overlay preserva o registro de pausa; não há hook de teclado.
-- **Linux X11:** usa uma conexão XCB dedicada e registra as variações para Caps Lock, Num Lock e Scroll Lock. Requer `libxcb`; em caso de conflito o registro anterior permanece ativo.
+- **Linux X11:** usa uma conexão XCB dedicada e registra as variações para Caps Lock, Num Lock e Scroll Lock. A thread aguarda eventos bloqueando em `poll()` sobre o descritor do socket XCB (`xcb_get_file_descriptor`) fora do lock, com timeout adaptativo (12 ms enquanto há verificação de auto-repeat pendente; 250 ms quando ociosa). Requer `libxcb`; em caso de conflito o registro anterior permanece ativo.
 - **Linux Wayland:** usa o portal `org.freedesktop.portal.GlobalShortcuts` pela sessão D-Bus. O ambiente gráfico pode abrir uma confirmação e escolher uma combinação diferente da solicitada; a interface mostra a descrição devolvida pelo sistema. A disponibilidade depende do portal e do compositor. XWayland não é usado como substituto para atalhos globais Wayland.
 
 No Linux, o suporte foi implementado, mas ainda precisa de validação em sessões reais X11 e Wayland. O atalho de pausa continua disponível apenas no Windows. Quando o serviço global não está disponível, a interface e a bandeja continuam permitindo alternar o overlay.

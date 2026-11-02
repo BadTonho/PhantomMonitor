@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PhantomMonitor.App</RootNamespace>
     <AssemblyName>PhantomMonitor</AssemblyName>
-    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <TieredPGO>true</TieredPGO>
     <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
     <!-- Marcador de build de desenvolvimento: o updater nunca "atualiza" um 0.0.0-dev.

@@ -255,7 +255,7 @@ public sealed partial class AppConfig
             if (string.IsNullOrWhiteSpace(profile.Name))
                 profile.Name = $"Perfil {Profiles.IndexOf(profile) + 1}";
 
-            profile.AppMatch = (profile.AppMatch ?? "").Trim('.').Trim();
+            profile.AppMatch = (profile.AppMatch ?? "").Trim().Trim('.').Trim();
             if (profile.AppMatch.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 profile.AppMatch = profile.AppMatch[..^4].Trim();
 

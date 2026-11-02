@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PhantomMonitor.App.Views.OverlayHiddenMetricsDialog"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:DataType="vmroot:OverlayHiddenMetricsDialogViewModel"
         Title="Linhas ocultadas"
         Width="620" Height="520" MinWidth="480" MinHeight="360"
         WindowStartupLocation="CenterOwner"
@@ -22,7 +24,7 @@
                Background="{DynamicResource BgCardBrush}"
                BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1">
         <ListBox.ItemTemplate>
-          <DataTemplate>
+          <DataTemplate x:DataType="vmroot:OverlayHiddenMetricOption">
             <StackPanel Spacing="2" Margin="4">
               <TextBlock Text="{Binding Label}" Foreground="{DynamicResource TextBodyBrush}"
                          FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />

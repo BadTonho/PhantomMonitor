@@ -138,8 +138,8 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
 
         try
         {
-            var (freeGb, totalGb) = ReadRamFromWmi();
-            debugInfo.Add($"[WMI] RAM Available = {freeGb:F1} GB / Total = {totalGb:F1} GB");
+            var (freeGb, totalGb) = ReadRamNative();
+            debugInfo.Add($"[RAM] Available = {freeGb:F1} GB / Total = {totalGb:F1} GB");
             if (freeGb > 0 && data.GetValue(SType.RamAvailable) <= 0)
             {
                 data.Values[SType.RamAvailable] = freeGb;
@@ -225,7 +225,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
         {
             try
             {
-                using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT * FROM BatteryStatus");
+                using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT DischargeRate, ChargeRate, Voltage, PowerOnline FROM BatteryStatus");
                 using var results = searcher.Get();
                 foreach (var obj in results)
                 {
@@ -249,7 +249,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
         {
             try
             {
-                using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Battery");
+                using var searcher = new ManagementObjectSearcher("SELECT EstimatedChargeRemaining, DesignVoltage, FullChargeCapacity, DesignCapacity FROM Win32_Battery");
                 using var results = searcher.Get();
                 foreach (var obj in results)
                 {
@@ -443,6 +443,30 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
         }
         return 0;
     }
+
+    /// <summary>Memória física via GlobalMemoryStatusEx (GB); cai para WMI se a chamada nativa falhar.</summary>
+    private static (double availableGB, double totalGB) ReadRamNative()
+    {
+        try
+        {
+            var status = new MemoryStatusEx { Length = (uint)System.Runtime.InteropServices.Marshal.SizeOf<MemoryStatusEx>() };
+            if (GlobalMemoryStatusEx(ref status) && status.TotalPhys > 0)
+                return (status.AvailPhys / 1024.0 / 1024.0 / 1024.0, status.TotalPhys / 1024.0 / 1024.0 / 1024.0);
+        }
+        catch (Exception ex) { ErrorLog.Write("Native.Ram", ex); }
+        return ReadRamFromWmi();
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MemoryStatusEx
+    {
+        public uint Length; public uint MemoryLoad;
+        public ulong TotalPhys, AvailPhys, TotalPageFile, AvailPageFile, TotalVirtual, AvailVirtual, AvailExtendedVirtual;
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx buffer);
 
     private static (double availableGB, double totalGB) ReadRamFromWmi()
     {

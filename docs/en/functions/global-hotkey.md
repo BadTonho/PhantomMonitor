@@ -9,7 +9,7 @@ Supported keys are `A–Z` and `0–9` with at least one modifier (`Ctrl`, `Alt`
 ## Platforms
 
 - **Windows:** `RegisterHotKey` sends events to a message-only window on a dedicated thread. Changing the overlay shortcut preserves the pause shortcut; no keyboard hook is installed.
-- **Linux X11:** a dedicated XCB connection registers the combination with Caps Lock, Num Lock, and Scroll Lock variations. It requires `libxcb` and retains the previous registration on conflict.
+- **Linux X11:** a dedicated XCB connection registers the combination with Caps Lock, Num Lock, and Scroll Lock variations. The event loop blocks in `poll()` on the XCB socket descriptor (`xcb_get_file_descriptor`) outside the lock with an adaptive timeout (12 ms while a key-release auto-repeat check is pending; 250 ms when idle). It requires `libxcb` and retains the previous registration on conflict.
 - **Linux Wayland:** uses `org.freedesktop.portal.GlobalShortcuts` on the session D-Bus. The desktop may ask for confirmation or select another combination; the interface displays the effective description returned by the portal. Availability depends on the portal and compositor. XWayland is not treated as a global Wayland fallback.
 
 The Linux implementations still need validation in real X11 and Wayland sessions. The pause hotkey remains Windows-only. The existing interface and tray controls remain available when global shortcuts are unavailable.

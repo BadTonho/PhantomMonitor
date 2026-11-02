@@ -174,6 +174,8 @@ internal sealed class X11OverlayHotkeyBackend(Action activated, Action<string> u
             var fire = false;
             var hadEvent = false;
             var disconnected = false;
+            var fd = -1;
+            var timeoutMs = IdleWaitMs;
             lock (_gate)
             {
                 if (_disposed) return;
@@ -207,6 +209,8 @@ internal sealed class X11OverlayHotkeyBackend(Action activated, Action<string> u
                         finally { Native.free(evt); }
                     }
                     else _repeat.FlushRelease(Environment.TickCount64);
+                    if (_repeat.HasPending) timeoutMs = PendingWaitMs;
+                    fd = Native.xcb_get_file_descriptor(_connection);
                 }
             }
             if (disconnected)
@@ -215,8 +219,23 @@ internal sealed class X11OverlayHotkeyBackend(Action activated, Action<string> u
                 return;
             }
             if (fire) activated();
-            if (!hadEvent) Thread.Sleep(10);
+            if (!hadEvent) WaitForEvents(fd, timeoutMs);
         }
+    }
+
+    private const int IdleWaitMs = 250;
+    private const int PendingWaitMs = 12;
+
+    /// <summary>Bloqueia fora do lock até o socket XCB ficar legível ou o timeout expirar (Dispose espera no máx. ~250 ms).</summary>
+    private static void WaitForEvents(int fd, int timeoutMs)
+    {
+        if (fd < 0) { Thread.Sleep(timeoutMs); return; }
+        try
+        {
+            var pfd = new Native.PollFd { Fd = fd, Events = 1 };
+            if (Native.poll(ref pfd, 1, timeoutMs) < 0) Thread.Sleep(PendingWaitMs);
+        }
+        catch (Exception) { Thread.Sleep(PendingWaitMs); }
     }
 
     public void Dispose()
@@ -254,6 +273,9 @@ internal sealed class X11OverlayHotkeyBackend(Action activated, Action<string> u
         [DllImport(Xcb)] internal static extern IntPtr xcb_request_check(IntPtr connection, Cookie cookie);
         [DllImport(Xcb)] internal static extern IntPtr xcb_poll_for_event(IntPtr connection);
         [DllImport(Xcb)] internal static extern int xcb_flush(IntPtr connection);
+        [StructLayout(LayoutKind.Sequential)] internal struct PollFd { public int Fd; public short Events; public short Revents; }
+        [DllImport(Xcb)] internal static extern int xcb_get_file_descriptor(IntPtr connection);
+        [DllImport("libc.so.6")] internal static extern int poll(ref PollFd fds, ulong nfds, int timeout);
         [DllImport("libc.so.6")] internal static extern void free(IntPtr pointer);
     }
 }
@@ -286,6 +308,8 @@ internal sealed class X11KeyRepeatFilter
     {
         if (_releasePending && now - _releaseObservedAt >= 60) Reset();
     }
+
+    public bool HasPending => _releasePending;
 
     public void Reset() { _down = false; _releasePending = false; }
 }

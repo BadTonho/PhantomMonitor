@@ -30,3 +30,22 @@ The Windows palette uses `#0F1117` for the main background, `#141720` for the si
 **Theme tokens:** in the unified app, colors and accents live in theme dictionaries (`src/PhantomMonitor.App/Themes/Tokens.*.axaml`, 49 keys mirrored between the two themes) consumed via `{DynamicResource}` (the dynamic ranges use brushes resolved by key in the ViewModel — same catalog). F1.6 completes the two built-in themes: `Neptune` derives from the original Avalonia palette and `Slate` from the retired WPF palette (`Styles.xaml`, banners/pills from the WPF `MainWindow.xaml`, OSD panel `#CC070A0F`/`#25FFFFFF` — files removed with the WPF in Phase 2, provenance documented per line in the dictionary). The choice lives in `config.json` — `"theme": "neptune" | "slate"` (files from the F1.6 era holding `uiTheme` migrate on load), applied at boot and switchable **at runtime** through Settings → INTERFACE (Phase 3: dictionary swap without restart; the CLI `--theme=<name>` overrides the file for comparison/smoke, with legacy `--ui-theme=` still accepted) — see the [visual unification roadmap](../visual-unification-roadmap.md). Also in F1.6: sidebar nav with a selected state (background + 3×14 indicator) via `Nav*` tokens, alert toasts with `AlertToast*` tokens (amber border/header on Slate, like the WPF popup) and a win-x64 publish of the unified binary.
 
 The INTERFACE card also opens a palette editor with five family base colors and an advanced view for all 49 theme colors. Neptune and Slate keep separate palettes. Individual overrides take precedence over family colors and survive family edits; resetting an individual token returns it to its calculated family color. **Done** keeps a draft, and **Save and apply** persists and applies it only after the config save succeeds. The primary accent also controls action buttons and the selected navigation indicator, independent of the Windows accent.
+
+
+## Compiled bindings and the `x:DataType` convention
+
+All App `.axaml` views use compiled bindings (`<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>` in `PhantomMonitor.App.csproj`). A missing property is a build error (`AVLN2000`) instead of a silent runtime failure.
+
+Convention:
+- Every view/window declares `x:DataType` on its root, pointing to the ViewModel of its `DataContext` (`MainWindowViewModel` for pages and main windows; `OverlayBlockContentDialogViewModel`, `OverlayHiddenMetricsDialogViewModel`, `ThemePaletteEditorViewModel` and `OverlayCanvasBlockViewModel` for their dialogs/views). Namespace prefixes: `vmroot:` (`using:PhantomMonitor.App.ViewModels`), `models:` and `svc:` for Core types.
+- Every `DataTemplate`/`TreeDataTemplate`/`ControlTheme` with bindings declares the item `x:DataType` (or its own `DataType`). `string` collections use `x:DataType="x:String"`.
+- Ancestor DataContext access uses a typed cast: `{Binding $parent[UserControl].((vmroot:MainWindowViewModel)DataContext).Property}`.
+- `RelativeSource AncestorType=Button` remains supported in compiled mode.
+- Bindings kept as `{ReflectionBinding}`: see list below (none if empty).
+
+
+## ViewModel modularization and delayed actions
+
+- `MainWindowViewModel` is organized into focused partial files (`DashboardState`, `OverlayState`, `SettingsDraft`, `RunState`, `Loggers`, `PageSwitching`, `Snapshot`, `SnapshotFormatting`, `Alerts`, `Inventory`, `PendingSettings`, `Overlay*`, `TelemetryExport`, `Updates`, etc.).
+- `OverlayBlockContentDialogViewModel` is split into cohesive partial files (`.cs`, `.Ordering.cs`, `.GraphsAndTemplates.cs`, `.SeriesCatalog.cs`, `.Metrics.cs`, and `.CustomLines.cs`).
+- `DelayedActionScheduler` (`Services/DelayedActionScheduler.cs`) centralizes single-shot delayed UI actions (alert toasts, inventory status clearing, and settings save confirmation banners), replacing multiple ad-hoc `DispatcherTimer` instances.

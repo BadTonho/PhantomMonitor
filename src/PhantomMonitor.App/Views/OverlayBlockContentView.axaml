@@ -3,6 +3,8 @@
              xmlns:charts="using:PhantomMonitor.App.Controls"
              xmlns:vm="using:PhantomMonitor.App.ViewModels"
              x:Class="PhantomMonitor.App.Views.OverlayBlockContentView"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:DataType="vmroot:OverlayCanvasBlockViewModel"
              Width="{Binding PresentationWidth}">
   <Border Margin="{Binding PresentationOuterMargin}"
           CornerRadius="6"
@@ -18,19 +20,19 @@
       <ItemsControl ItemsSource="{Binding Content}">
         <ItemsControl.DataTemplates>
           <DataTemplate DataType="vm:OverlayBlockMetricViewModel">
-            <StackPanel Spacing="2" Margin="{Binding $parent[UserControl].DataContext.PresentationRowMargin}">
+            <StackPanel Spacing="2" Margin="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationRowMargin}">
               <TextBlock Text="{Binding Name}" IsVisible="{Binding ShowName}" Foreground="{Binding NameForeground}"
-                         FontFamily="{Binding $parent[UserControl].DataContext.PresentationNameFontFamily}"
-                         FontSize="{Binding $parent[UserControl].DataContext.PresentationNameFontSize}" TextTrimming="CharacterEllipsis" />
+                         FontFamily="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationNameFontFamily}"
+                         FontSize="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationNameFontSize}" TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{Binding Value}" Foreground="{Binding ValueForeground}"
-                         FontSize="{Binding $parent[UserControl].DataContext.PresentationValueFontSize}"
-                         FontFamily="{Binding $parent[UserControl].DataContext.PresentationValueFontFamily}" TextWrapping="WrapWithOverflow" />
+                         FontSize="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationValueFontSize}"
+                         FontFamily="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationValueFontFamily}" TextWrapping="WrapWithOverflow" />
               <charts:HistoryChart IsVisible="{Binding ShowFrametimeGraph}"
-                                   Values="{Binding $parent[UserControl].DataContext.Owner.FrametimeSamples}"
-                                   Stroke="{Binding $parent[UserControl].DataContext.PresentationAccentBrush}"
+                                   Values="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).Owner.FrametimeSamples}"
+                                   Stroke="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationAccentBrush}"
                                    GuideBrush="{DynamicResource OverlayGuideBrush}"
                                    MinY="0" MaxFloor="33.3" GuideAt="16.66"
-                                   Height="{Binding $parent[UserControl].DataContext.PresentationFrametimeGraphHeight}" />
+                                   Height="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationFrametimeGraphHeight}" />
             </StackPanel>
           </DataTemplate>
           <DataTemplate DataType="vm:OverlayGraphRowViewModel">
@@ -46,16 +48,16 @@
           </DataTemplate>
           <DataTemplate DataType="vm:OverlayTemplateRowViewModel">
             <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" IsVisible="{Binding IsVisible}"
-                       FontSize="{Binding $parent[UserControl].DataContext.PresentationValueFontSize}"
-                       FontFamily="{Binding $parent[UserControl].DataContext.PresentationValueFontFamily}" TextTrimming="CharacterEllipsis"
-                       Margin="{Binding $parent[UserControl].DataContext.PresentationRowMargin}" />
+                       FontSize="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationValueFontSize}"
+                       FontFamily="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationValueFontFamily}" TextTrimming="CharacterEllipsis"
+                       Margin="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationRowMargin}" />
           </DataTemplate>
           <DataTemplate DataType="vm:OverlayCustomLineViewModel">
             <TextBlock Text="{Binding Text}" IsVisible="{Binding IsVisible}" FontSize="{Binding FontSize}"
                        Width="{Binding Width}" HorizontalAlignment="Left" TextWrapping="Wrap"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontFamily="{Binding $parent[UserControl].DataContext.PresentationValueFontFamily}"
-                       Margin="{Binding $parent[UserControl].DataContext.PresentationRowMargin}" />
+                       FontFamily="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationValueFontFamily}"
+                       Margin="{Binding $parent[UserControl].((vm:OverlayCanvasBlockViewModel)DataContext).PresentationRowMargin}" />
           </DataTemplate>
         </ItemsControl.DataTemplates>
       </ItemsControl>

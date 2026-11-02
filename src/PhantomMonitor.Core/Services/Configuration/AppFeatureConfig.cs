@@ -21,6 +21,17 @@ public sealed class TelemetryExportConfig
 
     /// <summary>false = escuta só em 127.0.0.1; true = todas as interfaces (LAN, opt-in).</summary>
     public bool ListenAll { get; set; }
+
+    /// <summary>
+    /// Token de acesso exigido quando <c>listenAll</c> está ativo (cabeçalho <c>Authorization: Bearer</c> ou <c>?token=</c>).
+    /// Gerado aleatoriamente na primeira ativação da LAN e persistido; pode ser trocado manualmente no config.json.
+    /// Loopback (127.0.0.1) nunca exige token.
+    /// </summary>
+    public string AccessToken { get; set; } = "";
+
+    /// <summary>Gera um token aleatório URL-safe de 256 bits.</summary>
+    public static string GenerateAccessToken() =>
+        Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
 
 /// <summary>

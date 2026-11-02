@@ -19,7 +19,7 @@ Phantom Monitor uses JSON configuration. The location of `config.json` depends o
 | `overlayOpacity`, `overlayPosition`, `overlay` | Global opacity, initial position, and overlay settings. |
 | `sensors` | Sensor categories enabled by the model; reserved switches the interface does not fully consume. |
 | `alerts` | Alert rules and actions. The unified app edits rules, cooldowns, internal notifications, and scripts; on Linux the notification carries the sound and shutdown is not executed, while on Windows (since F1.5) the app runs all actions at the former WPF parity. See [alerts](alerts.md). |
-| `telemetryExport` | Optional HTTP exporter: `{ "enabled": false, "port": 7317, "listenAll": false }`; provides `/values` and `/health`. See the [Telemetry SDK](../telemetry-sdk.md). |
+| `telemetryExport` | Optional HTTP exporter: `{ "enabled": false, "port": 7317, "listenAll": false, "accessToken": "" }`; provides `/values` and `/health`. See the [Telemetry SDK](../telemetry-sdk.md). |
 | `update` | Update checks via GitHub Releases: `{ "autoCheck": true, "checkBeta": false, "repository": "" }` — automatic check at startup and every 24 h (toggle in Settings) plus a manual button; `checkBeta` accepts prereleases ("beta channel"); an empty `repository` falls back to the official one (`BadTonho/PhantomMonitor`; a GitHub URL is also accepted). Shared implementation in `PhantomMonitor.Services.Update` (Core). |
 | `beta` | Sidebar visibility preferences: `{ "showCustomSensorsInSidebar": false, "showSensorTuningInSidebar": false, "showAlertsInSidebar": false }`. Each toggle saves immediately. All three entries are hidden by default, including in older configs without `beta`. This is separate from `update.checkBeta`, which controls prerelease updates. |
 | `profiles` | Windows OSD per-application overrides: name, process match, position, width, font, opacity, accent, series, and visibility. See [overlay](overlay.md). |
@@ -66,7 +66,7 @@ The **Custom sensors** and **Per-series tuning** pages edit `customSensors` and 
 
 The **BETA** card in Settings controls whether **Custom sensors**, **Per-series tuning**, and **Alerts** appear in navigation, in either the sidebar or bottom bar. Each toggle applies and saves immediately; if saving fails, its previous value is restored. All three entries are hidden by default, including for older configs without `beta`.
 
-The log directory is displayed read-only in Settings. The telemetry listener stays active while collection is paused and serves the frozen latest snapshot; it closes when collection stops. Binding to all interfaces (`listenAll`) has neither TLS nor authentication. If a configuration save fails, the running options remain in effect.
+The log directory is displayed read-only in Settings. The telemetry listener stays active while collection is paused and serves the frozen latest snapshot; it closes when collection stops. Binding to all interfaces (`listenAll`) has no TLS and requires `telemetryExport.accessToken` (auto-generated on first activation; Bearer header or `?token=`). If a configuration save fails, the running options remain in effect.
 
 Internally, `AppConfig` remains the read/write boundary. Normalization and overlay migration live in dedicated partials; configuration models are grouped into overlay, sensor, and other option files without changing JSON names or existing defaults.
 

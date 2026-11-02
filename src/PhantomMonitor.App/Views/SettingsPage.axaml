@@ -1,6 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-            x:Class="PhantomMonitor.App.Views.SettingsPage">
+            x:Class="PhantomMonitor.App.Views.SettingsPage"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             xmlns:svc="using:PhantomMonitor.Services"
+             x:DataType="vmroot:MainWindowViewModel">
     <UserControl.Styles>
       <Style Selector="Button.settings-help-icon">
         <Setter Property="Width" Value="28" />
@@ -78,10 +81,10 @@
               </Grid>
               <ItemsControl ItemsSource="{Binding OverlayInGameTargets}">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="svc:OverlayLaunchTargetConfig">
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,2">
                       <TextBlock Text="{Binding ExecutablePath}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                      <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].DataContext.IsOverlayTargetLaunchVisible}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
+                      <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].((vmroot:MainWindowViewModel)DataContext).IsOverlayTargetLaunchVisible}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
                       <Button Grid.Column="2" Content="Remover" Click="OnRemoveOverlayTargetClick" />
                     </Grid>
                   </DataTemplate>

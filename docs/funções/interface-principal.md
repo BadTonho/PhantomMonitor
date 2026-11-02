@@ -64,3 +64,22 @@ O monitoramento inicia automaticamente ao abrir o aplicativo (com fallback segur
 ## Elevação de privilégio
 
 Se o aplicativo não estiver rodando como Administrador, exibe um banner com botão para reiniciar com privilégios elevados (necessário para a leitura irrestrita da CPU e rastreamento via PresentMon). O processo elevado aguarda a instância atual liberar o bloqueio de instância única antes de abrir a janela, evitando que o próprio reinício seja encerrado como duplicado.
+
+
+## Bindings compilados e convenção `x:DataType`
+
+Todas as views `.axaml` do App usam *compiled bindings* (`<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>` em `PhantomMonitor.App.csproj`). Propriedade inexistente vira erro de build (`AVLN2000`) em vez de falha silenciosa em tempo de execução.
+
+Convenção:
+- Toda view/janela declara `x:DataType` na raiz, apontando para o ViewModel do seu `DataContext` (`MainWindowViewModel` para páginas e janelas principais; `OverlayBlockContentDialogViewModel`, `OverlayHiddenMetricsDialogViewModel`, `ThemePaletteEditorViewModel` e `OverlayCanvasBlockViewModel` nos respectivos diálogos/views). Prefixos de namespace: `vmroot:` (`using:PhantomMonitor.App.ViewModels`), `models:` e `svc:` para tipos do Core.
+- Todo `DataTemplate`/`TreeDataTemplate`/`ControlTheme` com bindings declara `x:DataType` do item (ou usa `DataType` próprio). Coleções de `string` usam `x:DataType="x:String"`.
+- Acesso ao DataContext de um ancestral usa cast tipado: `{Binding $parent[UserControl].((vmroot:MainWindowViewModel)DataContext).Propriedade}`.
+- `RelativeSource AncestorType=Button` continua suportado em modo compilado.
+- Bindings mantidos com `{ReflectionBinding}`: ver lista abaixo (se vazia, nenhum).
+
+
+## Modularização dos ViewModels e ações atrasadas
+
+- `MainWindowViewModel` é organizado em classes parciais temáticas (`DashboardState`, `OverlayState`, `SettingsDraft`, `RunState`, `Loggers`, `PageSwitching`, `Snapshot`, `SnapshotFormatting`, `Alerts`, `Inventory`, `PendingSettings`, `Overlay*`, `TelemetryExport`, `Updates`, etc.).
+- `OverlayBlockContentDialogViewModel` é dividido em arquivos parciais coesos (`.cs`, `.Ordering.cs`, `.GraphsAndTemplates.cs`, `.SeriesCatalog.cs`, `.Metrics.cs` e `.CustomLines.cs`).
+- `DelayedActionScheduler` (`Services/DelayedActionScheduler.cs`) centraliza o agendamento de ações únicas atrasadas na UI thread (toast de alertas, limpeza de mensagem do inventário e confirmação de salvamento de configurações), substituindo múltiplos `DispatcherTimer` manuais.

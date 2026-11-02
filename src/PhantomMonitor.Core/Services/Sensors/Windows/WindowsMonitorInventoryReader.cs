@@ -28,7 +28,7 @@ internal sealed class WindowsMonitorInventoryReader
             // 1) Tamanho físico e flag de primário por InstanceName.
             var sizes = new Dictionary<string, (double In, bool Primary)>(StringComparer.OrdinalIgnoreCase);
             using (var sizeSearcher = new ManagementObjectSearcher(@"root\wmi",
-                       "SELECT * FROM WmiMonitorBasicDisplayParams"))
+                       "SELECT InstanceName, MaxHorizontalImageSize, MaxVerticalImageSize, VideoInputType FROM WmiMonitorBasicDisplayParams"))
             using (var items = sizeSearcher.Get())
             {
                 foreach (var obj in items)
@@ -51,7 +51,7 @@ internal sealed class WindowsMonitorInventoryReader
 
             // 2) Identidade EDID por InstanceName (somente monitores ativos).
             using (var idSearcher = new ManagementObjectSearcher(@"root\wmi",
-                       "SELECT * FROM WmiMonitorID"))
+                       "SELECT Active, InstanceName, ManufacturerName, ProductCodeID, SerialNumberID, UserFriendlyName, UserFriendlyNameLength, WeekOfManufacture, YearOfManufacture FROM WmiMonitorID"))
             using (var items = idSearcher.Get())
             {
                 foreach (var obj in items)

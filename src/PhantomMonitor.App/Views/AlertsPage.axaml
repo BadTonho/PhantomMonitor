@@ -1,6 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-            x:Class="PhantomMonitor.App.Views.AlertsPage">
+            x:Class="PhantomMonitor.App.Views.AlertsPage"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:DataType="vmroot:MainWindowViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsAlerts}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
@@ -37,7 +39,7 @@
 
         <ItemsControl ItemsSource="{Binding AlertRules}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate>
+            <DataTemplate x:DataType="vmroot:AlertRuleEditorViewModel">
               <Border Classes="desktop-card" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="11">
                   <Grid ColumnDefinitions="*,Auto,Auto">
@@ -94,7 +96,7 @@
             <TextBlock IsVisible="{Binding !HasAlertHistory}" Text="Nenhum alerta disparado nesta execução." Classes="muted" FontSize="11" />
             <ItemsControl ItemsSource="{Binding AlertHistory}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vmroot:AlertHistoryEntryViewModel">
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
                       <TextBlock Text="{Binding Time}" Classes="muted" FontSize="11" VerticalAlignment="Center" />

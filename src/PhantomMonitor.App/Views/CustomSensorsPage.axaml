@@ -1,6 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-            x:Class="PhantomMonitor.App.Views.CustomSensorsPage">
+            x:Class="PhantomMonitor.App.Views.CustomSensorsPage"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:DataType="vmroot:MainWindowViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsCustomSensors}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
@@ -34,7 +36,7 @@
 
         <ItemsControl ItemsSource="{Binding CustomSensorEditors}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate>
+            <DataTemplate x:DataType="vmroot:CustomSensorEditorViewModel">
               <Border Classes="desktop-card" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="10">
                   <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">

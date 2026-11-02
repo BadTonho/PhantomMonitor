@@ -172,11 +172,7 @@ public sealed partial class MainWindowViewModel
         if (!trigger.Rule.Popup) return;
         AlertToastMessage = trigger.Message;
         AlertToastVisible = true;
-        _alertToastTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-        _alertToastTimer.Stop();
-        _alertToastTimer.Tick -= OnAlertToastTimerTick;
-        _alertToastTimer.Tick += OnAlertToastTimerTick;
-        _alertToastTimer.Start();
+        _alertToastTimer.Schedule(HideAlertToast);
 
         if (!_windowActive || _windowMinimized)
             _ = SendDesktopNotificationAsync(trigger.Message);
@@ -201,10 +197,6 @@ public sealed partial class MainWindowViewModel
         }
     }
 
-    private void OnAlertToastTimerTick(object? sender, EventArgs e)
-    {
-        _alertToastTimer?.Stop();
-        AlertToastVisible = false;
-    }
+    private void HideAlertToast() => AlertToastVisible = false;
 
 }

@@ -1,4 +1,5 @@
 using Avalonia.Threading;
+using PhantomMonitor.Services;
 using PhantomMonitor.Services.Telemetry;
 
 namespace PhantomMonitor.App.ViewModels;
@@ -31,8 +32,14 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        if (options.ListenAll && string.IsNullOrWhiteSpace(options.AccessToken))
+        {
+            options.AccessToken = TelemetryExportConfig.GenerateAccessToken();
+            SaveConfiguration();
+        }
+
         DisposeTelemetryExporter();
-        var exporter = new TelemetryHttpExporter(options.Port, options.ListenAll);
+        var exporter = new TelemetryHttpExporter(options.Port, options.ListenAll, options.ListenAll ? options.AccessToken : null);
         _telemetryHttpExporter = exporter;
         _activeTelemetryPort = options.Port;
         _activeTelemetryListenAll = options.ListenAll;

@@ -11,7 +11,7 @@ public sealed partial class MainWindowViewModel
 {
     private enum SettingsSaveFeedbackState { Idle, Succeeded, Failed }
 
-    private DispatcherTimer? _settingsSaveConfirmationTimer;
+    private readonly DelayedActionScheduler _settingsSaveConfirmationTimer = new(TimeSpan.FromSeconds(2));
     private string _settingsSaveMessage = "";
     private bool _settingsSaveConfirmationVisible;
     private bool _settingsSaveConfirmedSinceLastEdit;
@@ -183,14 +183,11 @@ public sealed partial class MainWindowViewModel
     private void StartSettingsSaveConfirmationTimer()
     {
         StopSettingsSaveConfirmationTimer();
-        _settingsSaveConfirmationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        _settingsSaveConfirmationTimer.Tick += OnSettingsSaveConfirmationTimerTick;
-        _settingsSaveConfirmationTimer.Start();
+        _settingsSaveConfirmationTimer.Schedule(OnSettingsSaveConfirmationElapsed);
     }
 
-    private void OnSettingsSaveConfirmationTimerTick(object? sender, EventArgs e)
+    private void OnSettingsSaveConfirmationElapsed()
     {
-        StopSettingsSaveConfirmationTimer();
         SetSettingsSaveFeedbackState(SettingsSaveFeedbackState.Idle);
         if (_settingsSaveConfirmedSinceLastEdit)
         {
@@ -210,13 +207,12 @@ public sealed partial class MainWindowViewModel
 
     private void StopSettingsSaveConfirmationTimer()
     {
-        _settingsSaveConfirmationTimer?.Stop();
-        _settingsSaveConfirmationTimer = null;
+        _settingsSaveConfirmationTimer.Cancel();
     }
 
     private void DisposeSettingsSaveConfirmationTimer()
     {
-        StopSettingsSaveConfirmationTimer();
+        _settingsSaveConfirmationTimer.Dispose();
     }
 
     private void FinishSettingsDraftInitialization()

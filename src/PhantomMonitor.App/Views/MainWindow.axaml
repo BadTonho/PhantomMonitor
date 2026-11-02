@@ -3,6 +3,9 @@
         xmlns:charts="using:PhantomMonitor.App.Controls"
         xmlns:pages="using:PhantomMonitor.App.Views"
         x:Class="PhantomMonitor.App.Views.MainWindow"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             xmlns:models="using:PhantomMonitor.Models"
+             x:DataType="vmroot:MainWindowViewModel"
         Title="Phantom Monitor"
         Width="1120" Height="790" MinWidth="850" MinHeight="640"
         WindowStartupLocation="CenterScreen"
@@ -448,7 +451,7 @@
             </Grid>
             <ItemsControl ItemsSource="{Binding GpuProcessRows}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="models:GpuProcessInfo">
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,0,0,1" Padding="0,5">
                     <Grid ColumnDefinitions="*,80">
                       <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
@@ -506,14 +509,14 @@
             </Border>
             <ItemsControl ItemsSource="{Binding InventoryGroups}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vmroot:InventoryGroupViewModel">
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" HorizontalAlignment="Stretch">
                     <StackPanel>
                         <ToggleButton Classes="inventory-group" Content="{Binding Title}" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
                                       HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Title}" />
                         <ItemsControl ItemsSource="{Binding Rows}" IsVisible="{Binding IsExpanded}" HorizontalAlignment="Stretch">
                           <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate x:DataType="vmroot:InventoryRowViewModel">
                               <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="10,2" HorizontalAlignment="Stretch">
                                 <StackPanel Spacing="0" HorizontalAlignment="Stretch">
                                   <Grid ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch">
@@ -542,7 +545,7 @@
                                   </Grid>
                                   <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding ShowChildren}" HorizontalAlignment="Stretch">
                                     <ItemsControl.ItemTemplate>
-                                      <DataTemplate>
+                                      <DataTemplate x:DataType="vmroot:InventoryRowViewModel">
                                         <Grid ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch" Margin="0,1,0,0">
                                           <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding SensorName}" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="38,0,0,0" />
                                           <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
@@ -578,7 +581,7 @@
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Monitors}" MinWidth="620">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="models:MonitorInfo">
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <StackPanel Spacing="3">
                       <Grid ColumnDefinitions="*,Auto">
@@ -645,7 +648,7 @@
 
         <ItemsControl ItemsSource="{Binding SensorTuningEditors}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate>
+            <DataTemplate x:DataType="vmroot:SensorTuningEditorViewModel">
               <Border Classes="desktop-card" Padding="16" Margin="0,0,0,12">
                 <StackPanel Spacing="10">
                   <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">

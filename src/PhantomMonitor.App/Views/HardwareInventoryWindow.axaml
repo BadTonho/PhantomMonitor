@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PhantomMonitor.App.Views.HardwareInventoryWindow"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:DataType="vmroot:MainWindowViewModel"
         Title="Hardware detectado"
         Width="760" Height="680" MinWidth="420" MinHeight="320"
         WindowStartupLocation="CenterOwner"
@@ -29,7 +31,7 @@
             </Style>
           </TreeView.Styles>
           <TreeView.ItemTemplate>
-            <TreeDataTemplate ItemsSource="{Binding Children}">
+            <TreeDataTemplate x:DataType="vmroot:InventoryHardwareNodeViewModel" ItemsSource="{Binding Children}">
               <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBodyBrush}"
                          FontSize="11" />
             </TreeDataTemplate>

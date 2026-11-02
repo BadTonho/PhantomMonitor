@@ -52,12 +52,12 @@ In C, read the same sequence around the copied entries. On ARM64, load `seq` wit
 ## HTTP exporter (`telemetryExport`)
 
 ```json
-"telemetryExport": { "enabled": false, "port": 7317, "listenAll": false }
+"telemetryExport": { "enabled": false, "port": 7317, "listenAll": false, "accessToken": "" }
 ```
 
 - `GET /values` returns the same snapshot payload as `sensors_latest.json`: `timestamp`, `values`, `labels`, `series`, `seriesLabels`, `seriesStats`, and `monitors`.
 - `GET /health` returns a health-check response such as `{"ok":true,"timestamp":"..."}`. Other paths return 404.
-- Default address: `http://127.0.0.1:7317/`. `listenAll: true` binds all interfaces, which can require firewall changes. The service has no TLS or authentication; use only on a trusted network. The port is normalized to 1024–65535.
+- Default address: `http://127.0.0.1:7317/`. `listenAll: true` binds all interfaces, which can require firewall changes. With `listenAll`, an access token is required: `accessToken` is generated randomly on first activation and persisted in config.json (not shown in the UI yet); send `Authorization: Bearer <token>` or `?token=<token>` (otherwise 401). Loopback needs no token. There is no TLS; use only on a trusted network. The port is normalized to 1024–65535.
 - Responses use `Cache-Control: no-store`, JSON content type, and content length.
 - The listener exists only while monitoring is started. It continues serving the frozen last snapshot while paused. Bind failures are logged and do not stop collection.
 - On Linux, **Settings** edits `enabled`, `port`, and `listenAll`, and shows the endpoint and listener state. Changing the address or port during a pause reopens the listener and republishes the frozen snapshot.

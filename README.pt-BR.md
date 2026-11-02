@@ -120,7 +120,7 @@ Releases são geradas localmente por mantenedores (`scripts/release.ps1`, sem CI
 O tarball Linux usa `tools/ReleasePackager` para gravar permissões POSIX explícitas,
 inclusive quando a release é empacotada no Windows.
 
-Execute `dotnet run --project tests/PhantomMonitor.OverlayRegressionTests -c Release`; o runner é um console e precisa ser executado, mesmo estando na solução. `dotnet test` sozinho não o executa. Para C++, use `cmake -S src/PhantomVulkanLayer -B build/native -DBUILD_TESTING=ON`, `cmake --build build/native --config Release` e `ctest --test-dir build/native -C Release --output-on-failure`. No Linux, `sh tests/linux-regression.sh` verifica atualização, rollback e pacote `.deb`.
+Execute `dotnet test` (ou `dotnet test tests/PhantomMonitor.OverlayRegressionTests -c Release`) para rodar a suíte xUnit de regressão e testes unitários (`RegressionTests`, `AlertRuleEvaluatorTests`, `CustomSensorFormulaParserTests` e `AppConfigNormalizeTests`). Para C++, use `cmake -S src/PhantomVulkanLayer -B build/native -DBUILD_TESTING=ON`, `cmake --build build/native --config Release` e `ctest --test-dir build/native -C Release --output-on-failure`. No Linux, `sh tests/linux-regression.sh` verifica atualização, rollback e pacote `.deb`.
 
 A camada Vulkan resolve funções dinamicamente e exige apenas os headers do SDK, sem biblioteca de importação de 32 ou 64 bits. O preload OpenGL exige os pacotes de desenvolvimento EGL/GLX; `-DPHANTOM_BUILD_OPENGL=OFF` permite compilar Vulkan e seus testes independentemente. Reinstale a camada Linux para usar o ring v2 com 4.096 quadros. No Windows, o lançamento antecipado está disponível em Configurações para capturar a fila exata de jogos D3D12 com múltiplas filas.
 
@@ -130,7 +130,7 @@ Na primeira execução, o aplicativo cria `config.json` usando [`config.example.
 
 Durante o desenvolvimento, a configuração fica na raiz do repositório. No instalador Windows e no pacote `.deb`, o caminho usual é `%AppData%\PhantomMonitor\config.json` no Windows e `$XDG_CONFIG_HOME/PhantomMonitor/config.json` no Linux. Os logs continuam nos locais de dados do usuário.
 
-No Linux, os logs de telemetria e de erros ficam em `~/.local/share/PhantomMonitor/logs/` (ou em `$XDG_DATA_HOME` quando definido). Abra **Diagnóstico** no Avalonia para consultar erros recentes e as fontes de sensores detectadas. A página **Configurações** permite ajustar o intervalo, os formatos de log e opções do overlay. O exportador HTTP vem desativado e restrito a loopback; habilitar acesso a outras interfaces expõe os endpoints sem TLS ou autenticação.
+No Linux, os logs de telemetria e de erros ficam em `~/.local/share/PhantomMonitor/logs/` (ou em `$XDG_DATA_HOME` quando definido). Abra **Diagnóstico** no Avalonia para consultar erros recentes e as fontes de sensores detectadas. A página **Configurações** permite ajustar o intervalo, os formatos de log e opções do overlay. O exportador HTTP vem desativado e restrito a loopback; habilitar acesso a outras interfaces (`listenAll`) gera e exige um token de acesso (`Authorization: Bearer <token>` ou `?token=<token>`), embora o tráfego continue em HTTP sem TLS.
 
 ## Arquitetura
 

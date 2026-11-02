@@ -1,6 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-            x:Class="PhantomMonitor.App.Views.DiagnosticsPage">
+            x:Class="PhantomMonitor.App.Views.DiagnosticsPage"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             xmlns:models="using:PhantomMonitor.Models"
+             x:DataType="vmroot:MainWindowViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsDiagnostics}">
       <StackPanel Margin="28,23,28,28" Spacing="16">
         <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
@@ -33,7 +36,7 @@
               <TextBlock Text="As posições e dimensões abaixo comparam o pedido do app com o estado observado após a janela abrir. Em Wayland nativo, o compositor pode ignorar posições absolutas." Classes="muted" FontSize="11" TextWrapping="Wrap" />
               <ItemsControl ItemsSource="{Binding LinuxOverlayDiagnosticLines}">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="x:String">
                     <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,6">
                       <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="11" TextWrapping="Wrap" />
                     </Border>
@@ -74,7 +77,7 @@
             <TextBlock Text="Os estados descrevem o que o kernel e os drivers reportaram. Sensor não exposto não significa falha do app." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding DiagnosticSensorLines}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="x:String">
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,6">
                     <TextBlock Text="{Binding}" Foreground="{DynamicResource TextStatusBrush}" FontFamily="monospace" FontSize="11" TextWrapping="Wrap" />
                   </Border>
@@ -93,7 +96,7 @@
             <TextBlock Text="Indisponibilidades são estados atuais do driver e não são gravadas como erros do aplicativo." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding DiagnosticSensorWarnings}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vmroot:DiagnosticSensorWarningViewModel">
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <StackPanel Spacing="3">
                       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
@@ -120,7 +123,7 @@
             <TextBlock IsVisible="{Binding !HasDiagnosticEntries}" Text="Nenhuma falha registrada. A lista é atualizada automaticamente quando o app registra uma nova ocorrência." Classes="muted" FontSize="11" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding DiagnosticEntries}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="models:ErrorLogEntry">
                   <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
                     <StackPanel Spacing="3">
                       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">

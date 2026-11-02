@@ -96,7 +96,7 @@ explicito necessário em x86/x64 para este uso; em ARM64, leia `seq` com
 Complemento de rede para o mapa de memória — mesma cadência, payload maior:
 
 ```json
-"telemetryExport": { "enabled": false, "port": 7317, "listenAll": false }
+"telemetryExport": { "enabled": false, "port": 7317, "listenAll": false, "accessToken": "" }
 ```
 
 - **Endpoints:** `GET /values` (snapshot JSON, **mesmo payload do
@@ -104,7 +104,7 @@ Complemento de rede para o mapa de memória — mesma cadência, payload maior:
   `seriesLabels`, `seriesStats`, `monitors`) e `GET /health`
   (`{"ok":true,"timestamp":"..."}` para health checks). Outros caminhos → 404 em texto.
 - **Escuta padrão:** `http://127.0.0.1:7317/` — loopback não requer permissão de
-  URL do http.sys nem firewall. `listenAll: true` vira `http://+:porta/`
+  URL do http.sys nem firewall. `listenAll: true` vira `http://+:porta/` e **exige token de acesso** (`accessToken`, gerado aleatoriamente na primeira ativação e salvo no config.json; envie `Authorization: Bearer <token>` ou `?token=<token>`; sem token válido a resposta é 401). Loopback não exige token. O token ainda não aparece na UI: leia-o no config.json
   (todas as interfaces, para consumo em 2ª máquina) e pode exigir uma regra de
   firewall no Linux ou uma URL ACL/firewall no Windows; sem TLS e sem
   autenticação, então só use em rede confiável. `port` é travada em 1024–65535

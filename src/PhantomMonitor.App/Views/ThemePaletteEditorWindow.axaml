@@ -2,6 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:color="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.ColorPicker"
         x:Class="PhantomMonitor.App.Views.ThemePaletteEditorWindow"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:DataType="vmroot:ThemePaletteEditorViewModel"
         Title="Personalizar paleta"
         Width="940" Height="720" MinWidth="760" MinHeight="600"
         WindowStartupLocation="CenterOwner"
@@ -25,7 +27,7 @@
                    Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
                    BorderThickness="1">
             <ListBox.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vmroot:ThemePaletteGroupItem">
                 <StackPanel Spacing="2" Margin="4">
                   <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBodyBrush}"
                              FontWeight="SemiBold" />
@@ -60,7 +62,7 @@
                    Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
                    BorderThickness="1">
             <ListBox.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vmroot:ThemePaletteTokenItem">
                 <StackPanel Spacing="2" Margin="4">
                   <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextBodyBrush}"
                              FontWeight="SemiBold" />

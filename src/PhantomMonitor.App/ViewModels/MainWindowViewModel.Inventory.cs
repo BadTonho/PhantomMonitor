@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using PhantomMonitor.App.ViewModels;
+using PhantomMonitor.App.Services;
 using PhantomMonitor.Models;
 using PhantomMonitor.Services;
 
@@ -39,7 +40,7 @@ public sealed partial class MainWindowViewModel
     public bool HasInventoryActionStatus { get => _hasInventoryActionStatus; private set => Set(ref _hasInventoryActionStatus, value); }
     private bool _hasInventoryActionStatus;
 
-    private DispatcherTimer? _inventoryStatusClearTimer;
+    private readonly DelayedActionScheduler _inventoryStatusClearTimer = new(TimeSpan.FromSeconds(4));
 
     /// <summary>Chamado por UpdateSnapshot: árvore + monitores com guardas por assinatura.</summary>
     private void UpdateInventorySession(SensorData data)
@@ -196,16 +197,11 @@ public sealed partial class MainWindowViewModel
 
     private void ScheduleInventoryStatusClear()
     {
-        _inventoryStatusClearTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
-        _inventoryStatusClearTimer.Tick -= OnInventoryStatusClearTick;
-        _inventoryStatusClearTimer.Tick += OnInventoryStatusClearTick;
-        _inventoryStatusClearTimer.Stop();
-        _inventoryStatusClearTimer.Start();
+        _inventoryStatusClearTimer.Schedule(ClearInventoryActionStatus);
     }
 
-    private void OnInventoryStatusClearTick(object? sender, EventArgs e)
+    private void ClearInventoryActionStatus()
     {
-        _inventoryStatusClearTimer?.Stop();
         InventoryActionStatusText = "";
         HasInventoryActionStatus = false;
     }

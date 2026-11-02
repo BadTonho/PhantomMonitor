@@ -6,7 +6,7 @@ Serviço de leitura de sensores de hardware para ambiente Windows, implementando
 
 ## Funcionalidades
 
-No Core, o serviço fica em `Services/Sensors/Windows/` e coordena leitores internos dedicados a fallbacks WMI, identidade de monitores e processos que usam a GPU.
+No Core, o serviço fica em `Services/Sensors/Windows/` (dividido entre `HardwareMonitorService.cs` para ciclo de vida/orquestração do snapshot e `HardwareMonitorService.SensorMapping.cs` para o mapeamento por hardware/família) e coordena leitores internos dedicados a fallbacks nativos/WMI, identidade de monitores e processos que usam a GPU.
 
 - Leitura de temperatura, uso, clock, voltagem e potência da CPU
 - Leitura de temperatura, uso, clock e potência da GPU
@@ -17,7 +17,7 @@ No Core, o serviço fica em `Services/Sensors/Windows/` e coordena leitores inte
 - Leitura de velocidade de ventoinhas e temperatura da placa-mãe (inclui sensores de sub-hardware/SuperIO)
 - **Fallback de clock da CPU:** quando o LibreHardwareMonitor não publica frequência positiva, `CallNtPowerInformation(ProcessorInformation)` fornece `CurrentMhz` por processador lógico; a média é publicada na série existente `CpuClock` e identificada como aproximada. Esse valor reflete a frequência máxima ajustada pelo throttling atual, não é clock por núcleo e não preenche `CpuClock#i`. A leitura do LHM tem prioridade; nenhuma fonte de frequência válida deixa o clock indisponível. O acesso completo aos sensores pode exigir iniciar manualmente como Administrador; o app não solicita elevação automaticamente.
 - **Fallback de temperatura da CPU via zona térmica ACPI (WMI `root\WMI`) e, em cascata, o contador térmico do sistema (`Win32_PerfFormattedData_Counters_ThermalZoneInformation`), **somente se o LibreHardwareMonitor não fornecer** a temperatura; consultado no máximo a cada 10 s e rotulado como aproximação
-- Fallback de RAM via WMI (`Win32_OperatingSystem`) e `PerformanceCounter` reutilizado entre ciclos
+- Fallback de RAM via `GlobalMemoryStatusEx` (chamada nativa `kernel32.dll`, com fallback para WMI `Win32_OperatingSystem` se falhar) e `PerformanceCounter` reutilizado entre ciclos
 - Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
 - **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo). Classes ausentes são marcadas como indisponíveis durante a execução, sem erros repetidos; os outros provedores de bateria continuam como fallback.
 - **Monitores (P8.4):** identidade dos painéis conectados via EDID/WMI (`WmiMonitorID` + `WmiMonitorBasicDisplayParams`, somente monitores ativos) — fabricante, modelo, serial, diagonal física, ano/semana de fabricação e flag de primário; cache de 60 s, lista ordenada pelo caminho de instância WMI. Campos opcionais são tolerados; se a consulta WMI falhar, o app continua com a lista vazia e registra uma única ocorrência diagnóstica por execução. Sem monitores reportados também resulta em lista vazia, sem erro. Modelo `MonitorInfo` em [modelos-dados.md](modelos-dados.md)
@@ -82,7 +82,7 @@ gera nenhuma linha — nem no CSV, nem no JSON, nem no OSD:
 | `BatteryAcPower` | 1/0 | Fonte AC conectada (`PowerOnline`) |
 
 - Leitura WMI a cada **10 s** (carga/tensão mudam devagar; a consulta atravessa COM).
-- `SELECT *` com acesso tolerante às propriedades: drivers de bateria variam o que
+- Projeção explícita de colunas com acesso tolerante às propriedades: drivers de bateria variam o que
   expõem (propriedade ausente devolve fallback em vez de derrubar o ciclo).
 - Classes opcionais inexistentes (`InvalidClass`) são lembradas pelo restante da
   execução e deixam de ser consultadas; `Win32_Battery` e as demais classes

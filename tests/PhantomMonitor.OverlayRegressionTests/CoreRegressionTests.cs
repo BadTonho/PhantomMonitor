@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
@@ -11,30 +11,10 @@ internal sealed class TestSkippedException(string message) : Exception(message);
 
 internal static class CoreRegressionTests
 {
-    internal static IEnumerable<(string, Action)> Cases =>
-    [
-        ("alertas com a mesma condição preservam ações e cooldown independentes", Alerts),
-        ("série que reaparece descarta cadência e suavização antigas", Tuning),
-        ("configuração filtra gráficos/templates nulos antes de normalizar", Config),
-        ("configuração portátil usa diretório próprio e preserva instalações", ConfigLocations),
-        ("CSV abre segmento com novas séries e preserva registros anteriores", Csv),
-        ("fila de escrita permanece limitada quando o consumidor bloqueia", WriterQueue),
-        ("rede Linux conta bytes sem multiplicar intervalos ociosos", Network),
-        ("discos Linux são selecionados por sysfs, incluindo virtio e eMMC", Disks),
-        ("autostart resolve AppImage persistente e configuração XDG", Startup),
-        ("ring Vulkan preserva frames e rejeita leitura parcial", VulkanRing),
-        ("FPS Linux troca processo ocioso e reinicia contadores por sessão", FpsSessions),
-        ("extração ZIP preserva subpastas e rejeita traversal", Zip),
-        ("extração tar Linux suporta espaços e apóstrofos sem shell", Tar),
-        ("download rejeita SHA-256 ausente, inválido ou divergente", Digest),
-        ("atalho Windows registra na thread proprietária", Hotkeys),
-        ("updater Windows instala subpastas e restaura todos os arquivos após falha", UpdateTransaction)
-    ];
-
-    private static void Check(bool condition, string message)
+    internal static void Check(bool condition, string message)
     { if (!condition) throw new InvalidOperationException(message); }
 
-    private static void ConfigLocations()
+    internal static void ConfigLocations()
     {
         using var directory = new TestDirectory();
         var root = directory.Path;
@@ -85,7 +65,7 @@ internal static class CoreRegressionTests
         Check(Resolve(output, windows: false, legacy: output).ConfigFile == userConfig, "Pacote Linux instalado deve usar config por usuário.");
     }
 
-    private static void Alerts()
+    internal static void Alerts()
     {
         var config = new AlertsConfig { Rules = [new() { Threshold = 80, Popup = true }, new() { Threshold = 80, Script = "script" }] };
         var evaluator = new AlertRuleEvaluator(config);
@@ -94,7 +74,7 @@ internal static class CoreRegressionTests
         Check(evaluator.Evaluate(data).Count == 0, "Cooldown não foi preservado.");
     }
 
-    private static void Tuning()
+    internal static void Tuning()
     {
         var now = DateTime.UtcNow;
         var tuning = new SensorTuningEngine([new() { Series = "CpuTemperature", IntervalMs = 10000, Smoothing = 3 }], () => now);
@@ -104,7 +84,7 @@ internal static class CoreRegressionTests
         Check(data.GetValue(SensorType.CpuTemperature) == 90, "Série nova recebeu estado anterior.");
     }
 
-    private static void Config()
+    internal static void Config()
     {
         var config = new AppConfig { Theme = "slate", UpdateIntervalMs = 500 };
         config.Overlay.Graphs.Add(null!); config.Overlay.Templates.Add(null!);
@@ -134,7 +114,7 @@ internal static class CoreRegressionTests
         Check(invalidDisplay.NavigationDisplayMode == "iconsAndText", "Exibição inválida deve voltar a ícones e textos.");
     }
 
-    private static void Csv()
+    internal static void Csv()
     {
         using var directory = new TestDirectory();
         var path = Path.Combine(directory.Path, "capture.csv");
@@ -149,7 +129,7 @@ internal static class CoreRegressionTests
         Check(part[0].Contains("Fps") && part.Length == 3 && part[^1].EndsWith(','), "Esquema/célula ausente incorretos.");
     }
 
-    private static void Network()
+    internal static void Network()
     {
         using var directory = new TestDirectory();
         Directory.CreateDirectory(Path.Combine(directory.Path, "net"));
@@ -163,7 +143,7 @@ internal static class CoreRegressionTests
         Check(data.GetValue(SensorType.NetworkDownTotal) == 200 && data.GetValue(SensorType.NetworkDown) == 100, "Bytes inflados após inatividade.");
     }
 
-    private static void WriterQueue()
+    internal static void WriterQueue()
     {
         using var gate = new ManualResetEventSlim(false);
         using var writer = new BackgroundSnapshotWriter();
@@ -176,7 +156,7 @@ internal static class CoreRegressionTests
         finally { gate.Set(); }
     }
 
-    private static void Disks()
+    internal static void Disks()
     {
         using var directory = new TestDirectory();
         var reader = new LinuxDiskNetworkReader(directory.Path, directory.Path);
@@ -185,7 +165,7 @@ internal static class CoreRegressionTests
         Check(!reader.IsPhysicalDisk("vda1") && !reader.IsPhysicalDisk("loop0") && !reader.IsPhysicalDisk("dm-0"), "Partição/agregador duplicado.");
     }
 
-    private static void Startup()
+    internal static void Startup()
     {
         using var directory = new TestDirectory();
         var image = Path.Combine(directory.Path, "Monitor's $100%.AppImage"); File.WriteAllText(image, "test");
@@ -198,7 +178,7 @@ internal static class CoreRegressionTests
         => new(pid, $"game{pid}", session, (ulong)frametimes.Length, time,
             frametimes.Select((ft, index) => new VulkanFrame((ulong)index + 1, time, ft, 1000 / ft)).ToArray(), false);
 
-    private static void VulkanRing()
+    internal static void VulkanRing()
     {
         var bytes = new byte[LinuxVulkanTelemetryReader.Size];
         BinaryPrimitives.WriteUInt32LittleEndian(bytes, 0x50484E54); BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(4), 2);
@@ -216,7 +196,7 @@ internal static class CoreRegressionTests
         Check(LinuxVulkanTelemetryReader.Parse(bytes, 8) is null && LinuxVulkanTelemetryReader.Parse(bytes.AsSpan(0, 100), 6) is null, "Leitura parcial aceita.");
     }
 
-    private static void FpsSessions()
+    internal static void FpsSessions()
     {
         using var monitor = new LinuxFpsMonitor();
         monitor.Consume([Snapshot(1, 1, 1_000_000_000, 10, 100, 10)], 1_000_000_000);
@@ -229,7 +209,7 @@ internal static class CoreRegressionTests
         Check(!monitor.HasData && monitor.FpsAvg == 0, "Métricas expiradas permaneceram disponíveis.");
     }
 
-    private static void Zip()
+    internal static void Zip()
     {
         using var directory = new TestDirectory();
         var path = Path.Combine(directory.Path, "update.zip");
@@ -246,7 +226,7 @@ internal static class CoreRegressionTests
         Check(applier.PayloadPath(directory.Path, "1.2.3").StartsWith(Path.Combine(directory.Path, "1.2.3")), "Payload fora da versão.");
     }
 
-    private static void Hotkeys()
+    internal static void Hotkeys()
     {
         if (!OperatingSystem.IsWindows()) throw new TestSkippedException("Requer Windows.");
         using var hotkeys = new GlobalHotkeyService();
@@ -255,7 +235,7 @@ internal static class CoreRegressionTests
         Check(hotkeys.Register(901, "Ctrl+Alt+Shift+F24", () => {}), "Remoção/re-registro falhou.");
     }
 
-    private static void Digest()
+    internal static void Digest()
     {
         var hash = System.Security.Cryptography.SHA256.HashData("payload"u8);
         GitHubReleaseSource.ValidateDigest("sha256:" + Convert.ToHexString(hash), hash);
@@ -267,7 +247,7 @@ internal static class CoreRegressionTests
         }
     }
 
-    private static void Tar()
+    internal static void Tar()
     {
         using var directory = new TestDirectory();
         var source = Path.Combine(directory.Path, "source's data");
@@ -282,7 +262,7 @@ internal static class CoreRegressionTests
         Check(File.ReadAllText(Path.Combine(target, "native", "layer.so")) == "native", "Tar falhou com caminhos especiais.");
     }
 
-    private static void UpdateTransaction()
+    internal static void UpdateTransaction()
     {
         if (!OperatingSystem.IsWindows()) throw new TestSkippedException("Script Windows; Linux possui validação separada.");
         using var directory = new TestDirectory();

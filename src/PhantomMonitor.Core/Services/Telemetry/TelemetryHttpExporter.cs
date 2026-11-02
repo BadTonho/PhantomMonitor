@@ -13,7 +13,7 @@ namespace PhantomMonitor.Services.Telemetry;
 ///
 /// - Por padrão escuta em <c>http://127.0.0.1:&lt;porta&gt;/</c>. Acesso LAN
 ///   opt-in via <c>listenAll</c> (<c>http://+:porta/</c>), que pode requerer
-///   liberação de firewall — documentado em docs/telemetry-sdk.md.
+///   liberação de firewall — documentado em docs/telemetry-sdk.md. Com\r\n///   <c>listenAll</c> exige token (Bearer ou ?token=); loopback não exige.
 /// - Somente leitura e somente o último ciclo: nem consome sensores nem toca em
 ///   processos de jogos (política anti-cheat do projeto, em qualquer camada).
 /// - Concorrência: <see cref="Publish"/> só troca a referência do último
@@ -32,6 +32,8 @@ public sealed class TelemetryHttpExporter : IDisposable
 
     private readonly int _port;
     private readonly bool _listenAll;
+    private readonly string? _accessToken;
+    private readonly bool _requireToken;
     private readonly HttpListener _listener = new();
     private readonly SemaphoreSlim _handlers = new(16, 16);
     private CancellationTokenSource? _cts;
@@ -46,10 +48,12 @@ public sealed class TelemetryHttpExporter : IDisposable
     public bool IsListening => _isListening;
     public string? LastError { get; private set; }
 
-    public TelemetryHttpExporter(int port, bool listenAll = false)
+    public TelemetryHttpExporter(int port, bool listenAll = false, string? accessToken = null)
     {
         _port = port;
+        _accessToken = listenAll && !string.IsNullOrEmpty(accessToken) ? accessToken : null;
         _listenAll = listenAll;
+        _requireToken = listenAll; // LAN sem token configurado nega tudo (fail closed)
         _listener.Prefixes.Add(_listenAll ? $"http://+:{port}/" : $"http://127.0.0.1:{port}/");
     }
 
@@ -137,6 +141,14 @@ public sealed class TelemetryHttpExporter : IDisposable
     {
         try
         {
+            if (_requireToken && !IsAuthorized(context.Request))
+            {
+                context.Response.Headers[HttpResponseHeader.WwwAuthenticate] = "Bearer";
+                await WriteTextAsync(context, 401, "text/plain; charset=utf-8", "Token de acesso obrigatório (Authorization: Bearer <token> ou ?token=).\n").ConfigureAwait(false);
+                context.Response.Close();
+                return;
+            }
+
             var path = context.Request.Url?.AbsolutePath.TrimEnd('/');
             var body = path switch
             {
@@ -162,6 +174,18 @@ public sealed class TelemetryHttpExporter : IDisposable
             ErrorLog.Write("HttpExporter.Handle", ex);
             try { context.Response.Abort(); } catch { /* socket pode ter sumido */ }
         }
+    }
+
+    private bool IsAuthorized(HttpListenerRequest request)
+    {
+        if (_accessToken is null) return false;
+        var supplied = request.QueryString["token"];
+        var header = request.Headers["Authorization"];
+        if (header is not null && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            supplied = header[7..].Trim();
+        if (string.IsNullOrEmpty(supplied)) return false;
+        return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(supplied), Encoding.UTF8.GetBytes(_accessToken));
     }
 
     private static async Task WriteTextAsync(HttpListenerContext context, int status, string contentType, string text)

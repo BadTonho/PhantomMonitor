@@ -69,6 +69,11 @@ public sealed partial class MainWindowViewModel
             var result = await ApplyOverlayHotkeyAsync(_config.ToggleOverlayHotkey);
             if (!_disposed) OverlayHotkeyStatus = result.Success ? $"Atalho ativo: {result.Display}." : result.Message;
         }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("OverlayHotkey.Initialize", ex);
+            if (!_disposed) OverlayHotkeyStatus = $"Falha ao registrar o atalho: {ex.Message}";
+        }
         finally { IsSavingSettings = false; }
     }
 

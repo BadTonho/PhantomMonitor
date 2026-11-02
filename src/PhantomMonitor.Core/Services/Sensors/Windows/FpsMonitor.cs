@@ -442,7 +442,7 @@ public sealed class FpsMonitor : IFpsMonitor
                     _presentMonProcess.WaitForExit(1000);
                 }
             }
-            catch { }
+            catch (Exception ex) { ErrorLog.Write("FpsMonitor.StopPresentMon", ex); }
             finally
             {
                 _presentMonProcess.Dispose();

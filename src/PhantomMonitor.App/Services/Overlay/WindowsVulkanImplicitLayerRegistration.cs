@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using PhantomMonitor.Services;
 using System.Runtime.Versioning;
 
 namespace PhantomMonitor.App.Services.Overlay;
@@ -59,7 +60,7 @@ internal sealed class WindowsVulkanImplicitLayerRegistration
             foreach (var entry in completed)
             {
                 try { _registry.Remove(entry); }
-                catch { }
+                catch (Exception rollbackEx) { ErrorLog.Write("VulkanLayerRegistration.Rollback", rollbackEx); }
             }
             return $"Falha ao registrar a camada Vulkan no perfil do usuário: {ex.Message}";
         }

@@ -34,14 +34,28 @@ public sealed class WindowsAlertActions : IAlertActions
 
         var args = (rule.ScriptArguments ?? "")
             .Replace("{value}", trigger.Value.ToString("F1", CultureInfo.InvariantCulture))
-            .Replace("{sensor}", trigger.SensorName);
+            .Replace("{sensor}", SanitizeArgument(trigger.SensorName));
 
-        Process.Start(new ProcessStartInfo
+        try
         {
-            FileName = rule.Script,
-            Arguments = args,
-            UseShellExecute = true
-        })?.Dispose();
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = Path.GetFullPath(rule.Script),
+                Arguments = args,
+                UseShellExecute = true
+            })?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("AlertActions", $"Falha ao executar o script do alerta: {ex.Message}");
+        }
+    }
+
+    /// <summary>Remove metacaracteres de shell/aspas do nome do sensor antes de entrar na linha de comando.</summary>
+    private static string SanitizeArgument(string value)
+    {
+        var chars = (value ?? "").Where(ch => !char.IsControl(ch) && "\"&|<>^%`;".IndexOf(ch) < 0).ToArray();
+        return new string(chars);
     }
 
     public void Shutdown(string message)

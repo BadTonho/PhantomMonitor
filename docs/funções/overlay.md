@@ -256,3 +256,11 @@ da swapchain. A descoberta tardia observa `ExecuteCommandLists` e usa uma fila
 DIRECT apenas se for inequívoca para o dispositivo; com várias filas, use o
 lançamento antecipado. `Present` e `Present1` são interceptados. Jogos com APIs ou
 proteções específicas ainda precisam de validação real; nenhuma proteção é contornada.
+
+
+## Otimizações de desempenho
+
+- **Seguir janela (Windows):** o timer de posicionamento roda a 30 ms enquanto a janela em foco se move e passa a 150 ms após 20 ticks estáveis, voltando a 30 ms ao detectar mudança.
+- **Varredura de processos in-game:** com hooks já instalados, a varredura de processos que apresentam frames ocorre no máximo a cada 3 s (1 s enquanto não há hook).
+- **Gráficos in-game:** a serialização do quadro não aloca cópias das amostras quando há até 1200 pontos.
+- **Publicação:** elease.ps1 usa PublishReadyToRun; o App habilita TieredPGO.

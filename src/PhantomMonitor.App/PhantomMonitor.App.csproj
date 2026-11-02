@@ -7,6 +7,8 @@
     <RootNamespace>PhantomMonitor.App</RootNamespace>
     <AssemblyName>PhantomMonitor</AssemblyName>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
     <!-- Marcador de build de desenvolvimento: o updater nunca "atualiza" um 0.0.0-dev.
          A release passa /p:Version=<tag> no publish e a versão compilada passa a casar. -->
     <Version>0.0.0-dev</Version>

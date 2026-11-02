@@ -23,7 +23,7 @@ public sealed partial class OverlayWindow
         if (_followTimer is null)
         {
             _followTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
-            _followTimer.Tick += (_, _) => PositionWindows();
+            _followTimer.Tick += (_, _) => OnFollowTick();
         }
         _followTimer.Start();
         if (_topmostTimer is null)
@@ -34,9 +34,45 @@ public sealed partial class OverlayWindow
         _topmostTimer.Start();
     }
 
+    // Intervalo adaptativo: 30 ms enquanto a janela-alvo se move, 150 ms quando estável (menos CPU ociosa).
+    private static readonly TimeSpan FollowActiveInterval = TimeSpan.FromMilliseconds(30);
+    private static readonly TimeSpan FollowIdleInterval = TimeSpan.FromMilliseconds(150);
+    private const int FollowStableTicksBeforeIdle = 20;
+    private (IntPtr Foreground, Rect Rect)? _lastFollowSignature;
+    private int _followStableTicks;
+
+    private void OnFollowTick()
+    {
+        PositionWindows();
+        if (_followTimer is null) return;
+        var signature = OperatingSystem.IsWindows() ? CaptureFollowSignature() : null;
+        if (signature is not null && signature.Equals(_lastFollowSignature))
+        {
+            if (_followStableTicks < FollowStableTicksBeforeIdle) _followStableTicks++;
+        }
+        else
+        {
+            _followStableTicks = 0;
+            _lastFollowSignature = signature;
+        }
+        var desired = _followStableTicks >= FollowStableTicksBeforeIdle ? FollowIdleInterval : FollowActiveInterval;
+        if (_followTimer.Interval != desired) _followTimer.Interval = desired;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private (IntPtr Foreground, Rect Rect)? CaptureFollowSignature()
+    {
+        var foreground = Win32Interop.GetForegroundWindow();
+        if (foreground == IntPtr.Zero || !GetWindowRect(foreground, out var rect)) return null;
+        return (foreground, rect);
+    }
+
     private void StopWindowsTimers()
     {
         _followTimer?.Stop();
+        _followStableTicks = 0;
+        _lastFollowSignature = null;
+        if (_followTimer is not null) _followTimer.Interval = FollowActiveInterval;
         _topmostTimer?.Stop();
     }
 

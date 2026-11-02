@@ -248,6 +248,18 @@ internal sealed record InGameOverlayGraph(double Height, string Color, double? M
 /// <summary>Captures the applied blocks once, then encodes that immutable presentation for native consumers.</summary>
 internal static class InGameOverlayFrameSerializer
 {
+    private const int MaxGraphSamples = 1200;
+
+    /// <summary>Últimas amostras do gráfico sem LINQ; só copia quando excede o limite (o quadro é serializado na mesma chamada).</summary>
+    private static IReadOnlyList<double> TailSamples(IReadOnlyList<double> samples)
+    {
+        if (samples.Count <= MaxGraphSamples) return samples;
+        var tail = new double[MaxGraphSamples];
+        var offset = samples.Count - MaxGraphSamples;
+        for (var i = 0; i < tail.Length; i++) tail[i] = samples[offset + i];
+        return tail;
+    }
+
     public static byte[] Build(MainWindowViewModel viewModel, bool forceHidden = false)
         => Serialize(Capture(viewModel, forceHidden));
 
@@ -307,17 +319,17 @@ internal static class InGameOverlayFrameSerializer
                     if (metric.ShowFrametimeGraph)
                         elements.Add(new InGameOverlayGraph(viewModel.OverlayFrametimeGraphHeight,
                             ColorHex(viewModel.OverlayAccentBrush, "FF1E90FF"), null, null,
-                            viewModel.FrametimeSamples.TakeLast(1200).ToArray()));
+                            TailSamples(viewModel.FrametimeSamples)));
                     break;
                 case OverlayGraphRowViewModel graph when graph.IsVisible:
                     elements.Add(new InGameOverlayGraph(graph.Height,
                         ColorHex(graph.Stroke, ColorHex(viewModel.OverlayAccentBrush, "FF1E90FF")), graph.MinY, graph.MaxY,
-                        graph.Samples.TakeLast(1200).ToArray()));
+                        TailSamples(graph.Samples)));
                     break;
                 case OverlayFrametimeGraphViewModel:
                     elements.Add(new InGameOverlayGraph(viewModel.OverlayFrametimeGraphHeight,
                         ColorHex(viewModel.OverlayAccentBrush, "FF1E90FF"), null, null,
-                        viewModel.FrametimeSamples.TakeLast(1200).ToArray()));
+                        TailSamples(viewModel.FrametimeSamples)));
                     break;
                 case OverlayTemplateRowViewModel template when template.IsVisible:
                     elements.Add(new InGameOverlayText('T', viewModel.OverlayMetricValueFontSize,

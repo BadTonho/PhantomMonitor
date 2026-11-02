@@ -55,7 +55,7 @@ try {
         dotnet publish (Join-Path $repoRoot "src\PhantomMonitor.App\PhantomMonitor.App.csproj") `
             -c Release -r win-x64 --self-contained true `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:Version=$Version -o (Join-Path $stage "win")
+            -p:Version=$Version -p:PublishReadyToRun=true -o (Join-Path $stage "win")
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish do Windows falhou." }
 
         Write-Step "Compilando renderers nativos Windows (x86/x64; requer Visual Studio 2022 e Vulkan SDK)..."
@@ -85,7 +85,7 @@ try {
         dotnet publish (Join-Path $repoRoot "src\PhantomMonitor.App\PhantomMonitor.App.csproj") `
             -c Release -r linux-x64 --self-contained true `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:Version=$Version -o (Join-Path $stage "linux")
+            -p:Version=$Version -p:PublishReadyToRun=true -o (Join-Path $stage "linux")
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish do Linux falhou." }
 
         # Hardlink transicional: installs portáteis antigos relançam pelo nome

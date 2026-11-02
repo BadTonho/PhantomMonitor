@@ -105,6 +105,8 @@ public sealed partial class MainWindowViewModel
         PublishInGameOverlayFrame(initializeOrClear: true, forceHidden: true); // limpa estado deixado por outra execução.
     }
 
+    private long _windowsOverlayLastScanTicks;
+
     private async void OnInGameOverlayHeartbeat(object? sender, EventArgs e)
     {
         if (_disposed) return;
@@ -112,6 +114,10 @@ public sealed partial class MainWindowViewModel
         if (!OperatingSystem.IsWindows() || OverlayRenderMode != "inGame" || _windowsOverlayProcessScanActive)
             return;
 
+        // Com hooks já instalados a varredura de processos é espaçada (3 s); sem hooks mantém 1 s para reagir rápido a um jogo novo.
+        var nowTicks = Environment.TickCount64;
+        if (_windowsOverlayInjectedProcessIds.Count > 0 && nowTicks - _windowsOverlayLastScanTicks < 3000) return;
+        _windowsOverlayLastScanTicks = nowTicks;
         _windowsOverlayProcessScanActive = true;
         try
         {

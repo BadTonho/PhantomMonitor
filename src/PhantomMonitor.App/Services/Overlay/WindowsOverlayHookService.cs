@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
+using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.Services.Overlay;
 
@@ -126,6 +127,7 @@ internal static class WindowsOverlayHookService
 
     private static async Task<Result> RunAsync(string launcher, IReadOnlyList<string> arguments)
     {
+        Process? process = null;
         try
         {
             var startInfo = new ProcessStartInfo
@@ -138,7 +140,7 @@ internal static class WindowsOverlayHookService
                 CreateNoWindow = true
             };
             foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
-            using var process = Process.Start(startInfo);
+            process = Process.Start(startInfo);
             if (process is null) return new Result(false, "Não foi possível iniciar o launcher nativo.");
             var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
@@ -152,12 +154,30 @@ internal static class WindowsOverlayHookService
         }
         catch (TimeoutException)
         {
+            // C1 (auditoria 2026-11-03): encerra o launcher pendado — antes ele
+            // ficava órfão, com ninguém drenando os pipes e o hook já injetado.
+            if (process is not null)
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(3000);
+                }
+                catch (Exception killEx)
+                {
+                    ErrorLog.Write("OverlayHook.KillTimeout", killEx);
+                }
+            }
             return new Result(false, "O launcher nativo excedeu o tempo limite.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
                                    or Win32Exception or ArgumentException or NotSupportedException)
         {
             return new Result(false, $"Falha no launcher nativo: {ex.Message}");
+        }
+        finally
+        {
+            process?.Dispose();
         }
     }
 

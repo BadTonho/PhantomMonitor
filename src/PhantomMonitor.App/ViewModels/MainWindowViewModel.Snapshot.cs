@@ -55,10 +55,19 @@ public sealed partial class MainWindowViewModel
         {
             Dispatcher.UIThread.Post(() =>
             {
-                _uiPostActive = 0;
-                var latest = _pendingUiSnapshot;
-                if (_disposed || latest is null) return;
-                UpdateSnapshot(latest);
+                // C2 (auditoria 2026-11-03): drena o payload ANTES de liberar a
+                // flag — zerar antes deixava um snapshot novo agendar um segundo
+                // callback processando o mesmo dado (inventário reconstruído
+                // duas vezes). Se o produtor escrever na janela entre o Exchange
+                // final e a liberação da flag, o payload aguardará o CAS do
+                // snapshot seguinte (≤ 1 ciclo), sem trabalho duplicado.
+                while (!_disposed)
+                {
+                    var latest = Interlocked.Exchange(ref _pendingUiSnapshot, null);
+                    if (latest is null) break;
+                    UpdateSnapshot(latest);
+                }
+                Interlocked.Exchange(ref _uiPostActive, 0);
             });
         }
     }

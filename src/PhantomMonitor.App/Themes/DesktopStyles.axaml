@@ -11,8 +11,9 @@
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>
   <Style Selector="Button.action">
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Padding" Value="14,9" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="13,7" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="Button.action:not(.accent)">
@@ -21,16 +22,124 @@
     <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector="Button.action:not(.accent):pointerover">
+  <Style Selector="Button.action:not(.accent):pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrightBrush}" />
+  </Style>
+  <Style Selector="Button.action.accent">
+    <Setter Property="Background" Value="{DynamicResource AccentLightBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource BgWindowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="Button.action.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentChipCpuBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentChipCpuBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource BgWindowBrush}" />
   </Style>
   <Style Selector="Button.action:disabled">
     <Setter Property="Opacity" Value="0.55" />
   </Style>
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{DynamicResource BgChipBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBodyBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrightBrush}" />
+  </Style>
   <Style Selector="TextBox">
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="{DynamicResource BgWindowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="FontSize" Value="12" />
   </Style>
   <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource BgWindowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="11,6" />
+    <Setter Property="MinHeight" Value="33" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ComboBox:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource BgChipBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+  </Style>
+  <Style Selector="ComboBox /template/ Popup > Border">
+    <Setter Property="Background" Value="{DynamicResource BgSidebarBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+  <Style Selector="ComboBoxItem">
     <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Margin" Value="1,1" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBodyBrush}" />
+  </Style>
+  <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrightBrush}" />
+  </Style>
+  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource NavForegroundSelectedBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ListBox.segmented-pills">
+    <Setter Property="Background" Value="{DynamicResource BgWindowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="3" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <StackPanel Orientation="Horizontal" Spacing="3" />
+      </ItemsPanelTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBox.segmented-pills ListBoxItem">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="11,5" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="MinHeight" Value="26" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ListBox.segmented-pills ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ListBox.segmented-pills ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource NavForegroundSelectedBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 </Styles>

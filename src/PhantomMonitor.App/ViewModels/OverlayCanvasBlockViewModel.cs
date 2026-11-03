@@ -33,15 +33,18 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         get
         {
             if (Content.Count == 0) return "Novo bloco · duplo clique para configurar";
-            var labels = Content.OfType<OverlayBlockMetricViewModel>().Select(row => row.Name)
+            var labels = Content.OfType<OverlayBlockMetricViewModel>()
+                .Where(row => !row.ShowName && row.ShowNameOverride != false)
+                .Select(row => row.Name)
                 .Concat(Content.OfType<OverlayGraphRowViewModel>().Select(_ => "Gráfico"))
                 .Concat(Content.OfType<OverlayFrametimeGraphViewModel>().Select(_ => "Frametime"))
                 .Concat(Content.OfType<OverlayTemplateRowViewModel>().Select(_ => "Template"))
                 .Concat(Content.OfType<OverlayCustomLineViewModel>().Select(_ => "Texto"))
                 .Distinct(StringComparer.OrdinalIgnoreCase).Take(2).ToArray();
-            return labels.Length == 0 ? "Bloco do overlay" : string.Join(" · ", labels);
+            return string.Join(" · ", labels);
         }
     }
+    public bool ShowTitle => Content.Count == 0 || Content.OfType<OverlayBlockMetricViewModel>().Any(row => !row.ShowName && row.ShowNameOverride != false);
     public MainWindowViewModel Owner { get; }
     internal bool IsPreview { get; private set; }
     public ObservableCollection<object> Content { get; } = [];
@@ -127,6 +130,7 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     public void NotifyContentChanged()
     {
         Raise(nameof(Title));
+        Raise(nameof(ShowTitle));
         Raise(nameof(HasContent));
         Raise(nameof(IsRenderable));
     }
@@ -145,10 +149,12 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
                 existing.SetShowGpuModel(showGpuModel);
                 return existing;
             }
+            existing.PropertyChanged -= OnMetricPropertyChanged;
             existing.Dispose();
         }
 
         var created = new OverlayBlockMetricViewModel(source, metricOverride, showGpuModel);
+        created.PropertyChanged += OnMetricPropertyChanged;
         _metricViewModels[identity] = created;
         return created;
     }
@@ -189,8 +195,17 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
     public void DisposeMetrics()
     {
         foreach (var metric in _metricViewModels.Values)
-            metric.Dispose();
+            { metric.PropertyChanged -= OnMetricPropertyChanged; metric.Dispose(); }
         _metricViewModels.Clear();
+    }
+
+    private void OnMetricPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(OverlayBlockMetricViewModel.Name) or nameof(OverlayBlockMetricViewModel.ShowName))
+        {
+            Raise(nameof(Title));
+            Raise(nameof(ShowTitle));
+        }
     }
 
     public void ReconcileContent(IReadOnlyList<object> desired)
@@ -216,7 +231,8 @@ public sealed class OverlayCanvasBlockViewModel : INotifyPropertyChanged
         {
             if (Content[^1] is OverlayBlockMetricViewModel metric)
             {
-                metric.Dispose();
+                metric.PropertyChanged -= OnMetricPropertyChanged;
+                { metric.PropertyChanged -= OnMetricPropertyChanged; metric.Dispose(); }
                 if (_metricViewModels.TryGetValue(metric.Identity, out var cached) && ReferenceEquals(cached, metric))
                     _metricViewModels.Remove(metric.Identity);
             }

@@ -28,6 +28,11 @@ public sealed partial class OverlayBlockContentDialogViewModel
                     RefreshMetricChoicesFor(value.Group);
                 SelectedMetric = MetricChoices.FirstOrDefault(choice => choice.Identity.Equals(metric.Identity, StringComparison.OrdinalIgnoreCase));
             }
+            else if (value is { IsGroup: true, Group.Kind: "category" or "series" })
+            {
+                RefreshMetricChoicesFor(value.Group);
+                SelectedMetric = MetricChoices.Count == 1 ? MetricChoices[0] : null;
+            }
             else
                 SelectedMetric = null;
             Raise(nameof(CanMoveContentUp));
@@ -41,7 +46,7 @@ public sealed partial class OverlayBlockContentDialogViewModel
         }
     }
 
-    public bool HasSelectedMetric => SelectedOrderRow?.Metric is not null;
+    public bool HasSelectedMetric => SelectedMetric is not null;
     public bool ShowMetricEditorHint => !HasSelectedMetric && !HasSelectedCustomLine;
     public bool CanRemoveSelectedContent => SelectedOrderRow is not null;
     public string RemoveSelectedContentText => SelectedOrderRow?.IsMetric == true

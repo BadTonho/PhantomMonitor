@@ -98,7 +98,7 @@ Configuração atual por `overlay.blocks` e aparência global no painel **Config
 - `shownSeries` - Whitelist (padrões wildcard) das séries por instância; padrão `["Gpu*", "FanSpeed*", "Disk*"]` (ver seção "Linhas por Instância" acima)
 - `layout` - Mapa de posições normalizadas dos blocos (`cpu`, `gpu`, `ram`, `disk`, `network`, `fans`, `motherboard`, `fps`, `extras`), cada uma com `x` e `y` entre 0 e 1.
 - `blocks` - Blocos com `{ id, x, y, items: [{ kind, value }] }`; `kind` aceita categoria, série, gráfico, template ou frametime. Vários itens podem ser reunidos em cada bloco.
-- `overlay.blocks[].metricOverrides` - Ajustes opcionais por sensor e específicos de cada bloco: `identity`, `displayName`, `decimals` (0–3) e `color`.
+- `overlay.blocks[].metricOverrides` - Ajustes opcionais por sensor e específicos de cada bloco: `identity`, `displayName`, `showName` (`true` para exibir nome + valor, `false` para exibir apenas o valor do sensor sem nome), `decimals` (0–3) e `color`.
 - `overlay.blocks[].customLines` - Linhas de texto do bloco com `id`, `text`, `fontSize`, `width` e referências `hardware` (`token`, `deviceId`, `category`). O item `customline` na lista de conteúdo determina sua posição. Nomes de hardware são referências, não leituras de sensores.
 - `overlay.showGpuModel` - Exibe o modelo da GPU nas linhas de séries individuais; padrão `false`, inclusive em configurações antigas.
 - `overlay.blocks[].metricOrder` - Ordem opcional das linhas de métricas por regra do bloco (`category:<categoria>` ou `series:<padrão>`); métricas detectadas depois são acrescentadas ao fim do grupo.

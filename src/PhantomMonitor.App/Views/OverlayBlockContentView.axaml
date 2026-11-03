@@ -11,9 +11,10 @@
           Background="{Binding PresentationBackgroundBrush}"
           BorderBrush="{Binding PresentationBorderBrush}"
           BorderThickness="{Binding PresentationBorderThickness}"
-          Padding="{Binding PresentationPadding}">
+          Padding="{Binding PresentationPadding}"
+          PointerPressed="OnDragHandlePointerPressed">
     <StackPanel Spacing="{Binding PresentationContentSpacing}">
-      <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
+      <TextBlock Text="{Binding Title}" IsVisible="{Binding ShowTitle}" Foreground="{DynamicResource TextOverlaySecondaryBrush}"
                  FontFamily="{Binding PresentationNameFontFamily}"
                  FontSize="{Binding PresentationNameFontSize}" FontWeight="SemiBold"
                  PointerPressed="OnDragHandlePointerPressed" Cursor="SizeAll" />

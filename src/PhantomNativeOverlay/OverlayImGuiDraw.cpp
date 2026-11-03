@@ -131,7 +131,8 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
         // preserving the user's configured size and relative sizes.
         constexpr float text_scale = 1.25f;
         const float title_size = std::max(1.0f, frame.name_font_size * sy * text_scale);
-        const float title_height = measure_wrapped(font, title_size, block.title, text_width);
+        const bool has_title = !block.title.empty();
+        const float title_height = has_title ? measure_wrapped(font, title_size, block.title, text_width) : 0.0f;
         float content_height = title_height;
         for (const auto& element : block.elements) {
             if (element.kind == Element::Kind::Graph) {
@@ -143,7 +144,7 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
             content_height += measure_wrapped(font, text_size, element.text, element_width) + row_top + row_bottom;
             if (element.kind == Element::Kind::Name) content_height += 2.0f * sy;
         }
-        const float height = content_height + pad_top + pad_bottom + frame.content_spacing * sy;
+        const float height = content_height + pad_top + pad_bottom + (has_title ? frame.content_spacing * sy : 0.0f);
         const auto position = ToPixelPosition(frame, block, framebuffer_width, framebuffer_height,
             frame.width * sx, height + frame.outer_margin.top * sy + frame.outer_margin.bottom * sy);
         const float x = position.x + frame.outer_margin.left * sx;
@@ -156,9 +157,11 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
             draw->AddRect(upper, lower, color(frame.border_color, opacity), 6.0f * sy, 0, std::max(1.0f, sx));
 
         float cursor_y = content_start.y;
-        draw->AddText(font, title_size, ImVec2(content_start.x, cursor_y),
+        if (has_title) {
+            draw->AddText(font, title_size, ImVec2(content_start.x, cursor_y),
             color(frame.accent_color, opacity), block.title.c_str(), block.title.c_str() + block.title.size(), text_width);
-        cursor_y += title_height + frame.content_spacing * sy;
+            cursor_y += title_height + frame.content_spacing * sy;
+        }
         for (const auto& element : block.elements) {
             cursor_y += row_top;
             if (element.kind == Element::Kind::Graph) {

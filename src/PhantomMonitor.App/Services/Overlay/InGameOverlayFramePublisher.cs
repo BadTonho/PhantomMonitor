@@ -273,7 +273,7 @@ internal static class InGameOverlayFrameSerializer
                     block.Key,
                     block.X,
                     block.Y,
-                    block.Title,
+                    block.ShowTitle ? block.Title : "",
                     CaptureElements(block, viewModel)))
                 .ToArray()
             : [];

@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -151,6 +151,12 @@ internal static class OverlayRegressionCases
         first.UpdateOverride(new OverlayMetricOverrideConfig { Identity = "GPU", Decimals = 2, Color = "#FFFFFF" });
         Assert(!first.ShowName && first.Name == "GPU" && choice.Label == "GPU · 35%",
             "Limpar o nome deve restaurar a apresentação padrão sem depender dos demais ajustes.");
+        var seriesSource = new OverlayMetricViewModel("RamCommitted", "RAM Comprometida") { Value = "21.4 GB" };
+        using var seriesMetric = new OverlayBlockMetricViewModel(seriesSource, null);
+        Assert(seriesMetric.ShowName && seriesMetric.Name == "RAM Comprometida", "Série individual exibe o nome por padrão.");
+        seriesMetric.UpdateOverride(new OverlayMetricOverrideConfig { Identity = "RamCommitted", ShowName = false });
+        Assert(!seriesMetric.ShowName && seriesMetric.ShowNameOverride == false,
+            "Desativar o nome na série deve exibir apenas o valor do sensor.");
     }
 
     internal static void TestOverlayGpuModel()
@@ -197,12 +203,12 @@ internal static class OverlayRegressionCases
             Assert(!new AppConfig().Overlay.ShowGpuModel, "Configurações antigas devem ocultar modelos por padrão.");
             var config = new AppConfig { Overlay = new OverlayConfig { ShowGpuModel = true, Blocks =
             [new OverlayBlockConfig { Id = "one", Items = [new() { Kind = "series", Value = "Gpu*" }],
-                MetricOverrides = [new() { Identity = "GpuCore#1", DisplayName = "Uso da GPU", Decimals = 2, Color = "#FFFFFF" }] }] } };
+                MetricOverrides = [new() { Identity = "GpuCore#1", DisplayName = "Uso da GPU", ShowName = false, Decimals = 2, Color = "#FFFFFF" }] }] } };
             Assert(config.Save(path), "Configuração deve ser salva.");
             var loaded = AppConfig.Load(path);
             var metric = loaded.Overlay.Blocks!.Single().MetricOverrides.Single();
             Assert(loaded.Overlay.ShowGpuModel && metric.Identity == "GpuCore#1" && metric.DisplayName == "Uso da GPU"
-                && metric.Decimals == 2 && metric.Color == "#FFFFFF", "Modelo e ajustes devem sobreviver à carga.");
+                && metric.ShowName == false && metric.Decimals == 2 && metric.Color == "#FFFFFF", "Modelo e ajustes devem sobreviver à carga.");
         }
         finally
         {

@@ -6,19 +6,17 @@ namespace PhantomMonitor.Services.Linux;
 
 internal sealed class LinuxCpuMemoryReader
 {
-
     private long _prevCpuTotal;
     private long _prevCpuIdle;
     private readonly Dictionary<int, (long Total, long Idle)> _prevPerCore = [];
     private int? _cpuCoreCount;
+
     internal void ReadCpuStats(SensorData data)
     {
         try
         {
             if (!File.Exists("/proc/stat")) return;
 
-            // Uma única passada: a leitura duplicada de /proc/stat achava o
-            // agregado e depois relia o arquivo todo para os núcleos.
             string? cpuLine = null;
             var perCoreLines = new List<string>(16);
             foreach (var line in File.ReadLines("/proc/stat"))
@@ -62,7 +60,6 @@ internal sealed class LinuxCpuMemoryReader
                 _prevCpuIdle = idleTotal;
             }
 
-            // Uso por núcleo: linhas "cpuN" coletadas acima, com estado por núcleo.
             foreach (var line in perCoreLines)
             {
                 var coreToken = line["cpu".Length..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -98,11 +95,6 @@ internal sealed class LinuxCpuMemoryReader
                 _prevPerCore[core] = (cTotal, cIdleTotal);
             }
 
-            // Frequência por núcleo (scaling_cur_freq em kHz). O layout de núcleos
-            // com cpufreq é estável na sessão: a contagem é detectada uma única vez
-            // (antes: até 512 File.Exists/ReadAllText por tick = O(núcleos) syscalls
-            // a cada snapshot). Semântica original mantida: pára no primeiro core
-            // sem cpufreq.
             if (_cpuCoreCount is null)
             {
                 var count = 0;
@@ -123,10 +115,6 @@ internal sealed class LinuxCpuMemoryReader
         }
     }
 
-    /// <summary>
-    /// Lê a memória física a partir de /proc/meminfo
-    /// </summary>
-
     internal void ReadMemInfo(SensorData data, uint activeGamePid = 0)
     {
         try
@@ -141,58 +129,6 @@ internal sealed class LinuxCpuMemoryReader
             foreach (var line in File.ReadLines("/proc/meminfo"))
             {
                 if (line.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase))
-                    totalKb = ParseMemInfoValue(line);
-                else if (line.StartsWith("MemAvailable:", StringComparison.OrdinalIgnoreCase))
-                    availKb = ParseMemInfoValue(line);
-                else if (line.StartsWith("Committed_AS:", StringComparison.OrdinalIgnoreCase))
-                    committedKb = ParseMemInfoValue(line);
-                else if (line.StartsWith("CommitLimit:", StringComparison.OrdinalIgnoreCase))
-                    commitLimitKb = ParseMemInfoValue(line);
-            }
-
-            if (totalKb > 0)
-            {
-                long usedKb = totalKb - availKb;
-                double totalGb = totalKb / (1024.0 * 1024.0);
-                double availGb = availKb / (1024.0 * 1024.0);
-                double usedGb = usedKb / (1024.0 * 1024.0);
-                double usagePct = ((double)usedKb / totalKb) * 100.0;
-
-                data.SetValue(SensorType.RamTotal, totalGb, "RAM Total");
-                data.SetValue(SensorType.RamUsed, usedGb, "RAM Used");
-                data.SetValue(SensorType.RamAvailable, availGb, "RAM Available");
-                data.SetValue(SensorType.RamUsage, Math.Clamp(usagePct, 0.0, 100.0), "RAM Usage");
-                if (committedKb > 0)
-                    data.SetValue(SensorType.RamCommitted, committedKb / (1024.0 * 1024.0), "Memória comprometida");
-                if (commitLimitKb > 0)
-                    data.SetValue(SensorType.RamCommitLimit, commitLimitKb / (1024.0 * 1024.0), "Limite de memória comprometida");
-
-                double gameRamGb = 0;
-                if (activeGamePid > 0 && File.Exists($"/proc/{activeGamePid}/statm"))
-                    try
-                    {
-                        var tokens = File.ReadAllText($"/proc/{activeGamePid}/statm").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        if (tokens.Length > 1 && long.TryParse(tokens[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var rssPages) && rssPages > 0)
-                            gameRamGb = (rssPages * (double)Environment.SystemPageSize) / (1024.0 * 1024.0 * 1024.0);
-                    }
-                    catch { gameRamGb = 0; }
-                }
-                data.SetValue(SensorType.RamGameUsed, gameRamGb, "RAM Jogo");
-                data.SetValue(SensorType.RamSystemUsed, Math.Max(0.0, usedGb - gameRamGb), "RAM Sistema");
-            }
-        }
-    {
-        try
-        {
-            if (!File.Exists("/proc/meminfo")) return;
-
-            long totalKb = 0;
-            long availKb = 0;
-
-            foreach (var line in File.ReadLines("/proc/meminfo"))
-            {
-                if (line.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase))
-                {
                     totalKb = ParseMemInfoValue(line);
                 else if (line.StartsWith("MemAvailable:", StringComparison.OrdinalIgnoreCase))
                     availKb = ParseMemInfoValue(line);
@@ -251,8 +187,4 @@ internal sealed class LinuxCpuMemoryReader
         }
         return 0;
     }
-
-    /// <summary>
-    /// Lê temperaturas e sensores através do subsistema hwmon (/sys/class/hwmon/)
-    /// </summary>
 }

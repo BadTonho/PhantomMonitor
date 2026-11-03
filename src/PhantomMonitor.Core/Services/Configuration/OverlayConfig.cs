@@ -118,6 +118,7 @@ public sealed class OverlayMetricOverrideConfig
 {
     public string Identity { get; set; } = "";
     public string? DisplayName { get; set; }
+    public bool? ShowName { get; set; }
     public int? Decimals { get; set; }
     public string? Color { get; set; }
 }

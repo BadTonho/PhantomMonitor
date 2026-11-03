@@ -206,7 +206,7 @@ public sealed partial class AppConfig
                     metricOverride.Color = null;
             }
             block.MetricOverrides.RemoveAll(item => item.Identity.Length == 0
-                || item.DisplayName is null && item.Decimals is null && item.Color is null);
+                || item.DisplayName is null && item.ShowName is null && item.Decimals is null && item.Color is null);
             block.MetricOverrides = block.MetricOverrides
                 .GroupBy(item => item.Identity, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.Last())

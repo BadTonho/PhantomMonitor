@@ -139,8 +139,10 @@
               <TextBlock Text="{Binding HardwareSelectionMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
 
-            <StackPanel IsVisible="{Binding HasSelectedMetric}" Spacing="8">
-              <StackPanel Spacing="4">
+            <StackPanel IsVisible="{Binding HasSelectedMetric}" Spacing="10">
+              <CheckBox Classes="chip-toggle" Content="Exibir nome do sensor no overlay"
+                        IsChecked="{Binding MetricShowName, Mode=TwoWay}" HorizontalAlignment="Left" />
+              <StackPanel Spacing="4" IsEnabled="{Binding MetricShowName}">
                 <TextBlock Text="NOME EXIBIDO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
                 <TextBox PlaceholderText="Vazio usa o nome padrão"
                          Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />

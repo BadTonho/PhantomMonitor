@@ -88,6 +88,8 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         _editingGraphId = source._editingGraphId;
         _editingTemplateId = source._editingTemplateId;
 
+        foreach (var sourceOverride in source._metricOverrides.Values)
+            _metricOverrides[sourceOverride.Identity] = Clone(sourceOverride);
         foreach (var item in source.OrderedContentItems)
             OrderedContentItems.Add(new OverlayBlockItemChoiceViewModel(item.Kind, item.Value, item.Label));
         foreach (var (key, name) in Categories)
@@ -152,6 +154,8 @@ public sealed partial class OverlayBlockContentDialogViewModel : INotifyProperty
         OrderedContentItems.Clear();
         foreach (var item in pickerDraft.OrderedContentItems)
             OrderedContentItems.Add(new OverlayBlockItemChoiceViewModel(item.Kind, item.Value, GetItemLabel(item.Kind, item.Value)));
+        _metricOverrides.Clear();
+        foreach (var entry in pickerDraft._metricOverrides) _metricOverrides[entry.Key] = Clone(entry.Value);
         _metricOrder.Clear();
         foreach (var entry in pickerDraft._metricOrder) _metricOrder[entry.Key] = entry.Value.ToList();
         _customMetricOrderGroups.Clear();

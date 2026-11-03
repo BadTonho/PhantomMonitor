@@ -362,6 +362,7 @@ public sealed partial class MainWindowViewModel
     {
         Identity = metricOverride.Identity,
         DisplayName = metricOverride.DisplayName,
+        ShowName = metricOverride.ShowName,
         Decimals = metricOverride.Decimals,
         Color = metricOverride.Color
     };

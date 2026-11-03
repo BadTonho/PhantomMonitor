@@ -10,6 +10,7 @@ namespace PhantomMonitor.App.ViewModels;
 public sealed class OverlayBlockMetricViewModel : INotifyPropertyChanged, IDisposable
 {
     private string? _displayName;
+    private bool? _showName;
     private int? _decimals;
     private string? _color;
     private bool _showGpuModel;
@@ -41,7 +42,9 @@ public sealed class OverlayBlockMetricViewModel : INotifyPropertyChanged, IDispo
                 ? OverlaySensorPrecisionFormatter.Format(value, numeric, decimals) : value;
         }
     }
-    public bool ShowName => !string.IsNullOrWhiteSpace(_displayName) || Source.ShowName;
+    public bool? ShowNameOverride => _showName;
+    public bool DefaultShowName => !string.IsNullOrWhiteSpace(_displayName) || Source.ShowName;
+    public bool ShowName => _showName ?? DefaultShowName;
     public bool ShowFrametimeGraph => Source.ShowFrametimeGraph;
     public IBrush NameForeground => ResolveForeground("TextOverlaySecondaryBrush");
     public IBrush ValueForeground => ResolveForeground("TextPrimaryBrush");
@@ -50,10 +53,12 @@ public sealed class OverlayBlockMetricViewModel : INotifyPropertyChanged, IDispo
     public void UpdateOverride(OverlayMetricOverrideConfig? metricOverride)
     {
         var displayName = metricOverride?.DisplayName;
+        var showName = metricOverride?.ShowName;
         var decimals = metricOverride?.Decimals;
         var color = metricOverride?.Color;
-        if (_displayName == displayName && _decimals == decimals && _color == color) return;
+        if (_displayName == displayName && _showName == showName && _decimals == decimals && _color == color) return;
         _displayName = displayName;
+        _showName = showName;
         _decimals = decimals;
         _color = color;
         RaiseAll();

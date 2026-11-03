@@ -9,6 +9,8 @@ public sealed partial class OverlayBlockContentDialogViewModel
     private readonly Dictionary<string, OverlayMetricOverrideConfig> _metricOverrides = new(StringComparer.OrdinalIgnoreCase);
     private OverlayMetricEditChoiceViewModel? _selectedMetric;
     private string _metricDisplayName = "";
+    private bool _metricShowName = true;
+    private bool _loadingMetricOverride;
     private string _metricDecimals = "Automática";
     private string _metricColor = "";
     private string _metricEditorMessage = "";
@@ -26,11 +28,22 @@ public sealed partial class OverlayBlockContentDialogViewModel
         set
         {
             if (!Set(ref _selectedMetric, value)) return;
+            Raise(nameof(HasSelectedMetric));
+            Raise(nameof(ShowMetricEditorHint));
             LoadMetricOverrideDraft();
         }
     }
 
     public string MetricDisplayName { get => _metricDisplayName; set => Set(ref _metricDisplayName, value ?? ""); }
+    public bool MetricShowName
+    {
+        get => _metricShowName;
+        set
+        {
+            if (!Set(ref _metricShowName, value)) return;
+            if (!_loadingMetricOverride) SaveMetricOverride();
+        }
+    }
     public string MetricDecimals
     {
         get => _metricDecimals;
@@ -68,13 +81,15 @@ public sealed partial class OverlayBlockContentDialogViewModel
         }
         color = color.Length == 0 ? null : color.ToUpperInvariant();
 
-        if (displayName is null && decimals is null && color is null)
+        bool? showName = MetricShowName ? null : false;
+        if (displayName is null && showName is null && decimals is null && color is null)
             _metricOverrides.Remove(selected.Identity);
         else
             _metricOverrides[selected.Identity] = new OverlayMetricOverrideConfig
             {
                 Identity = selected.Identity,
                 DisplayName = displayName,
+                ShowName = showName,
                 Decimals = decimals,
                 Color = color
             };
@@ -93,7 +108,7 @@ public sealed partial class OverlayBlockContentDialogViewModel
             MetricChoices.Clear();
         Raise(nameof(HasMetricChoices));
         Raise(nameof(NoMetricChoices));
-        SelectedMetric = null;
+        SelectedMetric = MetricChoices.Count == 1 ? MetricChoices[0] : null;
     }
 
     private void RefreshMetricChoicesFor(OverlayBlockItemChoiceViewModel item)
@@ -135,7 +150,10 @@ public sealed partial class OverlayBlockContentDialogViewModel
         MetricEditorMessage = "";
         var metricOverride = SelectedMetric is { } selected
             && _metricOverrides.TryGetValue(selected.Identity, out var value) ? value : null;
+        _loadingMetricOverride = true;
         MetricDisplayName = metricOverride?.DisplayName ?? "";
+        MetricShowName = metricOverride?.ShowName ?? true;
+        _loadingMetricOverride = false;
         MetricDecimals = metricOverride?.Decimals?.ToString(CultureInfo.InvariantCulture) ?? "Automática";
         MetricColor = metricOverride?.Color ?? "";
         Raise(nameof(CanEditMetricDecimals));
@@ -143,6 +161,6 @@ public sealed partial class OverlayBlockContentDialogViewModel
 
     private static OverlayMetricOverrideConfig Clone(OverlayMetricOverrideConfig item) => new()
     {
-        Identity = item.Identity, DisplayName = item.DisplayName, Decimals = item.Decimals, Color = item.Color
+        Identity = item.Identity, DisplayName = item.DisplayName, ShowName = item.ShowName, Decimals = item.Decimals, Color = item.Color
     };
 }

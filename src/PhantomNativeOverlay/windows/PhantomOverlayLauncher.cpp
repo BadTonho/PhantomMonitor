@@ -184,7 +184,10 @@ int launch_target(const std::wstring& library, const std::wstring& executable,
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
     PROCESS_INFORMATION process{};
-    const auto working_directory = executable.substr(0, executable.find_last_of(L"\\/"));
+    const auto separator = executable.find_last_of(L"\\/");
+    // A12 (auditoria 2026-11-03): com nome sem caminho, find_last_of devolve npos e
+    // substr(0, npos) devolvia a string inteira como diretório (CreateProcessW falha).
+    const auto working_directory = separator == std::wstring::npos ? L"" : executable.substr(0, separator);
     if (!CreateProcessW(executable.c_str(), command_line.data(), nullptr, nullptr, FALSE,
             CREATE_SUSPENDED, nullptr, working_directory.empty() ? nullptr : working_directory.c_str(),
             &startup, &process)) {
@@ -223,6 +226,11 @@ int wmain(int argc, wchar_t** argv) {
     }
     if (argc == 5 && std::wstring(argv[1]) == L"--launch")
         return launch_target(argv[2], argv[3], argv[4]);
-    std::wcerr << L"Usage: PhantomOverlayLauncher --inject <pid> <dll> | --launch <dll> <exe> <args>\n";
+    // A10 (auditoria 2026-11-03): attach em processo vivo não é atômico frente aos
+    // threads do jogo executando as funções hookadas; use --launch (criação
+    // suspensa, caminho seguro adotado pelo PhantomMonitor).
+    std::wcerr << L"Usage: PhantomOverlayLauncher --inject <pid> <dll> | --launch <dll> <exe> <args>\n"
+               << L"Note: --inject is diagnostic only (no thread suspension; may race a live game).\n"
+               << L"       Prefer --launch (suspended start) when hook injection is required.\n";
     return 1;
 }

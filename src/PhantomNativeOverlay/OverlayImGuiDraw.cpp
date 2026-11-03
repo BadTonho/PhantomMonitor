@@ -108,6 +108,10 @@ void DrawFrame(const Frame& frame, std::uint32_t framebuffer_width,
     io.LogFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NoMouse | ImGuiConfigFlags_NoKeyboard;
 
+    // A13 (auditoria 2026-11-03): atlas vazio (todas as TTF e o AddFontDefault
+    // falharam) deixaria Fonts[0] fora de limites mais abaixo; sem fonte, nada a desenhar.
+    if (io.Fonts->Fonts.empty()) return;
+
     ImGui::NewFrame();
     ImDrawList* draw = ImGui::GetForegroundDrawList();
     const float opacity = std::clamp(frame.opacity, 0.0f, 1.0f);

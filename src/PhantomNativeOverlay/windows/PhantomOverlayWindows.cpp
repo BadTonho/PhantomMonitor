@@ -18,6 +18,7 @@
 #include "imgui_impl_opengl3.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <exception>
 #include <mutex>
@@ -85,8 +86,10 @@ HANDLE g_d3d12_fence_event = nullptr;
 UINT g_d3d12_rtv_increment = 0;
 UINT g_d3d12_frame_index = 0;
 std::uint64_t g_d3d12_next_fence = 1;
+std::uint64_t g_d3d12_fence_last = 0;  // A2: valor da última fence submetida (lista em execução)
 std::vector<D3D12Frame> g_d3d12_frames;
 DXGI_FORMAT g_d3d12_format = DXGI_FORMAT_UNKNOWN;
+bool g_gl_pending_shutdown = false;    // A8: backend GL só é destruído no thread do contexto dono
 
 class InitializationSignal {
 public:
@@ -125,8 +128,21 @@ void shutdown_imgui() {
             else if (g_api == RenderApi::Direct3D12) ImGui_ImplDX12_Shutdown();
             else if (g_api == RenderApi::Direct3D10) ImGui_ImplDX10_Shutdown();
             else if (g_api == RenderApi::Direct3D9) ImGui_ImplDX9_Shutdown();
-            else if (g_api == RenderApi::OpenGL && wglGetCurrentContext() == g_gl_context)
-                ImGui_ImplOpenGL3_Shutdown();
+            else if (g_api == RenderApi::OpenGL) {
+                // A8 (auditoria 2026-11-03): fontes/buffers do backend GL pertencem ao
+                // thread/contexto dono; teardown vindo de Release/Resize destruiria o
+                // contexto ImGui e vazaria os handles GL. Adia para ensure_opengl.
+                if (wglGetCurrentContext() == g_gl_context) {
+                    ImGui_ImplOpenGL3_Shutdown();
+                    ImGui::DestroyContext(g_imgui);
+                    g_imgui = nullptr;
+                    g_imgui_backend_initialized = false;
+                    g_api = RenderApi::Unknown;
+                    return;
+                }
+                g_gl_pending_shutdown = true;
+                return;
+            }
         }
         ImGui::DestroyContext(g_imgui);
         g_imgui = nullptr;
@@ -135,18 +151,23 @@ void shutdown_imgui() {
     g_api = RenderApi::Unknown;
 }
 
-void wait_d3d12_queue() {
-    if (!g_d3d12_queue || !g_d3d12_fence || !g_d3d12_fence_event) return;
+bool wait_d3d12_queue(DWORD timeout_ms = 5000) {
+    if (!g_d3d12_queue || !g_d3d12_fence || !g_d3d12_fence_event) return false;
     const auto value = g_d3d12_next_fence++;
-    if (SUCCEEDED(g_d3d12_queue->Signal(g_d3d12_fence, value))
-        && g_d3d12_fence->GetCompletedValue() < value) {
-        if (SUCCEEDED(g_d3d12_fence->SetEventOnCompletion(value, g_d3d12_fence_event)))
-            WaitForSingleObject(g_d3d12_fence_event, 5000);
-    }
+    if (FAILED(g_d3d12_queue->Signal(g_d3d12_fence, value))) return false;
+    if (g_d3d12_fence->GetCompletedValue() >= value) return true;
+    if (FAILED(g_d3d12_fence->SetEventOnCompletion(value, g_d3d12_fence_event))) return false;
+    return WaitForSingleObject(g_d3d12_fence_event, timeout_ms) == WAIT_OBJECT_0;
 }
 
+// A9 (auditoria 2026-11-03): o wait herdado (5 s) rodava sob g_render_mutex e podia
+// travar threads do jogo a cada teardown (device hung). O runtime D3D12 adia a
+// destruição de objetos ainda referenciados por comandos na fila (spec), então a
+// espera não é obrigatória: primeira queda encerra com espera curta; as seguintes
+// seguem sem espera.
 void release_d3d12_resources(bool release_device) {
-    wait_d3d12_queue();
+    static std::atomic<bool> d3d12_teardown_waited{false};
+    if (!d3d12_teardown_waited.exchange(true)) wait_d3d12_queue(500);
     shutdown_imgui();
     for (auto& frame : g_d3d12_frames) {
         if (frame.target) frame.target->Release();
@@ -157,8 +178,18 @@ void release_d3d12_resources(bool release_device) {
     if (g_d3d12_rtv_heap) { g_d3d12_rtv_heap->Release(); g_d3d12_rtv_heap = nullptr; }
     if (g_d3d12_srv_heap) { g_d3d12_srv_heap->Release(); g_d3d12_srv_heap = nullptr; }
     if (g_d3d12_fence) { g_d3d12_fence->Release(); g_d3d12_fence = nullptr; }
+    g_d3d12_fence_last = 0;  // A2: sem fence pendente entre gerações
     if (g_d3d12_fence_event) { CloseHandle(g_d3d12_fence_event); g_d3d12_fence_event = nullptr; }
     if (release_device) {
+        // A4 (auditoria 2026-11-03): o device rastreado está morrendo; solta todas
+        // as refs de observação (as queues são re-observadas no próximo
+        // ExecuteCommandLists). Ordem de locks: g_render_mutex → g_swapchain_mutex.
+        {
+            std::lock_guard<std::mutex> swapchain_lock(g_swapchain_mutex);
+            for (auto& pair : g_observed_queues)
+                for (auto* queue : pair.second) queue->Release();
+            g_observed_queues.clear();
+        }
         if (g_d3d12_queue) { g_d3d12_queue->Release(); g_d3d12_queue = nullptr; }
         if (g_d3d12_device) { g_d3d12_device->Release(); g_d3d12_device = nullptr; }
     }
@@ -271,6 +302,29 @@ bool ensure_d3d9(IDirect3DDevice9* device) {
 
 bool ensure_opengl(HGLRC current) {
     if (!current) return false;
+    if (g_gl_pending_shutdown) {
+        // A8: completa o teardown adiado do backend GL. Só é possível soltar as
+        // fontes/buffers no thread onde o contexto WGL é corrente; com contexto
+        // remoto (jogo recriou o contexto), os GL handles antigos morrem com o
+        // contexto da dupla attach e o ImGui host é descartado sem tocar GL.
+        if (current == g_gl_context) {
+            if (g_imgui) {
+                ImGui::SetCurrentContext(g_imgui);
+                ImGui_ImplOpenGL3_Shutdown();
+                ImGui::DestroyContext(g_imgui);
+            }
+            g_imgui = nullptr;
+            g_imgui_backend_initialized = false;
+            if (g_api == RenderApi::OpenGL) g_api = RenderApi::Unknown;
+        } else if (g_imgui) {
+            ImGui::SetCurrentContext(g_imgui);
+            ImGui::DestroyContext(g_imgui);
+            g_imgui = nullptr;
+            g_imgui_backend_initialized = false;
+            if (g_api == RenderApi::OpenGL) g_api = RenderApi::Unknown;
+        }
+        g_gl_pending_shutdown = false;
+    }
     if (g_gl_context && g_gl_context != current) {
         set_status(RenderApi::OpenGL, RenderState::Unsupported,
             "Mais de um contexto WGL foi apresentado; o renderer mantém o primeiro contexto.");
@@ -304,13 +358,15 @@ void render_d3d10(IDXGISwapChain* swapchain) {
         static_cast<float>(desc.BufferDesc.Width) / frame.reference_width,
         static_cast<float>(desc.BufferDesc.Height) / frame.reference_height, &draw_data);
     if (!draw_data) return;
-    ID3D10RenderTargetView* old_target = nullptr;
+    // A6 (auditoria 2026-11-03): salva/restaura TODOS os slots de RT (o caminho
+    // antigo com slot único destrutia os RTs 1..7 que o jogo tivesse ativos).
+    ID3D10RenderTargetView* old_targets[D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
     ID3D10DepthStencilView* old_depth = nullptr;
-    g_d3d10_device->OMGetRenderTargets(1, &old_target, &old_depth);
+    g_d3d10_device->OMGetRenderTargets(D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT, old_targets, &old_depth);
     g_d3d10_device->OMSetRenderTargets(1, &g_d3d10_target, nullptr);
     ImGui_ImplDX10_RenderDrawData(draw_data);
-    g_d3d10_device->OMSetRenderTargets(1, &old_target, old_depth);
-    if (old_target) old_target->Release();
+    g_d3d10_device->OMSetRenderTargets(D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT, old_targets, old_depth);
+    for (auto* old_target : old_targets) if (old_target) old_target->Release();
     if (old_depth) old_depth->Release();
     set_status(RenderApi::Direct3D10, RenderState::Active, "Renderer Direct3D 10 desenhando o quadro aplicado.");
 }
@@ -425,7 +481,10 @@ bool ensure_d3d12(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue) {
         reset_renderer_devices();
         g_d3d12_device = device;
         g_d3d12_queue = queue;
-        g_d3d12_device->AddRef();
+        // A3 (auditoria 2026-11-03): o ref vindo de swapchain->GetDevice já é a
+        // posse armazenada (reset_renderer_devices solta exatamente 1); o AddRef
+        // extra acumulava +1 ref de device por ciclo de init falho. A fila mantém
+        // o AddRef: o ref temporário é devolvido pelo chamador em render_present.
         g_d3d12_queue->AddRef();
         g_d3d12_format = desc.BufferDesc.Format;
         D3D12_COMMAND_QUEUE_DESC queue_desc = queue->GetDesc();
@@ -556,11 +615,14 @@ void render_d3d11(IDXGISwapChain* swapchain) {
     set_status(RenderApi::Direct3D11, RenderState::Active, "Renderer Direct3D 11 desenhando o quadro aplicado.");
 }
 
-bool wait_d3d12_frame(D3D12Frame& frame) {
-    if (frame.fence_value == 0 || g_d3d12_fence->GetCompletedValue() >= frame.fence_value) return true;
-    if (FAILED(g_d3d12_fence->SetEventOnCompletion(frame.fence_value, g_d3d12_fence_event))) return false;
+bool wait_d3d12_fence_value(std::uint64_t value) {
+    if (!g_d3d12_fence || !g_d3d12_fence_event) return false;
+    if (value == 0 || g_d3d12_fence->GetCompletedValue() >= value) return true;
+    if (FAILED(g_d3d12_fence->SetEventOnCompletion(value, g_d3d12_fence_event))) return false;
     return WaitForSingleObject(g_d3d12_fence_event, 5000) == WAIT_OBJECT_0;
 }
+
+bool wait_d3d12_frame(D3D12Frame& frame) { return wait_d3d12_fence_value(frame.fence_value); }
 
 void render_d3d12(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue) {
     Frame frame;
@@ -575,7 +637,12 @@ void render_d3d12(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue) {
     swapchain3->Release();
     if (index >= g_d3d12_frames.size()) return;
     auto& context = g_d3d12_frames[index];
-    if (!wait_d3d12_frame(context)) {
+    // A2 (auditoria 2026-11-03): além da fence do frame atual (estado do back
+    // buffer), aguarda a ÚLTIMA submissão — a mesma g_d3d12_commands é reusada
+    // por todos os frames e a submissão anterior (frame N-1) pode seguir
+    // executando na GPU; Reset nela é ilegal (device removal no jogo).
+    if (!wait_d3d12_frame(context)
+        || (g_d3d12_fence_last > context.fence_value && !wait_d3d12_fence_value(g_d3d12_fence_last))) {
         set_status(RenderApi::Direct3D12, RenderState::Failed, "Timeout esperando o frame Direct3D 12.");
         return;
     }
@@ -614,6 +681,7 @@ void render_d3d12(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue) {
     const auto fence_value = g_d3d12_next_fence++;
     if (FAILED(g_d3d12_queue->Signal(g_d3d12_fence, fence_value))) return;
     context.fence_value = fence_value;
+    g_d3d12_fence_last = fence_value;  // A2: marca a submissão mais recente
     set_status(RenderApi::Direct3D12, RenderState::Active, "Renderer Direct3D 12 desenhando o quadro aplicado.");
 }
 
@@ -627,9 +695,22 @@ ID3D12CommandQueue* find_queue(IDXGISwapChain* swapchain) {
         device->Release();
         // Multiple DIRECT queues are ambiguous. Never submit into an arbitrary
         // queue: the early launcher captures the exact swapchain association.
-        if (observed == g_observed_queues.end() || observed->second.size() != 1) return nullptr;
-        observed->second[0]->AddRef();
-        return observed->second[0];
+        // A5 (auditoria 2026-11-03): a chave é um device pointer que o mapa não
+        // possui (o endereço pode ser realocado a um novo device); confere que a
+        // queue registrada pertence a este device antes de devolvê-la.
+        if (observed != g_observed_queues.end() && observed->second.size() == 1) {
+            ID3D12Device* owner = nullptr;
+            if (SUCCEEDED(observed->second[0]->GetDevice(IID_PPV_ARGS(&owner)))) {
+                const bool same_device = owner == device;
+                owner->Release();
+                if (same_device) {
+                    observed->second[0]->AddRef();
+                    return observed->second[0];
+                }
+            }
+            return nullptr;
+        }
+        return nullptr;
     }
     found->second->AddRef();
     return found->second;
@@ -653,6 +734,8 @@ void STDMETHODCALLTYPE detour_execute_lists(ID3D12CommandQueue* queue, UINT coun
     }
     } catch (...) { }
     if (device) device->Release();
+    // A7: defesa (detour habilitado sem original — não deve ocorrer)
+    if (!g_execute_lists) return;
     g_execute_lists(queue, count, lists);
 }
 
@@ -750,22 +833,37 @@ struct PresentScope {
 };
 
 HRESULT STDMETHODCALLTYPE detour_present(IDXGISwapChain* swapchain, UINT sync, UINT flags) {
+    if (!g_present) {  // A7: defesa (detour habilitado sem original — não deve ocorrer)
+        set_status(RenderApi::Unknown, RenderState::Failed, "Present hook sem functor original.");
+        return E_FAIL;
+    }
     PresentScope scope;
     if (scope.outer) render_present(swapchain, flags);
     return g_present(swapchain, sync, flags);
 }
 
 HRESULT STDMETHODCALLTYPE detour_present1(IDXGISwapChain1* swapchain, UINT sync, UINT flags, const DXGI_PRESENT_PARAMETERS* parameters) {
+    if (!g_present1) {  // A7: defesa (detour habilitado sem original — não deve ocorrer)
+        set_status(RenderApi::Unknown, RenderState::Failed, "Present1 hook sem functor original.");
+        return E_FAIL;
+    }
     PresentScope scope;
     if (scope.outer) render_present(swapchain, flags);
     return g_present1(swapchain, sync, flags, parameters);
 }
 
 ULONG STDMETHODCALLTYPE detour_release(IUnknown* object) {
-    const auto remaining = g_release(object);
-    if (remaining == 0 && object == g_active_swapchain) {
+    // A7 (auditoria 2026-11-03): defesa em profundidade — o detour não deveria
+    // estar habilitado sem o functor original (hook_address agora falha nesse caso).
+    if (!g_release) return 0;
+    // A1 (auditoria 2026-11-03): o Release original destrói o objeto ao chegar a 0.
+    // Para a swapchain ativa, o lock de render precisa cobrir a PRÓPRIA chamada:
+    // antes era adquirido depois e o present em voo (mutex com ele) podia usar o
+    // objeto morto → UAF.
+    if (object == g_active_swapchain) {
         std::lock_guard<std::mutex> render_lock(g_render_mutex);
-        if (object == g_active_swapchain) {
+        const auto remaining = g_release(object);
+        if (remaining == 0) {
             reset_renderer_devices();
             g_active_swapchain = nullptr;
             std::lock_guard<std::mutex> swapchain_lock(g_swapchain_mutex);
@@ -775,15 +873,19 @@ ULONG STDMETHODCALLTYPE detour_release(IUnknown* object) {
                 g_queues.erase(found);
             }
         }
+        return remaining;
     }
-    return remaining;
+    return g_release(object);
 }
 
 bool hook_address(void* target, void* detour, void** original) {
     if (!target) return false;
-    const auto created = MH_CreateHook(target, detour, original);
-    if (created != MH_OK && created != MH_ERROR_ALREADY_CREATED) return false;
-    return MH_EnableHook(target) == MH_OK || MH_EnableHook(target) == MH_ERROR_ENABLED;
+    // A7 (auditoria 2026-11-03): MH_ERROR_ALREADY_CREATED (dupla injeção) não
+    // preenche 'original' — tratar como sucesso deixava o detour com functor
+    // original nulo (crash no primeiro chamado). Falhar aqui mantém o processo
+    // intacto (o hooking existente é de quem já criou).
+    return MH_CreateHook(target, detour, original) == MH_OK
+        && (MH_EnableHook(target) == MH_OK || MH_EnableHook(target) == MH_ERROR_ENABLED);
 }
 
 DWORD WINAPI initialize_hooks(void*) {

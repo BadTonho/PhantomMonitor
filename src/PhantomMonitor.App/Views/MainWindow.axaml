@@ -241,13 +241,6 @@
         </Border>
       </Grid>
     </Border>
-
-    <StackPanel x:Name="BottomNavigationHeader" Grid.Column="1" Grid.Row="0" Margin="28,13,28,0" Spacing="1"
-                IsVisible="{Binding !IsLeftNavigation}">
-      <TextBlock Text="PHANTOM" Foreground="{DynamicResource TextBrightBrush}" FontSize="17" FontWeight="Bold" />
-      <TextBlock Text="HARDWARE MONITOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
-    </StackPanel>
-
     <Border x:Name="BottomNavigationBar" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2"
             IsVisible="{Binding IsBottomNavigation}" Background="{DynamicResource BgSidebarBrush}"
             BorderBrush="{DynamicResource BgSidebarBorderBrush}" BorderThickness="0,1,0,0" Padding="10,7">

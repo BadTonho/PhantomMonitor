@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · Documento de análise; **não release/diretriz** — registro pontual de achados para backlog.
 > **Escopo:** snapshot do repositório em `96de37b` (`feat: add ShowName option for overlay metrics…`), Windows (build local).
-> **Status do repositório ao auditar:** working tree limpo; arquivo novo acrescentado nesta auditoria **sem commit**.
+> **Status do repositório ao auditar:** working tree limpo; este documento foi commitado como baseline (`85e43e3`) e as correções da mesma sessão seguem commits próprios (ver "Status das correções").
 
 ## Metodologia e baseline
 
@@ -14,6 +14,46 @@
 - **Não auditado a fundo:** `src/PhantomVulkanLayer` (1,6k linhas, Linux-only) e o restante do ImGui vendido.
 
 Legenda de gravidade: **HIGH** = potencial de crash/corrupção · **MED** = comportamento errado confirmável · **LOW** = latente, cosmético ou nicho.
+
+---
+
+## 📌 Status das correções (mesma sessão, working Windows)
+
+Itens **não envolvendo Linux** foram corrigidos nesta sessão; os pendentes aguardam a sua sessão Linux. Validação da sessão: build C# limpa (0 avisos/0 erros), testes 122 ✓ / 1 skip, nativo compilando limpo em x64 e x86 Release (`cmake -G "Visual Studio 17 2022"`, alvos `PhantomOverlayHook` + `PhantomOverlayLauncher`).
+
+| Item | Gravidade | Status | Commit |
+|---|---|---|---|
+| A1 UAF no detour de `Release` | HIGH | ✅ Corrigido (lock cobre o próprio `g_release`) | `95b0ffb` |
+| A2 `Reset` de command list D3D12 em voo | HIGH | ✅ Corrigido (aguarda `g_d3d12_fence_last` antes do `Reset`) | `95b0ffb` |
+| A3 AddRef extra no device D3D12 | MED | ✅ Corrigido | `95b0ffb` |
+| A4 refs de `g_observed_queues` nunca soltos | MED | ✅ Corrigido (expurgo no teardown do device) | `95b0ffb` |
+| A5 `find_queue` por device pointer morto | MED | ✅ Corrigido (verifica posse via `GetDevice`) | `95b0ffb` |
+| A6 D3D10 salva/restaura 1 RT de 8 | MED | ✅ Corrigido (8 slots) | `95b0ffb` |
+| A7 `MH_ERROR_ALREADY_CREATED` + functor nulo | MED | ✅ Corrigido (tratado como falha + guardas nos detours) | `95b0ffb` |
+| A8 shutdown GL fora do contexto dono | MED | ✅ Corrigido (adiado para `ensure_opengl`) | `95b0ffb` |
+| A9 fence wait 5 s sob mutex | MED | ✅ Corrigido (1ª queda 500 ms; seguintes sem espera) | `95b0ffb` |
+| A10 `--inject` sem suspensão | MED | 📝 Atenuado (modo marcado "diagnostic only" no usage; sem alteração mecânica) | `95b0ffb` |
+| A11 patch Vulkan com só assert | MED* | ⏳ Pendente (sessão Linux) | — |
+| A12 `working_directory` com `npos` | LOW | ✅ Corrigido | `95b0ffb` |
+| A13 `Fonts[0]` sem guarda | LOW | ✅ Corrigido | `95b0ffb` |
+| A14 shared memory nunca reabre | LOW* | ⏳ Pendente (sessão Linux — leitor compartilhado Windows/Linux) | — |
+| A15 `eglQueryAPI` por thread | LOW* | ⏳ Pendente (sessão Linux) | — |
+| B1 totais de rede absorvem pausa/wake | MED | ✅ Corrigido (clamp + re-base no `Start()`; docs sincronizados) | `72bf702` |
+| B2 "primário" deriva de `VideoInputType` | MED | ✅ Corrigido (`Primary` indeterminável/false; docs sincronizados) | `72bf702` |
+| B3 alvo do FPS com dois escritores | LOW | ✅ Corrigido (setter único sob lock) | `72bf702` |
+| B4 cultura nas mensagens de alerta | LOW | ✅ Corrigido (InvariantCulture) | `72bf702` |
+| B5 updater `Content-Length` vs gzip | LOW | ✅ Corrigido (check pulado com `Content-Encoding`) | `72bf702` |
+| B6 dedup do `ErrorLog` por segundo | LOW | ✅ Corrigido (timestamp integral) | `72bf702` |
+| B7 indentação do `foreach` em Linux | — | ⏳ Pendente (sessão Linux) | — |
+| C1 launcher órfão no timeout | MED | ✅ Corrigido (`Kill(entireProcessTree)` + `finally`) | `a35988f` |
+| C2 dreno duplo na coalescência | LOW | ✅ Corrigido (drena antes de liberar a flag) | `a35988f` |
+| C3 sessão do portal Wayland | LOW* | ⏳ Pendente (sessão Linux) | — |
+
+Notas:
+- \* = achado `⚠ relatado` (confiança média), não re-confirmando linha a linha na revisão.
+- **A10** permanece com o risco original (attach em processo vivo); a melhoria foi documentação/no usage — a suspensão de threads (`NtSuspendProcess`) foi considerada invasiva demais para este ciclo.
+- **B2:** o comportamento escolhido é o "mínimo" da auditoria (`Primary = false`); a detecção real (EnumDisplayMonitors + correlação por EDID) ficou como trabalho futuro.
+- **C2:** drenar antes de liberar a flag deixa um payload pendente se o produtor escrever na janela final do callback — ele será drenado pelo CAS do snapshot seguinte (≤ 1 ciclo), nunca processado duas vezes.
 
 ---
 

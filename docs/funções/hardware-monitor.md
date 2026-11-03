@@ -12,7 +12,7 @@ No Core, o serviço fica em `Services/Sensors/Windows/` (dividido entre `Hardwar
 - Leitura de temperatura, uso, clock e potência da GPU
 - **Temperaturas por diodo da GPU:** `GpuHotSpot` (Hot Spot) e `GpuVramTemperature` (junction da memória — NVIDIA `GPU Memory Temperature`/legado `Memory Junction`, AMD `GPU VRAM`); diodos `VRM`/`Liquid`/`PLX` da AMD não publicam série (`GpuTemperature` só aceita diodos do chip)
 - Leitura de VRAM usada/total (`SmallData`: `GPU Memory Used/Total` em MB; reserva `D3D Dedicated Memory Used/Total` para GPUs integradas)
-- Leitura de uso e disponibilidade de RAM
+- Leitura de uso, disponibilidade, memória comprometida (`RamCommitted` / `RamCommitLimit`), frequência (`RamFrequency`), timings (`RamCasLatency`, `RamTrcd`, `RamTrp`, `RamTras`), memória usada pelo sistema (`RamSystemUsed`) e pelo jogo ativo (`RamGameUsed`) da RAM
 - Leitura de uso e I/O de disco
 - Leitura de velocidade de ventoinhas e temperatura da placa-mãe (inclui sensores de sub-hardware/SuperIO)
 - **Fallback de clock da CPU:** quando o LibreHardwareMonitor não publica frequência positiva, `CallNtPowerInformation(ProcessorInformation)` fornece `CurrentMhz` por processador lógico; a média é publicada na série existente `CpuClock` e identificada como aproximada. Esse valor reflete a frequência máxima ajustada pelo throttling atual, não é clock por núcleo e não preenche `CpuClock#i`. A leitura do LHM tem prioridade; nenhuma fonte de frequência válida deixa o clock indisponível. O acesso completo aos sensores pode exigir iniciar manualmente como Administrador; o app não solicita elevação automaticamente.
@@ -30,7 +30,7 @@ No Core, o serviço fica em `Services/Sensors/Windows/` (dividido entre `Hardwar
 - **Vários núcleos/discos:** uso por núcleo, uso de disco, clock, ventoinhas e temperatura da placa-mãe guardam o **maior** valor; throughput de disco e rede é **somado**.
 - **VRAM da GPU:** prioridade `GPU Memory Used/Total` > `D3D Dedicated Memory Used/Total` (sensores `SmallData`, em MB).
 - **Disco (`DiskUsage`):** usa o sensor `Total Activity` (% de atividade), não `Used Space`.
-- **RAM:** somente memória física (ignora `Virtual Memory`). Os sensores `Data` do LibreHardwareMonitor já vêm em **GB**; `RamTotal` = usada + disponível.
+- **RAM:** sensores `Data` do LibreHardwareMonitor já vêm em **GB** (`RamTotal` = usada + disponível, `Virtual Memory Used` mapeia para `RamCommitted`); frequência e timings (`tCL`, `tRCD`, `tRP`, `tRAS`) são lidos do controlador de memória no LHM com fallback para `GlobalMemoryStatusEx` (memória comprometida/limite) e `Win32_PhysicalMemory` (`ConfiguredClockSpeed`/`Speed` e latência CAS extraída do `PartNumber`). `RamGameUsed` reflete o `WorkingSet64` do processo do jogo monitorado pelo `FpsMonitor` e `RamSystemUsed` corresponde a `RamUsed - RamGameUsed`.
 
 ## Séries por instância (`SensorKey`)
 

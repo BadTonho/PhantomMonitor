@@ -29,6 +29,7 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     public float Fps1Low => _low1;
     public float Fps01Low => _low01;
     public bool HasData => _hasData;
+    public uint TargetProcessId => _pid;
     public FrametimeBuffer FrametimeHistory => _history;
     public string DebugInfo => _debug;
 

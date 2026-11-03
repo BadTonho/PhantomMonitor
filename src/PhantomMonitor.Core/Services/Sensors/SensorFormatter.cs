@@ -68,6 +68,38 @@ public static class SensorFormatter
         return parts.Count > 0 ? string.Join("  ", parts) : null;
     }
 
+    /// <summary>Badge de frequência e timings da RAM (ex.: "3000 MHz · CL15").</summary>
+    public static string BuildRamSpecBadge(SensorData data)
+    {
+        var parts = new List<string>(2);
+        var freq = data.GetValue(SensorType.RamFrequency);
+        if (freq > 0) parts.Add($"{freq:F0} MHz");
+        if (!string.IsNullOrWhiteSpace(data.RamTimings))
+            parts.Add(data.RamTimings);
+        else if (data.GetValue(SensorType.RamCasLatency) is var cl and > 0)
+            parts.Add($"CL{cl:F0}");
+        return parts.Count > 0 ? string.Join(" · ", parts) : "DRAM";
+    }
+
+    /// <summary>Detalhes de alocação da RAM: comprometida, sistema e jogo.</summary>
+    public static string BuildRamExtraDetail(SensorData data)
+    {
+        var parts = new List<string>(3);
+        var committed = data.GetValue(SensorType.RamCommitted);
+        var commitLimit = data.GetValue(SensorType.RamCommitLimit);
+        if (committed > 0)
+        {
+            parts.Add(commitLimit > 0
+                ? $"Comprometida {committed:F1}/{commitLimit:F1} GB"
+                : $"Comprometida {committed:F1} GB");
+        }
+        if (data.Values.ContainsKey(SensorType.RamSystemUsed))
+            parts.Add($"Sistema {data.GetValue(SensorType.RamSystemUsed):F1} GB");
+        if (data.Values.ContainsKey(SensorType.RamGameUsed))
+            parts.Add($"Jogo {data.GetValue(SensorType.RamGameUsed):F1} GB");
+        return parts.Count > 0 ? string.Join("  ·  ", parts) : "—";
+    }
+
     /// <summary>Linha de ventoinhas dos cards: GPU e sistema.</summary>
     public static string BuildFanSummary(SensorData data)
     {
@@ -96,13 +128,20 @@ public static class SensorFormatter
 
             SensorType.CpuClock or SensorType.GpuCoreClock or SensorType.GpuMemoryClock => FormatClock(value),
 
+            SensorType.RamFrequency => $"{value:F0} MHz",
+
+            SensorType.RamCasLatency => $"CL{value:F0}",
+
+            SensorType.RamTrcd or SensorType.RamTrp or SensorType.RamTras => $"{value:F0} clk",
+
             SensorType.CpuVoltage or SensorType.GpuVoltage or SensorType.RailVoltage => $"{value:F2} V",
 
             SensorType.CpuPower or SensorType.GpuPower => $"{value:F0} W",
 
             SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal => $"{value / 1024.0:F1} GB",
 
-            SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal => $"{value:F1} GB",
+            SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal or
+            SensorType.RamCommitted or SensorType.RamCommitLimit or SensorType.RamSystemUsed or SensorType.RamGameUsed => $"{value:F1} GB",
 
             SensorType.DiskTotalRead or SensorType.DiskTotalWritten => $"{value:F0} GB",
 

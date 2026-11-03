@@ -72,7 +72,7 @@ public sealed partial class OverlayBlockContentDialogViewModel
                 || string.Equals(SeriesCategory(value), _selectedSeriesCategory, StringComparison.OrdinalIgnoreCase))
             .OrderBy(value => value, SeriesValueComparer.Instance);
         foreach (var value in series)
-            SeriesChoices.Add(CreateChoice("series", value, value, selectionChanged: _ => Raise(nameof(SeriesCategorySelectionState))));
+            SeriesChoices.Add(CreateChoice("series", value, SeriesChipLabel(value), selectionChanged: _ => Raise(nameof(SeriesCategorySelectionState))));
         Raise(nameof(HasSeriesChoices));
         Raise(nameof(NoSeriesChoices));
         Raise(nameof(SeriesCategorySelectionState));
@@ -109,6 +109,9 @@ public sealed partial class OverlayBlockContentDialogViewModel
             or SensorType.GpuCoreClock or SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuFan
             or SensorType.GpuPower or SensorType.GpuBusy => "GPU",
         SensorType.RamUsage or SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal
+            or SensorType.RamCommitted or SensorType.RamCommitLimit or SensorType.RamFrequency
+            or SensorType.RamCasLatency or SensorType.RamTrcd or SensorType.RamTrp or SensorType.RamTras
+            or SensorType.RamSystemUsed or SensorType.RamGameUsed
             or SensorType.RamTemperature => "RAM",
         SensorType.DiskUsage or SensorType.DiskRead or SensorType.DiskWrite or SensorType.DiskTemperature
             or SensorType.DiskHealth or SensorType.DiskTotalRead or SensorType.DiskTotalWritten => "Disco",
@@ -122,6 +125,28 @@ public sealed partial class OverlayBlockContentDialogViewModel
             or SensorType.FpsP99 or SensorType.FrametimeP1 or SensorType.FrametimeP99 => "FPS",
         _ => "Outros"
     };
+
+    private static string SeriesChipLabel(string value)
+    {
+        if (!SensorKey.TryParse(value, out var key) || !key.IsPrimary) return value;
+        return key.Type switch
+        {
+            SensorType.RamUsage => "RamUsage · Uso (%)",
+            SensorType.RamUsed => "RamUsed · Memória usada",
+            SensorType.RamAvailable => "RamAvailable · Memória disponível",
+            SensorType.RamTotal => "RamTotal · Memória total",
+            SensorType.RamCommitted => "RamCommitted · Memória comprometida",
+            SensorType.RamCommitLimit => "RamCommitLimit · Limite comprometido",
+            SensorType.RamFrequency => "RamFrequency · Frequência",
+            SensorType.RamCasLatency => "RamCasLatency · Timings (CL)",
+            SensorType.RamTrcd => "RamTrcd · Timing tRCD",
+            SensorType.RamTrp => "RamTrp · Timing tRP",
+            SensorType.RamTras => "RamTras · Timing tRAS",
+            SensorType.RamSystemUsed => "RamSystemUsed · Memória do sistema",
+            SensorType.RamGameUsed => "RamGameUsed · Memória do jogo",
+            _ => value
+        };
+    }
 
     private sealed class SeriesValueComparer : IComparer<string>
     {

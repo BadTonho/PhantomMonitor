@@ -127,7 +127,7 @@ internal sealed class LinuxCpuMemoryReader
     /// Lê a memória física a partir de /proc/meminfo
     /// </summary>
 
-    internal void ReadMemInfo(SensorData data)
+    internal void ReadMemInfo(SensorData data, uint activeGamePid = 0)
     {
         try
         {
@@ -135,19 +135,19 @@ internal sealed class LinuxCpuMemoryReader
 
             long totalKb = 0;
             long availKb = 0;
+            long committedKb = 0;
+            long commitLimitKb = 0;
 
             foreach (var line in File.ReadLines("/proc/meminfo"))
             {
                 if (line.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase))
-                {
                     totalKb = ParseMemInfoValue(line);
-                }
                 else if (line.StartsWith("MemAvailable:", StringComparison.OrdinalIgnoreCase))
-                {
                     availKb = ParseMemInfoValue(line);
-                }
-
-                if (totalKb > 0 && availKb > 0) break;
+                else if (line.StartsWith("Committed_AS:", StringComparison.OrdinalIgnoreCase))
+                    committedKb = ParseMemInfoValue(line);
+                else if (line.StartsWith("CommitLimit:", StringComparison.OrdinalIgnoreCase))
+                    commitLimitKb = ParseMemInfoValue(line);
             }
 
             if (totalKb > 0)
@@ -162,6 +162,76 @@ internal sealed class LinuxCpuMemoryReader
                 data.SetValue(SensorType.RamUsed, usedGb, "RAM Used");
                 data.SetValue(SensorType.RamAvailable, availGb, "RAM Available");
                 data.SetValue(SensorType.RamUsage, Math.Clamp(usagePct, 0.0, 100.0), "RAM Usage");
+                if (committedKb > 0)
+                    data.SetValue(SensorType.RamCommitted, committedKb / (1024.0 * 1024.0), "Memória comprometida");
+                if (commitLimitKb > 0)
+                    data.SetValue(SensorType.RamCommitLimit, commitLimitKb / (1024.0 * 1024.0), "Limite de memória comprometida");
+
+                double gameRamGb = 0;
+                if (activeGamePid > 0 && File.Exists($"/proc/{activeGamePid}/statm"))
+                    try
+                    {
+                        var tokens = File.ReadAllText($"/proc/{activeGamePid}/statm").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (tokens.Length > 1 && long.TryParse(tokens[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var rssPages) && rssPages > 0)
+                            gameRamGb = (rssPages * (double)Environment.SystemPageSize) / (1024.0 * 1024.0 * 1024.0);
+                    }
+                    catch { gameRamGb = 0; }
+                }
+                data.SetValue(SensorType.RamGameUsed, gameRamGb, "RAM Jogo");
+                data.SetValue(SensorType.RamSystemUsed, Math.Max(0.0, usedGb - gameRamGb), "RAM Sistema");
+            }
+        }
+    {
+        try
+        {
+            if (!File.Exists("/proc/meminfo")) return;
+
+            long totalKb = 0;
+            long availKb = 0;
+
+            foreach (var line in File.ReadLines("/proc/meminfo"))
+            {
+                if (line.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase))
+                {
+                    totalKb = ParseMemInfoValue(line);
+                else if (line.StartsWith("MemAvailable:", StringComparison.OrdinalIgnoreCase))
+                    availKb = ParseMemInfoValue(line);
+                else if (line.StartsWith("Committed_AS:", StringComparison.OrdinalIgnoreCase))
+                    committedKb = ParseMemInfoValue(line);
+                else if (line.StartsWith("CommitLimit:", StringComparison.OrdinalIgnoreCase))
+                    commitLimitKb = ParseMemInfoValue(line);
+            }
+
+            if (totalKb > 0)
+            {
+                long usedKb = totalKb - availKb;
+                double totalGb = totalKb / (1024.0 * 1024.0);
+                double availGb = availKb / (1024.0 * 1024.0);
+                double usedGb = usedKb / (1024.0 * 1024.0);
+                double usagePct = ((double)usedKb / totalKb) * 100.0;
+
+                data.SetValue(SensorType.RamTotal, totalGb, "RAM Total");
+                data.SetValue(SensorType.RamUsed, usedGb, "RAM Used");
+                data.SetValue(SensorType.RamAvailable, availGb, "RAM Available");
+                data.SetValue(SensorType.RamUsage, Math.Clamp(usagePct, 0.0, 100.0), "RAM Usage");
+                if (committedKb > 0)
+                    data.SetValue(SensorType.RamCommitted, committedKb / (1024.0 * 1024.0), "Memória comprometida");
+                if (commitLimitKb > 0)
+                    data.SetValue(SensorType.RamCommitLimit, commitLimitKb / (1024.0 * 1024.0), "Limite de memória comprometida");
+
+                double gameRamGb = 0;
+                if (activeGamePid > 0 && File.Exists($"/proc/{activeGamePid}/statm"))
+                {
+                    try
+                    {
+                        var tokens = File.ReadAllText($"/proc/{activeGamePid}/statm").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (tokens.Length > 1 && long.TryParse(tokens[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var rssPages) && rssPages > 0)
+                            gameRamGb = (rssPages * (double)Environment.SystemPageSize) / (1024.0 * 1024.0 * 1024.0);
+                    }
+                    catch { gameRamGb = 0; }
+                }
+                data.SetValue(SensorType.RamGameUsed, gameRamGb, "RAM Jogo");
+                data.SetValue(SensorType.RamSystemUsed, Math.Max(0.0, usedGb - gameRamGb), "RAM Sistema");
             }
         }
         catch (Exception ex)

@@ -178,7 +178,9 @@ public static class SensorUnits
 
         SensorType.FanSpeed => "RPM",
 
-        SensorType.CpuClock or SensorType.GpuCoreClock or SensorType.GpuMemoryClock => "MHz",
+        SensorType.CpuClock or SensorType.GpuCoreClock or SensorType.GpuMemoryClock or SensorType.RamFrequency => "MHz",
+
+        SensorType.RamCasLatency or SensorType.RamTrcd or SensorType.RamTrp or SensorType.RamTras => "clk",
 
         SensorType.CpuVoltage or SensorType.GpuVoltage or SensorType.RailVoltage or
         SensorType.BatteryVoltage => "V",
@@ -187,7 +189,7 @@ public static class SensorUnits
 
         SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal => "MB",
 
-        SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal or
+        SensorType.RamAvailable or SensorType.RamUsed or SensorType.RamTotal or SensorType.RamCommitted or SensorType.RamCommitLimit or SensorType.RamSystemUsed or SensorType.RamGameUsed or
         SensorType.DiskTotalRead or SensorType.DiskTotalWritten => "GB",
 
         SensorType.DiskRead or SensorType.DiskWrite or SensorType.NetworkUp or SensorType.NetworkDown => "B/s",

@@ -72,6 +72,8 @@ public sealed class FpsMonitor : IFpsMonitor
     public float FrametimeP1 => _frametimeP1;
     public float FrametimeP99 => _frametimeP99;
     public bool HasData => _hasData;
+    public int TargetProcessId => _targetPid;
+    public string TargetProcessName => _targetProcessName;
     public FrametimeBuffer FrametimeHistory => _frametimeHistory;
     public string DebugInfo => _debugInfo;
     public string PerfResult => _perfResult;

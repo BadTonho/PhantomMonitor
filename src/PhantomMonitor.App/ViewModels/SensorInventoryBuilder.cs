@@ -58,7 +58,9 @@ internal static class SensorInventoryBuilder
             SensorType.GpuTemperature, SensorType.GpuHotSpot, SensorType.GpuVramTemperature,
             SensorType.GpuCoreClock, SensorType.GpuMemoryClock, SensorType.GpuVoltage, SensorType.GpuFan,
             SensorType.GpuPower, SensorType.GpuBusy]),
-        new("Memória", [SensorType.RamUsage, SensorType.RamUsed, SensorType.RamTotal, SensorType.RamAvailable]),
+        new("Memória", [SensorType.RamUsage, SensorType.RamUsed, SensorType.RamTotal, SensorType.RamAvailable,
+            SensorType.RamCommitted, SensorType.RamCommitLimit, SensorType.RamSystemUsed, SensorType.RamGameUsed,
+            SensorType.RamFrequency, SensorType.RamCasLatency, SensorType.RamTrcd, SensorType.RamTrp, SensorType.RamTras]),
         new("Disco", [SensorType.DiskRead, SensorType.DiskWrite, SensorType.DiskUsage]),
         new("Rede", [SensorType.NetworkDown, SensorType.NetworkUp,
             SensorType.NetworkDownTotal, SensorType.NetworkUpTotal]),
@@ -257,6 +259,12 @@ internal static class SensorInventoryBuilder
 
         if (type is SensorType.CpuClock or SensorType.GpuCoreClock or SensorType.GpuMemoryClock)
             return value >= 1000 ? ($"{value / 1000:F2}", "GHz") : ($"{value:F0}", "MHz");
+
+        if (type == SensorType.RamFrequency)
+            return ($"{value:F0}", "MHz");
+
+        if (type is SensorType.RamCasLatency or SensorType.RamTrcd or SensorType.RamTrp or SensorType.RamTras)
+            return ($"{value:F0}", "clk");
 
         return (value.ToString("F2", CultureInfo.CurrentCulture), SensorUnits.Of(type));
     }

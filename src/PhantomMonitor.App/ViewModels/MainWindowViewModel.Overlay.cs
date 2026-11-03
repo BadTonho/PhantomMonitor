@@ -121,7 +121,7 @@ public sealed partial class MainWindowViewModel
 
     private void RefreshOverlaySeriesOptions()
     {
-        var options = _latestSensorData?.Series.Keys
+        var options = _latestSensorData?.GetSeriesKeys()
             .Select(key => key.ToString())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)

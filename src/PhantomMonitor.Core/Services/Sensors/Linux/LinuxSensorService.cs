@@ -103,7 +103,7 @@ public sealed partial class LinuxSensorService : ISensorService
 
             _gpuSensorReader.BeginSample(data.Timestamp);
             _cpuMemoryReader.ReadCpuStats(data);
-            _cpuMemoryReader.ReadMemInfo(data);
+            _cpuMemoryReader.ReadMemInfo(data, _fpsMonitor.HasData ? _fpsMonitor.TargetProcessId : 0);
             _diskNetworkReader.ReadNetworkStats(data);
             _hardwarePowerReader.ReadHwmonSensors(data);
             _diskNetworkReader.ReadDiskStats(data);

@@ -274,7 +274,7 @@ internal static class OverlayBlockKeys
         {
             SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.CpuTemperature or SensorType.CpuClock or SensorType.CpuPower or SensorType.CpuVoltage => Cpu,
             SensorType.GpuCore or SensorType.GpuTemperature or SensorType.GpuMemory or SensorType.GpuMemoryUsed or SensorType.GpuMemoryTotal or SensorType.GpuFan or SensorType.GpuPower or SensorType.GpuCoreClock or SensorType.GpuMemoryClock or SensorType.GpuVoltage or SensorType.GpuHotSpot or SensorType.GpuVramTemperature => Gpu,
-            SensorType.RamUsage or SensorType.RamUsed or SensorType.RamTotal or SensorType.RamTemperature => Ram,
+            SensorType.RamUsage or SensorType.RamUsed or SensorType.RamTotal or SensorType.RamAvailable or SensorType.RamCommitted or SensorType.RamCommitLimit or SensorType.RamFrequency or SensorType.RamCasLatency or SensorType.RamTrcd or SensorType.RamTrp or SensorType.RamTras or SensorType.RamSystemUsed or SensorType.RamGameUsed or SensorType.RamTemperature => Ram,
             SensorType.DiskRead or SensorType.DiskWrite or SensorType.DiskTotalRead or SensorType.DiskTotalWritten or SensorType.DiskUsage or SensorType.DiskHealth or SensorType.DiskTemperature => Disk,
             SensorType.NetworkUp or SensorType.NetworkDown or SensorType.NetworkUpTotal or SensorType.NetworkDownTotal => Network,
             SensorType.FanSpeed or SensorType.GpuFan => Fans,

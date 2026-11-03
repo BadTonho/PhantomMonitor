@@ -8,7 +8,7 @@ Enumeração com todos os tipos de sensores suportados:
 
 - **CPU**: CpuTotal, CpuPerCore, CpuTemperature, CpuPower, CpuClock, CpuVoltage
 - **GPU**: GpuCore, GpuMemory, GpuMemoryUsed, GpuMemoryTotal, GpuTemperature, GpuHotSpot, GpuVramTemperature (P8.6, junction da memória), GpuCoreClock, GpuMemoryClock, GpuVoltage, GpuFan, GpuPower
-- **RAM**: RamUsage, RamAvailable, RamUsed, RamTotal, RamTemperature
+- **RAM**: RamUsage, RamAvailable, RamUsed, RamTotal, RamTemperature, RamCommitted, RamCommitLimit, RamFrequency, RamCasLatency, RamTrcd, RamTrp, RamTras, RamSystemUsed, RamGameUsed
 - **Disco**: DiskUsage, DiskRead, DiskWrite, DiskTemperature, DiskHealth, DiskTotalRead, DiskTotalWritten
 - **Rede**: NetworkUp, NetworkDown, NetworkUpTotal, NetworkDownTotal (totais da sessão)
 - **Placa-mãe**: MotherboardTemp, FanSpeed, VrmTemperature, RailVoltage
@@ -35,6 +35,7 @@ Modelo principal que carrega todos os dados de sensores em um snapshot:
 - `Series` - Séries por instância, chaveadas por `SensorKey` (`GpuCore#1`, `CpuTemperature#3`...)
 - `SeriesLabels` - Rótulos das séries por instância
 - `SeriesStats` - Estatísticas da sessão por série: min/máx/média (ver [hardware-monitor.md](hardware-monitor.md))
+- `RamTimings` - String consolidada de timings da RAM (`tCL-tRCD-tRP-tRAS` ou `CLxx`) quando disponível
 - `Monitors` - Identidade dos monitores conectados (P8.4; EDID via WMI — ver MonitorInfo abaixo)
 - `GpuProcesses` - Lista de processos usando GPU (não serializada no JSON)
 - `SensorDebugInfo` - Informações de debug de cada sensor (não serializadas no JSON)

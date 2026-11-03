@@ -328,9 +328,13 @@ public sealed partial class HardwareMonitorService
 
     private void MapMemorySensor(ISensor sensor, double val, string label, SensorData data)
     {
-        // Ignora a memória virtual (pagefile): só a RAM física interessa.
-        if (sensor.Hardware.Name.Contains("Virtual", StringComparison.OrdinalIgnoreCase))
+        if (sensor.Hardware.Name.Contains("Virtual", StringComparison.OrdinalIgnoreCase)
+            || sensor.Name.Contains("Virtual", StringComparison.OrdinalIgnoreCase))
+        {
+            if (sensor.SensorType == LhmSensorType.Data && sensor.Name.Contains("Used", StringComparison.OrdinalIgnoreCase) && val > 0)
+                Put(data, SType.RamCommitted, val, "Memória comprometida");
             return;
+        }
 
         switch (sensor.SensorType)
         {
@@ -343,6 +347,22 @@ public sealed partial class HardwareMonitorService
                 break;
             case LhmSensorType.Data when sensor.Name.Contains("Used", StringComparison.OrdinalIgnoreCase):
                 Put(data, SType.RamUsed, val, label);
+                break;
+            case LhmSensorType.Clock when val > 0:
+                PutPreferred(data, SType.RamFrequency, val < 1800 ? val * 2 : val, label, 2);
+                break;
+            case var _ when (sensor.Name.Contains("tCL", StringComparison.OrdinalIgnoreCase)
+                || sensor.Name.Contains("CAS#", StringComparison.OrdinalIgnoreCase)) && val > 0:
+                Put(data, SType.RamCasLatency, val, label);
+                break;
+            case var _ when sensor.Name.Contains("tRCD", StringComparison.OrdinalIgnoreCase) && val > 0:
+                Put(data, SType.RamTrcd, val, label);
+                break;
+            case var _ when sensor.Name.Contains("tRP", StringComparison.OrdinalIgnoreCase) && val > 0:
+                Put(data, SType.RamTrp, val, label);
+                break;
+            case var _ when sensor.Name.Contains("tRAS", StringComparison.OrdinalIgnoreCase) && val > 0:
+                Put(data, SType.RamTras, val, label);
                 break;
             case LhmSensorType.Temperature:
                 // Temperatura de módulos de RAM (poucas placas/EC expõem; ex.: "RAM Temperature").

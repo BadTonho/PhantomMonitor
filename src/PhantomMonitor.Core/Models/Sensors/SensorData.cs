@@ -130,6 +130,7 @@ public sealed class SensorData
     public double GpuTemp => GetValue(SensorType.GpuTemperature);
     public double RamUsagePercent => GetValue(SensorType.RamUsage);
     public double RamAvailableGB => GetValue(SensorType.RamAvailable);
+    public string? RamTimings { get; set; }
 
     // FPS
     public double Fps => GetValue(SensorType.Fps);

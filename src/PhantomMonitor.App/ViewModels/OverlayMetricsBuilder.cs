@@ -63,6 +63,18 @@ internal static class OverlayMetricsBuilder
                     ? $"{ramUsed:F1}/{ramTotal:F1} GB"
                     : "—"
             };
+            if (TryValue(data, keys, SensorType.RamFrequency, out var ramFreq) && ramFreq > 0)
+                parts.Add($"{ramFreq:F0} MHz");
+            if (!string.IsNullOrWhiteSpace(data?.RamTimings))
+                parts.Add(data.RamTimings!);
+            else if (TryValue(data, keys, SensorType.RamCasLatency, out var ramCl) && ramCl > 0)
+                parts.Add($"CL{ramCl:F0}");
+            if (TryValue(data, keys, SensorType.RamCommitted, out var ramCommitted) && ramCommitted > 0)
+                parts.Add($"Comp. {ramCommitted:F1} GB");
+            if (TryValue(data, keys, SensorType.RamSystemUsed, out var ramSys))
+                parts.Add($"Sist. {ramSys:F1} GB");
+            if (TryValue(data, keys, SensorType.RamGameUsed, out var ramGame))
+                parts.Add($"Jogo {ramGame:F1} GB");
             rows.Add(new OverlayRowPlan("RAM", "RAM", string.Join(" · ", parts), false));
         }
 
@@ -125,28 +137,54 @@ internal static class OverlayMetricsBuilder
 
         if (data is not null && shownSeries is { Count: > 0 })
         {
-            var instanceRows = data.Series.Keys
+            var sourceKeys = includePrimarySeries ? (keys ?? []) : (IEnumerable<SensorKey>)data.Series.Keys;
+            var instanceRows = sourceKeys
                 .Where(key => (includePrimarySeries || !key.IsPrimary) && shownSeries.Any(key.MatchesPattern))
                 .Distinct()
                 .OrderBy(FamilyOrder)
                 .ThenBy(key => key.Type.ToString(), StringComparer.Ordinal)
                 .ThenBy(key => key.Index)
-                .Take(MaxInstanceRows);
+                .Take(includePrimarySeries ? 256 : MaxInstanceRows);
 
             foreach (var key in instanceRows)
             {
-                var formatted = SensorFormatter.FormatSeries(key, data.Series[key], showZero: true);
+                var rawVal = data.GetValue(key);
+                var formatted = key.Type == SensorType.RamCasLatency && !string.IsNullOrWhiteSpace(data.RamTimings)
+                    ? data.RamTimings!
+                    : SensorFormatter.FormatSeries(key, rawVal, showZero: true);
                 var label = data.GetLabel(key);
-                var description = string.Equals(label, key.ToString(), StringComparison.OrdinalIgnoreCase)
-                    ? formatted
-                    : $"{formatted} · {label}";
+                var description = !key.IsPrimary && !string.Equals(label, key.ToString(), StringComparison.OrdinalIgnoreCase)
+                    ? $"{formatted} · {label}"
+                    : formatted;
                 var identity = key.ToString();
-                rows.Add(new OverlayRowPlan(identity, identity, description, false, identity, key, data.Series[key],
-                    IsIndividualSeries: true, DeviceLabel: string.Equals(label, identity, StringComparison.OrdinalIgnoreCase) ? null : label));
+                rows.Add(new OverlayRowPlan(identity, FriendlyPrimaryName(key, identity), description, false, identity, key, rawVal,
+                    IsIndividualSeries: true, DeviceLabel: !key.IsPrimary && !string.Equals(label, identity, StringComparison.OrdinalIgnoreCase) ? label : null));
             }
         }
 
         return rows;
+    }
+
+    private static string FriendlyPrimaryName(SensorKey key, string identity)
+    {
+        if (!key.IsPrimary) return identity;
+        return key.Type switch
+        {
+            SensorType.RamUsage => "RAM Uso",
+            SensorType.RamUsed => "RAM Usada",
+            SensorType.RamAvailable => "RAM Disponível",
+            SensorType.RamTotal => "RAM Total",
+            SensorType.RamCommitted => "RAM Comprometida",
+            SensorType.RamCommitLimit => "RAM Limite Commit",
+            SensorType.RamFrequency => "RAM Frequência",
+            SensorType.RamCasLatency => "RAM Timings",
+            SensorType.RamTrcd => "RAM tRCD",
+            SensorType.RamTrp => "RAM tRP",
+            SensorType.RamTras => "RAM tRAS",
+            SensorType.RamSystemUsed => "RAM Sistema",
+            SensorType.RamGameUsed => "RAM Jogo",
+            _ => identity
+        };
     }
 
     private static int FamilyOrder(SensorKey key) => key.Type switch
@@ -157,7 +195,10 @@ internal static class OverlayMetricsBuilder
         SensorType.FanSpeed => 1,
         SensorType.DiskRead or SensorType.DiskWrite or SensorType.DiskTotalRead or SensorType.DiskTotalWritten or
             SensorType.DiskUsage or SensorType.DiskHealth or SensorType.DiskTemperature => 2,
-        SensorType.RamTemperature => 3,
+        SensorType.RamUsage or SensorType.RamUsed or SensorType.RamAvailable or SensorType.RamTotal or
+            SensorType.RamCommitted or SensorType.RamCommitLimit or SensorType.RamFrequency or
+            SensorType.RamCasLatency or SensorType.RamTrcd or SensorType.RamTrp or SensorType.RamTras or
+            SensorType.RamSystemUsed or SensorType.RamGameUsed or SensorType.RamTemperature => 3,
         SensorType.CpuTotal or SensorType.CpuPerCore or SensorType.CpuTemperature or SensorType.CpuClock or
             SensorType.CpuPower or SensorType.CpuVoltage => 4,
         SensorType.NetworkUp or SensorType.NetworkDown or SensorType.NetworkUpTotal or SensorType.NetworkDownTotal => 5,

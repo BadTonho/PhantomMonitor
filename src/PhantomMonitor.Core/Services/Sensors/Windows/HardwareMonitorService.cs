@@ -197,13 +197,20 @@ public sealed partial class HardwareMonitorService : ISensorService, IOverlayPro
 
         _sensorFallbackReader.ApplyCpuClockFallback(data, debugInfo);
         _sensorFallbackReader.ApplyCpuTempFallback(data, debugInfo);
-        _sensorFallbackReader.ApplyRamFallbacks(data, debugInfo);
         _sensorFallbackReader.ReadBattery(data, debugInfo);
         _sensorFallbackReader.ReadWheaErrors(data, debugInfo);
 
         data.Monitors = _monitorInventoryReader.GetMonitors();
 
         data.GpuProcesses = _gpuProcessReader.GetGpuProcesses();
+
+        var activeGamePid = _fpsMonitor.HasData
+            ? _fpsMonitor.TargetProcessId
+            : _fpsMonitor.TargetProcessId > 0 && data.GpuProcesses.Any(p => p.Name.Equals(_fpsMonitor.TargetProcessName, StringComparison.OrdinalIgnoreCase))
+                ? _fpsMonitor.TargetProcessId
+                : 0;
+        var activeGameName = activeGamePid > 0 ? _fpsMonitor.TargetProcessName : "";
+        _sensorFallbackReader.ApplyRamFallbacks(data, debugInfo, activeGamePid, activeGameName);
 
         // Totais de rede da sessão: acumula velocidade observada x tempo desde a amostra anterior.
         if (_lastNetSampleUtc is { } last && data.GetValue(SType.NetworkUp) + data.GetValue(SType.NetworkDown) > 0)

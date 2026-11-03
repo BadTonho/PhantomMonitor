@@ -55,6 +55,12 @@ public sealed partial class MainWindowViewModel
     public string GpuDetailText { get => _gpuDetailText; private set => Set(ref _gpuDetailText, value); }
     private string _gpuDetailText = "VRAM, clocks e hotspot indisponíveis";
 
+    public string RamSpecBadgeText { get => _ramSpecBadgeText; private set => Set(ref _ramSpecBadgeText, value); }
+    private string _ramSpecBadgeText = "DRAM";
+
+    public string RamExtraDetailText { get => _ramExtraDetailText; private set => Set(ref _ramExtraDetailText, value); }
+    private string _ramExtraDetailText = "—";
+
     // ---- Card Placa-mãe & ventoinhas ----
     public string MotherboardTempText { get => _motherboardTempText; private set => Set(ref _motherboardTempText, value); }
     private string _motherboardTempText = "Indisponível";
@@ -176,6 +182,8 @@ public sealed partial class MainWindowViewModel
             ?? "Clock, potência e voltagem indisponíveis";
         GpuDetailText = SensorFormatter.BuildGpuDetail(data)
             ?? "VRAM, clocks e hotspot indisponíveis";
+        RamSpecBadgeText = SensorFormatter.BuildRamSpecBadge(data);
+        RamExtraDetailText = SensorFormatter.BuildRamExtraDetail(data);
 
         SetTempState(Has(data, SensorType.CpuTemperature) ? data.GetValue(SensorType.CpuTemperature) : null);
         SetGpuTempState(Has(data, SensorType.GpuTemperature) ? data.GetValue(SensorType.GpuTemperature) : null);

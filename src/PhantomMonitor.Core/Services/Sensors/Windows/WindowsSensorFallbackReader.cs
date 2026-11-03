@@ -25,6 +25,9 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
     private DateTime? _wheaSessionStart;
     private int _wheaSessionCount;
     private DateTime _lastWheaRead = DateTime.MinValue;
+    private bool _ramSpecLoaded;
+    private double _cachedRamFrequencyMhz;
+    private double _cachedRamCasLatency;
 
     public void StartSession() => _wheaSessionStart = DateTime.Now;
 
@@ -123,7 +126,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
         }
     }
 
-    internal void ApplyRamFallbacks(SensorData data, List<string> debugInfo)
+    internal void ApplyRamFallbacks(SensorData data, List<string> debugInfo, int activeGamePid = 0, string activeGameName = "")
     {
         // LibreHardwareMonitor expõe Memory Used/Available em GB.
         if (data.Values.TryGetValue(SType.RamUsed, out var used) &&
@@ -134,11 +137,85 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
             data.Labels[SType.RamTotal] = "RAM Total (Used + Available)";
         }
 
-        if (data.GetValue(SType.RamAvailable) > 0 && data.GetValue(SType.RamTotal) > 0) return;
+        // Sempre lê GlobalMemoryStatusEx para memória comprometida (Commit Charge) e fallback de RAM física.
+        try
+        {
+            var (freeGb, totalGb, committedGb, commitLimitGb) = ReadRamNative();
+            if (freeGb > 0 && data.GetValue(SType.RamAvailable) <= 0)
+            {
+                data.Values[SType.RamAvailable] = freeGb;
+                data.Labels[SType.RamAvailable] = "RAM Disponível";
+            }
+            if (totalGb > 0 && data.GetValue(SType.RamTotal) <= 0)
+            {
+                data.Values[SType.RamTotal] = totalGb;
+                data.Labels[SType.RamTotal] = "RAM Total";
+            }
+            if (committedGb > 0 && data.GetValue(SType.RamCommitted) <= 0)
+            {
+                data.Values[SType.RamCommitted] = committedGb;
+                data.Labels[SType.RamCommitted] = "Memória comprometida";
+            }
+            if (commitLimitGb > 0 && data.GetValue(SType.RamCommitLimit) <= 0)
+            {
+                data.Values[SType.RamCommitLimit] = commitLimitGb;
+                data.Labels[SType.RamCommitLimit] = "Limite de memória comprometida";
+            }
+        }
+        catch (Exception ex) { ErrorLog.Write("Native.Ram", ex); }
+
+        if (!data.Values.ContainsKey(SType.RamUsed) && data.GetValue(SType.RamTotal) > 0 && data.GetValue(SType.RamAvailable) > 0)
+        {
+            data.Values[SType.RamUsed] = Math.Max(0, data.GetValue(SType.RamTotal) - data.GetValue(SType.RamAvailable));
+            data.Labels[SType.RamUsed] = "RAM Usada";
+        }
+
+        EnsurePhysicalMemorySpecLoaded(debugInfo);
+        if (_cachedRamFrequencyMhz > 0 && data.GetValue(SType.RamFrequency) <= 0)
+        {
+            data.Values[SType.RamFrequency] = _cachedRamFrequencyMhz;
+            data.Labels[SType.RamFrequency] = "Frequência da RAM";
+        }
+        if (_cachedRamCasLatency > 0 && data.GetValue(SType.RamCasLatency) <= 0)
+        {
+            data.Values[SType.RamCasLatency] = _cachedRamCasLatency;
+            data.Labels[SType.RamCasLatency] = $"Timings (CL{_cachedRamCasLatency:F0})";
+        }
+
+        var cl = data.GetValue(SType.RamCasLatency);
+        var trcd = data.GetValue(SType.RamTrcd);
+        var trp = data.GetValue(SType.RamTrp);
+        var tras = data.GetValue(SType.RamTras);
+        if (cl > 0 && trcd > 0 && trp > 0 && tras > 0)
+        {
+            data.RamTimings = $"{cl:F0}-{trcd:F0}-{trp:F0}-{tras:F0}";
+            data.Labels[SType.RamCasLatency] = $"Timings ({data.RamTimings})";
+        }
+        else if (cl > 0)
+        {
+            data.RamTimings = $"CL{cl:F0}";
+            data.Labels[SType.RamCasLatency] = $"Timings (CL{cl:F0})";
+        }
+
+        double gameRamGb = 0;
+        if (activeGamePid > 0)
+        {
+            try
+            {
+                using var proc = Process.GetProcessById(activeGamePid);
+                gameRamGb = Math.Max(0, proc.WorkingSet64 / (1024.0 * 1024.0 * 1024.0));
+            }
+            catch { gameRamGb = 0; }
+        }
+        data.SetValue(SType.RamGameUsed, gameRamGb, activeGameName.Length > 0 ? $"RAM Jogo ({activeGameName})" : "RAM Jogo");
+        if (data.Values.TryGetValue(SType.RamUsed, out var totalUsedGb))
+            data.SetValue(SType.RamSystemUsed, Math.Max(0, totalUsedGb - gameRamGb), "RAM Sistema");
+
+        if (data.GetValue(SType.RamAvailable) > 0 && data.GetValue(SType.RamTotal) > 0 && data.Values.ContainsKey(SType.RamUsage)) return;
 
         try
         {
-            var (freeGb, totalGb) = ReadRamNative();
+            var (freeGb, totalGb, _, _) = ReadRamNative();
             debugInfo.Add($"[RAM] Available = {freeGb:F1} GB / Total = {totalGb:F1} GB");
             if (freeGb > 0 && data.GetValue(SType.RamAvailable) <= 0)
             {
@@ -445,16 +522,52 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
     }
 
     /// <summary>Memória física via GlobalMemoryStatusEx (GB); cai para WMI se a chamada nativa falhar.</summary>
-    private static (double availableGB, double totalGB) ReadRamNative()
+    private static (double availableGB, double totalGB, double committedGB, double commitLimitGB) ReadRamNative()
     {
         try
         {
             var status = new MemoryStatusEx { Length = (uint)System.Runtime.InteropServices.Marshal.SizeOf<MemoryStatusEx>() };
             if (GlobalMemoryStatusEx(ref status) && status.TotalPhys > 0)
-                return (status.AvailPhys / 1024.0 / 1024.0 / 1024.0, status.TotalPhys / 1024.0 / 1024.0 / 1024.0);
+                return (
+                    status.AvailPhys / 1024.0 / 1024.0 / 1024.0,
+                    status.TotalPhys / 1024.0 / 1024.0 / 1024.0,
+                    status.TotalPageFile >= status.AvailPageFile ? (status.TotalPageFile - status.AvailPageFile) / 1024.0 / 1024.0 / 1024.0 : 0,
+                    status.TotalPageFile / 1024.0 / 1024.0 / 1024.0);
         }
         catch (Exception ex) { ErrorLog.Write("Native.Ram", ex); }
-        return ReadRamFromWmi();
+        var (availWmi, totalWmi) = ReadRamFromWmi();
+        return (availWmi, totalWmi, 0, 0);
+    }
+
+    private void EnsurePhysicalMemorySpecLoaded(List<string> debugInfo)
+    {
+        if (_ramSpecLoaded) return;
+        _ramSpecLoaded = true;
+        try
+        {
+            using var searcher = new ManagementObjectSearcher("SELECT ConfiguredClockSpeed, Speed, PartNumber FROM Win32_PhysicalMemory");
+            using var results = searcher.Get();
+            foreach (var obj in results)
+            {
+                using (obj)
+                {
+                    var configuredSpeed = WmiProp(obj, "ConfiguredClockSpeed");
+                    var speed = WmiProp(obj, "Speed");
+                    var freq = configuredSpeed > 0 ? configuredSpeed : speed;
+                    if (freq > _cachedRamFrequencyMhz) _cachedRamFrequencyMhz = freq;
+
+                    if (_cachedRamCasLatency <= 0 && WmiValue(obj, "PartNumber") is string part && !string.IsNullOrWhiteSpace(part))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(part.Trim(), @"(?:CL|C)(\d{2})(?:\D|$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        if (match.Success && int.TryParse(match.Groups[1].Value, out var cl) && cl is >= 9 and <= 50)
+                            _cachedRamCasLatency = cl;
+                    }
+                }
+            }
+            if (_cachedRamFrequencyMhz > 0 || _cachedRamCasLatency > 0)
+                debugInfo.Add($"[RAM] Spec WMI: {_cachedRamFrequencyMhz:F0} MHz, CL={_cachedRamCasLatency:F0}");
+        }
+        catch (Exception ex) { ErrorLog.Write("WMI.PhysicalMemory", ex); }
     }
 
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]

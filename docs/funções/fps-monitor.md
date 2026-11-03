@@ -2,7 +2,7 @@
 
 > **Idioma:** Português (Brasil) · [English](../en/functions/fps-monitor.md)
 
-Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon** (open-source) em segundo plano para capturar eventos de apresentação de frames (`Present`) da placa de vídeo via ETW nativo. Essa coleta não injeta DLL. Separadamente, o modo opt-in do overlay dentro do jogo instala hooks nos processos observados pelo PresentMon; anti-cheats podem bloquear essa integração, e o aplicativo não tenta contornar esses bloqueios.
+No Windows, o monitor utiliza o **Intel PresentMon** (open-source) em segundo plano para capturar eventos de apresentação (`Present`) via ETW nativo, sem injetar DLL. No Linux, observa eventos X11 Present nas janelas X11/XWayland e usa telemetria Vulkan e hooks EGL/GLX passivos como fontes complementares. Esses hooks registram quadros sem desenhar o overlay dentro do jogo, mas precisam estar carregados quando o jogo inicia.
 
 ## Funcionalidades
 
@@ -16,7 +16,7 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 
 - **Contrato Multiplataforma (`IFpsMonitor`):** Interface unificada que abstrai a captura de taxas de quadros entre Windows (`FpsMonitor`) e Linux (`LinuxFpsMonitor`).
 - **Motor Windows:** `PresentMon.exe` (binário standalone oficial da Intel, armazenado em `tools/` e copiado automaticamente para a pasta de saída do build)
-- **Motor Linux:** `PhantomVulkanLayer` (camada Vulkan nativa em C++ que intercepta `vkQueuePresentKHR` e transmite dados via memória compartilhada `/dev/shm/phantom_fps_<pid>`, dispensando softwares como MangoHud)
+- **Motor Linux:** eventos X11 Present de janelas X11/XWayland; a janela em foco tem prioridade e, se o PhantomMonitor estiver em foco, o monitor escolhe outra janela que esteja apresentando quadros. Para jogos Wayland/OpenGL nativos, o app prepara o preload EGL/GLX para publicar telemetria em memória compartilhada, sem desenhar o OSD. Vulkan usa a camada `PhantomVulkanLayer` e memória compartilhada nos modos flutuante e dentro do jogo. Processos e launchers já abertos precisam ser reiniciados depois da ativação.
 - **Comunicação no Windows:** o serviço C# inicializa o processo com saída padrão redirecionada (`--output_stdout --no_console_stats --stop_existing_session --session_name PhantomMonitorFps --exclude PhantomMonitor.exe --no_track_input --no_track_gpu --exclude_dropped`) e analisa o CSV em tempo real. Os argumentos precisam existir no PresentMon 2.x (por exemplo, `--no_track_gpu_video` **não existe** e faz o processo encerrar imediatamente).
 - **Parse Dinâmico:** mapeia as colunas do PresentMon (`ProcessID`, `Application`; frametime por `msBetweenPresents`, com fallback em `FrameTime` e `msBetweenDisplayChange`) e trata campos CSV entre aspas
 - **Detecção de Foco:** `GetForegroundWindow` e `GetWindowThreadProcessId` via P/Invoke identificam o jogo ativo a cada 500ms
@@ -38,9 +38,10 @@ Monitor de FPS independente de alta precisão que utiliza o **Intel PresentMon**
 ## Métricas extras do PresentMon e percentis puros (P6.5)
 
 Estas séries são exclusivas do leitor Windows baseado em PresentMon. O coletor
-Linux baseado na camada Vulkan publica FPS, frametime, média/mínimo/máximo,
+Linux baseado em X11 Present/Vulkan/EGL/GLX publica FPS, frametime, média/mínimo/máximo,
 1%/0,1% Low e histórico de frametime, mas ainda não publica P1/P99, GPU Busy,
-CPU Busy, CPU Wait ou latência de present.
+CPU Busy, CPU Wait ou latência de present. X11 Present depende de X11/XWayland e
+da extensão Present; janelas Wayland nativas dependem de um hook Vulkan ou EGL/GLX carregado no jogo.
 
 Além do FPS/frametime clássicos, o monitor consome **colunas opcionais** do CSV do
 PresentMon 2.x e publica percentis brutos:
@@ -80,4 +81,4 @@ O formato v1 continua legível em modo aproximado, com orientação para reinsta
 a camada. O v2 tem 98.424 bytes: prefixo legado de 100, capacidade em 100,
 sequência uint64 em 104, sessão uint64 em 112 e 4.096 registros de 24 bytes em 120.
 Cada registro contém número uint64, timestamp monotônico uint64, frametime float e
-FPS float. Reinstale com `install_layer.sh` após atualizar a aplicação.
+FPS float. Os pacotes de release atualizam a camada com o app; instalações manuais feitas por `install_layer.sh` precisam executar esse script novamente após atualizar.

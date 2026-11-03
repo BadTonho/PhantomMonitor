@@ -63,17 +63,26 @@ mas a versão atual do renderer usa a fonte padrão interna do Dear ImGui; taman
 cores e geometria são aplicados, enquanto a família selecionada no editor ainda
 não é carregada pelo renderer nativo.
 
-No Linux, o usuário pode iniciar um executável configurado no PhantomMonitor,
-que define `ENABLE_PHANTOM_OVERLAY=1`, ou copiar essa variável para as opções de
-inicialização do jogo na Steam. O gating por processo também mantém disponível a
+No Linux, ao aplicar **Dentro do jogo**, o PhantomMonitor registra a camada
+Vulkan e publica `ENABLE_PHANTOM_OVERLAY=1` e `LD_PRELOAD` no ambiente
+D-Bus/systemd da sessão. No KDE Plasma, tenta atualizar o ambiente de lançamento
+do desktop pelo serviço `org.kde.Startup` ou, quando disponível, pelo método
+`setLaunchEnv` do KLauncher; o diagnóstico informa quando nenhum deles está ativo. A
+configuração é gravada em `environment.d` para sessões futuras. Quando a
+integração da sessão é confirmada, não é preciso cadastrar executáveis, editar
+opções da Steam ou sair da conta. Launchers e jogos que já estavam abertos
+precisam ser reiniciados. O gating por processo também mantém disponível a
 coleta FPS da camada Vulkan existente.
 
 ## Estado e validação
 
-O código contém a camada Vulkan Linux com desenho e coleta existente de FPS/frametime, o renderer OpenGL GLX/EGL, hooks Windows Direct3D 9–12 e WGL, além da camada Vulkan Windows. No Windows, a sessão PresentMon permanece ativa se a coleta de sensores parar enquanto **Dentro do jogo** estiver ativo; o parser coleta PIDs válidos antes do filtro de janela em foco usado pelas métricas. O app resolve a imagem e arquitetura do processo, ignora PhantomMonitor e processos de shell/sistema, e tenta o launcher nativo x86/x64 uma vez por processo, com diagnóstico de falhas e sem fallback para injetar processos não observados. Vulkan usa manifests implícitos em HKCU nas visões de Registro correspondentes; os registros são limpos ao trocar para janela flutuante, ao encerrar o app e ao iniciar já em modo flutuante. O manifest oferece `PHANTOMMONITOR_DISABLE_VULKAN_LAYER=1`; aplicações Vulkan iniciadas antes do registro precisam ser reiniciadas. Falhas aparecem em Diagnóstico e não acionam janelas flutuantes automaticamente.
+O código contém a camada Vulkan Linux com desenho e coleta existente de FPS/frametime, o renderer OpenGL GLX/EGL, hooks Windows Direct3D 9–12 e WGL, além da camada Vulkan Windows. No Windows, a sessão PresentMon permanece ativa se a coleta de sensores parar enquanto **Dentro do jogo** estiver ativo; o parser coleta PIDs válidos antes do filtro de janela em foco usado pelas métricas. O app resolve a imagem e arquitetura do processo, ignora PhantomMonitor e processos de shell/sistema, e tenta o launcher nativo x86/x64 uma vez por processo, com diagnóstico de falhas e sem fallback para injetar processos não observados. O diagnóstico da interface também informa a presença do launcher e da DLL de hook em cada arquitetura e avisa quando a visibilidade do overlay está desligada. Vulkan usa manifests implícitos em HKCU nas visões de Registro correspondentes; os registros são limpos ao trocar para janela flutuante, ao encerrar o app e ao iniciar já em modo flutuante. O manifest oferece `PHANTOMMONITOR_DISABLE_VULKAN_LAYER=1`; aplicações Vulkan iniciadas antes do registro precisam ser reiniciadas. Falhas aparecem em Diagnóstico e não acionam janelas flutuantes automaticamente.
 
 O build Linux compila a camada Vulkan, o preload OpenGL e os testes nativos. O
-build dos componentes Windows exige Visual Studio 2022 e Vulkan SDK com as
+`dotnet build` e o `dotnet publish` do app não compilam nem copiam os hooks Windows;
+para um build local funcional do modo dentro do jogo, execute
+`scripts/build-windows-overlay.ps1 -OutDirectory <pasta-do-app>/PhantomOverlay`.
+O build dos componentes Windows exige Visual Studio 2022 e Vulkan SDK com as
 bibliotecas de importação do loader x86 e x64; deve ser executado em Windows e
 os renderers precisam de validação real em x86/x64. Com um SDK somente x64, os
 hooks x86 Direct3D/OpenGL ainda compilam, mas a camada Vulkan x86 não linka. A

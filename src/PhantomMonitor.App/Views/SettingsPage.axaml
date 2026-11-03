@@ -71,28 +71,35 @@
                   <TextBlock Text="{Binding InGameOverlayDiagnosticText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
-              <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
-                <TextBox Text="{Binding OverlayTargetPathText, Mode=TwoWay}" PlaceholderText="Caminho do executável" />
-                <TextBox Grid.Column="1" Text="{Binding OverlayTargetArgumentsText, Mode=TwoWay}" PlaceholderText="Argumentos (opcional)" />
-                <Button Grid.Column="2" Content="Adicionar" Click="OnAddOverlayTargetClick" />
-              </Grid>
-              <ItemsControl ItemsSource="{Binding OverlayInGameTargets}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,2">
-                      <TextBlock Text="{Binding ExecutablePath}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                      <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].DataContext.IsOverlayTargetLaunchVisible}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
-                      <Button Grid.Column="2" Content="Remover" Click="OnRemoveOverlayTargetClick" />
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <StackPanel IsVisible="{Binding IsLinuxPlatform}" Orientation="Horizontal" Spacing="8">
-                <TextBox Text="{Binding SteamOverlayLaunchOption}" IsReadOnly="True" MinWidth="260" />
-                <Button Content="Copiar opção Steam" Click="OnCopySteamOverlayOptionClick" />
+              <StackPanel IsVisible="{Binding IsWindowsPlatform}" Spacing="8">
+                <Grid ColumnDefinitions="2*,*,Auto" ColumnSpacing="8">
+                  <TextBox Text="{Binding OverlayTargetPathText, Mode=TwoWay}" PlaceholderText="Caminho do executável" />
+                  <TextBox Grid.Column="1" Text="{Binding OverlayTargetArgumentsText, Mode=TwoWay}" PlaceholderText="Argumentos (opcional)" />
+                  <Button Grid.Column="2" Content="Adicionar" Click="OnAddOverlayTargetClick" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding OverlayInGameTargets}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,2">
+                        <TextBlock Text="{Binding ExecutablePath}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <Button Grid.Column="1" IsVisible="{Binding $parent[UserControl].DataContext.IsOverlayTargetLaunchVisible}" Content="Iniciar" Click="OnLaunchOverlayTargetClick" />
+                        <Button Grid.Column="2" Content="Remover" Click="OnRemoveOverlayTargetClick" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
               </StackPanel>
-              <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
+            <Border IsVisible="{Binding IsLinuxOverlaySessionWarningVisible}"
+                    Background="{DynamicResource BgWindowBrush}"
+                    BorderBrush="{DynamicResource BgCardBorderBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="12">
+              <StackPanel Spacing="5">
+                <TextBlock Text="INTEGRAÇÃO DA SESSÃO LINUX" Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" FontWeight="Bold" />
+                <TextBlock Text="{Binding LinuxOverlaySessionDiagnosticText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
             <Button Classes="settings-help-icon" AutomationProperties.Name="Ajuda da seção MODO DO OVERLAY">
               <ToolTip.Tip>
                 <StackPanel MaxWidth="420" Spacing="6">
@@ -100,7 +107,9 @@
                              TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
                   <TextBlock Text="No Windows, o app detecta globalmente aplicações apresentando frames enquanto está aberto e tenta instalar o hook sem cadastro de executável, usando ETW/PresentMon. Pode exigir a conta no grupo Performance Log Users. Aplicações Vulkan já abertas precisam ser reiniciadas; jogos elevados podem ignorar registros por usuário. Anti-cheats podem recusar o hook. Para jogos D3D12 sem overlay, adicione o executável abaixo e use Iniciar."
                              TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
-                  <TextBlock Text="No Linux, adicione um executável para iniciá-lo com Vulkan e, se instalado, o preload OpenGL GLX/EGL. Para Steam, cole a opção gerada abaixo nas propriedades do jogo."
+                  <TextBlock Text="Se não houver desenho, confirme que Mostrar overlay está ativo. O diagnóstico informa se os hooks nativos x86/x64 estão presentes; um dotnet build/publish comum não os compila."
+                             TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+                  <TextBlock Text="No Linux, os pacotes incluem a camada Vulkan e o preload OpenGL GLX/EGL. Ao ativar Dentro do jogo, o app registra a camada e publica ENABLE_PHANTOM_OVERLAY e LD_PRELOAD no ambiente D-Bus/systemd da sessão e nas sessões futuras. No KDE Plasma, tenta atualizar o ambiente de lançamento pelo serviço de sessão; em sessões KDE 5, também tenta o KLauncher. Se o diagnóstico não confirmar, jogos iniciados pelo desktop talvez não recebam o hook nesta sessão. Feche e reabra jogos ou launchers já abertos depois da confirmação. Flatpak pode exigir integração própria."
                              TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
                 </StackPanel>
               </ToolTip.Tip>

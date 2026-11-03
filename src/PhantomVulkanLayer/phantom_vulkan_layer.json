@@ -13,7 +13,7 @@
             "vkGetDeviceProcAddr": "Phantom_vkGetDeviceProcAddr"
         },
         "enable_environment": {
-            "ENABLE_PHANTOM_OVERLAY": "1"
+            "PHANTOM_FPS_CAPTURE": "1"
         },
         "disable_environment": {
             "DISABLE_PHANTOM_OVERLAY": "1"

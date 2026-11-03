@@ -208,8 +208,8 @@ public sealed partial class LinuxSensorService : ISensorService
 
         foreach (var type in new[] { SensorType.Fps, SensorType.FrametimeMs, SensorType.FpsAvg, SensorType.FpsMin,
                      SensorType.Fps1Low, SensorType.Fps01Low, SensorType.FpsMax })
-            AddAvailability(lines, availableTypes, "FPS", type, "memória compartilhada da PhantomVulkanLayer", _fpsMonitor.DebugInfo);
-        lines.Add($"[FPS] Camada: {_fpsMonitor.DebugInfo}");
+            AddAvailability(lines, availableTypes, "FPS", type, "X11 Present/XWayland, PhantomVulkanLayer ou preload EGL/GLX", _fpsMonitor.DebugInfo);
+        lines.Add($"[FPS] Fonte: {_fpsMonitor.DebugInfo}");
 
         _gpuSensorReader.AppendDiagnostics(lines, data);
         return lines;

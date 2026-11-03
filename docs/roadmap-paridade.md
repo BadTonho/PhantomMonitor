@@ -75,9 +75,7 @@
 
 > Decisão atual: oferecer janela flutuante e modo dentro do jogo como escolha global. No Windows, ETW/PresentMon detecta aplicações que apresentam frames; hooks x86/x64 atuam nos PIDs observados, sem cadastro de executável. Vulkan usa camada implícita por usuário enquanto o modo está ativo. Há aviso anti-cheat, sem tentativa de contorno. Janela flutuante continua como padrão e opção disponível.
 
-- [x] Contrato interno v1 de apresentação aplicada em memória compartilhada,
-- [x] Contrato interno v1 de apresentação aplicada em memória compartilhada, seleção global e migração para `floating`; a lista manual continua no Linux e os hooks Windows detectam processos por PresentMon/ETW.
-      Linux por launcher/Steam.
+- [x] Contrato interno v1 de apresentação aplicada em memória compartilhada, seleção global e migração para `floating`; o Linux ativa Vulkan/OpenGL pelo ambiente da sessão sem lista manual, e os hooks Windows detectam processos por PresentMon/ETW.
 - [x] Documentar fases, política anti-cheat e diagnóstico em português/inglês.
 - [x] Renderer Linux Vulkan e hooks Windows Direct3D 11/12 (fase base).
 - [x] Linux OpenGL e Windows OpenGL, Vulkan e Direct3D 9/10 (expansão).

@@ -72,11 +72,11 @@ O ZIP Windows e o tar.gz Linux incluem `phantom.portable`, mas nunca um `config.
 | `PhantomMonitor-<versão>-linux-x64.AppImage` | Automático (Applier do AppImage) |
 | `PhantomMonitorSetup-<versão>.exe` | Instalador per-user (Inno Setup; cada arquivo junto à pasta trocada) |
 | `phantom-monitor_<versão>_amd64.deb` | Instalação .deb (fica em modo notificação) |
-| `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan (instalação manual; atualiza reexecutando o `install_layer.sh` da versão) |
+| Payload `PhantomOverlay/linux/` dentro dos pacotes Linux | Camada Vulkan e preload OpenGL; registrados para o usuário enquanto o modo dentro do jogo está ativo |
 
 Fluxo de publicação:
 
-1. `scripts/release.ps1 -Version <x.y.z>`: publica o app único (win-x64 e linux-x64) self-contained single-file com `-p:Version=<versão>` e gera o zip e o tarball em `releases/<versão>/` — o payload do Windows é `PhantomMonitor.exe` + `PresentMon.exe` + `config.example.json` (o script garante o PresentMon solto e limpa os `*.pdb`) e o do Linux é o binário plus o hardlink transicional. Opções: `-PackWindowsSetup` (instalador com o ISCC quando o Inno Setup 6 está presente), `-LayerSoPath <so>` (anexa a camada Vulkan compilada), `-SkipWindows/-SkipLinux` e `-OutDirectory`.
+1. Em uma máquina Linux, compile o payload nativo com `scripts/build-linux-overlay.sh build/linux-overlay-payload` e disponibilize essa pasta na máquina Windows de release. No Windows, `scripts/release.ps1 -Version <x.y.z> -LinuxOverlayDirectory <pasta-do-payload>` publica o app único (win-x64 e linux-x64) self-contained single-file com `-p:Version=<versão>` e gera o zip e o tarball em `releases/<versão>/`. O pacote Linux inclui as duas bibliotecas e o manifesto, sem exigir download separado pelo usuário. O payload do Windows é `PhantomMonitor.exe` + `PresentMon.exe` + `config.example.json` (o script garante o PresentMon solto e limpa os `*.pdb`) e o do Linux inclui também o hardlink transicional. Opções: `-PackWindowsSetup`, `-SkipWindows/-SkipLinux` e `-OutDirectory`. Sem `-LinuxOverlayDirectory`, a geração Linux falha em vez de produzir um pacote sem o renderer.
 2. No Linux, os empacotadores experimentais (NÃO TESTADOS) ficam em `packaging/linux/`: `appimage.sh` (appimagetool) e `deb.sh` (dpkg-deb). O instalador Windows em `packaging/windows/phantom-monitor.iss`.
 3. Revise os pacotes, crie a tag `v<x.y.z>` (`git tag v1.2.3 && git push --tags`) e publique: o script imprime o comando `gh release create v1.2.3 ...` com os assets — ou suba tudo pela página do GitHub.
 4. Rascunho (draft) não conta como atualização disponível; a tag deve ser a versão mesma (ex.: `v1.2.3` ↔ `1.2.3` comparada pelo SemVer além do "v").

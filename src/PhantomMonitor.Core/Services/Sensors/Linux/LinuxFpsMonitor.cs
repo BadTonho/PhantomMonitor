@@ -9,15 +9,18 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     private readonly FrametimeBuffer _history = new(600);
     private readonly Queue<double> _samples = new();
     private readonly object _gate = new();
+    private readonly LinuxX11PresentMonitor _x11Monitor = new();
     private readonly Timer _timer;
     private bool _running;
     private uint _pid;
     private ulong _session;
     private ulong _lastFrame;
+    private string _source = "";
+    private DateTime _lastX11FrameReceived = DateTime.MinValue;
     private DateTime _lastStats;
     private volatile float _fps, _frametime, _average, _minimum, _maximum, _low1, _low01;
     private volatile bool _hasData;
-    private volatile string _debug = "Aguardando PhantomVulkanLayer...";
+    private volatile string _debug = "Aguardando frames Vulkan, EGL/GLX ou X11 Present...";
     public float Fps => _fps;
     public float FrametimeMs => _frametime;
     public float FpsAvg => _average;
@@ -30,16 +33,27 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
     public string DebugInfo => _debug;
 
     public LinuxFpsMonitor() => _timer = new Timer(_ => Poll(), null, Timeout.Infinite, Timeout.Infinite);
-    public void Start() { lock (_gate) { Reset(); _running = true; _timer.Change(0, 100); } }
-    public void Stop() { _timer.Change(Timeout.Infinite, Timeout.Infinite); lock (_gate) { _running = false; Reset(); } }
+    public void Start()
+    {
+        lock (_gate) { Reset(); _running = true; _timer.Change(0, 100); }
+        _x11Monitor.Start(ConsumeX11Frame);
+    }
+
+    public void Stop()
+    {
+        _timer.Change(Timeout.Infinite, Timeout.Infinite);
+        _x11Monitor.Stop();
+        lock (_gate) { _running = false; Reset(); }
+    }
     public void Reset()
     {
         lock (_gate)
         {
             _samples.Clear(); _history.Clear();
             _fps = _frametime = _average = _minimum = _maximum = _low1 = _low01 = 0;
-            _hasData = false; _pid = 0; _session = _lastFrame = 0; _lastStats = DateTime.MinValue;
-            _debug = "Aguardando PhantomVulkanLayer...";
+            _hasData = false; _pid = 0; _session = _lastFrame = 0; _source = "";
+            _lastStats = DateTime.MinValue; _lastX11FrameReceived = DateTime.MinValue;
+            _debug = $"Aguardando frames Vulkan, EGL/GLX ou X11 Present. {_x11Monitor.Status}";
         }
     }
 
@@ -60,6 +74,10 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                 }
             }
             var nowNs = (ulong)(Stopwatch.GetTimestamp() * (1_000_000_000.0 / Stopwatch.Frequency));
+            var hasFreshHookFrames = snapshots.Any(snapshot => snapshot.TimestampNs <= nowNs
+                && nowNs - snapshot.TimestampNs <= 2_000_000_000UL);
+            if (!hasFreshHookFrames && (DateTime.UtcNow - _lastX11FrameReceived).TotalSeconds <= 2)
+                return;
             Consume(snapshots, nowNs);
         }
         catch (Exception ex) { ErrorLog.Write("LinuxFpsMonitor.Poll", ex); }
@@ -78,7 +96,7 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
             if (selected is null) { Reset(); return; }
             if (selected.Pid != _pid || selected.Session != _session || selected.FrameCount < _lastFrame)
             {
-                Reset(); _pid = selected.Pid; _session = selected.Session;
+                Reset(); _pid = selected.Pid; _session = selected.Session; _source = "shared memory";
             }
             var frames = selected.Frames.Where(f => f.Number > _lastFrame).ToArray();
             if (frames.Length == 0) return;
@@ -102,11 +120,47 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                 _low01 = (float)sorted[Math.Min(sorted.Length - 1, (int)(sorted.Length * 0.001))];
                 _lastStats = DateTime.UtcNow;
             }
-            _debug = $"{_fps:F0} FPS ({_frametime:F1} ms) - {selected.Name} (PID {_pid}) [Vulkan v{(selected.Legacy ? 1 : 2)}]"
+            _debug = $"{_fps:F0} FPS ({_frametime:F1} ms) - {selected.Name} (PID {_pid}) [shared memory v{(selected.Legacy ? 1 : 2)}]"
                 + (selected.Legacy ? " · camada antiga: reinstale para capturar todos os frames" : "")
                 + (gap ? " · ring excedido: frames perdidos durante a pausa de leitura" : "");
         }
     }
 
-    public void Dispose() { Stop(); _timer.Dispose(); }
+    private void ConsumeX11Frame(uint pid, string name, float frametimeMs, float fps)
+    {
+        if (pid == 0 || !float.IsFinite(frametimeMs) || !float.IsFinite(fps)
+            || frametimeMs <= 0 || fps <= 0) return;
+
+        lock (_gate)
+        {
+            if (!_running) return;
+            if (_pid != pid || !string.Equals(_source, "X11 Present", StringComparison.Ordinal))
+            {
+                Reset();
+                _pid = pid;
+                _source = "X11 Present";
+            }
+
+            _history.Add(frametimeMs);
+            _frametime = frametimeMs;
+            _fps = _hasData ? 0.35f * fps + 0.65f * _fps : fps;
+            _hasData = true;
+            _samples.Enqueue(fps);
+            if (_samples.Count > MaxStatsSamples) _samples.Dequeue();
+            _lastX11FrameReceived = DateTime.UtcNow;
+
+            if ((DateTime.UtcNow - _lastStats).TotalSeconds >= 1)
+            {
+                var sorted = _samples.Order().ToArray();
+                _average = (float)sorted.Average(); _minimum = (float)sorted[0]; _maximum = (float)sorted[^1];
+                _low1 = (float)sorted[Math.Min(sorted.Length - 1, (int)(sorted.Length * 0.01))];
+                _low01 = (float)sorted[Math.Min(sorted.Length - 1, (int)(sorted.Length * 0.001))];
+                _lastStats = DateTime.UtcNow;
+            }
+
+            _debug = $"{_fps:F0} FPS ({_frametime:F1} ms) - {name} (PID {_pid}) [X11 Present]";
+        }
+    }
+
+    public void Dispose() { Stop(); _x11Monitor.Dispose(); _timer.Dispose(); }
 }

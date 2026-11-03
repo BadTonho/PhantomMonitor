@@ -333,6 +333,7 @@ public sealed partial class MainWindowViewModel
         OnOverlayBaseConfigChanged();
         UpdateOverlayRows(_latestSensorData);
         ConfigureInGameOverlayHeartbeat();
+        await WaitForLinuxOverlaySessionConfigurationAsync();
         OverlayWidthText = _config.Overlay.Width.ToString(CultureInfo.CurrentCulture);
         OverlayOpacityPercent = _config.OverlayOpacity * 100;
         OverlayBackgroundOpacityPercent = _config.Overlay.BackgroundOpacity * 100;
@@ -381,6 +382,12 @@ public sealed partial class MainWindowViewModel
         else if (hotkeyChanged && !intervalChanged && !loggingChanged && !telemetryChanged
             && !overlayChanged && !themeAppearanceChanged && !updateChanged)
             SettingsSaveMessage = "Atalho do overlay salvo e aplicado.";
+
+        if (OperatingSystem.IsLinux() && _config.Overlay.RenderMode == "floating"
+            && !string.IsNullOrWhiteSpace(_linuxOverlayRegistrationDiagnostic))
+        {
+            SettingsSaveMessage += $" Aviso: {_linuxOverlayRegistrationDiagnostic}";
+        }
 
         RefreshSettingsPendingState();
         return true;

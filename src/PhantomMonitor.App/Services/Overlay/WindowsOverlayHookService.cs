@@ -11,6 +11,25 @@ internal static class WindowsOverlayHookService
     internal sealed record Result(bool Success, string Message);
     private const uint ProcessQueryLimitedInformation = 0x1000;
 
+    internal static string GetNativeArtifactsDiagnostic()
+    {
+        var root = Path.Combine(AppContext.BaseDirectory, "PhantomOverlay");
+        var architectures = new[] { "x86", "x64" };
+        var details = architectures.Select(architecture =>
+        {
+            var directory = Path.Combine(root, architecture);
+            var missing = new List<string>();
+            if (!File.Exists(Path.Combine(directory, "PhantomOverlayLauncher.exe")))
+                missing.Add("launcher");
+            if (!File.Exists(Path.Combine(directory, "PhantomOverlayHook.dll")))
+                missing.Add("hook");
+            return missing.Count == 0
+                ? $"{architecture} disponível"
+                : $"{architecture} incompleto (falta {string.Join(" e ", missing)})";
+        });
+        return "Hooks nativos: " + string.Join("; ", details) + ".";
+    }
+
     internal static bool TryGetExecutablePath(int processId, out string executablePath, out string error)
     {
         executablePath = "";

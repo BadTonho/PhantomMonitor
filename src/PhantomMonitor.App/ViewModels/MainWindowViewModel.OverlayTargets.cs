@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
+using PhantomMonitor.App.Services.Overlay;
 using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.ViewModels;
@@ -14,25 +14,9 @@ public sealed partial class MainWindowViewModel
     public string OverlayTargetPathText { get => _overlayTargetPathText; set => Set(ref _overlayTargetPathText, value); }
     public string OverlayTargetArgumentsText { get => _overlayTargetArgumentsText; set => Set(ref _overlayTargetArgumentsText, value); }
     public string OverlayTargetMessage { get => _overlayTargetMessage; private set => Set(ref _overlayTargetMessage, value); }
-    public bool IsLinuxPlatform => OperatingSystem.IsLinux();
     public bool IsWindowsPlatform => OperatingSystem.IsWindows();
-    public bool IsOverlayTargetLaunchVisible => IsOverlayInGameModeSelected && (IsLinuxPlatform || IsWindowsPlatform);
+    public bool IsOverlayTargetLaunchVisible => IsOverlayInGameModeSelected && IsWindowsPlatform;
     public bool IsOverlayInGameModeSelected => OverlayRenderModeIndex == 1;
-    public string SteamOverlayLaunchOption
-    {
-        get
-        {
-            var openGlLibrary = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".local", "lib", "libPhantomOpenGLOverlay.so");
-            if (!File.Exists(openGlLibrary)) return "ENABLE_PHANTOM_OVERLAY=1 %command%";
-            var escapedPath = openGlLibrary.Replace("\\", "\\\\", StringComparison.Ordinal)
-                .Replace("\"", "\\\"", StringComparison.Ordinal)
-                .Replace("$", "\\$", StringComparison.Ordinal)
-                .Replace("`", "\\`", StringComparison.Ordinal);
-            return $"ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD=\"{escapedPath}${{LD_PRELOAD:+:$LD_PRELOAD}}\" %command%";
-        }
-    }
-    public void SetOverlayTargetMessage(string message) => OverlayTargetMessage = message;
 
     private void LoadOverlayInGameTargets()
     {
@@ -43,10 +27,11 @@ public sealed partial class MainWindowViewModel
 
     public void AddOverlayInGameTarget()
     {
-        var path = OverlayTargetPathText.Trim().Trim('"');
-        if (path.Length == 0 || !File.Exists(path))
+        var requestedPath = OverlayTargetPathText.Trim().Trim('"');
+        var path = ResolveOverlayTargetPath(requestedPath);
+        if (path is null)
         {
-            OverlayTargetMessage = "Selecione um executável existente.";
+            OverlayTargetMessage = "Informe o caminho de um executável existente ou um comando disponível no PATH.";
             return;
         }
 
@@ -85,7 +70,7 @@ public sealed partial class MainWindowViewModel
 
     public async Task LaunchOverlayTargetAsync(OverlayLaunchTargetConfig? target)
     {
-        if (target is null || (!OperatingSystem.IsLinux() && !OperatingSystem.IsWindows())) return;
+        if (target is null || !OperatingSystem.IsWindows()) return;
         if (!File.Exists(target.ExecutablePath))
         {
             OverlayTargetMessage = "O executável não foi encontrado no caminho salvo.";
@@ -94,34 +79,8 @@ public sealed partial class MainWindowViewModel
 
         try
         {
-            if (OperatingSystem.IsWindows())
-            {
-                var result = await Services.Overlay.WindowsOverlayHookService.LaunchAsync(target.ExecutablePath, target.Arguments);
-                OverlayTargetMessage = result.Message;
-                return;
-            }
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = target.ExecutablePath,
-                Arguments = target.Arguments,
-                WorkingDirectory = Path.GetDirectoryName(target.ExecutablePath) ?? Environment.CurrentDirectory,
-                UseShellExecute = false
-            };
-            startInfo.Environment["ENABLE_PHANTOM_OVERLAY"] = "1";
-            startInfo.Environment.Remove("DISABLE_PHANTOM_OVERLAY");
-            var openGlLibrary = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".local", "lib", "libPhantomOpenGLOverlay.so");
-            if (File.Exists(openGlLibrary))
-            {
-                var existingPreload = startInfo.Environment.TryGetValue("LD_PRELOAD", out var value) ? value : null;
-                startInfo.Environment["LD_PRELOAD"] = string.IsNullOrWhiteSpace(existingPreload)
-                    ? openGlLibrary
-                    : openGlLibrary + ":" + existingPreload;
-            }
-            Process.Start(startInfo)?.Dispose();
-            OverlayTargetMessage = File.Exists(openGlLibrary)
-                ? $"Iniciado: {Path.GetFileName(target.ExecutablePath)} com Vulkan e preload GLX/EGL."
-                : $"Iniciado: {Path.GetFileName(target.ExecutablePath)}. Vulkan pode funcionar; instale a biblioteca OpenGL para jogos GLX/EGL.";
+            var result = await Services.Overlay.WindowsOverlayHookService.LaunchAsync(target.ExecutablePath, target.Arguments);
+            OverlayTargetMessage = result.Message;
         }
         catch (Exception ex)
         {
@@ -145,4 +104,11 @@ public sealed partial class MainWindowViewModel
 
     internal static OverlayLaunchTargetConfig CloneOverlayTarget(OverlayLaunchTargetConfig target)
         => new() { ExecutablePath = target.ExecutablePath, Arguments = target.Arguments };
+
+    private static string? ResolveOverlayTargetPath(string requestedPath)
+    {
+        if (requestedPath.Length == 0) return null;
+        if (File.Exists(requestedPath)) return Path.GetFullPath(requestedPath);
+        return null;
+    }
 }

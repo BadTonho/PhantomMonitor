@@ -22,6 +22,10 @@ public sealed partial class MainWindowViewModel
     private bool _windowsOverlayProcessScanActive;
     private string _windowsOverlayInjectionDiagnostic = "";
     private string _windowsVulkanLayerDiagnostic = "";
+    private string _linuxOverlayRegistrationDiagnostic = "";
+    private string? _linuxConfiguredSessionMode;
+    private readonly SemaphoreSlim _linuxOverlaySessionConfiguration = new(1, 1);
+    private Task _linuxOverlaySessionConfigurationTask = Task.CompletedTask;
 
     [SupportedOSPlatform("windows")]
     private WindowsVulkanImplicitLayerRegistration WindowsVulkanLayerRegistration =>
@@ -34,8 +38,12 @@ public sealed partial class MainWindowViewModel
     }
 
     public bool IsInGameOverlayDiagnosticsVisible => OverlayRenderMode == "inGame";
+    public bool IsLinuxOverlaySessionWarningVisible => OperatingSystem.IsLinux()
+        && OverlayRenderMode != "inGame"
+        && !string.IsNullOrWhiteSpace(_linuxOverlayRegistrationDiagnostic);
+    public string LinuxOverlaySessionDiagnosticText => _linuxOverlayRegistrationDiagnostic;
     public string InGameOverlayCapabilityNotice => OperatingSystem.IsLinux()
-        ? "Linux: Vulkan usa a camada ativada por jogo; OpenGL usa preload GLX/EGL. O modo não abre janelas flutuantes automaticamente."
+        ? "Linux: o PhantomMonitor prepara captura passiva de FPS via Vulkan e GLX/EGL, sem desenhar dentro do jogo no modo flutuante. O modo Dentro do jogo também ativa o renderer. A captura exige iniciar o jogo depois de o ambiente ser atualizado; launchers e jogos já abertos precisam ser reabertos. Flatpak pode exigir integração própria."
         : OperatingSystem.IsWindows()
             ? "Windows: enquanto este modo estiver ativo, o PresentMon detecta aplicações apresentando frames e o PhantomMonitor tenta instalar hooks x86/x64 para Direct3D 9–12 e OpenGL, sem cadastro de executável. Vulkan usa uma camada implícita por usuário. ETW pode exigir a conta no grupo Performance Log Users; processos elevados ou protegidos podem recusar acesso. Anti-cheats podem bloquear o hook; não há troca automática para janelas flutuantes."
             : "O renderer dentro do jogo não está disponível nesta plataforma. O modo selecionado não alterna automaticamente para janelas flutuantes.";
@@ -60,6 +68,23 @@ public sealed partial class MainWindowViewModel
 
     private void ConfigureInGameOverlayHeartbeat()
     {
+        if (OperatingSystem.IsLinux())
+        {
+            var requestedMode = OverlayRenderMode;
+            var shouldConfigure = requestedMode != _linuxConfiguredSessionMode;
+            _linuxOverlayRegistrationDiagnostic = shouldConfigure
+                ? requestedMode == "inGame"
+                    ? "Preparando a integração Vulkan/OpenGL para esta sessão…"
+                    : "Preparando captura passiva de FPS Vulkan/OpenGL…"
+                : "";
+            Raise(nameof(IsLinuxOverlaySessionWarningVisible));
+            Raise(nameof(LinuxOverlaySessionDiagnosticText));
+            if (shouldConfigure)
+                _linuxOverlaySessionConfigurationTask = ConfigureLinuxOverlaySessionAsync(requestedMode);
+            else
+                _linuxOverlaySessionConfigurationTask = Task.CompletedTask;
+        }
+
         if (OperatingSystem.IsWindows())
         {
             var shouldEnable = OverlayRenderMode == "inGame";
@@ -103,6 +128,55 @@ public sealed partial class MainWindowViewModel
 
         _inGameOverlayHeartbeat?.Stop();
         PublishInGameOverlayFrame(initializeOrClear: true, forceHidden: true); // limpa estado deixado por outra execução.
+    }
+
+    private Task WaitForLinuxOverlaySessionConfigurationAsync()
+        => _linuxOverlaySessionConfigurationTask;
+
+    private async Task ConfigureLinuxOverlaySessionAsync(string requestedMode)
+    {
+        await _linuxOverlaySessionConfiguration.WaitAsync();
+        try
+        {
+            LinuxOverlaySessionResult result;
+            try
+            {
+                result = await Task.Run(() => requestedMode == "inGame"
+                    ? LinuxOverlaySessionEnvironment.Enable()
+                    : LinuxOverlaySessionEnvironment.EnableFpsCapture());
+            }
+            catch (Exception ex)
+            {
+                result = new(false, false, $"Falha ao configurar o ambiente Linux: {ex.Message}");
+                ErrorLog.Write("InGameOverlay.LinuxSession", ex);
+            }
+
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Dispatcher.UIThread.Post(() =>
+            {
+                try
+                {
+                    if (!_disposed && OverlayRenderMode == requestedMode)
+                    {
+                        _linuxOverlayRegistrationDiagnostic = result.Message;
+                        if (result.SessionActive || result.Persistent)
+                            _linuxConfiguredSessionMode = requestedMode;
+                        Raise(nameof(IsLinuxOverlaySessionWarningVisible));
+                        Raise(nameof(LinuxOverlaySessionDiagnosticText));
+                        PublishInGameOverlayFrame();
+                    }
+                }
+                finally
+                {
+                    completion.TrySetResult();
+                }
+            });
+            await completion.Task;
+        }
+        finally
+        {
+            _linuxOverlaySessionConfiguration.Release();
+        }
     }
 
     private async void OnInGameOverlayHeartbeat(object? sender, EventArgs e)
@@ -198,12 +272,18 @@ public sealed partial class MainWindowViewModel
                 "/usr/lib64/libVkLayer_phantom_monitor.so",
                 "/usr/local/lib/libVkLayer_phantom_monitor.so"
             };
-            var openGlLibrary = Path.Combine(home, ".local", "lib", "libPhantomOpenGLOverlay.so");
-            return $"Plataforma: Linux · camada Vulkan {(manifestCandidates.Any(File.Exists) && libraryCandidates.Any(File.Exists) ? "instalada" : "não encontrada")} · preload OpenGL {(File.Exists(openGlLibrary) ? "instalado" : "não encontrado")}.";
+            var hasInstalledVulkanLayer = LinuxOverlayNativeFiles.HasInstalledVulkanLayer
+                || manifestCandidates.Any(File.Exists) && libraryCandidates.Any(File.Exists);
+            var vulkanStatus = hasInstalledVulkanLayer ? "registrada para este usuário" : "não registrada";
+            var openGlStatus = LinuxOverlayNativeFiles.HasInstalledOpenGlPreload ? "instalado" : "não instalado";
+            var registrationDiagnostic = string.IsNullOrWhiteSpace(_linuxOverlayRegistrationDiagnostic)
+                ? "Integração da sessão não confirmada."
+                : _linuxOverlayRegistrationDiagnostic.TrimEnd('.');
+            return $"Plataforma: Linux · camada Vulkan {vulkanStatus} · preload OpenGL {openGlStatus}. {registrationDiagnostic}";
         }
 
         if (OperatingSystem.IsWindows())
-            return $"Plataforma: Windows · detecção global por ETW/PresentMon ativa no modo Dentro do jogo; hooks x86/x64 para Direct3D/OpenGL e Vulkan implícito por usuário. Jogos Vulkan abertos antes da ativação precisam ser reiniciados. {_windowsVulkanLayerDiagnostic}";
+            return $"Plataforma: Windows · detecção global por ETW/PresentMon ativa no modo Dentro do jogo; hooks para Direct3D/OpenGL e Vulkan implícito por usuário. Jogos Vulkan abertos antes da ativação precisam ser reiniciados. {_windowsVulkanLayerDiagnostic} {WindowsOverlayHookService.GetNativeArtifactsDiagnostic()}";
 
         return "Plataforma: sem integração nativa para overlay dentro do jogo.";
     }
@@ -226,14 +306,18 @@ public sealed partial class MainWindowViewModel
 
         var nativeText = statuses.Count == 0
             ? OperatingSystem.IsLinux()
-                ? "API detectada: nenhum processo Vulkan publicou estado. Inicie o jogo com ENABLE_PHANTOM_OVERLAY=1."
+                ? "API detectada: nenhum processo Vulkan/OpenGL publicou estado. Feche completamente o launcher e o jogo e abra-os novamente após ativar o modo. Se persistir, confira o backend gráfico em F3; Flatpak pode não herdar as bibliotecas do host."
                 : "API detectada: nenhum processo detectado apresentando frames publicou estado do hook."
             : string.Join("\n", statuses.Select(status =>
                 $"PID {status.ProcessId} · {status.Producer} · {status.ApiName} · {status.StateName}: {status.Message}"));
+        var visibilityDiagnostic = OverlayVisible
+            ? null
+            : "Visibilidade: overlay oculto. Use Mostrar overlay na Visão geral ou o atalho configurado.";
         var etwDiagnostic = OperatingSystem.IsWindows()
             ? (_sensorService as IOverlayProcessDiscovery)?.OverlayDiscoveryDiagnostic
             : null;
         return string.Join("\n", new[] { nativeText,
+            visibilityDiagnostic,
             string.IsNullOrWhiteSpace(etwDiagnostic) ? null : $"ETW: {etwDiagnostic}",
             _windowsOverlayInjectionDiagnostic.Length == 0 ? null : _windowsOverlayInjectionDiagnostic }
             .Where(value => value is not null));

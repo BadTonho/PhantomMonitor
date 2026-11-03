@@ -2,146 +2,190 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PhantomMonitor.App.ViewModels"
         x:Class="PhantomMonitor.App.Views.OverlayBlockContentDialog"
-             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
-             x:DataType="vmroot:OverlayBlockContentDialogViewModel"
+        xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+        x:DataType="vmroot:OverlayBlockContentDialogViewModel"
         Title="Conteúdo do bloco"
         Icon="avares://PhantomMonitor/Assets/fantasma.ico"
-        Width="980" Height="760" MinWidth="800" MinHeight="560"
+        Width="980" Height="740" MinWidth="800" MinHeight="560"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">
   <Window.Styles>
     <StyleInclude Source="avares://PhantomMonitor/Themes/DesktopStyles.axaml" />
+    <Style Selector="Border.desktop-card">
+      <Setter Property="Padding" Value="14,12" />
+    </Style>
+    <Style Selector="ListBox#ContentItemsList">
+      <Setter Property="Background" Value="{DynamicResource BgWindowBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BgCardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="4" />
+    </Style>
+    <Style Selector="ListBox#ContentItemsList ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Margin" Value="1" />
+    </Style>
+    <Style Selector="ListBox#ContentItemsList ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource NavSoftBrush}" />
+    </Style>
+    <Style Selector="ListBox#ContentItemsList ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
   </Window.Styles>
-  <Grid Margin="18" RowDefinitions="*,Auto" RowSpacing="12">
-    <Grid Grid.Row="0" ColumnDefinitions="1*,1.35*" ColumnSpacing="16">
-      <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="8">
-        <TextBlock Text="ORDEM NO BLOCO" FontSize="10" FontWeight="Bold" />
-        <ListBox Grid.Row="1" x:Name="ContentItemsList"
-                 ItemsSource="{Binding OrderRows}"
-                 SelectedItem="{Binding SelectedOrderRow, Mode=TwoWay}"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 MinHeight="120" VerticalAlignment="Stretch">
-          <ListBox.Styles>
-            <Style Selector="ListBoxItem">
-              <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            </Style>
-          </ListBox.Styles>
-          <ListBox.ItemTemplate>
-            <DataTemplate DataType="{x:Type vm:OverlayBlockOrderRowViewModel}">
-              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="4,2">
-                <TextBlock Text="{Binding Kind}" Classes="muted" FontSize="9" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding Label}" TextWrapping="Wrap"
-                           VerticalAlignment="Center" IsVisible="{Binding IsGroup}" />
-                <TextBlock Grid.Column="1" Text="{Binding Label}" TextWrapping="Wrap"
-                           VerticalAlignment="Center" Margin="14,0,0,0" IsVisible="{Binding IsMetric}" />
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-        <Canvas Grid.Row="1" x:Name="InsertionMarkerCanvas" IsHitTestVisible="False" ZIndex="5">
-          <Border x:Name="InsertionMarker" Height="3" IsVisible="False"
-                  Background="{DynamicResource AccentLightBrush}" CornerRadius="2">
-            <Border.Transitions>
-              <Transitions>
-                <DoubleTransition Property="Canvas.Top" Duration="0:0:0.12" />
-              </Transitions>
-            </Border.Transitions>
-          </Border>
-        </Canvas>
-        <WrapPanel Grid.Row="2" Orientation="Horizontal">
-          <Button IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick" Margin="0,0,8,8"
-                  MinWidth="36" MinHeight="34" Padding="8" ToolTip.Tip="Mover para cima" AutomationProperties.Name="Mover para cima">
-            <Path Data="M 8,13 L 8,3 M 3,8 L 8,3 L 13,8" Width="14" Height="14" Stretch="Uniform"
-                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" />
-          </Button>
-          <Button IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick" Margin="0,0,8,8"
-                  MinWidth="36" MinHeight="34" Padding="8" ToolTip.Tip="Mover para baixo" AutomationProperties.Name="Mover para baixo">
-            <Path Data="M 8,3 L 8,13 M 3,8 L 8,13 L 13,8" Width="14" Height="14" Stretch="Uniform"
-                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" />
-          </Button>
-          <Button Click="OnOpenContentPickerClick" Margin="0,0,8,8" MinWidth="36" MinHeight="34" Padding="8"
-                  ToolTip.Tip="Adicionar conteúdo" AutomationProperties.Name="Adicionar conteúdo">
-            <Path Data="M 8,3 L 8,13 M 3,8 L 13,8" Width="14" Height="14" Stretch="Uniform"
-                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" />
-          </Button>
-          <Button Content="{Binding RemoveSelectedContentText}" IsEnabled="{Binding CanRemoveSelectedContent}" Click="OnRemoveContentClick" Margin="0,0,8,8" />
-        </WrapPanel>
-      </Grid>
 
-      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="8">
-          <TextBlock Text="EDITAR LINHA DO SENSOR" FontSize="10" FontWeight="Bold"
-                     IsVisible="{Binding HasSelectedMetric}" />
-          <TextBlock Text="Selecione uma categoria ou série na lista para editar sua apresentação."
-                     Classes="muted" TextWrapping="Wrap" IsVisible="{Binding ShowMetricEditorHint}" />
-          <TextBlock Text="Nenhuma linha de sensor disponível para este item agora."
-                     Classes="muted" TextWrapping="Wrap" IsVisible="{Binding NoMetricChoices}" />
-          <StackPanel IsVisible="{Binding HasSelectedCustomLine}" Spacing="8">
-            <TextBlock Text="EDITAR LINHA PERSONALIZADA" FontSize="10" FontWeight="Bold" />
-            <TextBox x:Name="CustomLineTextBox" PlaceholderText="Digite o texto da linha" MaxLength="2048"
-                     Text="{Binding CustomLineText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <StackPanel Spacing="3">
-              <TextBlock Text="TAMANHO DO TEXTO (8–20 PT)" FontSize="9" TextWrapping="Wrap" />
-              <TextBox PlaceholderText="Padrão" Text="{Binding CustomLineFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+  <Grid RowDefinitions="*,Auto">
+    <Grid Grid.Row="0" Margin="18,16,18,12" ColumnDefinitions="1.05*,1.3*" ColumnSpacing="14">
+      <!-- Coluna esquerda: Ordem no bloco -->
+      <Border Grid.Column="0" Classes="desktop-card">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+          <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+            <TextBlock Text="ITENS E ORDEM NO BLOCO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="action accent" Padding="10,5" Click="OnOpenContentPickerClick"
+                    ToolTip.Tip="Adicionar conteúdo" AutomationProperties.Name="Adicionar conteúdo">
+              <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                <Path Data="M 8,3 L 8,13 M 3,8 L 13,8" Width="11" Height="11" Stretch="Uniform"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="2" />
+                <TextBlock Text="Adicionar" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </Grid>
+
+          <ListBox Grid.Row="1" x:Name="ContentItemsList"
+                   ItemsSource="{Binding OrderRows}"
+                   SelectedItem="{Binding SelectedOrderRow, Mode=TwoWay}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   MinHeight="120" VerticalAlignment="Stretch">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="{x:Type vm:OverlayBlockOrderRowViewModel}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="2,1">
+                  <Border Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Kind}" Foreground="{DynamicResource AccentChipCpuBrush}" FontFamily="monospace" FontSize="10" FontWeight="SemiBold" />
+                  </Border>
+                  <TextBlock Grid.Column="1" Text="{Binding Label}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"
+                             VerticalAlignment="Center" IsVisible="{Binding IsGroup}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Label}" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" TextWrapping="Wrap"
+                             VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding IsMetric}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <Canvas Grid.Row="1" x:Name="InsertionMarkerCanvas" IsHitTestVisible="False" ZIndex="5">
+            <Border x:Name="InsertionMarker" Height="3" IsVisible="False"
+                    Background="{DynamicResource AccentLightBrush}" CornerRadius="2">
+              <Border.Transitions>
+                <Transitions>
+                  <DoubleTransition Property="Canvas.Top" Duration="0:0:0.12" />
+                </Transitions>
+              </Border.Transitions>
+            </Border>
+          </Canvas>
+
+          <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="6">
+            <Button Classes="secondary" IsEnabled="{Binding CanMoveContentUp}" Click="OnMoveContentUpClick"
+                    MinWidth="34" MinHeight="32" Padding="8,6" ToolTip.Tip="Mover para cima" AutomationProperties.Name="Mover para cima">
+              <Path Data="M 8,13 L 8,3 M 3,8 L 8,3 L 13,8" Width="13" Height="13" Stretch="Uniform"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6" />
+            </Button>
+            <Button Grid.Column="1" Classes="secondary" IsEnabled="{Binding CanMoveContentDown}" Click="OnMoveContentDownClick"
+                    MinWidth="34" MinHeight="32" Padding="8,6" ToolTip.Tip="Mover para baixo" AutomationProperties.Name="Mover para baixo">
+              <Path Data="M 8,3 L 8,13 M 3,8 L 8,13 L 13,8" Width="13" Height="13" Stretch="Uniform"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6" />
+            </Button>
+            <Button Grid.Column="3" Classes="secondary" Content="{Binding RemoveSelectedContentText}" IsEnabled="{Binding CanRemoveSelectedContent}" Click="OnRemoveContentClick" />
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- Coluna direita: Editor do item selecionado -->
+      <Border Grid.Column="1" Classes="desktop-card">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="10">
+            <TextBlock Text="EDITAR LINHA DO SENSOR" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold"
+                       IsVisible="{Binding HasSelectedMetric}" />
+            <TextBlock Text="Selecione um item na lista à esquerda para editar."
+                       Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding ShowMetricEditorHint}" />
+            <TextBlock Text="Nenhuma linha de sensor disponível para este item agora."
+                       Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding NoMetricChoices}" />
+
+            <StackPanel IsVisible="{Binding HasSelectedCustomLine}" Spacing="8">
+              <TextBlock Text="EDITAR LINHA PERSONALIZADA" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+              <TextBox x:Name="CustomLineTextBox" PlaceholderText="Digite o texto da linha" MaxLength="2048"
+                       Text="{Binding CustomLineText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="TAMANHO DO TEXTO (8–20 PT)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                  <TextBox PlaceholderText="Padrão" Text="{Binding CustomLineFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="LARGURA (40–700 PX)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                  <TextBox PlaceholderText="Largura do bloco" Text="{Binding CustomLineWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+              </Grid>
+              <TextBlock Text="{Binding CustomLineMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock Text="INSERIR NOME DO HARDWARE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding HardwareCategories}" SelectedItem="{Binding HardwareCategory, Mode=TwoWay}"
+                        PlaceholderText="Selecione uma categoria" HorizontalAlignment="Stretch" SelectionChanged="OnHardwareCategoryChanged" />
+              <ComboBox ItemsSource="{Binding HardwareOptions}" IsVisible="{Binding ShowHardwareOptions}"
+                        PlaceholderText="Selecione o dispositivo detectado" HorizontalAlignment="Stretch" SelectionChanged="OnHardwareDeviceChanged">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vmroot:OverlayHardwareOption"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="{Binding HardwareSelectionMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
-            <StackPanel Spacing="3">
-              <TextBlock Text="LARGURA (40–700 PX)" FontSize="9" TextWrapping="Wrap" />
-              <TextBox PlaceholderText="Largura do bloco" Text="{Binding CustomLineWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <StackPanel IsVisible="{Binding HasSelectedMetric}" Spacing="8">
+              <StackPanel Spacing="4">
+                <TextBlock Text="NOME EXIBIDO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                <TextBox PlaceholderText="Vazio usa o nome padrão"
+                         Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="CASAS DECIMAIS" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                  <ComboBox ItemsSource="{Binding MetricDecimalsOptions}"
+                            SelectedItem="{Binding MetricDecimals, Mode=TwoWay}"
+                            IsEnabled="{Binding CanEditMetricDecimals}"
+                            HorizontalAlignment="Stretch" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="COR DO TEXTO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="secondary" Content="Padrão" Padding="8,2" FontSize="10" Click="OnResetMetricColorClick" />
+                  </Grid>
+                  <TextBox PlaceholderText="#RRGGBB" Text="{Binding MetricColor, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding ColorSwatches}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vmroot:OverlayColorSwatch">
+                    <Button Width="22" Height="22" MinWidth="22" Padding="0" Margin="2" CornerRadius="5"
+                            Tag="{Binding Hex}" Background="{Binding Brush}"
+                            BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1"
+                            ToolTip.Tip="{Binding Hex}" Click="OnMetricColorSwatchClick" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+              <Button Classes="action accent" Content="Aplicar ajuste à linha" HorizontalAlignment="Left" Click="OnSaveMetricOverrideClick" />
             </StackPanel>
-            <TextBlock Text="{Binding CustomLineMessage}" Classes="muted" TextWrapping="Wrap" />
-            <TextBlock Text="SENSORES" FontSize="9" FontWeight="Bold" />
-            <ComboBox ItemsSource="{Binding HardwareCategories}" SelectedItem="{Binding HardwareCategory, Mode=TwoWay}"
-                      PlaceholderText="Selecione uma categoria" HorizontalAlignment="Stretch" SelectionChanged="OnHardwareCategoryChanged" />
-            <ComboBox ItemsSource="{Binding HardwareOptions}" IsVisible="{Binding ShowHardwareOptions}"
-                      PlaceholderText="Selecione o dispositivo detectado" HorizontalAlignment="Stretch" SelectionChanged="OnHardwareDeviceChanged">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vmroot:OverlayHardwareOption"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Text="{Binding HardwareSelectionMessage}" Classes="muted" TextWrapping="Wrap" />
-            <TextBlock Text="O nome é atualizado automaticamente. Se o dispositivo não estiver disponível, a linha mostrará Indisponível."
-                       Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
-          <StackPanel IsVisible="{Binding HasSelectedMetric}" Spacing="8">
-            <TextBox PlaceholderText="Nome exibido (vazio usa o nome atual)"
-                     Text="{Binding MetricDisplayName, UpdateSourceTrigger=PropertyChanged}" />
-            <StackPanel Spacing="3">
-              <TextBlock Text="CASAS DECIMAIS" FontSize="9" TextWrapping="Wrap" />
-              <ComboBox ItemsSource="{Binding MetricDecimalsOptions}"
-                        SelectedItem="{Binding MetricDecimals, Mode=TwoWay}"
-                        IsEnabled="{Binding CanEditMetricDecimals}" />
-            </StackPanel>
-            <StackPanel Spacing="3">
-              <WrapPanel>
-                <TextBlock Text="COR DO TEXTO" FontSize="9" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <Button Content="Padrão" Padding="6,2" Click="OnResetMetricColorClick" />
-              </WrapPanel>
-              <TextBox PlaceholderText="#RRGGBB" Text="{Binding MetricColor, UpdateSourceTrigger=PropertyChanged}" />
-            </StackPanel>
-            <ItemsControl ItemsSource="{Binding ColorSwatches}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vmroot:OverlayColorSwatch">
-                  <Button Width="20" Height="20" MinWidth="20" Padding="0" Margin="2"
-                          Tag="{Binding Hex}" Background="{Binding Brush}"
-                          BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1"
-                          ToolTip.Tip="{Binding Hex}" Click="OnMetricColorSwatchClick" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Text="{Binding MetricEditorMessage}" Classes="muted" TextWrapping="Wrap" />
-            <Button Content="Aplicar ajuste à linha" HorizontalAlignment="Left" Click="OnSaveMetricOverrideClick" />
-          </StackPanel>
-        </StackPanel>
-      </ScrollViewer>
+        </ScrollViewer>
+      </Border>
     </Grid>
 
-    <Canvas Grid.Row="0" Grid.ColumnSpan="2" x:Name="DragOverlay" IsHitTestVisible="False" ZIndex="20">
-      <Border x:Name="DragGhost" IsVisible="False" Padding="8,5" CornerRadius="4"
-              Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}"
-              BorderThickness="1" Opacity="0.92">
+    <Canvas Grid.Row="0" x:Name="DragOverlay" IsHitTestVisible="False" ZIndex="20">
+      <Border x:Name="DragGhost" IsVisible="False" Padding="8,5" CornerRadius="6"
+              Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource AccentLightBrush}"
+              BorderThickness="1" Opacity="0.94">
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
           <TextBlock x:Name="DragGhostKind" Classes="muted" FontSize="9" VerticalAlignment="Center" />
           <TextBlock x:Name="DragGhostLabel" Grid.Column="1" TextTrimming="CharacterEllipsis"
@@ -150,10 +194,12 @@
       </Border>
     </Canvas>
 
-    <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Content="Linhas ocultadas…" Click="OnOpenHiddenMetricsClick" Margin="0,0,8,8" />
-      <Button Content="Cancelar" Click="OnCancelClick" Margin="0,0,8,8" />
-      <Button Content="Aplicar conteúdo" IsEnabled="{Binding CanApplyCustomLine}" Click="OnApplyClick" Margin="0,0,0,8" />
-    </WrapPanel>
+    <Border Grid.Row="1" Background="{DynamicResource BgSidebarBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="18,12">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+        <Button Grid.Column="0" Classes="secondary" Content="Linhas ocultadas…" Click="OnOpenHiddenMetricsClick" />
+        <Button Grid.Column="2" Classes="secondary" Content="Cancelar" Click="OnCancelClick" />
+        <Button Grid.Column="3" Classes="action accent" Content="Aplicar conteúdo" IsEnabled="{Binding CanApplyCustomLine}" Click="OnApplyClick" />
+      </Grid>
+    </Border>
   </Grid>
 </Window>

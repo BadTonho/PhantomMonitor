@@ -20,7 +20,7 @@ No Core, o serviço fica em `Services/Sensors/Windows/` (dividido entre `Hardwar
 - Fallback de RAM via `GlobalMemoryStatusEx` (chamada nativa `kernel32.dll`, com fallback para WMI `Win32_OperatingSystem` se falhar) e `PerformanceCounter` reutilizado entre ciclos
 - Processos que usam a GPU via WMI (`GPUEngine`), agregados por PID, com nome resolvido e cache de 3 s
 - **Bateria (P6.4):** notebooks/UPs publicam a família `Battery*` — carga estimada, tensão, fluxo de potência, desgaste e status da fonte AC; consultas WMI têm cache de 10 s e desktops não publicam nenhuma série da família (ver seção abaixo). Classes ausentes são marcadas como indisponíveis durante a execução, sem erros repetidos; os outros provedores de bateria continuam como fallback.
-- **Monitores (P8.4):** identidade dos painéis conectados via EDID/WMI (`WmiMonitorID` + `WmiMonitorBasicDisplayParams`, somente monitores ativos) — fabricante, modelo, serial, diagonal física, ano/semana de fabricação e flag de primário; cache de 60 s, lista ordenada pelo caminho de instância WMI. Campos opcionais são tolerados; se a consulta WMI falhar, o app continua com a lista vazia e registra uma única ocorrência diagnóstica por execução. Sem monitores reportados também resulta em lista vazia, sem erro. Modelo `MonitorInfo` em [modelos-dados.md](modelos-dados.md)
+- **Monitores (P8.4):** identidade dos painéis conectados via EDID/WMI (`WmiMonitorID` + `WmiMonitorBasicDisplayParams`, somente monitores ativos) — fabricante, modelo, serial, diagonal física e ano/semana de fabricação; cache de 60 s, lista ordenada pelo caminho de instância WMI. A propriedade `Primary` não é determinada por este leitor (fica `false`): a derivação antiga via `VideoInputType` lia o flag de sinal Analógico/Digital do EDID, não primariedade. Campos opcionais são tolerados; se a consulta WMI falhar, o app continua com a lista vazia e registra uma única ocorrência diagnóstica por execução. Sem monitores reportados também resulta em lista vazia, sem erro. Modelo `MonitorInfo` em [modelos-dados.md](modelos-dados.md)
 - **Erros de hardware WHEA:** série `WheaErrorCount` (Windows apenas) = eventos do provedor `Microsoft-Windows-WHEA-Logger` no log System desde o início da sessão; `0` é leitura real (alerta `Above > 0` detecta que o contador ficou não zero; como ele é cumulativo, pode repetir após cooldown, mas não sinaliza cada incremento separadamente)
 
 ## Regras de mapeamento de sensores
@@ -48,7 +48,7 @@ Além das séries canônicas (índice 0, acima), cada ciclo também publica sér
 | `DiskUsage/DiskRead/DiskWrite/DiskTemperature/DiskHealth/DiskTotalRead/DiskTotalWritten#i` | disco por nó | NVMe/HD SMART |
 | `NetworkUp/NetworkDown#i` | interface por nó (nickname do adaptador no rótulo) | NIC |
 | `MotherboardTemp#i`, `VrmTemperature#i`, `RailVoltage#i`, `RamTemperature#i` | slot estável por nome do sensor | Placa-mãe/SuperIO/EC |
-| `NetworkUpTotal`, `NetworkDownTotal` (canônicas) | somatório da sessão (velocidade × tempo entre amostras) | NIC |
+| `NetworkUpTotal`, `NetworkDownTotal` (canônicas) | somatório da sessão (velocidade × tempo **observado** entre amostras; buracos maiores que 2× o ciclo — pausa/Stop/wake — não somam) | NIC |
 
 Consumidores:
 - **CSV/JSON:** colunas/entradas `Categoria#i` automáticas (ver [logging.md](logging.md)).

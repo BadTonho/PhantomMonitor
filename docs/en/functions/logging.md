@@ -20,7 +20,7 @@ CSV columns are created from the first snapshot: `Timestamp`, canonical sensor s
 
 `sensors_latest.json` is atomically replaced through a temporary file so readers never see a partial document. It includes canonical `values` and per-instance `series`/`seriesLabels`, `seriesStats` (min, max, sum, count, and average), and connected-monitor metadata in `monitors`. GPU process details are shown in the dashboard and are not serialized.
 
-Only series that have values in the snapshot are included. Instance series use their full `Category#index` key. The monitor metadata includes manufacturer, model, product code, serial, diagonal, manufacturing year/week, and primary status from EDID/WMI. The JSON snapshot is useful for external integrations that need one current state rather than a time series.
+Only series that have values in the snapshot are included. Instance series use their full `Category#index` key. The monitor metadata includes manufacturer, model, product code, serial, diagonal, and manufacturing year/week from EDID/WMI (primary status is not determined; `Primary` stays `false`). The JSON snapshot is useful for external integrations that need one current state rather than a time series.
 
 ## Append-only JSONL (`JsonJournalLogger`)
 

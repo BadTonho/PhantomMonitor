@@ -36,7 +36,7 @@ The GPU process list, sensor diagnostics, and frametime buffer are runtime-facin
 
 ## `MonitorInfo`
 
-Windows monitor identity is decoded from active EDID/WMI data and included in the JSON snapshot and inventory tab. Properties include manufacturer, model, product code, serial, diagonal in inches, manufacturing year/week, primary status, and formatted diagonal/date text. A zero size/year means the field was not reported.
+Windows monitor identity is decoded from active EDID/WMI data and included in the JSON snapshot and inventory tab. Properties include manufacturer, model, product code, serial, diagonal in inches, manufacturing year/week, and formatted diagonal/date text; primariness is not determined by the current reader (`Primary` stays `false` — the old derivation from `VideoInputType` read the EDID analog/digital signal flag, not primary status). A zero size/year means the field was not reported.
 
 The model's `DiagonalText` and `MadeText` properties format inventory display values such as `27.5"` and `2023 w24`; missing data is displayed as `--`. Monitor records are sorted by WMI instance path and excluded when the monitor is not active.
 

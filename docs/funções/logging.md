@@ -51,9 +51,9 @@ app: `%LOCALAPPDATA%\PhantomMonitor\logs\` no Windows ou
 - `seriesStats` traz as estatísticas da sessão com a MESMA chave `Categoria#índice`
   (`min`, `max`, `sum`, `count`, `average`); só aparecem séries com ao menos uma amostra
 - `monitors` traz a identidade dos monitores conectados (EDID via WMI, cache de ~60 s):
-  fabricante, modelo, código de produto, nº de série, diagonal em polegadas,
-  ano/semana de fabricação e flag de monitor primário — os processos da GPU NÃO
-  entram no snapshot (são exibidos apenas na página Inventário)
+  fabricante, modelo, código de produto, nº de série, diagonal em polegadas e
+  ano/semana de fabricação (primariedade não é determinada: `Primary` fica `false`)
+  — os processos da GPU NÃO entram no snapshot (são exibidos apenas na página Inventário)
 - Útil para integração com outras ferramentas
 
 ## Marcadores no CSV (`#marker`)

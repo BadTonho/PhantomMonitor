@@ -83,7 +83,10 @@ public static class GitHubReleaseSource
                 progress(Math.Clamp(written * 100.0 / total, 0, 100));
         }
 
-        if (total > 0 && written != total)
+        // B5 (auditoria 2026-11-03): com Content-Encoding no corpo (gzip/brotli em
+        // algum hop), Content-Length refere aos bytes comprimidos e a comparação
+        // perde o sentido — a integridade da release segue garantida pelo SHA-256.
+        if (total > 0 && response.Content.Headers.ContentEncoding.Count == 0 && written != total)
             throw new IOException($"Download truncado: {written} de {total} bytes recebidos.");
         ValidateDigest(asset.Digest, hash.GetHashAndReset());
     }

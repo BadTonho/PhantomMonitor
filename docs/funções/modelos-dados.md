@@ -67,7 +67,7 @@ e na aba "Monitores" do inventário; CSV/SDK não mudam (são séries numéricas
 - `Manufacturer`, `Model`, `ProductCode`, `Serial` - Identidade do painel decodificada do EDID
 - `DiagonalInches` - Diagonal física em polegadas (0 = não reportada)
 - `YearOfManufacture`, `WeekOfManufacture` - Fabricação do painel (0 = não reportada)
-- `Primary` - Monitor primário (bit `VideoInputType`; false quando não determinável)
+- `Primary` - Monitor primário do sistema (indeterminado pelo leitor atual — sempre `false`; a derivação antiga de `VideoInputType` lia o flag Analógico/Digital do EDID, não primariedade)
 - `DiagonalText` / `MadeText` - Formatações do inventário ("27.5\"", "2023 s24"; `--` quando ausente)
 
 ## AlertRule / AlertsConfig

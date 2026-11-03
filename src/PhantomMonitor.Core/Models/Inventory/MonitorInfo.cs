@@ -37,8 +37,10 @@ public sealed class MonitorInfo
     [JsonIgnore]
     public string InstanceName { get; set; } = "";
 
-    /// <summary>True para o monitor primário (bit da propriedade VideoInputType de
-    /// WmiMonitorBasicDisplayParams; false quando não determinável).</summary>
+    /// <summary>True para o monitor primário do sistema. O leitor Windows atual não
+    /// determina primariedade (a derivação antiga de VideoInputType de
+    /// WmiMonitorBasicDisplayParams era o flag Analógico/Digital e marcava vários
+    /// primários em setups digitais); false quando não determinável.</summary>
     public bool Primary { get; set; }
 
     /// <summary>Diagonal formatada para o inventário ("27.5&quot;"; "--" quando não reportada).</summary>

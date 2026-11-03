@@ -1,3 +1,4 @@
+using System.Globalization;
 using PhantomMonitor.Models;
 
 namespace PhantomMonitor.Services;
@@ -63,10 +64,12 @@ public sealed class AlertRuleEvaluator
                 string template = string.IsNullOrWhiteSpace(rule.Message)
                     ? "Sensor {sensor}: {value} (limite: {threshold})"
                     : rule.Message;
+                // B4 (auditoria 2026-11-03): InvariantCulture alinhado com CSV/JSON/SDK —
+                // em pt-BR o popup exibia "80,5" enquanto o script recebia "80.5".
                 string message = template
                     .Replace("{sensor}", sensorName)
-                    .Replace("{value}", value.ToString("F1"))
-                    .Replace("{threshold}", rule.Threshold.ToString("F1"));
+                    .Replace("{value}", value.ToString("F1", CultureInfo.InvariantCulture))
+                    .Replace("{threshold}", rule.Threshold.ToString("F1", CultureInfo.InvariantCulture));
                 triggered.Add(new AlertTrigger(rule, value, sensorName, message));
             }
         }

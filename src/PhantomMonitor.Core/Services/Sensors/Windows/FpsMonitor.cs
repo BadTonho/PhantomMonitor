@@ -256,13 +256,16 @@ public sealed class FpsMonitor : IFpsMonitor
             double cpuWait = frame.CpuWait;
             double latency = frame.DisplayLatencyMs;
 
-            if (targetPid == 0 && appName.Length > 0 && !WindowsOverlayProcessFilter.IsIgnored(appName))
-            {
-                _targetPid = pid;
-                _targetProcessName = appName;
-            }
+            // B3 (auditoria 2026-11-03): alvo definido com PID+nome juntos sob o
+            // mesmo lock das estatísticas — o timer de janela em foco também
+            // escreve nesses campos, e a escolha automática podia intercalar.
             lock (_lock)
             {
+                if (_targetPid == 0 && appName.Length > 0 && !WindowsOverlayProcessFilter.IsIgnored(appName))
+                {
+                    _targetPid = pid;
+                    _targetProcessName = appName;
+                }
                 _lastFrametimeMs = (float)ftMs;
                 _frametimeHistory.Add((float)ftMs);
                 _frametimeSamples.Enqueue(ftMs);
@@ -356,8 +359,8 @@ public sealed class FpsMonitor : IFpsMonitor
 
                     if (!WindowsOverlayProcessFilter.IsIgnored(pName) && _targetPid != (int)fgPid)
                     {
-                        _targetPid = (int)fgPid;
-                        _targetProcessName = pName;
+                        // B3: setter único (PID+nome juntos sob lock).
+                        SetTarget((int)fgPid, pName);
                         ResetStats();
                     }
                 }
@@ -410,11 +413,22 @@ public sealed class FpsMonitor : IFpsMonitor
     private static double PercentileOf(List<double> sortedLower, double p) =>
         sortedLower[Math.Clamp((int)Math.Floor(sortedLower.Count * p), 0, sortedLower.Count - 1)];
 
+    /// <summary>B3 (auditoria 2026-11-03): define o alvo do FPS com PID e nome
+    /// alterados juntos sob o mesmo lock — evita intercalação entre o stream do
+    /// PresentMon e o timer de janela em foco.</summary>
+    private void SetTarget(int pid, string name)
+    {
+        lock (_lock)
+        {
+            _targetPid = pid;
+            _targetProcessName = name;
+        }
+    }
+
     public void Reset()
     {
         ResetStats();
-        _targetPid = 0;
-        _targetProcessName = "";
+        SetTarget(0, "");
     }
 
     public void Stop()

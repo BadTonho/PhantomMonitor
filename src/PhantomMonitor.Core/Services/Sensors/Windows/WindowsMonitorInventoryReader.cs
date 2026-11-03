@@ -25,10 +25,15 @@ internal sealed class WindowsMonitorInventoryReader
 
         try
         {
-            // 1) Tamanho físico e flag de primário por InstanceName.
+            // 1) Tamanho físico por InstanceName. B2 (auditoria 2026-11-03):
+            // VideoInputType codifica Analógico/Digital (0=análogo, 1=digital), NÃO
+            // primariedade — publicá-lo como primário marcava todo monitor digital
+            // como primário. Sem fonte confiável aqui, primário fica indeterminável
+            // (false) até migrar para EnumDisplayMonitors + GetMonitorInfo
+            // (MONITORINFOF_PRIMARY) com correlação por EDID (DisplayConfig).
             var sizes = new Dictionary<string, (double In, bool Primary)>(StringComparer.OrdinalIgnoreCase);
             using (var sizeSearcher = new ManagementObjectSearcher(@"root\wmi",
-                       "SELECT InstanceName, MaxHorizontalImageSize, MaxVerticalImageSize, VideoInputType FROM WmiMonitorBasicDisplayParams"))
+                       "SELECT InstanceName, MaxHorizontalImageSize, MaxVerticalImageSize FROM WmiMonitorBasicDisplayParams"))
             using (var items = sizeSearcher.Get())
             {
                 foreach (var obj in items)
@@ -43,8 +48,7 @@ internal sealed class WindowsMonitorInventoryReader
                         var inches = hCm > 0 && vCm > 0
                             ? Math.Ceiling(Math.Sqrt(hCm * hCm + vCm * vCm) / 2.54 * 10.0) / 10.0
                             : 0.0;
-                        var isPrimary = WindowsSensorFallbackReader.WmiProp(obj, "VideoInputType", 0) % 2 == 1;
-                        sizes[instance] = (inches, isPrimary);
+                        sizes[instance] = (inches, false);
                     }
                 }
             }

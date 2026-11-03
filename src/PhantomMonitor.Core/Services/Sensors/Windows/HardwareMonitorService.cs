@@ -108,6 +108,11 @@ public sealed partial class HardwareMonitorService : ISensorService, IOverlayPro
             _fpsMonitor.Start();
             IsRunning = true;
             _sensorFallbackReader.StartSession();
+            // B1 (auditoria 2026-11-03): nova sessão = nova linha de tempo dos
+            // totais de rede (a marca congelada do Stop anterior contaminava a sessão).
+            _lastNetSampleUtc = null;
+            _netUpSessionBytes = 0;
+            _netDownSessionBytes = 0;
             _timer.Change(0, _updateIntervalMs);
         }
     }
@@ -212,12 +217,19 @@ public sealed partial class HardwareMonitorService : ISensorService, IOverlayPro
         var activeGameName = activeGamePid > 0 ? _fpsMonitor.TargetProcessName : "";
         _sensorFallbackReader.ApplyRamFallbacks(data, debugInfo, activeGamePid, activeGameName);
 
-        // Totais de rede da sessão: acumula velocidade observada x tempo desde a amostra anterior.
+        // Totais de rede da sessão: acumula velocidade observada x tempo desde a
+        // amostra anterior. B1 (auditoria 2026-11-03): buracos não observados
+        // (pausa/Stop/wake) não viram bytes — intervalo maior que 2x o ciclo apenas
+        // re-baseia a marca; sem clamp, a retomada somava tempo inteiro de pausa.
         if (_lastNetSampleUtc is { } last && data.GetValue(SType.NetworkUp) + data.GetValue(SType.NetworkDown) > 0)
         {
-            var elapsed = DateTime.UtcNow - last;
-            _netUpSessionBytes += data.GetValue(SType.NetworkUp) * elapsed.TotalSeconds;
-            _netDownSessionBytes += data.GetValue(SType.NetworkDown) * elapsed.TotalSeconds;
+            var elapsed = (DateTime.UtcNow - last).TotalSeconds;
+            var maxElapsed = Math.Max(5.0, 2.0 * _updateIntervalMs / 1000.0);
+            if (elapsed > 0 && elapsed <= maxElapsed)
+            {
+                _netUpSessionBytes += data.GetValue(SType.NetworkUp) * elapsed;
+                _netDownSessionBytes += data.GetValue(SType.NetworkDown) * elapsed;
+            }
         }
         _lastNetSampleUtc = DateTime.UtcNow;
         if (_netUpSessionBytes > 0 || _netDownSessionBytes > 0)

@@ -69,7 +69,9 @@ public static class ErrorLog
             }
 
             return fileEntries.Concat(RecentEntries)
-                .GroupBy(entry => (entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), entry.Context, entry.Message))
+                // B6 (auditoria 2026-11-03): dedup por Timestamp integral — agrupar
+                // por segundo colapsava ocorrências distintas no mesmo segundo.
+                .GroupBy(entry => (entry.Timestamp, entry.Context, entry.Message))
                 .Select(group => group.Last())
                 .OrderBy(entry => entry.Timestamp)
                 .TakeLast(maxEntries)

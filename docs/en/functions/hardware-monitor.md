@@ -32,7 +32,7 @@ Alongside canonical series (index 0), snapshots can include keys in the form `Ca
 | `NetworkUp#i`, `NetworkDown#i` | One per network interface |
 | `MotherboardTemp#i`, `VrmTemperature#i`, `RailVoltage#i`, `RamTemperature#i` | Named hardware sensor slots |
 
-Dedicated GPU is always instance 1. Disk and network indices follow the enumeration order. CPU core indices follow the source sensor's own core number; fans use their hardware slot/name. Canonical network totals (`NetworkUpTotal` and `NetworkDownTotal`) integrate each interface's observed throughput over the session.
+Dedicated GPU is always instance 1. Disk and network indices follow the enumeration order. CPU core indices follow the source sensor's own core number; fans use their hardware slot/name. Canonical network totals (`NetworkUpTotal` and `NetworkDownTotal`) integrate each interface's observed throughput over the session; unobserved gaps (pause/stop/sleep, longer than twice the update interval) are skipped instead of attributed phantom bytes.
 
 CSV/JSON logging, the OSD allowlist, and alert `sensorIndex` consume these keys. See [inventory](hardware-inventory.md), [alerts](alerts.md), and [logging](logging.md).
 

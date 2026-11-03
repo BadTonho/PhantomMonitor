@@ -40,8 +40,9 @@ A página também inclui recursos herdados do InventoryWindow do WPF:
   Inventário; cliques repetidos a reativam. No Windows sem administrador ou sem
   detecção, a janela orienta iniciar como Administrador.
 - **Card "Monitores (EDID)"**: instância WMI (device), fabricante, modelo,
-  código, serial, diagonal e fabricação + indicador PRIMÁRIO (mesma fonte
-  `WmiMonitorID`/`WmiMonitorBasicDisplayParams`); a lista só troca quando o
+  código, serial, diagonal e fabricação (mesma fonte
+  `WmiMonitorID`/`WmiMonitorBasicDisplayParams`; primariedade não é determinada —
+  o indicador "PRIMÁRIO" fica oculto); a lista só troca quando o
   conjunto de monitores muda. Sem monitor reportado (desktops/VMs/RDP), o card
   fica oculto e o snapshot JSON publica `monitors: []`. Se a consulta WMI falhar,
   o app segue com a lista vazia e registra uma única ocorrência diagnóstica por
@@ -133,7 +134,7 @@ ID dos monitores conectados, decodificado de `root\wmi` (cache de **60 s**):
 | S/N | `SerialNumberID` (série do painel) |
 | Diagonal | `WmiMonitorBasicDisplayParams`: √(largura² + altura²) cm → polegadas (`--` se não reportado) |
 | Fabricação | `YearOfManufacture` + semana (`2023 s24`) |
-| Primário | bit da propriedade `VideoInputType` |
+| Primário | sempre `false` hoje: a leitura WMI não determina primariedade (a derivação antiga de `VideoInputType` lia o flag de sinal Analógico/Digital do EDID, não primariedade) |
 
 - Somente monitores **ativos** (`Active ≠ 0`): entradas "fantasma" são removidas.
 - Também vai para o snapshot JSON (`monitors`) e para qualquer consumidor do

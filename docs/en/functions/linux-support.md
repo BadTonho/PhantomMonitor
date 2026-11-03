@@ -4,7 +4,7 @@
 
 Phantom Monitor's Linux support is built on the unified app with Avalonia and reads platform sensors directly. It does not require MangoHud, GOverlay, or additional proprietary drivers. The WPF frontend was retired in Phase 2 of the visual unification; the unified app is the interface on both systems.
 
-> **Current scope:** `src/PhantomMonitor.App` is the unified Avalonia app and, on Linux, consumes `LinuxSensorService` from `PhantomMonitor.Core`. It provides live monitoring, FPS, full inventory (published series with session statistics, a hardware tree when the collector publishes `[HWR]` lines — Windows today — and a monitor card fed by Windows WMI; on Linux the list stays empty and the card is hidden), custom-sensor and per-series editors, CSV/JSON/JSONL logging, settings and floating-overlay controls, an optional HTTP exporter (`/values`, `/health`), an XDG autostart toggle (`~/.config/autostart/phantom-monitor.desktop`), and alert rules with internal toasts and native D-Bus notifications. Linux alert scripts can run; on Linux the desktop notification carries the alert sound and shutdown is not executed, while on Windows the unified app runs beep, script, and guarded shutdown at WPF parity (F1.5). Since F1.5 the unified app also has its own tray with the full menu (show, overlay, start with the system, reset statistics, pause, OSD profile pin, and exit) via StatusNotifier/DBus — on desktops without support the icon simply does not appear and the app stays functional —, single-instance enforcement through the `logs/session.lock` file lock, and the per-OS update applier (tarball/AppImage on Linux; portable zip + one-shot cmd on Windows). The overlay hotkey uses XCB in X11 sessions and the GlobalShortcuts portal where available on Wayland; the pause hotkey remains Windows-only. Validation in real Linux sessions is pending. The Vulkan layer is built separately with CMake and `install_layer.sh`, outside the MSBuild solution. The WPF and its own Windows alert actions were retired in Phase 2 — the unified app covers both systems. Since F1.1, the Avalonia app on Windows reads the same sensors through the cross-platform `SensorServiceFactory` (LibreHardwareMonitor + PresentMon via `Core/Services/Sensors/Windows/`), and since F1.2 its dashboard has the temperature range pills, CPU/GPU detail lines, the Motherboard & fans card, the GPU process list (reported by Windows via WMI GPUEngine), the update badge in the STATUS box and the elevation banner with "Run as admin" (UAC), and since F1.3 the overlay on Windows gained the full OSD (per-app profiles, per-series graphs, text templates and true click-through with position by focused app and reinforced Topmost), while on Linux the overlay stays interactive and draggable with fixed Topmost — no follow, click-through, or per-app profile matcher.
+> **Current scope:** `src/PhantomMonitor.App` is the unified Avalonia app and, on Linux, consumes `LinuxSensorService` from `PhantomMonitor.Core`. It provides live monitoring, FPS, full inventory (published series with session statistics, a hardware tree when the collector publishes `[HWR]` lines — Windows today — and a monitor card fed by Windows WMI; on Linux the list stays empty and the card is hidden), custom-sensor and per-series editors, CSV/JSON/JSONL logging, settings and floating-overlay controls, an optional HTTP exporter (`/values`, `/health`), an XDG autostart toggle (`~/.config/autostart/phantom-monitor.desktop`), and alert rules with internal toasts and native D-Bus notifications. Linux alert scripts can run; on Linux the desktop notification carries the alert sound and shutdown is not executed, while on Windows the unified app runs beep, script, and guarded shutdown at WPF parity (F1.5). Since F1.5 the unified app also has its own tray with the full menu (show, overlay, start with the system, reset statistics, pause, OSD profile pin, and exit) via StatusNotifier/DBus — on desktops without support the icon simply does not appear and the app stays functional —, single-instance enforcement through the `logs/session.lock` file lock, and the per-OS update applier (tarball/AppImage on Linux; portable zip + one-shot cmd on Windows). The overlay hotkey uses XCB in X11 sessions and the GlobalShortcuts portal where available on Wayland; the pause hotkey remains Windows-only. Validation in real Linux sessions is pending. Linux native renderers are built separately with CMake by `scripts/build-linux-overlay.sh`, outside the MSBuild solution; releases bundle both libraries. The WPF and its own Windows alert actions were retired in Phase 2 — the unified app covers both systems. Since F1.1, the Avalonia app on Windows reads the same sensors through the cross-platform `SensorServiceFactory` (LibreHardwareMonitor + PresentMon via `Core/Services/Sensors/Windows/`), and since F1.2 its dashboard has the temperature range pills, CPU/GPU detail lines, the Motherboard & fans card, the GPU process list (reported by Windows via WMI GPUEngine), the update badge in the STATUS box and the elevation banner with "Run as admin" (UAC), and since F1.3 the overlay on Windows gained the full OSD (per-app profiles, per-series graphs, text templates and true click-through with position by focused app and reinforced Topmost), while on Linux the overlay stays interactive and draggable with fixed Topmost — no follow, click-through, or per-app profile matcher.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ PhantomMonitor.App (Linux)
           ├── LinuxGpuSensorReader → DRM/PCI + hwmon + optional NVML
           │   └── /proc/<pid>/fdinfo (i915/xe usage when published)
           ├── /proc/diskstats and /proc/net/dev (disk and network)
-          └── LinuxFpsMonitor → PhantomVulkanLayer (shared memory)
+          └── LinuxFpsMonitor → X11 Present/XWayland + Vulkan + EGL/GLX preload
 
 PhantomMonitor.App (Windows)
   └── PhantomMonitor.Core
@@ -44,7 +44,13 @@ The service reads standard kernel interfaces without injecting code into other p
 
 Unavailable values display as `—` in the dashboard; a reported zero remains a valid value.
 
-## FPS and frametime through Vulkan
+## FPS and frametime
+
+In floating mode, the monitor observes **X11 Present** completion events from X11/XWayland windows, prioritizing the focused window. If PhantomMonitor has focus, it selects another window that is presenting frames. The session needs `libxcb-present` and the Present extension; native Wayland windows do not publish these events. For those windows, the app also prepares a passive EGL/GLX hook that publishes telemetry without drawing in-game, in addition to the Vulkan layer. It only captures processes launched after activation; existing launchers and games must restart. Source status appears under **Diagnostics → Sensors**.
+
+For Vulkan games, the collector uses `PhantomVulkanLayer` whenever the game has loaded the layer, in both floating and in-game modes. It intercepts `vkQueuePresentKHR` and publishes FPS/frametime through shared memory. On native Wayland without X11 events, the Vulkan layer or the EGL/GLX hook supplies frame data. The GLX/EGL preload is prepared for telemetry in both modes; only OpenGL drawing requires in-game mode.
+
+### Vulkan telemetry details
 
 `PhantomVulkanLayer` is a native C++ implicit Vulkan layer in `src/PhantomVulkanLayer/`. The Vulkan loader discovers it automatically. The layer intercepts `vkQueuePresentKHR`, measures frame intervals with a monotonic clock, and writes data to a per-process POSIX shared-memory object. The C# `LinuxFpsMonitor` reads that data and calculates rolling FPS metrics and frametime history.
 
@@ -58,28 +64,26 @@ Run the dashboard from the repository root:
 dotnet run --project src/PhantomMonitor.App
 ```
 
-The dashboard starts sensor collection automatically. Build and install the Vulkan layer when FPS data is needed:
+The dashboard starts sensor collection automatically.
+
+For a development build, compile both native renderers into the app output folder:
 
 ```bash
-cd src/PhantomVulkanLayer
-./install_layer.sh
+scripts/build-linux-overlay.sh src/PhantomMonitor.App/bin/Debug/net10.0/PhantomOverlay/linux
+dotnet run --project src/PhantomMonitor.App
 ```
 
-The script builds `libVkLayer_phantom_monitor.so`, installs it under `~/.local/lib`, and registers the implicit-layer manifest at `~/.local/share/vulkan/implicit_layer.d/phantom_vulkan_layer.json`. Older manifests in the nonstandard `explicit_layers.d` location are removed by the installer.
+The script requires CMake, Vulkan headers, and EGL/GLX development libraries. Release packages bundle the Vulkan layer and OpenGL preload under `PhantomOverlay/linux`, so users do not need to compile or download a separate component. Both modes enable passive FPS capture with `PHANTOM_FPS_CAPTURE=1`; floating mode keeps `ENABLE_PHANTOM_OVERLAY` off so the OpenGL OSD is not drawn, while in-game mode enables drawing. The Vulkan layer draws only when it receives a visible applied frame. The app copies these files to `~/.local/lib`, registers the implicit-layer manifest at `~/.local/share/vulkan/implicit_layer.d/phantom_vulkan_layer.json`, writes `90-phantom-monitor-fps.conf` under `environment.d` (by default `~/.config/environment.d`), and publishes `LD_PRELOAD` and FPS-capture variables to the current D-Bus/systemd session environment. On KDE Plasma, it also tries the Plasma session launch service and KLauncher where available; Diagnostics reports whether a desktop launch service confirmed the update. If no service confirms, desktop-launched games may not inherit the hook during the current session. The persistent setting prepares future sessions, and existing `LD_PRELOAD` entries are preserved. Returning to **Floating window** keeps FPS capture enabled and turns off OpenGL drawing.
 
-The layer loads for Vulkan processes but publishes telemetry only when enabled for that process. `DISABLE_PHANTOM_OVERLAY=1` disables it for a session and takes precedence over the enable variable.
+`install_layer.sh` remains available for development and manual installation from source, but is not needed with release packages.
 
-Steam launch options:
+### Activating games
 
-```bash
-ENABLE_PHANTOM_OVERLAY=1 %command%
-```
+Frame capture is prepared in both overlay modes. Select **Settings → Overlay mode → In-game** only if you also want the OSD drawn over the game. The app enables the Vulkan layer and OpenGL preload for new processes reached through the session's D-Bus/systemd environment and, when KDE Plasma confirms the integration, the desktop launch environment. If Diagnostics says the Plasma launch service is unavailable, games started from the desktop menu may not inherit the hook during the current session. You do not need to register `minecraft-launcher`, use **Launch**, edit Steam launch options, or log out and back in.
 
-For Lutris, Heroic, or a terminal:
+A launcher or game that was open before activation must be closed and reopened once to load the renderer. After integration is active, the app and game can be opened in either order. The mode remains active while selected; the app publishes the overlay frame when it is running.
 
-```bash
-ENABLE_PHANTOM_OVERLAY=1 ./game-executable
-```
+A launcher or game that was already running keeps its old environment and must be closed and reopened. On KDE Plasma, the app tries to update the launch environment through `org.kde.Startup` and, where available, KLauncher's `setLaunchEnv` method. The Plasma startup service may have exited when the app is opened manually. Diagnostics reports whether a desktop service and D-Bus/systemd confirmed the update, and whether a Vulkan/OpenGL process published state. If no desktop service is available, launchers started from the menu are not confirmed to inherit the hook; there is no silent fallback or logout request. Sandboxes such as Flatpak may need separate integration because they might not see host libraries.
 
 ## In-game overlay mode
 
@@ -89,15 +93,19 @@ Older configs migrate to `floating`. The app publishes applied content through
 sequence, and timestamp; consumers must map it read-only and reject partial or
 stale frames.
 
-`inGame` draws through the Phantom Vulkan layer and through an OpenGL GLX/EGL
-preload. `install_layer.sh` builds and installs both libraries. The Settings
-**Launch** button sets `ENABLE_PHANTOM_OVERLAY=1` and adds the OpenGL preload
-when its library is present. Copy the option shown by the app into Steam; it
-includes the preload path for GLX/EGL:
-
-```bash
-ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD="$HOME/.local/lib/libPhantomOpenGLOverlay.so${LD_PRELOAD:+:$LD_PRELOAD}" %command%
-```
+FPS telemetry through Vulkan and OpenGL GLX/EGL is also captured passively in
+`floating`; the app installs the hooks and updates the D-Bus/systemd launch
+environment in both modes. Floating mode keeps `ENABLE_PHANTOM_OVERLAY` off so
+the OpenGL OSD is not drawn. In `inGame`, the renderer can draw the applied
+frame; the Vulkan layer draws only when that frame is visible. Release packages
+include both libraries. On KDE Plasma, the app also tries the Plasma launch
+service or KLauncher's `setLaunchEnv` method; Diagnostics reports if neither is
+available. It writes `90-phantom-monitor-fps.conf` under `environment.d` (by
+default `~/.config/environment.d`) for future sessions and preserves other
+`LD_PRELOAD` entries. Switching back to **Floating window** keeps FPS capture
+enabled and turns off OpenGL drawing. Games or launchers already open must be
+restarted once. Other desktops may not refresh launch variables during the
+session; Flatpak may need separate integration.
 
 The EGL renderer requires OpenGL ES 3 or newer, and each OpenGL process can
 currently present through one context. Vulkan presentations with multiple

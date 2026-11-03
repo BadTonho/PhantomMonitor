@@ -10,8 +10,9 @@
     Nenhum binário deste processo é commitado (releases/ está no .gitignore).
 
 .EXAMPLE
-    powershell -File scripts/release.ps1 -Version 1.2.3
-    powershell -File scripts/release.ps1 -Version 1.2.3 -PackWindowsSetup -LayerSoPath build\PhantomVulkanLayer-linux.so
+    powershell -File scripts/release.ps1 -Version 1.2.3 -SkipLinux
+    ./scripts/build-linux-overlay.sh
+    pwsh scripts/release.ps1 -Version 1.2.3 -LinuxOverlayDirectory build/linux-overlay-payload
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -24,7 +25,10 @@ param(
     [switch]$PackWindowsSetup,
     [string]$IsccPath,
 
-    # .so já compilada da camada Vulkan; entra como PhantomVulkanLayer-<versão>-linux.so.
+    # Pasta com as duas .so Linux e phantom_vulkan_layer.json para incluir no app.
+    [string]$LinuxOverlayDirectory,
+
+    # Asset avulso legado para instalações manuais de versões antigas.
     [string]$LayerSoPath,
 
     # Saída dos pacotes (padrão: <repo>\releases\<versão>\).
@@ -81,12 +85,33 @@ try {
     }
 
     if (-not $SkipLinux) {
+        if ([string]::IsNullOrWhiteSpace($LinuxOverlayDirectory)) {
+            throw "O pacote Linux precisa dos renderizadores nativos. Rode scripts/build-linux-overlay.sh em Linux e informe -LinuxOverlayDirectory <pasta-do-payload>, ou use -SkipLinux."
+        }
+        $linuxOverlayFiles = @(
+            "libVkLayer_phantom_monitor.so",
+            "libPhantomOpenGLOverlay.so",
+            "phantom_vulkan_layer.json",
+            "LICENSE-Dear-ImGui.txt"
+        )
+        foreach ($file in $linuxOverlayFiles) {
+            if (-not (Test-Path -LiteralPath (Join-Path $LinuxOverlayDirectory $file) -PathType Leaf)) {
+                throw "Payload nativo Linux incompleto: arquivo ausente '$file' em '$LinuxOverlayDirectory'."
+            }
+        }
+
         Write-Step "Publicando Linux (app único, linux-x64 self-contained single-file)..."
         dotnet publish (Join-Path $repoRoot "src\PhantomMonitor.App\PhantomMonitor.App.csproj") `
             -c Release -r linux-x64 --self-contained true `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:Version=$Version -p:PublishReadyToRun=true -o (Join-Path $stage "linux")
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish do Linux falhou." }
+
+        $linuxOverlayDestination = Join-Path $stage "linux\PhantomOverlay\linux"
+        New-Item -ItemType Directory -Force -Path $linuxOverlayDestination | Out-Null
+        foreach ($file in $linuxOverlayFiles) {
+            Copy-Item (Join-Path $LinuxOverlayDirectory $file) (Join-Path $linuxOverlayDestination $file) -Force
+        }
 
         # Hardlink transicional: installs portáteis antigos relançam pelo nome
         # legado "PhantomMonitor.App" no apply_update.sh gerado POR ELES; o nome
@@ -135,11 +160,6 @@ try {
 
     if ($LayerSoPath) {
         Copy-Item $LayerSoPath (Join-Path $OutDirectory ("PhantomVulkanLayer-{0}-linux.so" -f $Version)) -Force
-    }
-    else {
-        Write-Host ""
-        Write-Host "Sem -LayerSoPath: a camada Vulkan não foi anexada. Ela atualiza MANUALMENTE" -ForegroundColor Yellow
-        Write-Host "(o usuário roda install_layer.sh da versão nova após atualizar o app)." -ForegroundColor Yellow
     }
 
     Write-Step "Pacotes gerados"

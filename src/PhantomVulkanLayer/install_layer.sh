@@ -28,8 +28,8 @@ cp "${SCRIPT_DIR}/../PhantomNativeOverlay/third_party/imgui/LICENSE.txt" "${LICE
 LIB_JSON="$(printf '%s' "${LIB_PATH}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
 
 # Camada IMPLÍCITA (type GLOBAL + diretório implicit_layer.d): o loader a carrega
-# em todo processo Vulkan, mas a telemetria só é publicada com ENABLE_PHANTOM_
-# OVERLAY=1 (gating por jogo). DISABLE_PHANTOM_OVERLAY=1 vence o enable.
+# quando PHANTOM_FPS_CAPTURE=1. ENABLE_PHANTOM_OVERLAY controla o desenho OpenGL;
+# o Vulkan só desenha quando recebe um quadro aplicado visível.
 cat <<EOF > "${MANIFEST}"
 {
     "file_format_version": "1.2.0",
@@ -46,7 +46,7 @@ cat <<EOF > "${MANIFEST}"
             "vkGetDeviceProcAddr": "Phantom_vkGetDeviceProcAddr"
         },
         "enable_environment": {
-            "ENABLE_PHANTOM_OVERLAY": "1"
+            "PHANTOM_FPS_CAPTURE": "1"
         },
         "disable_environment": {
             "DISABLE_PHANTOM_OVERLAY": "1"
@@ -65,14 +65,14 @@ fi
 echo "Camada instalada em: ${MANIFEST}"
 echo ""
 echo "=== Como usar ==="
-echo "A camada é IMPLÍCITA: todo processo Vulkan a carrega, mas só publica telemetria"
-echo "e desenha o overlay com ENABLE_PHANTOM_OVERLAY=1 (gate por jogo)."
+echo "A camada é IMPLÍCITA e publica telemetria quando PHANTOM_FPS_CAPTURE=1."
+echo "ENABLE_PHANTOM_OVERLAY=1 habilita o desenho OpenGL; Vulkan desenha apenas quadros visíveis."
 echo ""
 echo "Steam (Opções de inicialização do jogo):"
-echo "  ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD=\"${OPENGL_LIB_PATH}\${LD_PRELOAD:+:\$LD_PRELOAD}\" %command%"
+echo "  PHANTOM_FPS_CAPTURE=1 ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD=\"${OPENGL_LIB_PATH}\${LD_PRELOAD:+:\$LD_PRELOAD}\" %command%"
 echo ""
 echo "Lutris / Heroic / terminal:"
-echo "  ENABLE_PHANTOM_OVERLAY=1 ./game"
+echo "  PHANTOM_FPS_CAPTURE=1 ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD=\"${OPENGL_LIB_PATH}\${LD_PRELOAD:+:\$LD_PRELOAD}\" ./game"
 echo "  OpenGL via GLX/EGL exige LD_PRELOAD=${OPENGL_LIB_PATH}; o botão Iniciar já define essa variável."
 echo ""
 echo "Desativar por sessão (mesmo com o enable no jogo):"

@@ -1,6 +1,7 @@
 #include "OverlayFrameReader.h"
 #include "OverlayImGuiDraw.h"
 #include "OverlayStatus.h"
+#include "PhantomOpenGLTelemetry.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 
@@ -17,6 +18,7 @@
 
 namespace {
 using namespace phantom::overlay;
+using phantom::overlay::linux_fps::Publisher;
 using GlxSwapBuffers = void (*)(Display*, GLXDrawable);
 using EglSwapBuffers = EGLBoolean (*)(EGLDisplay, EGLSurface);
 using GlxGetCurrentContext = GLXContext (*)();
@@ -34,6 +36,7 @@ FrameReader g_reader;
 StatusPublisher g_status(StatusProducer::OpenGL);
 std::mutex g_mutex;
 RendererState g_state;
+Publisher g_fps_publisher;
 
 template<typename T>
 T next_symbol(const char* name) {
@@ -122,6 +125,7 @@ extern "C" __attribute__((visibility("default"))) void glXSwapBuffers(Display* d
         }
     }
     original(display, drawable);
+    g_fps_publisher.RecordPresent();
 }
 
 extern "C" __attribute__((visibility("default"))) EGLBoolean eglSwapBuffers(EGLDisplay display, EGLSurface surface) {
@@ -141,7 +145,9 @@ extern "C" __attribute__((visibility("default"))) EGLBoolean eglSwapBuffers(EGLD
                     || client_version < 3) {
                     set_status(RenderState::Unsupported,
                         "O renderer OpenGL/EGL exige um contexto OpenGL ES 3.0 ou superior.");
-                    return original(display, surface);
+                    const auto result = original(display, surface);
+                    if (result == EGL_TRUE) g_fps_publisher.RecordPresent();
+                    return result;
                 }
             }
             if (query_surface(display, surface, EGL_WIDTH, &width)
@@ -154,5 +160,7 @@ extern "C" __attribute__((visibility("default"))) EGLBoolean eglSwapBuffers(EGLD
                 }
         }
     }
-    return original(display, surface);
+    const auto result = original(display, surface);
+    if (result == EGL_TRUE) g_fps_publisher.RecordPresent();
+    return result;
 }

@@ -33,15 +33,15 @@ O projeto roda um **único app desktop Avalonia** no Windows e no Linux. Release
 | Recurso | Windows | Linux |
 | --- | --- | --- |
 | Sensores | CPU, GPU, RAM, discos, rede, ventoinhas e sensores da placa-mãe via LibreHardwareMonitor | Sensores de `sysfs`, `procfs` (incluindo `fdinfo` DRM), `hwmon`, zonas térmicas Linux, DRM e NVML opcional da NVIDIA; métricas de GPU variam conforme o driver |
-| FPS e frametime | PresentMon via ETW | Camada Vulkan Phantom para jogos Vulkan |
-| Overlay | OSD flutuante com click-through e perfis; renderizadores opcionais dentro do jogo para executáveis x86/x64 autorizados: Direct3D 9–12, OpenGL/WGL e Vulkan ao iniciar pelo PhantomMonitor | Janelas separadas e arrastáveis; renderização opcional dentro do jogo via Vulkan e OpenGL GLX/EGL; jogos OpenGL precisam da biblioteca preload instalada |
+| FPS e frametime | PresentMon via ETW | X11 Present em janelas X11/XWayland e captura passiva de quadros Vulkan e OpenGL GLX/EGL |
+| Overlay | OSD flutuante com click-through e perfis; renderizadores opcionais dentro do jogo para executáveis x86/x64 autorizados: Direct3D 9–12, OpenGL/WGL e Vulkan ao iniciar pelo PhantomMonitor | Janelas separadas e arrastáveis; renderização opcional dentro do jogo via Vulkan e OpenGL GLX/EGL; os pacotes Linux incluem os dois renderizadores nativos |
 | Inventário | Inventário de hardware e estatísticas por série | Séries detectadas agrupadas por categoria; sensores sem leitura aparecem como indisponíveis |
 | Alertas | Notificação, som, scripts e desligamento configurável | Toast interno, notificações do desktop e execução de scripts |
 | Diagnóstico | Fontes de sensores, avisos atuais de GPU e log de erros | Fontes por placa, geometria das janelas do overlay, avisos atuais de GPU, erros recentes e detalhes da NVML NVIDIA |
 | Fórmulas e ajuste por série | Compatibilidade com as configurações existentes | Editores visuais de sensores customizados e ajuste de cadência/suavização |
 | Telemetria | CSV, JSON, JSONL e exportador HTTP opcional | CSV, JSON, JSONL e exportador HTTP opcional |
 
-O suporte varia conforme hardware, API gráfica e compositor. No Linux, FPS Vulkan e desenho dentro do jogo usam a camada Phantom; OpenGL usa a biblioteca preload GLX/EGL instalada por `install_layer.sh`. No Windows, a coleta de FPS usa ETW. O modo dentro do jogo é opcional e os hooks Windows ficam restritos aos executáveis adicionados pelo usuário; anti-cheats podem bloqueá-los e o Phantom Monitor não tentará contornar essas proteções. Os renderizadores nativos Windows exigem build em Windows com Visual Studio 2022 e Vulkan SDK e ainda precisam de validação em execução no Windows.
+O suporte varia conforme hardware, API gráfica e compositor. Os pacotes Linux incluem a camada Vulkan e o preload GLX/EGL. O modo flutuante prepara a captura passiva de quadros sem desenhar no jogo; **Dentro do jogo** também habilita o renderer do OSD. Ambos dependem do ambiente de lançamento, então jogos e launchers já abertos precisam ser reiniciados após a ativação. No KDE Plasma, o app tenta atualizar o ambiente pelo serviço de sessão e, quando disponível, pelo KLauncher. O diagnóstico informa se algum serviço confirmou a atualização; se nenhum confirmar, jogos iniciados pelo menu podem não receber o hook nesta sessão. X11 Present continua disponível para janelas X11/XWayland; janelas Wayland nativas dependem de hook Vulkan ou OpenGL carregado no processo. Flatpak pode exigir integração própria. No Windows, o modo dentro do jogo detecta aplicações apresentando frames com ETW/PresentMon e tenta instalar hooks nativos; pode exigir a associação ao grupo Performance Log Users. Anti-cheats podem bloqueá-los e o Phantom Monitor não tentará contornar essas proteções. Os renderizadores nativos Windows exigem build em Windows com Visual Studio 2022 e Vulkan SDK e ainda precisam de validação em execução no Windows.
 
 ## Comece a usar
 
@@ -55,27 +55,28 @@ Inicie o dashboard Avalonia:
 dotnet run --project src/PhantomMonitor.App
 ```
 
-Para coletar FPS em jogos Vulkan, compile e instale a camada Phantom:
+Para um build de desenvolvimento local, compile os renderizadores nativos na pasta de saída do app:
 
 ```bash
-cd src/PhantomVulkanLayer
-chmod +x install_layer.sh
-./install_layer.sh
+scripts/build-linux-overlay.sh src/PhantomMonitor.App/bin/Debug/net10.0/PhantomOverlay/linux
+dotnet run --project src/PhantomMonitor.App
 ```
 
-Depois, nas opções de inicialização do jogo — por exemplo, na Steam — use:
+Os pacotes de release já incluem os renderizadores Vulkan e OpenGL. No Linux, a captura de quadros é preparada nos dois modos do overlay. O PhantomMonitor registra a camada Vulkan para telemetria passiva e publica o preload GLX/EGL no ambiente D-Bus/systemd; no KDE Plasma, também tenta atualizar o ambiente de lançamento pelos serviços disponíveis na sessão. Se quiser desenhar o OSD no jogo, selecione **Dentro do jogo**. O diagnóstico informa se o desktop confirmou a atualização; se não confirmar, jogos iniciados pelo menu podem não receber os hooks nesta sessão. Feche e reabra jogos ou launchers que já estavam abertos. No Windows, a lista de executáveis continua disponível para iniciar jogos com parâmetros específicos.
+
+Para gerar uma release, compile o payload Linux em uma máquina Linux, disponibilize a pasta na máquina Windows de release e informe o caminho ao script:
 
 ```bash
-ENABLE_PHANTOM_OVERLAY=1 %command%
+scripts/build-linux-overlay.sh build/linux-overlay-payload
 ```
 
-O instalador compila a camada Vulkan e a biblioteca preload GLX/EGL. Inicie um executável cadastrado pelo botão **Iniciar** nas Configurações ou use a opção Steam gerada pelo app:
+Na máquina Windows de release, depois de disponibilizar essa pasta:
 
-```bash
-ENABLE_PHANTOM_OVERLAY=1 LD_PRELOAD="$HOME/.local/lib/libPhantomOpenGLOverlay.so${LD_PRELOAD:+:$LD_PRELOAD}" %command%
+```powershell
+powershell -File scripts/release.ps1 -Version 1.2.3 -LinuxOverlayDirectory .\build\linux-overlay-payload
 ```
 
-Vulkan usa a camada para FPS e desenho dentro do jogo. OpenGL exige a biblioteca preload e suporta GLX e EGL (OpenGL ES 3+); apenas um contexto OpenGL por processo é suportado. Em **Configurações → Modo do overlay**, `floating` continua sendo o padrão e configurações antigas migram para esse valor. Escolher `inGame` oculta as janelas flutuantes; o estado e as falhas nativas por processo aparecem em Diagnóstico. Vários swapchains Vulkan ou DXGI no mesmo processo são indicados como não suportados. Em um desktop Wayland, confira **Diagnóstico → Resumo** para ver o backend Avalonia: a configuração padrão do projeto usa X11/XWayland, enquanto um compositor Wayland nativo pode ignorar posições absolutas das janelas.
+Vulkan e OpenGL GLX/EGL fornecem telemetria passiva de FPS no modo flutuante e podem desenhar o OSD dentro do jogo em `inGame`. O desenho OpenGL suporta EGL (OpenGL ES 3+) e um contexto por processo. Em **Configurações → Modo do overlay**, `floating` continua sendo o padrão e configurações antigas migram para esse valor. Escolher `inGame` oculta as janelas flutuantes; o estado e as falhas nativas por processo aparecem em Diagnóstico. Vários swapchains Vulkan ou DXGI no mesmo processo são indicados como não suportados. Em um desktop Wayland, confira **Diagnóstico → Resumo** para ver o backend Avalonia: a configuração padrão do projeto usa X11/XWayland, enquanto um compositor Wayland nativo pode ignorar posições absolutas das janelas.
 
 ### Windows
 
@@ -95,9 +96,11 @@ O card **INTERFACE** também alterna a navegação entre a lateral esquerda, a b
 
 Algumas leituras de hardware podem exigir permissões elevadas. O FPS usa PresentMon/ETW e pode depender da versão do Windows e das permissões disponíveis.
 
-O pacote completo do renderer dentro do jogo é compilado por
-`scripts/build-windows-overlay.ps1`, que gera hooks, launchers e camadas Vulkan
-x86/x64. O script exige as ferramentas C++ do Visual Studio 2022 e o Vulkan SDK.
+O `dotnet build` e o `dotnet publish` comuns não compilam nem copiam o renderer
+Windows dentro do jogo. Para um build local funcional, execute
+`scripts/build-windows-overlay.ps1 -OutDirectory <pasta-do-app>/PhantomOverlay`;
+o script de release já faz isso automaticamente. Ele gera hooks, launchers e
+camadas Vulkan x86/x64 e exige as ferramentas C++ do Visual Studio 2022 e o Vulkan SDK.
 Ainda é necessária validação em execução no Windows para cada API e game capture.
 
 ## Releases e atualização automática
@@ -111,9 +114,7 @@ Builds publicados ficam na [página de Releases](https://github.com/BadTonho/Pha
 | `PhantomMonitor-<versão>-linux-x64.AppImage` | Linux (AppImage) |
 | `PhantomMonitorSetup-<versão>.exe` | Windows (instalador per-user via Inno Setup) |
 | `phantom-monitor_<versão>_amd64.deb` | Linux (pacote .deb) |
-| `PhantomVulkanLayer-<versão>-linux.so` | Camada Vulkan para FPS/frametime (instalação manual com `install_layer.sh`; não entra na troca automática) |
-
-Releases são geradas localmente por mantenedores (`scripts/release.ps1`, sem CI); detalhes na [documentação de atualizações](docs/funções/atualizações.md) e nos empacotadores em `packaging/`. Os scripts não assinam os binários. O Windows pode exibir o aviso do **SmartScreen** ("editor desconhecido") e o Linux pode pedir confirmação na primeira abertura. O download automático exige o SHA-256 publicado pela API do GitHub; a troca inclui subpastas, conserva backups de recuperação e restaura o conjunto alterado em falhas de cópia tratadas. Feche jogos que usam os hooks Windows antes de atualizar.
+Releases são geradas localmente por mantenedores (`scripts/release.ps1`, sem CI); o tarball Linux inclui os dois renderizadores nativos. Veja a [documentação de atualizações](docs/funções/atualizações.md) e os empacotadores em `packaging/`. Os scripts não assinam os binários. O Windows pode exibir o aviso do **SmartScreen** ("editor desconhecido") e o Linux pode pedir confirmação na primeira abertura. O download automático exige o SHA-256 publicado pela API do GitHub; a troca inclui subpastas, conserva backups de recuperação e restaura o conjunto alterado em falhas de cópia tratadas. Feche jogos que usam os hooks Windows antes de atualizar.
 
 ## Validação das correções
 
@@ -122,7 +123,7 @@ inclusive quando a release é empacotada no Windows.
 
 Execute `dotnet test` (ou `dotnet test tests/PhantomMonitor.OverlayRegressionTests -c Release`) para rodar a suíte xUnit de regressão e testes unitários (`RegressionTests`, `AlertRuleEvaluatorTests`, `CustomSensorFormulaParserTests` e `AppConfigNormalizeTests`). Para C++, use `cmake -S src/PhantomVulkanLayer -B build/native -DBUILD_TESTING=ON`, `cmake --build build/native --config Release` e `ctest --test-dir build/native -C Release --output-on-failure`. No Linux, `sh tests/linux-regression.sh` verifica atualização, rollback e pacote `.deb`.
 
-A camada Vulkan resolve funções dinamicamente e exige apenas os headers do SDK, sem biblioteca de importação de 32 ou 64 bits. O preload OpenGL exige os pacotes de desenvolvimento EGL/GLX; `-DPHANTOM_BUILD_OPENGL=OFF` permite compilar Vulkan e seus testes independentemente. Reinstale a camada Linux para usar o ring v2 com 4.096 quadros. No Windows, o lançamento antecipado está disponível em Configurações para capturar a fila exata de jogos D3D12 com múltiplas filas.
+A camada Vulkan resolve funções dinamicamente e exige apenas os headers do SDK, sem biblioteca de importação de 32 ou 64 bits. O preload OpenGL exige os pacotes de desenvolvimento EGL/GLX; `-DPHANTOM_BUILD_OPENGL=OFF` permite compilar Vulkan e seus testes independentemente. Os pacotes Linux atualizam as bibliotecas nativas junto com o app; instalações manuais feitas por `install_layer.sh` devem executar o script novamente após atualizar. No Windows, o lançamento antecipado está disponível em Configurações para capturar a fila exata de jogos D3D12 com múltiplas filas.
 
 ## Configuração e dados
 
@@ -142,7 +143,7 @@ src/
 └── PhantomSensorLib/     # Biblioteca nativa C++ prevista para extensão futura
 ```
 
-O Core compartilha modelos, configuração, avaliação de alertas e serviços de telemetria; o app mantém as integrações específicas de cada sistema operacional. A camada Vulkan é compilada separadamente com CMake e `install_layer.sh`; ela não faz parte do build da solução .NET.
+O Core compartilha modelos, configuração, avaliação de alertas e serviços de telemetria; o app mantém as integrações específicas de cada sistema operacional. Os renderizadores nativos Linux são compilados separadamente com CMake por `scripts/build-linux-overlay.sh` e incluídos nas releases; eles não fazem parte do build da solução .NET.
 
 ## Documentação
 

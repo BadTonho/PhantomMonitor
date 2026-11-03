@@ -70,11 +70,11 @@ The Windows ZIP and Linux tar.gz include `phantom.portable`, never a personal `c
 | `PhantomMonitor-<version>-linux-x64.AppImage` | Automatic (AppImage applier) |
 | `PhantomMonitorSetup-<version>.exe` | Per-user installer (Inno Setup; files match the swapped folder) |
 | `phantom-monitor_<version>_amd64.deb` | .deb install (stays in notify mode) |
-| `PhantomVulkanLayer-<version>-linux.so` | Vulkan layer (manual; update by re-running that version's `install_layer.sh`) |
+| `PhantomOverlay/linux/` payload inside Linux packages | Vulkan layer and OpenGL preload; registered per-user while in-game mode is active |
 
 Publishing flow:
 
-1. `scripts/release.ps1 -Version <x.y.z>`: publishes the unified app (win-x64 and linux-x64) self-contained single-file with `-p:Version=<version>` and generates the zip and tarball under `releases/<version>/` — the Windows payload is `PhantomMonitor.exe` + `PresentMon.exe` + `config.example.json` (the script guarantees a loose PresentMon and strips the `*.pdb`s) and the Linux one is the binary plus the transitional hardlink. Options: `-PackWindowsSetup` (installer when Inno Setup 6 is present), `-LayerSoPath <so>` (attaches the compiled Vulkan layer), `-SkipWindows/-SkipLinux` and `-OutDirectory`.
+1. On Linux, build the native payload with `scripts/build-linux-overlay.sh build/linux-overlay-payload` and make that folder available on the Windows release machine. On Windows, run `scripts/release.ps1 -Version <x.y.z> -LinuxOverlayDirectory <payload-folder>` to publish the unified app (win-x64 and linux-x64) self-contained single-file with `-p:Version=<version>` and generate the zip and tarball under `releases/<version>/`. Linux packages include both renderer libraries and the manifest, so users do not need a separate download. The Windows payload is `PhantomMonitor.exe` + `PresentMon.exe` + `config.example.json` (the script guarantees a loose PresentMon and strips the `*.pdb`s); Linux also includes the transitional hardlink. Options: `-PackWindowsSetup`, `-SkipWindows/-SkipLinux`, and `-OutDirectory`. Linux packaging fails without `-LinuxOverlayDirectory` rather than producing an app package without its native renderer.
 2. On Linux, the experimental packagers (NOT TESTED) live in `packaging/linux/`: `appimage.sh` (appimagetool) and `deb.sh` (dpkg-deb). The Windows installer is `packaging/windows/phantom-monitor.iss`.
 3. Review the packages, create the `v<x.y.z>` tag (`git tag v1.2.3 && git push --tags`) and publish: the script prints a `gh release create v1.2.3 ...` command with the assets — or upload everything through the GitHub page.
 4. A draft is not seen as an available update; the tag must match the version itself (e.g. `v1.2.3` ↔ `1.2.3`, "v" tolerated by the SemVer parser).

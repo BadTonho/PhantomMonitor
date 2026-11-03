@@ -45,7 +45,7 @@ that does not recognize the version must ignore the frame.
 
 | Platform | Native APIs in the code | Activation |
 |---|---|---|
-| Linux | Vulkan; OpenGL through GLX/EGL (OpenGL ES 3+) | Vulkan layer enabled per game; OpenGL through `LD_PRELOAD` |
+| Linux | Vulkan; OpenGL through GLX/EGL (OpenGL ES 3+) | User implicit-layer registration for Vulkan; OpenGL through `LD_PRELOAD` published to the session D-Bus/systemd environment |
 | Windows | Direct3D 9–12, OpenGL/WGL, and Vulkan | x86/x64 hooks for PIDs PresentMon identifies as presenting frames; Vulkan implicit layers registered in the matching x86/x64 HKCU registry views while the mode is active |
 
 The renderers use an internal API-independent presentation and Dear ImGui as
@@ -64,16 +64,24 @@ renderer uses Dear ImGui's built-in default font; size, colors, and geometry are
 applied, while a font family selected in the editor is not yet loaded by the
 native renderer.
 
-On Linux, users can start a configured executable from Phantom Monitor, which
-sets `ENABLE_PHANTOM_OVERLAY=1`, or copy that variable into the game's Steam
-launch options. Per-process gating also keeps the existing Vulkan FPS layer
-available.
+On Linux, applying **In-game** registers the Vulkan manifest and updates
+`ENABLE_PHANTOM_OVERLAY` and `LD_PRELOAD` in the current D-Bus/systemd
+environment and `~/.config/environment.d` for future sessions. On KDE Plasma,
+it also tries to update the desktop launch environment through `org.kde.Startup`
+or KLauncher's `setLaunchEnv` method where available. Diagnostics reports if
+neither service is active. When a session launch service confirms the update, no launcher
+registration, Steam launch option, or logout is required. Launchers and games
+already open must be restarted. Diagnostics also reports when no process
+publishes state. This keeps the existing Vulkan FPS layer available.
 
 ## Status and validation
 
-The code includes the Linux Vulkan layer with drawing and existing FPS/frametime collection, the OpenGL GLX/EGL renderer, Windows Direct3D 9–12 and WGL hooks, and a Windows Vulkan layer. On Windows, the PresentMon session stays active when sensor collection stops while **In-game** is selected; the parser records valid PIDs before the foreground-window filter used by FPS metrics. The app resolves each image and architecture, excludes Phantom Monitor and shell/system processes, and tries the matching x86/x64 native launcher once per process, reporting failures without falling back to unobserved PIDs. Vulkan uses implicit manifests in the matching HKCU registry views; registrations are removed when switching to Floating, on app exit, and when starting in Floating mode. The manifest provides `PHANTOMMONITOR_DISABLE_VULKAN_LAYER=1`; Vulkan applications started before registration must restart. Failures appear in Diagnostics and never open floating windows automatically.
+The code includes the Linux Vulkan layer with drawing and existing FPS/frametime collection, the OpenGL GLX/EGL renderer, Windows Direct3D 9–12 and WGL hooks, and a Windows Vulkan layer. On Windows, the PresentMon session stays active when sensor collection stops while **In-game** is selected; the parser records valid PIDs before the foreground-window filter used by FPS metrics. The app resolves each image and architecture, excludes Phantom Monitor and shell/system processes, and tries the matching x86/x64 native launcher once per process, reporting failures without falling back to unobserved PIDs. The UI diagnostic also reports whether the hook launcher and DLL exist for each architecture and warns when overlay visibility is off. Vulkan uses implicit manifests in the matching HKCU registry views; registrations are removed when switching to Floating, on app exit, and when starting in Floating mode. The manifest provides `PHANTOMMONITOR_DISABLE_VULKAN_LAYER=1`; Vulkan applications started before registration must restart. Failures appear in Diagnostics and never open floating windows automatically.
 
 The Linux build compiles the Vulkan layer, OpenGL preload, and native tests.
+The app's `dotnet build` and `dotnet publish` do not compile or copy the
+Windows hooks. For a local in-game build, run
+`scripts/build-windows-overlay.ps1 -OutDirectory <app-folder>/PhantomOverlay`.
 Windows components require Visual Studio 2022 and a Vulkan SDK with loader
 import libraries for both x86 and x64; they must be built on Windows and need
 runtime validation on x86/x64. With an x64-only SDK, the x86 Direct3D/OpenGL

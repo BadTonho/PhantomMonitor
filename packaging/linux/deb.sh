@@ -27,7 +27,9 @@ command -v dpkg-deb >/dev/null 2>&1 || {
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-mkdir -p "$WORK/DEBIAN" "$WORK/usr/bin" "$WORK/usr/lib/phantom-monitor" "$WORK/usr/share/applications"
+REPO_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+mkdir -p "$WORK/DEBIAN" "$WORK/usr/bin" "$WORK/usr/lib/phantom-monitor" "$WORK/usr/share/applications" "$WORK/usr/share/icons/hicolor/256x256/apps"
+cp "$REPO_ROOT/fantasma.png" "$WORK/usr/share/icons/hicolor/256x256/apps/phantom-monitor.png"
 
 cp -r "$PUBLISH_DIR/." "$WORK/usr/lib/phantom-monitor/"
 rm -f "$WORK/usr/lib/phantom-monitor/phantom.portable" "$WORK/usr/lib/phantom-monitor/config.json"
@@ -54,6 +56,7 @@ Type=Application
 Name=Phantom Monitor
 Comment=Hardware, FPS and frametime local monitor
 Exec=/usr/bin/phantom-monitor
+Icon=phantom-monitor
 Categories=System;Utility;
 EOF
 

@@ -5,6 +5,7 @@
              xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
              x:DataType="vmroot:OverlayCanvasBlockViewModel"
         Title="Phantom Monitor Overlay"
+        Icon="avares://PhantomMonitor/Assets/fantasma.ico"
         Width="{Binding PresentationWidth}" SizeToContent="Height"
         CanResize="False" WindowDecorations="None" WindowStartupLocation="Manual"
         ShowInTaskbar="False" Topmost="True"

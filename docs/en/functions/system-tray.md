@@ -30,7 +30,7 @@ Settings and the tray menu both expose the startup toggle.
 
 ## Unified app (Avalonia, F1.5)
 
-The unified app ships the same tray through Avalonia's `TrayIcon` API (`src/PhantomMonitor.App/Services/TrayIconService.cs`), with the same menu and the same runtime-drawn icon (dark square with a cyan graph line; no external assets):
+The unified app ships the same tray through Avalonia's `TrayIcon` API (`src/PhantomMonitor.App/Services/TrayIconService.cs`), using the embedded `avares://PhantomMonitor/Assets/fantasma.ico` icon (generated from `fantasma.png` and also applied as the executable `<ApplicationIcon>` and window `Icon`, keeping the runtime-drawn icon as fallback):
 
 - **Windows:** the same `Shell_NotifyIcon` protocol underneath the Avalonia API.
 - **Linux:** integration via **StatusNotifier/DBus** — it works on desktops with support (KDE, GNOME with the notification-area extension); on desktops without StatusNotifier the icon simply does not appear and the app stays functional.

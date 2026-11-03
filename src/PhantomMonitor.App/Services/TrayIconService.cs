@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
+using Avalonia.Platform;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
 
@@ -118,9 +119,19 @@ public sealed class TrayIconService : IDisposable
         TrayIcon.SetIcons(Application.Current!, []);
     }
 
-    /// <summary>Desenha o ícone do app (quadro escuro com gráfico ciano) em runtime, como o WPF.</summary>
+    /// <summary>Carrega o ícone fantasma empacotado (com fallback para o ícone desenhado em runtime).</summary>
     private static WindowIcon? CreateAppIcon(int size)
     {
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri("avares://PhantomMonitor/Assets/fantasma.ico"));
+            return new WindowIcon(stream);
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("TrayIcon.LoadAssetIcon", ex);
+        }
+
         try
         {
             var bitmap = new RenderTargetBitmap(new PixelSize(size, size), new Vector(96, 96));

@@ -1,4 +1,4 @@
-﻿; Phantom Monitor - instalador Windows por usuário (Inno Setup 6).
+; Phantom Monitor - instalador Windows por usuário (Inno Setup 6).
 ;
 ; Geração local/manual (o projeto não tem CI):
 ;   scripts/release.ps1 -Version <x.y.z> -PackWindowsSetup  (descobre o ISCC)
@@ -13,7 +13,7 @@
 ; todos os logs em %LOCALAPPDATA%\PhantomMonitor\logs, fora da troca.
 
 #ifndef VersionName
-  #define VersionName "0.0.0-local"
+  #define VersionName "0.1.0"
 #endif
 
 ; Pasta do publish do Windows (stage do scripts/release.ps1) usada como fonte.
@@ -38,6 +38,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
+SetupIconFile=..\..\src\PhantomMonitor.App\Assets\fantasma.ico
 UninstallDisplayIcon={app}\PhantomMonitor.exe
 
 [Tasks]

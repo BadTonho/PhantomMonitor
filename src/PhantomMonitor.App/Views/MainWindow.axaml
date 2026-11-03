@@ -7,6 +7,7 @@
              xmlns:models="using:PhantomMonitor.Models"
              x:DataType="vmroot:MainWindowViewModel"
         Title="Phantom Monitor"
+        Icon="avares://PhantomMonitor/Assets/fantasma.ico"
         Width="1120" Height="790" MinWidth="850" MinHeight="640"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BgWindowBrush}">

@@ -7,6 +7,7 @@
              xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
              x:DataType="vmroot:MainWindowViewModel"
         Title="Editor do overlay flutuante"
+        Icon="avares://PhantomMonitor/Assets/fantasma.ico"
         Width="1120" Height="820" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">

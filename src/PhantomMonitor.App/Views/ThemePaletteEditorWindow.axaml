@@ -5,6 +5,7 @@
              xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
              x:DataType="vmroot:ThemePaletteEditorViewModel"
         Title="Personalizar paleta"
+        Icon="avares://PhantomMonitor/Assets/fantasma.ico"
         Width="940" Height="720" MinWidth="760" MinHeight="600"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">

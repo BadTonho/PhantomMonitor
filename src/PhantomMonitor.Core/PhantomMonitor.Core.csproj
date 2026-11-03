@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PhantomMonitor</RootNamespace>
     <AssemblyName>PhantomMonitor.Core</AssemblyName>
+    <Version>0.1.0</Version>
   </PropertyGroup>
 
   <!-- Pacotes Windows-only usados por Services/Sensors/Windows (HardwareMonitorService/FpsMonitor).

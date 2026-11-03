@@ -4,6 +4,7 @@
              xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
              x:DataType="vmroot:OverlayHiddenMetricsDialogViewModel"
         Title="Linhas ocultadas"
+        Icon="avares://PhantomMonitor/Assets/fantasma.ico"
         Width="620" Height="520" MinWidth="480" MinHeight="360"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgWindowBrush}">

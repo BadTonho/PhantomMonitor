@@ -30,7 +30,7 @@ Integração com a bandeja **sem WinForms**: usa `Shell_NotifyIcon` do Win32 e o
 
 O app único traz a mesma bandeja via API `TrayIcon` do Avalonia
 (`src/PhantomMonitor.App/Services/TrayIconService.cs`), com o mesmo menu e o mesmo
-ícone desenhado em runtime (quadrado escuro + gráfico ciano; sem assets externos):
+ícone empacotado `avares://PhantomMonitor/Assets/fantasma.ico` (gerado a partir de `fantasma.png` e também aplicado no executável e nas janelas, com fallback para o ícone desenhado em runtime):
 
 - **Windows:** o mesmo protocolo `Shell_NotifyIcon` (por baixo da API do Avalonia).
 - **Linux:** integração por **StatusNotifier/DBus** — funciona em desktops com

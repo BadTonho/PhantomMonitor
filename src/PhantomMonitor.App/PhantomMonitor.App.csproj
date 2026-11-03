@@ -11,7 +11,8 @@
     <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
     <!-- Marcador de build de desenvolvimento: o updater nunca "atualiza" um 0.0.0-dev.
          A release passa /p:Version=<tag> no publish e a versão compilada passa a casar. -->
-    <Version>0.0.0-dev</Version>
+    <Version>0.1.0</Version>
+    <ApplicationIcon>Assets\fantasma.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -46,5 +47,7 @@
 
   <ItemGroup>
     <None Include="..\..\config.example.json" Link="config.example.json" CopyToOutputDirectory="PreserveNewest" />
+    <AvaloniaResource Include="Assets\fantasma.ico" />
+    <AvaloniaResource Include="..\..\fantasma.png" Link="Assets\fantasma.png" />
   </ItemGroup>
 </Project>

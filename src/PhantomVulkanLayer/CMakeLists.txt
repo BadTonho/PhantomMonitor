@@ -9,20 +9,39 @@ if(NOT PHANTOM_VULKAN_INCLUDE_DIR)
     find_package(Vulkan QUIET)
     if(Vulkan_FOUND OR Vulkan_INCLUDE_DIRS)
         set(PHANTOM_VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
-    else()
-        find_path(PHANTOM_VULKAN_INCLUDE_DIR vulkan/vulkan.h
-            HINTS
-                ENV VULKAN_SDK
-                ENV VK_SDK_PATH
-            PATH_SUFFIXES
-                Include
-                include
-            PATHS
-                "C:/VulkanSDK/*/Include"
-                "C:/VulkanSDK/*/include"
-        )
     endif()
 endif()
+
+if(NOT PHANTOM_VULKAN_INCLUDE_DIR)
+    find_path(PHANTOM_VULKAN_INCLUDE_DIR vulkan/vulkan.h
+        HINTS
+            ENV VULKAN_SDK
+            ENV VK_SDK_PATH
+        PATH_SUFFIXES
+            Include
+            include
+        PATHS
+            "C:/VulkanSDK/*/Include"
+            "C:/VulkanSDK/*/include"
+    )
+endif()
+
+if(NOT PHANTOM_VULKAN_INCLUDE_DIR)
+    message(STATUS "Vulkan headers não encontrados localmente. Obtendo Vulkan-Headers oficiais do Khronos...")
+    include(FetchContent)
+    FetchContent_Declare(
+        vulkan_headers
+        GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+        GIT_TAG v1.3.296
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_GetProperties(vulkan_headers)
+    if(NOT vulkan_headers_POPULATED)
+        FetchContent_Populate(vulkan_headers)
+        set(PHANTOM_VULKAN_INCLUDE_DIR "${vulkan_headers_SOURCE_DIR}/include")
+    endif()
+endif()
+
 if(NOT PHANTOM_VULKAN_INCLUDE_DIR)
     message(FATAL_ERROR "Install Vulkan headers (Vulkan SDK or libvulkan-dev). No loader import library is required.")
 endif()

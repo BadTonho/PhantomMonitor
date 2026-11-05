@@ -61,24 +61,6 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Configurar Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.2
-        with:
-          version: latest
-          cache: false
-
-      - name: Garantir VULKAN_SDK no ambiente
-        shell: pwsh
-        run: |
-          Write-Host "VULKAN_SDK inicial: $env:VULKAN_SDK"
-          if (-not $env:VULKAN_SDK -or -not (Test-Path "$env:VULKAN_SDK")) {
-            $found = Get-ChildItem "C:\VulkanSDK" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
-            if ($found) {
-              Write-Host "Localizado Vulkan SDK em $($found.FullName)"
-              echo "VULKAN_SDK=$($found.FullName)" >> $env:GITHUB_ENV
-            }
-          }
-
       - name: Instalar Inno Setup 6
         run: choco install innosetup --no-progress
 

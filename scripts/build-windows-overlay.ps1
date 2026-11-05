@@ -33,9 +33,24 @@ try {
         Copy-Item (Join-Path $source "third_party\minhook\LICENSE.txt") `
             (Join-Path $destination "LICENSE-MinHook.txt") -Force
 
+        if (-not $env:VULKAN_SDK) {
+            $latestVulkan = Get-ChildItem "C:\VulkanSDK" -Directory -ErrorAction SilentlyContinue |
+                Sort-Object Name -Descending | Select-Object -First 1
+            if ($latestVulkan) { $env:VULKAN_SDK = $latestVulkan.FullName }
+        }
+
         $vulkanBuild = Join-Path $buildRoot ("vulkan-" + $architecture.Name)
         $vulkanSource = Join-Path $repoRoot "src\PhantomVulkanLayer"
-        & cmake -S $vulkanSource -B $vulkanBuild -G $Generator -A $architecture.CMake -DBUILD_TESTING=OFF
+        $cmakeVulkanArgs = @("-S", $vulkanSource, "-B", $vulkanBuild, "-G", $Generator, "-A", $architecture.CMake, "-DBUILD_TESTING=OFF")
+        if (-not [string]::IsNullOrWhiteSpace($env:VULKAN_SDK)) {
+            $normalizedVulkan = $env:VULKAN_SDK.Replace('\', '/')
+            if (Test-Path (Join-Path $env:VULKAN_SDK "Include\vulkan\vulkan.h")) {
+                $cmakeVulkanArgs += "-DPHANTOM_VULKAN_INCLUDE_DIR=$normalizedVulkan/Include"
+            } elseif (Test-Path (Join-Path $env:VULKAN_SDK "include\vulkan\vulkan.h")) {
+                $cmakeVulkanArgs += "-DPHANTOM_VULKAN_INCLUDE_DIR=$normalizedVulkan/include"
+            }
+        }
+        & cmake @cmakeVulkanArgs
         if ($LASTEXITCODE -ne 0) { throw "CMake configure da camada Vulkan $($architecture.Name) falhou. Instale o Vulkan SDK." }
         & cmake --build $vulkanBuild --config Release --target VkLayer_phantom_monitor --parallel
         if ($LASTEXITCODE -ne 0) { throw "Build da camada Vulkan $($architecture.Name) falhou." }

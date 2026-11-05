@@ -5,8 +5,24 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-find_path(PHANTOM_VULKAN_INCLUDE_DIR vulkan/vulkan.h
-    HINTS "$ENV{VULKAN_SDK}/Include" "$ENV{VULKAN_SDK}/include")
+if(NOT PHANTOM_VULKAN_INCLUDE_DIR)
+    find_package(Vulkan QUIET)
+    if(Vulkan_FOUND OR Vulkan_INCLUDE_DIRS)
+        set(PHANTOM_VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
+    else()
+        find_path(PHANTOM_VULKAN_INCLUDE_DIR vulkan/vulkan.h
+            HINTS
+                ENV VULKAN_SDK
+                ENV VK_SDK_PATH
+            PATH_SUFFIXES
+                Include
+                include
+            PATHS
+                "C:/VulkanSDK/*/Include"
+                "C:/VulkanSDK/*/include"
+        )
+    endif()
+endif()
 if(NOT PHANTOM_VULKAN_INCLUDE_DIR)
     message(FATAL_ERROR "Install Vulkan headers (Vulkan SDK or libvulkan-dev). No loader import library is required.")
 endif()

@@ -177,7 +177,7 @@ jobs:
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: "Phantom Monitor ${{ needs.prepare.outputs.version }}"
-          draft: ${{ needs.prepare.outputs.draft == 'true' }}
+          draft: true
           prerelease: false
           generate_release_notes: true
           files: final-releases/*

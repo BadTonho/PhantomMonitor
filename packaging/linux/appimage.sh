@@ -26,6 +26,7 @@ command -v "$APPIMAGE_TOOL" >/dev/null 2>&1 || {
 }
 
 APPDIR=$(mktemp -d)
+chmod 0755 "$APPDIR"
 trap 'rm -rf "$APPDIR"' EXIT
 
 # Conteúdo do publish vai para usr/bin (AppImage convenção).
@@ -56,8 +57,11 @@ Name=Phantom Monitor
 Comment=Hardware, FPS and frametime local monitor
 Exec=PhantomMonitor
 Icon=phantom-monitor
-Categories=System;Utility;
+Categories=Utility;
 EOF
+
+chmod -R a+rX "$APPDIR"
+chmod a+rx "$APPDIR/AppRun"
 
 "$APPIMAGE_TOOL" "$APPDIR" "$OUTPUT_APPIMAGE"
 echo "AppImage gerado: $OUTPUT_APPIMAGE"

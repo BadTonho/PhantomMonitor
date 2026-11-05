@@ -3,6 +3,7 @@
 #include "imgui.h"
 
 #include <algorithm>
+#include <clocale>
 #include <cmath>
 #include <chrono>
 #include <cstdint>
@@ -189,5 +190,14 @@ int main() {
     check(!malformed.valid, "truncated frame rejected");
     malformed = ParseFramePayload("F\t3\t1\t0\t220\t960\t760\t11.5\t0.85\tFF141A24\t1\tFF2C527A\tFF1E90FF\t0\t\t\t9\t8\t8\t8\t8\t8\t8\t8\t8\t2\t0\t2\t0\t2\t36\n\n");
     check(!malformed.valid, "unknown payload version rejected");
+
+    std::string original_locale = std::setlocale(LC_ALL, nullptr) ? std::setlocale(LC_ALL, nullptr) : "C";
+    if (std::setlocale(LC_ALL, "pt_BR.UTF-8") != nullptr || std::setlocale(LC_ALL, "de_DE.UTF-8") != nullptr) {
+        const auto locale_parsed = ParseFramePayload(valid_payload());
+        check(locale_parsed.valid && locale_parsed.frame.font_size > 11.0f,
+              "payload parses successfully under comma-decimal locale");
+        std::setlocale(LC_ALL, original_locale.c_str());
+    }
+
     return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

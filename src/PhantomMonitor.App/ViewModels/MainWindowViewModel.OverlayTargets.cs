@@ -15,8 +15,14 @@ public sealed partial class MainWindowViewModel
     public string OverlayTargetArgumentsText { get => _overlayTargetArgumentsText; set => Set(ref _overlayTargetArgumentsText, value); }
     public string OverlayTargetMessage { get => _overlayTargetMessage; private set => Set(ref _overlayTargetMessage, value); }
     public bool IsWindowsPlatform => OperatingSystem.IsWindows();
+    public bool IsLinuxPlatform => OperatingSystem.IsLinux();
     public bool IsOverlayTargetLaunchVisible => IsOverlayInGameModeSelected && IsWindowsPlatform;
     public bool IsOverlayInGameModeSelected => OverlayRenderModeIndex == 1;
+    public string SteamOverlayLaunchOption => "phantom-hud %command%";
+    public string LauncherWrapperOption => "phantom-hud";
+    public string LinuxHudLocationText => LinuxOverlayNativeFiles.InstalledHudExecutable;
+    public bool IsPhantomHudAvailable => OperatingSystem.IsLinux() && LinuxOverlayNativeFiles.HasInstalledHudExecutable;
+    public void SetOverlayTargetMessage(string message) => OverlayTargetMessage = message;
 
     private void LoadOverlayInGameTargets()
     {

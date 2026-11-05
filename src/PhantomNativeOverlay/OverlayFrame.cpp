@@ -1,6 +1,7 @@
 #include "OverlayFrame.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
@@ -16,13 +17,14 @@ constexpr std::size_t kMaxSamplesPerGraph = 1200;
 
 bool parse_number(std::string_view value, float& result) {
     if (value.empty()) return false;
-    std::string copy(value);
-    char* end = nullptr;
-    const double parsed = std::strtod(copy.c_str(), &end);
-    if (end == copy.c_str() || *end != '\0' || !std::isfinite(parsed)
+    if (value.front() == '+') value.remove_prefix(1);
+    if (value.empty()) return false;
+    float parsed = 0.0f;
+    const auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (ec != std::errc{} || ptr != value.data() + value.size() || !std::isfinite(parsed)
         || parsed > std::numeric_limits<float>::max()
         || parsed < -std::numeric_limits<float>::max()) return false;
-    result = static_cast<float>(parsed);
+    result = parsed;
     return true;
 }
 
@@ -34,11 +36,10 @@ bool parse_flag(std::string_view value, bool& result) {
 
 bool parse_color(std::string_view value, std::uint32_t& result) {
     if (value.size() != 8) return false;
-    char* end = nullptr;
-    const std::string copy(value);
-    const auto parsed = std::strtoul(copy.c_str(), &end, 16);
-    if (end != copy.c_str() + copy.size() || parsed > 0xFFFFFFFFUL) return false;
-    result = static_cast<std::uint32_t>(parsed);
+    std::uint32_t parsed = 0;
+    const auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), parsed, 16);
+    if (ec != std::errc{} || ptr != value.data() + value.size()) return false;
+    result = parsed;
     return true;
 }
 

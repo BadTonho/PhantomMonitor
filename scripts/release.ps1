@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Gera releases locais do Phantom Monitor (o projeto não publica via CI).
 
@@ -92,7 +92,8 @@ try {
             "libVkLayer_phantom_monitor.so",
             "libPhantomOpenGLOverlay.so",
             "phantom_vulkan_layer.json",
-            "LICENSE-Dear-ImGui.txt"
+            "LICENSE-Dear-ImGui.txt",
+            "phantom-hud"
         )
         foreach ($file in $linuxOverlayFiles) {
             if (-not (Test-Path -LiteralPath (Join-Path $LinuxOverlayDirectory $file) -PathType Leaf)) {

@@ -186,6 +186,32 @@
               </ItemsControl>
               <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
+            <StackPanel IsVisible="{Binding IsLinuxPlatform}" Spacing="6">
+              <Border Background="{DynamicResource BgWindowBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="INTEGRAÇÃO COM JOGOS (LINUX) · phantom-hud" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="Bold" />
+                      <TextBlock Text="Use o utilitário phantom-hud para jogos na Steam, launchers e Minecraft." Classes="muted" FontSize="11" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding LinuxHudLocationText}" Classes="muted" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="280" />
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBox Text="{Binding SteamOverlayLaunchOption}" IsReadOnly="True" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="secondary" Content="Copiar opção Steam" Click="OnCopySteamOverlayOptionClick" />
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBox Text="{Binding LauncherWrapperOption}" IsReadOnly="True" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="secondary" Content="Copiar comando Wrapper" Click="OnCopyLauncherWrapperOptionClick" />
+                  </Grid>
+
+                  <TextBlock Text="Dica: No Prism Launcher / MultiMC, abra Configurações → Comandos personalizados e cole 'phantom-hud' em Comando de empacotador." Classes="muted" FontSize="10" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding OverlayTargetMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
           </StackPanel>
 
           <Border IsVisible="{Binding IsLinuxOverlaySessionWarningVisible}"

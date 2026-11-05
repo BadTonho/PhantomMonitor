@@ -25,6 +25,7 @@ using GlxGetCurrentContext = GLXContext (*)();
 using EglGetCurrentContext = EGLContext (*)();
 using EglQuerySurface = EGLBoolean (*)(EGLDisplay, EGLSurface, EGLint, EGLint*);
 using GlxQueryDrawable = void (*)(Display*, GLXDrawable, int, unsigned int*);
+using GlGetIntegerv = void (*)(unsigned int, int*);
 
 struct RendererState {
     ImGuiContext* context = nullptr;
@@ -41,6 +42,19 @@ Publisher g_fps_publisher;
 template<typename T>
 T next_symbol(const char* name) {
     return reinterpret_cast<T>(dlsym(RTLD_NEXT, name));
+}
+
+bool try_get_viewport_dimensions(unsigned int& width, unsigned int& height) {
+    const auto get_integerv = next_symbol<GlGetIntegerv>("glGetIntegerv");
+    if (!get_integerv) return false;
+    int viewport[4] = {0, 0, 0, 0};
+    get_integerv(0x0BA2, viewport); // GL_VIEWPORT
+    if (viewport[2] > 0 && viewport[3] > 0) {
+        width = static_cast<unsigned int>(viewport[2]);
+        height = static_cast<unsigned int>(viewport[3]);
+        return true;
+    }
+    return false;
 }
 
 bool explicitly_enabled() {
@@ -115,11 +129,16 @@ extern "C" __attribute__((visibility("default"))) void glXSwapBuffers(Display* d
     if (explicitly_enabled()) {
         const auto get_context = next_symbol<GlxGetCurrentContext>("glXGetCurrentContext");
         const auto query_drawable = next_symbol<GlxQueryDrawable>("glXQueryDrawable");
-        if (get_context && query_drawable) {
+        if (get_context) {
             unsigned int width = 0;
             unsigned int height = 0;
-            query_drawable(display, drawable, 0x801D, &width);  // GLX_WIDTH
-            query_drawable(display, drawable, 0x801E, &height); // GLX_HEIGHT
+            if (query_drawable) {
+                query_drawable(display, drawable, 0x801D, &width);  // GLX_WIDTH
+                query_drawable(display, drawable, 0x801E, &height); // GLX_HEIGHT
+            }
+            if (width == 0 || height == 0) {
+                try_get_viewport_dimensions(width, height);
+            }
             try { draw(reinterpret_cast<std::uintptr_t>(get_context()), width, height, false); }
             catch (...) { set_status(RenderState::Failed, "Exceção no renderer OpenGL/GLX."); }
         }
@@ -134,7 +153,7 @@ extern "C" __attribute__((visibility("default"))) EGLBoolean eglSwapBuffers(EGLD
     if (explicitly_enabled()) {
         const auto get_context = next_symbol<EglGetCurrentContext>("eglGetCurrentContext");
         const auto query_surface = next_symbol<EglQuerySurface>("eglQuerySurface");
-        if (get_context && query_surface) {
+        if (get_context) {
             EGLint width = 0;
             EGLint height = 0;
             const auto context = get_context();
@@ -150,14 +169,24 @@ extern "C" __attribute__((visibility("default"))) EGLBoolean eglSwapBuffers(EGLD
                     return result;
                 }
             }
-            if (query_surface(display, surface, EGL_WIDTH, &width)
-                && query_surface(display, surface, EGL_HEIGHT, &height))
-                try {
-                    draw(reinterpret_cast<std::uintptr_t>(context), static_cast<std::uint32_t>(std::max(0, width)),
-                        static_cast<std::uint32_t>(std::max(0, height)), gles);
-                } catch (...) {
-                    set_status(RenderState::Failed, "Exceção no renderer OpenGL/EGL.");
+            if (query_surface) {
+                query_surface(display, surface, EGL_WIDTH, &width);
+                query_surface(display, surface, EGL_HEIGHT, &height);
+            }
+            if (width <= 0 || height <= 0) {
+                unsigned int vp_width = 0;
+                unsigned int vp_height = 0;
+                if (try_get_viewport_dimensions(vp_width, vp_height)) {
+                    width = static_cast<EGLint>(vp_width);
+                    height = static_cast<EGLint>(vp_height);
                 }
+            }
+            try {
+                draw(reinterpret_cast<std::uintptr_t>(context), static_cast<std::uint32_t>(std::max(0, width)),
+                    static_cast<std::uint32_t>(std::max(0, height)), gles);
+            } catch (...) {
+                set_status(RenderState::Failed, "Exceção no renderer OpenGL/EGL.");
+            }
         }
     }
     const auto result = original(display, surface);

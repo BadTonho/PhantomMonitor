@@ -1,6 +1,7 @@
 using Avalonia.Interactivity;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using PhantomMonitor.App.Services.Hotkeys;
 using PhantomMonitor.App.ViewModels;
 using PhantomMonitor.Services;
@@ -72,6 +73,35 @@ public partial class SettingsPage : UserControl
         if (sender is Button { DataContext: OverlayLaunchTargetConfig target })
             await ViewModel.LaunchOverlayTargetAsync(target);
     }
+
+    private async void OnCopySteamOverlayOptionClick(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        var clipboard = topLevel?.Clipboard;
+        if (clipboard is null)
+        {
+            ViewModel.SetOverlayTargetMessage("A área de transferência não está disponível nesta sessão.");
+            return;
+        }
+
+        await clipboard.SetTextAsync(ViewModel.SteamOverlayLaunchOption);
+        ViewModel.SetOverlayTargetMessage("Opção da Steam copiada ('phantom-hud %command%').");
+    }
+
+    private async void OnCopyLauncherWrapperOptionClick(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        var clipboard = topLevel?.Clipboard;
+        if (clipboard is null)
+        {
+            ViewModel.SetOverlayTargetMessage("A área de transferência não está disponível nesta sessão.");
+            return;
+        }
+
+        await clipboard.SetTextAsync(ViewModel.LauncherWrapperOption);
+        ViewModel.SetOverlayTargetMessage("Comando copiado ('phantom-hud'). Cole-o no 'Wrapper command' do seu launcher.");
+    }
+
     private void OnOpenThemePaletteEditorClick(object? sender, RoutedEventArgs e)
         => OpenThemePaletteEditorRequested?.Invoke(this, e);
     private void OnCheckUpdatesClick(object? sender, RoutedEventArgs e) => ViewModel.CheckUpdatesNow();

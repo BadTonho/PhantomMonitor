@@ -1,5 +1,8 @@
+using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using PhantomMonitor.Services;
 
 namespace PhantomMonitor.App.Services.Overlay;
 
@@ -9,19 +12,23 @@ internal static class LinuxOverlayNativeFiles
     private const string VulkanLayerFileName = "libVkLayer_phantom_monitor.so";
     private const string OpenGlLibraryFileName = "libPhantomOpenGLOverlay.so";
     private const string ManifestFileName = "phantom_vulkan_layer.json";
+    private const string HudExecutableFileName = "phantom-hud";
 
     private static string HomeDirectory => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private static string BundledDirectory => Path.Combine(AppContext.BaseDirectory, "PhantomOverlay", "linux");
     private static string UserLibraryDirectory => Path.Combine(HomeDirectory, ".local", "lib");
+    private static string UserBinDirectory => Path.Combine(HomeDirectory, ".local", "bin");
     private static string UserImplicitLayerDirectory => Path.Combine(HomeDirectory, ".local", "share", "vulkan", "implicit_layer.d");
 
     private static string BundledVulkanLibrary => Path.Combine(BundledDirectory, VulkanLayerFileName);
     private static string BundledOpenGlLibrary => Path.Combine(BundledDirectory, OpenGlLibraryFileName);
     private static string BundledManifest => Path.Combine(BundledDirectory, ManifestFileName);
+    private static string BundledHudExecutable => Path.Combine(BundledDirectory, HudExecutableFileName);
 
     public static string InstalledVulkanLibrary => Path.Combine(UserLibraryDirectory, VulkanLayerFileName);
     public static string InstalledOpenGlLibrary => Path.Combine(UserLibraryDirectory, OpenGlLibraryFileName);
     public static string InstalledManifest => Path.Combine(UserImplicitLayerDirectory, ManifestFileName);
+    public static string InstalledHudExecutable => Path.Combine(UserBinDirectory, HudExecutableFileName);
 
     public static bool HasBundledPayload => File.Exists(BundledVulkanLibrary)
         && File.Exists(BundledOpenGlLibrary)
@@ -31,6 +38,8 @@ internal static class LinuxOverlayNativeFiles
         && File.Exists(InstalledManifest);
 
     public static bool HasInstalledOpenGlPreload => File.Exists(InstalledOpenGlLibrary);
+
+    public static bool HasInstalledHudExecutable => File.Exists(InstalledHudExecutable);
 
     /// <summary>Removes this user's Vulkan registration while leaving the libraries intact.</summary>
     public static void RemoveInstalledRegistration()
@@ -61,7 +70,8 @@ internal static class LinuxOverlayNativeFiles
         {
             if (HasInstalledVulkanLayer && HasInstalledOpenGlPreload)
             {
-                message = "Usando os renderizadores Linux já instalados para este usuário.";
+                EnsureHudExecutableInstalled();
+                message = "Usando os renderizadores Linux já instalados para este usuário e comando phantom-hud configurado.";
                 return true;
             }
 
@@ -80,8 +90,9 @@ internal static class LinuxOverlayNativeFiles
             CopyAtomically(BundledVulkanLibrary, InstalledVulkanLibrary);
             CopyAtomically(BundledOpenGlLibrary, InstalledOpenGlLibrary);
             WriteManifestWithInstalledLibraryPath();
+            EnsureHudExecutableInstalled();
 
-            message = "Renderizadores Vulkan e OpenGL preparados para este usuário.";
+            message = "Renderizadores Vulkan e OpenGL preparados e comando phantom-hud pronto para este usuário.";
             return true;
         }
         catch (Exception ex)
@@ -89,6 +100,76 @@ internal static class LinuxOverlayNativeFiles
             message = $"Não foi possível preparar os renderizadores Linux: {ex.Message}";
             return false;
         }
+    }
+
+    private static void EnsureHudExecutableInstalled()
+    {
+        try
+        {
+            Directory.CreateDirectory(UserBinDirectory);
+            if (File.Exists(BundledHudExecutable))
+            {
+                CopyAtomically(BundledHudExecutable, InstalledHudExecutable);
+            }
+            else
+            {
+                var content = GenerateHudScriptContent();
+                var temporary = InstalledHudExecutable + ".new-" + Environment.ProcessId;
+                try
+                {
+                    File.WriteAllText(temporary, content, new UTF8Encoding(false));
+                    File.Move(temporary, InstalledHudExecutable, overwrite: true);
+                }
+                finally
+                {
+                    if (File.Exists(temporary)) File.Delete(temporary);
+                }
+            }
+
+            if (OperatingSystem.IsLinux() && File.Exists(InstalledHudExecutable))
+            {
+                File.SetUnixFileMode(InstalledHudExecutable,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("LinuxOverlayNativeFiles.EnsureHudExecutable", ex);
+        }
+    }
+
+    private static string GenerateHudScriptContent()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("#!/usr/bin/env bash");
+        sb.AppendLine("# Phantom Monitor HUD Wrapper");
+        sb.AppendLine("# Uso: phantom-hud <comando_do_jogo> [argumentos...]");
+        sb.AppendLine();
+        sb.AppendLine("if [ $# -eq 0 ]; then");
+        sb.AppendLine("    echo \"Phantom Monitor HUD (phantom-hud)\"");
+        sb.AppendLine("    echo \"Uso: phantom-hud <comando_do_jogo> [argumentos...]\"");
+        sb.AppendLine("    echo \"\"");
+        sb.AppendLine("    echo \"Exemplos:\"");
+        sb.AppendLine("    echo \"  Steam:             phantom-hud %command%\"");
+        sb.AppendLine("    echo \"  Prism / MultiMC:   defina o wrapper command como: phantom-hud\"");
+        sb.AppendLine("    echo \"  Lutris / Heroic:   coloque como prefixo de comando: phantom-hud\"");
+        sb.AppendLine("    echo \"  Terminal:          phantom-hud ./meujogo\"");
+        sb.AppendLine("    exit 1");
+        sb.AppendLine("fi");
+        sb.AppendLine();
+        sb.AppendLine("OPENGL_LIB=\"${HOME}/.local/lib/libPhantomOpenGLOverlay.so\"");
+        sb.AppendLine("export ENABLE_PHANTOM_OVERLAY=1");
+        sb.AppendLine("export PHANTOM_FPS_CAPTURE=1");
+        sb.AppendLine("unset DISABLE_PHANTOM_OVERLAY");
+        sb.AppendLine();
+        sb.AppendLine("if [ -f \"${OPENGL_LIB}\" ]; then");
+        sb.AppendLine("    export LD_PRELOAD=\"${OPENGL_LIB}${LD_PRELOAD:+:$LD_PRELOAD}\"");
+        sb.AppendLine("fi");
+        sb.AppendLine();
+        sb.AppendLine("exec \"$@\"");
+        return sb.ToString();
     }
 
     private static void CopyAtomically(string source, string destination)

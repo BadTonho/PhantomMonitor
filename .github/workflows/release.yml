@@ -1,0 +1,192 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão da release (ex: 0.1.0)'
+        required: true
+        default: '0.1.0'
+      draft:
+        description: 'Criar release como rascunho (Draft)?'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Preparar Metadados da Versão
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      draft: ${{ steps.ver.outputs.draft }}
+    steps:
+      - name: Extrair versão e tag
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW="${{ github.event.inputs.version }}"
+            DRAFT="${{ github.event.inputs.draft }}"
+          else
+            RAW="${{ github.ref_name }}"
+            DRAFT="false"
+          fi
+          VERSION="${RAW#v}"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "draft=${DRAFT}" >> "$GITHUB_OUTPUT"
+          echo "Versão definida: ${VERSION} (Tag: ${TAG}, Draft: ${DRAFT})"
+
+  build-windows:
+    name: Build Windows (Portátil & Instalador)
+    needs: prepare
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Configurar Vulkan SDK (Headers)
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: 1.3.268.0
+          vulkan-components: Vulkan-Headers
+          vulkan-use-cache: true
+
+      - name: Instalar Inno Setup 6
+        run: choco install innosetup --no-progress
+
+      - name: Executar script de release do Windows
+        shell: pwsh
+        run: |
+          mkdir -Force releases
+          ./scripts/release.ps1 -Version "$env:VERSION" -SkipLinux -PackWindowsSetup -OutDirectory releases
+
+      - name: Listar arquivos gerados no Windows
+        shell: pwsh
+        run: Get-ChildItem releases | Format-Table Name, Length
+
+      - name: Upload dos artefatos Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-packages
+          path: releases/*
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Linux (.tar.gz, AppImage, .deb)
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Instalar dependências nativas (OpenGL, Vulkan, dpkg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libgl-dev libglx-dev libegl-dev libvulkan-dev libx11-dev dpkg-dev
+
+      - name: Compilar renderizadores nativos Linux
+        run: |
+          chmod +x ./scripts/build-linux-overlay.sh
+          ./scripts/build-linux-overlay.sh build/linux-overlay-payload
+
+      - name: Publicar app .NET (linux-x64)
+        run: |
+          mkdir -p releases stage-linux
+          dotnet publish src/PhantomMonitor.App/PhantomMonitor.App.csproj \
+            -c Release -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:Version="${VERSION}" -p:PublishReadyToRun=true -o stage-linux
+
+      - name: Montar estrutura do stage Linux
+        run: |
+          mkdir -p stage-linux/PhantomOverlay/linux
+          cp -r build/linux-overlay-payload/* stage-linux/PhantomOverlay/linux/
+          ln stage-linux/PhantomMonitor stage-linux/PhantomMonitor.App
+          rm -f stage-linux/*.pdb stage-linux/PresentMon.exe
+          echo "portable" > stage-linux/phantom.portable
+
+      - name: Gerar pacote portátil (.tar.gz)
+        run: |
+          dotnet run --project tools/ReleasePackager -c Release -- \
+            stage-linux "releases/PhantomMonitor-${VERSION}-linux-x64.tar.gz"
+
+      - name: Gerar pacote AppImage
+        run: |
+          curl -fsSL https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
+          chmod +x appimagetool
+          ./appimagetool --appimage-extract
+          export ARCH=x86_64
+          export APPIMAGE_TOOL="$(pwd)/squashfs-root/AppRun"
+          chmod +x packaging/linux/appimage.sh
+          ./packaging/linux/appimage.sh stage-linux "releases/PhantomMonitor-${VERSION}-linux-x64.AppImage"
+
+      - name: Gerar pacote .deb
+        run: |
+          chmod +x packaging/linux/deb.sh
+          ./packaging/linux/deb.sh stage-linux "${VERSION}" releases
+
+      - name: Listar arquivos gerados no Linux
+        run: ls -lh releases/
+
+      - name: Upload dos artefatos Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: releases/*
+          if-no-files-found: error
+
+  publish:
+    name: Publicar Release no GitHub
+    needs: [prepare, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar pacotes do Windows e Linux
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organizar arquivos da Release
+        run: |
+          mkdir -p final-releases
+          cp -v artifacts/windows-packages/* final-releases/
+          cp -v artifacts/linux-packages/* final-releases/
+          echo "Arquivos finais preparados para a release:"
+          ls -lh final-releases/
+
+      - name: Criar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: "Phantom Monitor ${{ needs.prepare.outputs.version }}"
+          draft: ${{ needs.prepare.outputs.draft == 'true' }}
+          prerelease: false
+          generate_release_notes: true
+          files: final-releases/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

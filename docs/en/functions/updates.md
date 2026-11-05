@@ -74,6 +74,13 @@ The Windows ZIP and Linux tar.gz include `phantom.portable`, never a personal `c
 
 Publishing flow:
 
+### Automated via GitHub Actions (Recommended)
+The repository includes the `.github/workflows/release.yml` workflow, which compiles native modules and produces all distribution packages in isolated Windows and Ubuntu runners:
+1. **Via Git:** create and push the version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`).
+2. **Via GitHub Web UI:** under the **Actions** tab, trigger the **Release** workflow with `workflow_dispatch` specifying the version (e.g. `0.1.0`).
+3. The workflow builds all native renderers, packages all 5 assets, and publishes the GitHub Release automatically.
+
+### Manual / Local
 1. On Linux, build the native payload with `scripts/build-linux-overlay.sh build/linux-overlay-payload` and make that folder available on the Windows release machine. On Windows, run `scripts/release.ps1 -Version <x.y.z> -LinuxOverlayDirectory <payload-folder>` to publish the unified app (win-x64 and linux-x64) self-contained single-file with `-p:Version=<version>` and generate the zip and tarball under `releases/<version>/`. Linux packages include both renderer libraries and the manifest, so users do not need a separate download. The Windows payload is `PhantomMonitor.exe` + `PresentMon.exe` + `config.example.json` (the script guarantees a loose PresentMon and strips the `*.pdb`s); Linux also includes the transitional hardlink. Options: `-PackWindowsSetup`, `-SkipWindows/-SkipLinux`, and `-OutDirectory`. Linux packaging fails without `-LinuxOverlayDirectory` rather than producing an app package without its native renderer.
 2. On Linux, the experimental packagers (NOT TESTED) live in `packaging/linux/`: `appimage.sh` (appimagetool) and `deb.sh` (dpkg-deb). The Windows installer is `packaging/windows/phantom-monitor.iss`.
 3. Review the packages, create the `v<x.y.z>` tag (`git tag v1.2.3 && git push --tags`) and publish: the script prints a `gh release create v1.2.3 ...` command with the assets — or upload everything through the GitHub page.

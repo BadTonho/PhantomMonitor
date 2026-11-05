@@ -36,6 +36,10 @@ rm -f "$WORK/usr/lib/phantom-monitor/phantom.portable" "$WORK/usr/lib/phantom-mo
 printf '%s\n' 'Phantom Monitor installed distribution marker.' > "$WORK/usr/lib/phantom-monitor/phantom.installed"
 chmod +x "$WORK/usr/lib/phantom-monitor/$APPNAME"
 ln -s ../lib/phantom-monitor/$APPNAME "$WORK/usr/bin/phantom-monitor"
+if [ -f "$WORK/usr/lib/phantom-monitor/PhantomOverlay/linux/phantom-hud" ]; then
+    chmod +x "$WORK/usr/lib/phantom-monitor/PhantomOverlay/linux/phantom-hud"
+    ln -s ../lib/phantom-monitor/PhantomOverlay/linux/phantom-hud "$WORK/usr/bin/phantom-hud"
+fi
 
 # Dependências de runtime do .NET/Avalonia em self-contained; revise/ajuste.
 cat > "$WORK/DEBIAN/control" <<EOF

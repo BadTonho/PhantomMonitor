@@ -49,7 +49,7 @@ jobs:
   build-windows:
     name: Build Windows (Portátil & Instalador)
     needs: prepare
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:

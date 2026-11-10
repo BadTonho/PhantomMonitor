@@ -203,14 +203,14 @@ public sealed class FpsMonitor : IFpsMonitor
                     _etwDiag = "Requer Administrador ou membro do grupo Performance Log Users";
                     if (Interlocked.Exchange(ref permissionErrorLogged, 1) == 0)
                     {
-                        ErrorLog.Write("PresentMon",
+                        ErrorLog.WriteThrottled("PresentMon",
                             "A captura de FPS via ETW foi bloqueada por permissão. Execute como Administrador ou adicione a conta ao grupo Performance Log Users.");
                     }
                     return;
                 }
 
                 _etwDiag = $"PresentMon: {line}";
-                ErrorLog.Write("PresentMon", line);
+                ErrorLog.WriteThrottled("PresentMon", line);
             };
 
             _presentMonProcess.Exited += (s, e) =>
@@ -335,7 +335,7 @@ public sealed class FpsMonitor : IFpsMonitor
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("FpsMonitor.ProcessCsvLine", ex);
+            ErrorLog.WriteThrottled("FpsMonitor.ProcessCsvLine", ex);
         }
     }
 
@@ -378,7 +378,7 @@ public sealed class FpsMonitor : IFpsMonitor
                 }
             }
         }
-        catch (Exception ex) { ErrorLog.Write("FpsMonitor.CheckForegroundWindow", ex); }
+        catch (Exception ex) { ErrorLog.WriteThrottled("FpsMonitor.CheckForegroundWindow", ex); }
     }
 
     private void ResetStats()
@@ -458,7 +458,7 @@ public sealed class FpsMonitor : IFpsMonitor
                     _presentMonProcess.WaitForExit(1000);
                 }
             }
-            catch (Exception ex) { ErrorLog.Write("FpsMonitor.StopPresentMon", ex); }
+            catch (Exception ex) { ErrorLog.WriteThrottled("FpsMonitor.StopPresentMon", ex); }
             finally
             {
                 _presentMonProcess.Dispose();

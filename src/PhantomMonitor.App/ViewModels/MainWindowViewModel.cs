@@ -184,6 +184,7 @@ public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDispo
         App.ThemeChanged += OnThemeChanged;
         InitUpdateService();
         FinishSettingsDraftInitialization();
+        RefreshAttentionMessage();
     }
 
     private bool Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

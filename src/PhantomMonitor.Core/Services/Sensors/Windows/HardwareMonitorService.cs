@@ -156,7 +156,7 @@ public sealed partial class HardwareMonitorService : ISensorService, IOverlayPro
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("HardwareMonitorService.Update", ex);
+            ErrorLog.WriteThrottled("HardwareMonitorService.Update", ex);
         }
         finally
         {
@@ -167,7 +167,7 @@ public sealed partial class HardwareMonitorService : ISensorService, IOverlayPro
 
         // Fora do lock: handlers lentos não bloqueiam Stop/Dispose.
         try { SensorUpdated?.Invoke(data); }
-        catch (Exception ex) { ErrorLog.Write("HardwareMonitorService.SensorUpdated", ex); }
+        catch (Exception ex) { ErrorLog.WriteThrottled("HardwareMonitorService.SensorUpdated", ex); }
     }
 
     private SensorData CollectSnapshot()

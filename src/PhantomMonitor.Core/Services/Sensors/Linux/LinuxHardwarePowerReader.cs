@@ -101,13 +101,13 @@ internal sealed class LinuxHardwarePowerReader
                     if (isGpuHwmon && ex is (IOException or UnauthorizedAccessException))
                         _gpuSensorReader.ReportHwmonDirectoryIssue(gpuCardIndex, dir, ex.GetType().Name);
                     else
-                        ErrorLog.Write("LinuxSensorService.HwmonEntry", ex);
+                        ErrorLog.WriteThrottled("LinuxSensorService.HwmonEntry", ex);
                 }
             }
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("LinuxSensorService.Hwmon", ex);
+            ErrorLog.WriteThrottled("LinuxSensorService.Hwmon", ex);
         }
     }
 
@@ -222,7 +222,7 @@ internal sealed class LinuxHardwarePowerReader
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("LinuxSensorService.PowerSupply", ex);
+            ErrorLog.WriteThrottled("LinuxSensorService.PowerSupply", ex);
         }
     }
 

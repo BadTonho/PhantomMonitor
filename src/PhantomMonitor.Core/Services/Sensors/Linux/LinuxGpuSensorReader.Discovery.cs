@@ -70,7 +70,7 @@ internal sealed class LinuxGpuDeviceDiscovery
         }
         catch (Exception ex) when (LinuxGpuSensorReader.IsExpectedSysfsFailure(ex))
         {
-            ErrorLog.Write("LinuxGpuSensorReader.Enumerate", ex);
+            ErrorLog.WriteThrottled("LinuxGpuSensorReader.Enumerate", ex);
         }
 
         return devices;
@@ -92,7 +92,7 @@ internal sealed class LinuxGpuDeviceDiscovery
         }
         catch (Exception ex) when (LinuxGpuSensorReader.IsExpectedSysfsFailure(ex))
         {
-            ErrorLog.Write("LinuxGpuSensorReader.HwmonEnumeration", ex);
+            ErrorLog.WriteThrottled("LinuxGpuSensorReader.HwmonEnumeration", ex);
         }
 
         return result;

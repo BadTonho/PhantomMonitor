@@ -134,8 +134,12 @@ public sealed partial class MainWindowViewModel
     }
     public string TelemetryExportStatusText { get => _telemetryExportStatusText; private set => Set(ref _telemetryExportStatusText, value); }
     public string TelemetryExportEndpointText => TelemetryExportListenAll
-        ? $"http://<host>:{TelemetryExportPortText}/values · http://<host>:{TelemetryExportPortText}/health"
+        ? $"http://<host>:{TelemetryExportPortText}/values · http://<host>:{TelemetryExportPortText}/health\n"
+          + $"Requer token: envie o cabeçalho Authorization: Bearer {TelemetryExportTokenText}"
         : $"http://127.0.0.1:{TelemetryExportPortText}/values · http://127.0.0.1:{TelemetryExportPortText}/health";
+    public string TelemetryExportTokenText => string.IsNullOrEmpty(_config.TelemetryExport.AccessToken)
+        ? "(será gerado ao aplicar)"
+        : _config.TelemetryExport.AccessToken;
     public string LogDirectoryText => UserDataPaths.LogDirectory;
     public string SettingsMessage { get => _settingsMessage; private set => Set(ref _settingsMessage, value); }
 }

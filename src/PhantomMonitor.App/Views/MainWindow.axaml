@@ -293,6 +293,10 @@
                 BorderBrush="{DynamicResource BorderTintWarmBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
           <TextBlock Text="{Binding ConfigurationWarning}" Foreground="{DynamicResource AccentWarningBrush}" TextWrapping="Wrap" />
         </Border>
+        <Border IsVisible="{Binding HasAttentionMessage}" Background="{DynamicResource BgTintWarmBrush}"
+                BorderBrush="{DynamicResource BorderTintWarmBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+          <TextBlock Text="{Binding AttentionMessage}" Foreground="{DynamicResource AccentWarningBrush}" TextWrapping="Wrap" />
+        </Border>
         <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Visão geral do sistema" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />

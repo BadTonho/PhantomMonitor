@@ -160,7 +160,7 @@ public sealed partial class LinuxSensorService : ISensorService
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("LinuxSensorService.Update", ex);
+            ErrorLog.WriteThrottled("LinuxSensorService.Update", ex);
         }
         finally
         {

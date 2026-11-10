@@ -98,6 +98,7 @@ public sealed partial class MainWindowViewModel
         if (_disposed || !_started) return;
 
         _latestSensorData = data;
+        RefreshAttentionMessage();
         UpdateOverlayHardwareDevices(data);
         if (IsDiagnostics && (SelectedDiagnosticSection is "errors" or "sensors"))
             RefreshDiagnosticSensorState(data);

@@ -74,7 +74,7 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
         catch (Exception ex)
         {
             _status = $"Falha ao inicializar NVML: {ex.GetType().Name}: {ex.Message}";
-            ErrorLog.Write("NvidiaGpuSensorReader.Initialize", ex);
+            ErrorLog.WriteThrottled("NvidiaGpuSensorReader.Initialize", ex);
             Dispose();
         }
     }
@@ -155,7 +155,7 @@ internal sealed class NvidiaGpuSensorReader : IDisposable
         catch (Exception ex)
         {
             _status = $"Falha ao consultar NVML: {ex.GetType().Name}: {ex.Message}";
-            ErrorLog.Write("NvidiaGpuSensorReader.Read", ex);
+            ErrorLog.WriteThrottled("NvidiaGpuSensorReader.Read", ex);
             return false;
         }
     }

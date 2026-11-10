@@ -81,7 +81,7 @@ public sealed class LinuxFpsMonitor : IFpsMonitor
                 return;
             Consume(snapshots, nowNs);
         }
-        catch (Exception ex) { ErrorLog.Write("LinuxFpsMonitor.Poll", ex); }
+        catch (Exception ex) { ErrorLog.WriteThrottled("LinuxFpsMonitor.Poll", ex); }
         finally { Monitor.Exit(_gate); }
     }
 

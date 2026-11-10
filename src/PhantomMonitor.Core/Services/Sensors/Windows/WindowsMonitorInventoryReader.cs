@@ -90,7 +90,7 @@ internal sealed class WindowsMonitorInventoryReader
             if (!_monitorWmiFailureLogged)
             {
                 _monitorWmiFailureLogged = true;
-                ErrorLog.Write("WMI.MonitorId", $"Aviso: consulta EDID indisponível nesta execução. {ex.Message}");
+                ErrorLog.WriteThrottled("WMI.MonitorId", $"Aviso: consulta EDID indisponível nesta execução. {ex.Message}");
             }
         }
 

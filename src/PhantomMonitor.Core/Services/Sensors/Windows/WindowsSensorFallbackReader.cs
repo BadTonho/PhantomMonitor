@@ -104,12 +104,12 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
             _cachedWmiTemp = 0;
 
             try { _cachedWmiTemp = ReadCpuTempFromThermalZone(); }
-            catch (Exception ex) { ErrorLog.Write("WMI.ThermalZone", ex); }
+            catch (Exception ex) { ErrorLog.WriteThrottled("WMI.ThermalZone", ex); }
 
             if (_cachedWmiTemp <= 0)
             {
                 try { _cachedWmiTemp = ReadCpuTempFromPerfCounter(); }
-                catch (Exception ex) { ErrorLog.Write("WMI.ThermalZonePerf", ex); }
+                catch (Exception ex) { ErrorLog.WriteThrottled("WMI.ThermalZonePerf", ex); }
             }
         }
 
@@ -162,7 +162,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
                 data.Labels[SType.RamCommitLimit] = "Limite de memória comprometida";
             }
         }
-        catch (Exception ex) { ErrorLog.Write("Native.Ram", ex); }
+        catch (Exception ex) { ErrorLog.WriteThrottled("Native.Ram", ex); }
 
         if (!data.Values.ContainsKey(SType.RamUsed) && data.GetValue(SType.RamTotal) > 0 && data.GetValue(SType.RamAvailable) > 0)
         {
@@ -228,7 +228,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
                 data.Labels[SType.RamTotal] = "RAM Total (WMI)";
             }
         }
-        catch (Exception ex) { ErrorLog.Write("WMI.Ram", ex); }
+        catch (Exception ex) { ErrorLog.WriteThrottled("WMI.Ram", ex); }
 
         if (data.GetValue(SType.RamAvailable) <= 0)
         {
@@ -241,7 +241,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
                 data.Labels[SType.RamAvailable] = "RAM Disponível (Perf)";
                 debugInfo.Add($"[PERF] RAM Available = {availGb:F1} GB");
             }
-            catch (Exception ex) { ErrorLog.Write("PerfCounter.Ram", ex); }
+            catch (Exception ex) { ErrorLog.WriteThrottled("PerfCounter.Ram", ex); }
         }
 
         if (!data.Values.ContainsKey(SType.RamUsage) &&
@@ -260,7 +260,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
             _lastBatteryRead = DateTime.UtcNow;
             _cachedBattery = null;
             try { _cachedBattery = ReadBatteryFromWmi(); }
-            catch (Exception ex) { ErrorLog.Write("WMI.Battery", ex); }
+            catch (Exception ex) { ErrorLog.WriteThrottled("WMI.Battery", ex); }
         }
 
         var b = _cachedBattery;
@@ -376,7 +376,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
             return;
         }
 
-        ErrorLog.Write(context, exception);
+        ErrorLog.WriteThrottled(context, exception);
     }
 
     private double ReadOptionalWmiFirstNumeric(string scope, string className, string query, string property, string context)
@@ -478,7 +478,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
         catch (Exception ex)
         {
             // Provedor ausente/sem permissão de leitura: contador segue em 0 (leitura real).
-            ErrorLog.Write("Whea.Reader", ex);
+            ErrorLog.WriteThrottled("Whea.Reader", ex);
         }
         finally
         {
@@ -534,7 +534,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
                     status.TotalPageFile >= status.AvailPageFile ? (status.TotalPageFile - status.AvailPageFile) / 1024.0 / 1024.0 / 1024.0 : 0,
                     status.TotalPageFile / 1024.0 / 1024.0 / 1024.0);
         }
-        catch (Exception ex) { ErrorLog.Write("Native.Ram", ex); }
+        catch (Exception ex) { ErrorLog.WriteThrottled("Native.Ram", ex); }
         var (availWmi, totalWmi) = ReadRamFromWmi();
         return (availWmi, totalWmi, 0, 0);
     }
@@ -567,7 +567,7 @@ internal sealed class WindowsSensorFallbackReader : IDisposable
             if (_cachedRamFrequencyMhz > 0 || _cachedRamCasLatency > 0)
                 debugInfo.Add($"[RAM] Spec WMI: {_cachedRamFrequencyMhz:F0} MHz, CL={_cachedRamCasLatency:F0}");
         }
-        catch (Exception ex) { ErrorLog.Write("WMI.PhysicalMemory", ex); }
+        catch (Exception ex) { ErrorLog.WriteThrottled("WMI.PhysicalMemory", ex); }
     }
 
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]

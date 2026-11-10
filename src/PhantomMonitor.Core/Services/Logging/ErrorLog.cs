@@ -90,6 +90,60 @@ public static class ErrorLog
         }
     }
 
+    private sealed class ThrottleState
+    {
+        public DateTime LastWrittenUtc;
+        public int Suppressed;
+    }
+
+    private static readonly Dictionary<string, ThrottleState> Throttles = new(StringComparer.Ordinal);
+    private static readonly TimeSpan ThrottleWindow = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Para falhas que se repetem em laços de leitura (sensores, WMI, PresentMon): grava a primeira
+    /// ocorrência de cada contexto e, dentro de 60 s, apenas conta as demais. A gravação seguinte
+    /// informa quantas foram suprimidas.
+    /// </summary>
+    public static void WriteThrottled(string context, Exception ex)
+    {
+        var (shouldWrite, suppressed) = Admit(context);
+        if (!shouldWrite) return;
+        Write(context, suppressed == 0
+            ? ex.ToString()
+            : $"{ex.GetType().Name}: {ex.Message} (+{suppressed} ocorrências suprimidas)");
+    }
+
+    public static void WriteThrottled(string context, string message)
+    {
+        var (shouldWrite, suppressed) = Admit(context);
+        if (!shouldWrite) return;
+        Write(context, suppressed == 0
+            ? message
+            : $"{message} (+{suppressed} ocorrências suprimidas)");
+    }
+
+    private static (bool ShouldWrite, int Suppressed) Admit(string context)
+    {
+        var now = DateTime.UtcNow;
+        lock (Lock)
+        {
+            if (!Throttles.TryGetValue(context, out var state))
+            {
+                Throttles[context] = new ThrottleState { LastWrittenUtc = now };
+                return (true, 0);
+            }
+            if (now - state.LastWrittenUtc < ThrottleWindow)
+            {
+                state.Suppressed++;
+                return (false, 0);
+            }
+            var suppressed = state.Suppressed;
+            state.Suppressed = 0;
+            state.LastWrittenUtc = now;
+            return (true, suppressed);
+        }
+    }
+
     public static void Write(string context, Exception ex) =>
         Write(context, ex.ToString().ReplaceLineEndings(" | "));
 

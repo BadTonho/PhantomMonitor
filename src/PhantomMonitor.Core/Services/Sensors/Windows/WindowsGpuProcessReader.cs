@@ -60,7 +60,7 @@ internal sealed class WindowsGpuProcessReader
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("WMI.GpuEngine", ex);
+            ErrorLog.WriteThrottled("WMI.GpuEngine", ex);
         }
 
         // Processos que já não existem não precisam continuar em cache.

@@ -53,7 +53,7 @@ public sealed class CustomSensorEngine
             var expression = CustomSensorFormulaParser.Parse(entry.Formula);
             if (expression is null)
             {
-                ErrorLog.Write("CustomSensorEngine",
+                ErrorLog.WriteThrottled("CustomSensorEngine",
                     $"Fórmula descartada (sintaxe inválida): '{entry.Formula}' [{entry.Name}]");
                 continue;
             }

@@ -36,6 +36,8 @@ public sealed partial class MainWindowViewModel
         {
             options.AccessToken = TelemetryExportConfig.GenerateAccessToken();
             SaveConfiguration();
+            Raise(nameof(TelemetryExportEndpointText));
+            Raise(nameof(TelemetryExportTokenText));
         }
 
         DisposeTelemetryExporter();

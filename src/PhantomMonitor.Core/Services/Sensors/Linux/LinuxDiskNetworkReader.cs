@@ -95,7 +95,7 @@ internal sealed class LinuxDiskNetworkReader
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("LinuxSensorService.Disk", ex);
+            ErrorLog.WriteThrottled("LinuxSensorService.Disk", ex);
         }
     }
 
@@ -177,7 +177,7 @@ internal sealed class LinuxDiskNetworkReader
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("LinuxSensorService.Network", ex);
+            ErrorLog.WriteThrottled("LinuxSensorService.Network", ex);
         }
     }
 }

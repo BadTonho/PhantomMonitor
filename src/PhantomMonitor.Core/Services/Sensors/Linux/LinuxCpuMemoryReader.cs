@@ -111,7 +111,7 @@ internal sealed class LinuxCpuMemoryReader
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("LinuxSensorService.Cpu", ex);
+            ErrorLog.WriteThrottled("LinuxSensorService.Cpu", ex);
         }
     }
 
@@ -172,7 +172,7 @@ internal sealed class LinuxCpuMemoryReader
         }
         catch (Exception ex)
         {
-            ErrorLog.Write("LinuxSensorService.Memory", ex);
+            ErrorLog.WriteThrottled("LinuxSensorService.Memory", ex);
         }
     }
 

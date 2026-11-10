@@ -63,9 +63,10 @@ public static class ErrorLog
                         .ToArray();
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // The in-memory tail still exposes entries if the file was removed or became unreadable.
+                System.Diagnostics.Trace.WriteLine("ErrorLog: falha ao ler o log: " + ex.Message);
             }
 
             return fileEntries.Concat(RecentEntries)
@@ -120,9 +121,10 @@ public static class ErrorLog
                 File.AppendAllText(_path, $"{timestamp:yyyy-MM-dd HH:mm:ss} {line}{Environment.NewLine}");
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Logging nunca deve derrubar o app.
+            // Logging nunca deve derrubar o app, mas a falha não pode sumir sem rastro.
+            System.Diagnostics.Trace.WriteLine("ErrorLog: falha ao gravar o log: " + ex.Message);
         }
 
         try { EntryWritten?.Invoke(entry); }

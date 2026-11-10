@@ -8,6 +8,7 @@ public sealed class JsonLogger : IDisposable
 {
     private readonly string _filePath;
     private readonly object _lock = new();
+    private bool _writeFailureLogged;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -34,10 +35,17 @@ public sealed class JsonLogger : IDisposable
                 var tmp = _filePath + ".tmp";
                 File.WriteAllText(tmp, json + Environment.NewLine);
                 File.Move(tmp, _filePath, overwrite: true);
+                _writeFailureLogged = false;
             }
             catch (Exception ex)
             {
-                ErrorLog.Write("JsonLogger.Write", ex);
+                // Com intervalo de 100 ms, uma falha persistente (ex.: arquivo travado por outro processo)
+                // geraria milhares de linhas; registra só a primeira da sequência.
+                if (!_writeFailureLogged)
+                {
+                    _writeFailureLogged = true;
+                    ErrorLog.Write("JsonLogger.Write", ex);
+                }
             }
         }
     }

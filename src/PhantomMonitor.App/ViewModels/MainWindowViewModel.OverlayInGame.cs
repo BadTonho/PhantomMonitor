@@ -51,6 +51,8 @@ public sealed partial class MainWindowViewModel
     private void PublishInGameOverlayFrame(bool initializeOrClear = false, bool forceHidden = false)
     {
         if (_disposed) return;
+        // Ainda não há serviço de sensores durante o construtor; o frame é publicado após a inicialização.
+        if (_sensorService is null) return;
         if (OverlayRenderMode != "inGame" && !_inGameFrameChannelActive && !initializeOrClear) return;
         try
         {

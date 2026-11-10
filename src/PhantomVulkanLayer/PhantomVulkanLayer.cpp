@@ -22,7 +22,7 @@
 
 namespace {
 
-// Tabela de despacho para funÃ§Ãµes de instÃ¢ncia
+// Tabela de despacho para funções de instância
 struct InstanceDispatch {
     VkInstance instance = VK_NULL_HANDLE;
     PFN_vkGetInstanceProcAddr get_instance_proc_addr = nullptr;
@@ -30,7 +30,7 @@ struct InstanceDispatch {
     PFN_vkEnumeratePhysicalDevices enumerate_physical_devices = nullptr;
 };
 
-// Tabela de despacho para funÃ§Ãµes de dispositivo
+// Tabela de despacho para funções de dispositivo
 struct DeviceDispatch {
     VkDevice device = VK_NULL_HANDLE;
     PFN_vkGetDeviceProcAddr get_device_proc_addr = nullptr;
@@ -47,7 +47,7 @@ std::unordered_map<void*, InstanceDispatch> g_instance_dispatch;
 std::unordered_map<void*, DeviceDispatch> g_device_dispatch;
 std::unordered_map<void*, VkInstance> g_physical_device_instances;
 
-// Telemetria e memÃ³ria compartilhada
+// Telemetria e memória compartilhada
 std::atomic<PhantomVulkanTelemetryHeader*> g_telemetry_shm{nullptr};
 int g_shm_fd = -1;
 std::atomic<uint64_t> g_frame_counter{0};
@@ -56,18 +56,18 @@ std::atomic<uint64_t> g_last_present_ns{0};
 // para remover a entrada de /dev/shm (ou o arquivo de /tmp) e evitar dados fantasmas.
 std::string g_shm_path;
 std::string g_shm_fallback_path;
-// GIPA da camada seguinte (para repassar funÃ§Ãµes de physical device na interface v2).
+// GIPA da camada seguinte (para repassar funções de physical device na interface v2).
 std::atomic<PFN_vkGetInstanceProcAddr> g_next_gipa{nullptr};
 
 uint64_t get_time_ns() {
-    // Chrono steady: Ãºnica fonte nos dois SOs (no Windows o MSVC jÃ¡ usa QPC abaixo do
-    // capÃ´) â€” antes havia divisÃ£o por zero se QueryPerformanceFrequency falhasse.
+    // Chrono steady: única fonte nos dois SOs (no Windows o MSVC já usa QPC abaixo do
+    // capô) — antes havia divisão por zero se QueryPerformanceFrequency falhasse.
     return static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count());
 }
 
-// Acesso Ã  regiÃ£o da SHM: presents tomam lock COMPARTILHADO antes de carregar o
+// Acesso à região da SHM: presents tomam lock COMPARTILHADO antes de carregar o
 // ponteiro e escrever; o cleanup toma o EXCLUSIVO antes do munmap. Sem isso, um
 // present em voo podia escrever depois do munmap (write-after-munmap â†’ SIGSEGV
 // dentro do processo do JOGO, exatamente no shutdown).
@@ -81,9 +81,9 @@ void init_shared_memory() {
     if (g_telemetry_shm.load() != nullptr) return;
 
 #if !defined(_WIN32)
-    // 0600: apenas o mesmo usuÃ¡rio (jogo e PhantomMonitor) acessa a telemetria.
-    // Um objeto de SHM POR PID: dois processos Vulkan simultÃ¢neos com a layer ativa
-    // nÃ£o se pisotam mais (antes, o objeto Ãºnico era last-writer-wins e o FPS
+    // 0600: apenas o mesmo usuário (jogo e PhantomMonitor) acessa a telemetria.
+    // Um objeto de SHM POR PID: dois processos Vulkan simultâneos com a layer ativa
+    // não se pisotam mais (antes, o objeto único era last-writer-wins e o FPS
     // saltava entre os jogos); o leitor C# enumera phantom_fps* e valida o PID.
     char shm_name[64];
     char fallback_name[80];
@@ -91,8 +91,8 @@ void init_shared_memory() {
     std::snprintf(shm_name, sizeof(shm_name), PHANTOM_SHM_PREFIX "%d", pid);
     std::snprintf(fallback_name, sizeof(fallback_name), PHANTOM_FALLBACK_PREFIX "%d.bin", pid);
 
-    // O_CLOEXEC: o fd de telemetria nÃ£o Ã© herdado por processos filhos do jogo
-    // (launchers, forks utilitÃ¡rios, Proton).
+    // O_CLOEXEC: o fd de telemetria não é herdado por processos filhos do jogo
+    // (launchers, forks utilitários, Proton).
     g_shm_fd = shm_open(shm_name, O_CREAT | O_RDWR | O_CLOEXEC, 0600);
     if (g_shm_fd < 0) {
         // Fallback para arquivo comum em /tmp/phantom_fps_<pid>.bin
@@ -113,7 +113,7 @@ void init_shared_memory() {
                 shm->version = PHANTOM_TELEMETRY_VERSION;
                 shm->pid = static_cast<uint32_t>(pid);
 
-                // Ler nome do processo em /proc/self/comm (com O_CLOEXEC tambÃ©m).
+                // Ler nome do processo em /proc/self/comm (com O_CLOEXEC também).
                 if (int comm_fd = open("/proc/self/comm", O_RDONLY | O_CLOEXEC); comm_fd >= 0) {
                     char comm_buf[64] = {0};
                     ssize_t bytes_read = read(comm_fd, comm_buf, sizeof(comm_buf) - 1);
@@ -127,12 +127,12 @@ void init_shared_memory() {
 
                 g_shm_path = shm_name;
                 g_shm_fallback_path = fallback_name;
-                // Publica o ponteiro sÃ³ depois de inicializado.
+                // Publica o ponteiro só depois de inicializado.
                 g_telemetry_shm.store(shm);
                 return;
             }
         }
-        // ftruncate/mmap falhou (ex.: /dev/shm cheia): fechar o fd â€” antes ele
+        // ftruncate/mmap falhou (ex.: /dev/shm cheia): fechar o fd — antes ele
         // vazava e uma nova tentativa de init reabria mais um.
         close(g_shm_fd);
         g_shm_fd = -1;
@@ -143,9 +143,9 @@ void init_shared_memory() {
 void cleanup_shared_memory() {
     std::lock_guard<std::mutex> lock(g_shm_mutex);
 #if !defined(_WIN32)
-    // 1) Novos presents veem o ponteiro nulo e nÃ£o entram;
-    // 2) Escritas em voo sÃ£o drenadas pelo lock exclusivo;
-    // 3) SÃ³ entÃ£o munmap â€” sem write-after-munmap (crash do jogo).
+    // 1) Novos presents veem o ponteiro nulo e não entram;
+    // 2) Escritas em voo são drenadas pelo lock exclusivo;
+    // 3) Só então munmap — sem write-after-munmap (crash do jogo).
     PhantomVulkanTelemetryHeader* shm = g_telemetry_shm.exchange(nullptr);
     {
         std::unique_lock<std::shared_mutex> access(g_shm_access);
@@ -159,7 +159,7 @@ void cleanup_shared_memory() {
     }
 
     // Remove as entradas do filesystem: sem isso /dev/shm (ou /tmp) acumulava o
-    // objeto com dados congelados do processo morto â€” "FPS fantasma" no monitor.
+    // objeto com dados congelados do processo morto — "FPS fantasma" no monitor.
     if (!g_shm_path.empty()) {
         shm_unlink(g_shm_path.c_str());
     }
@@ -170,22 +170,22 @@ void cleanup_shared_memory() {
     g_shm_fallback_path.clear();
 
     // Ciclo createâ†’destroyâ†’create no mesmo processo reenicia do zero (antes a
-    // primeira frame da nova sessÃ£o calculava frametime de minutos).
+    // primeira frame da nova sessão calculava frametime de minutos).
     g_frame_counter.store(0);
     g_last_present_ns.store(0);
 #endif
 }
 
 // Chave do dispatch para ponteiros Vulkan (dispatchable handle).
-// Null-check: apps bagaceiros chamam vkDestroyInstance(VK_NULL_HANDLE) â€” violaÃ§Ã£o de
-// spec, mas desreferenciar um nullptr crashava o processo do jogo tambÃ©m.
+// Null-check: apps bagaceiros chamam vkDestroyInstance(VK_NULL_HANDLE) — violação de
+// spec, mas desreferenciar um nullptr crashava o processo do jogo também.
 void* get_dispatch_key(void* object) {
     return object ? *reinterpret_cast<void**>(object) : nullptr;
 }
 
 } // namespace
 
-// InterceptaÃ§Ã£o de vkQueuePresentKHR: o coraÃ§Ã£o da mediÃ§Ã£o de quadros
+// Interceptação de vkQueuePresentKHR: o coração da medição de quadros
 static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
     VkQueue queue,
     const VkPresentInfoKHR* pPresentInfo)
@@ -201,7 +201,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
         }
     }
 
-    // exchange atÃ´mico: seguro com vÃ¡rios threads/filas chamando present ao mesmo tempo.
+    // exchange atômico: seguro com vários threads/filas chamando present ao mesmo tempo.
     {
     std::lock_guard<std::mutex> telemetry_writer(g_present_mutex);
     uint64_t now_ns = get_time_ns();
@@ -212,7 +212,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
         float fps = (ft_ms > 0.001f) ? (1000.0f / ft_ms) : 0.0f;
 
         // Lock compartilhado ANTES do load + cleanup com lock exclusivo antes do
-        // munmap: escrita nunca cai em regiÃ£o desmapeada (antes: SIGSEGV no jogo).
+        // munmap: escrita nunca cai em região desmapeada (antes: SIGSEGV no jogo).
         std::shared_lock<std::shared_mutex> access(g_shm_access);
         PhantomVulkanTelemetryHeader* shm = g_telemetry_shm.load();
         if (shm != nullptr) {
@@ -253,7 +253,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkQueuePresentKHR(
         return next_present(queue, pPresentInfo);
     }
     // Sem cadeia para apresentar: retornar VK_SUCCESS mintava sucesso e a tela do
-    // app congelava sem diagnÃ³stico nenhum. O erro denuncia a falha de despacho.
+    // app congelava sem diagnóstico nenhum. O erro denuncia a falha de despacho.
     return VK_ERROR_INITIALIZATION_FAILED;
 }
 
@@ -263,7 +263,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateInstance(
     VkInstance* pInstance)
 {
     if (pCreateInfo == nullptr) {
-        // ViolaÃ§Ã£o de spec do app, mas desreferenciar nullptr crashava o processo.
+        // Violação de spec do app, mas desreferenciar nullptr crashava o processo.
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -277,8 +277,8 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateInstance(
             layer_info = reinterpret_cast<const VkLayerInstanceCreateInfo*>(layer_info->pNext);
         }
 
-        // Caminhos de falha ANTES do destroy: sem estes checks a SHM ficava Ã³rfÃ£
-        // (nunca passava pelo vkDestroyInstance) atÃ© o fim do processo.
+        // Caminhos de falha ANTES do destroy: sem estes checks a SHM ficava órfã
+        // (nunca passava pelo vkDestroyInstance) até o fim do processo.
         if (!layer_info || layer_info->u.pLayerInfo == nullptr ||
             layer_info->u.pLayerInfo->pfnNextGetInstanceProcAddr == nullptr) {
             cleanup_shared_memory();
@@ -286,7 +286,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateInstance(
         }
 
         PFN_vkGetInstanceProcAddr next_gipa = layer_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-        // Guardado para o pfnGetPhysicalDeviceProcAddr da interface v2 (a layer nÃ£o
+        // Guardado para o pfnGetPhysicalDeviceProcAddr da interface v2 (a layer não
         // intercepta nada de physical device; apenas repassa para a cadeia).
         g_next_gipa.store(next_gipa);
 
@@ -297,7 +297,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateInstance(
             return VK_ERROR_INITIALIZATION_FAILED;
         }
 
-        // AvanÃ§ar chain
+        // Avançar chain
         const_cast<VkLayerInstanceCreateInfo*>(layer_info)->u.pLayerInfo =
             layer_info->u.pLayerInfo->pNext;
 
@@ -318,7 +318,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateInstance(
     }
     catch (const std::exception&)
     {
-        // std::unordered_map/std::string podem lanÃ§ar bad_alloc; exceÃ§Ã£o atravessando
+        // std::unordered_map/std::string podem lançar bad_alloc; exceção atravessando
         // extern "C" seria terminate() do processo do jogo.
         cleanup_shared_memory();
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -355,7 +355,7 @@ static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyInstance(
             }
         }
 
-        // Telemetria morre junto com a instÃ¢ncia do jogo (drain do lock antes do munmap).
+        // Telemetria morre junto com a instância do jogo (drain do lock antes do munmap).
         cleanup_shared_memory();
 
         if (next_destroy != nullptr) {
@@ -364,8 +364,8 @@ static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyInstance(
     }
     catch (...)
     {
-        // Nunca deixe a exceÃ§Ã£o passar da fronteira extern "C" (terminaria o jogo);
-        // garanta que a telemetria nÃ£o sobreviva ao destroy.
+        // Nunca deixe a exceção passar da fronteira extern "C" (terminaria o jogo);
+        // garanta que a telemetria não sobreviva ao destroy.
         cleanup_shared_memory();
     }
 }
@@ -400,7 +400,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
     const VkAllocationCallbacks* pAllocator,
     VkDevice* pDevice)
 {
-    if (pCreateInfo == nullptr) return VK_ERROR_INITIALIZATION_FAILED; // violaÃ§Ã£o de spec
+    if (pCreateInfo == nullptr) return VK_ERROR_INITIALIZATION_FAILED; // violação de spec
 
     try
     {
@@ -472,7 +472,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkCreateDevice(
     }
     catch (const std::exception&)
     {
-        // bad_alloc em unordered_map/std::string nÃ£o atravessa extern "C".
+        // bad_alloc em unordered_map/std::string não atravessa extern "C".
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     catch (...)
@@ -485,7 +485,7 @@ static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroyDevice(
     VkDevice device,
     const VkAllocationCallbacks* pAllocator)
 {
-    if (device == VK_NULL_HANDLE) return; // violaÃ§Ã£o de spec, mas nÃ£o crashar
+    if (device == VK_NULL_HANDLE) return; // violação de spec, mas não crashar
 
     void* key = get_dispatch_key(device);
     PFN_vkDestroyDevice next_destroy = nullptr;
@@ -582,8 +582,8 @@ static VKAPI_ATTR void VKAPI_CALL Phantom_vkDestroySwapchainKHR(
     if (next != nullptr) next(device, swapchain, pAllocator);
 }
 
-// Repasse para physical device (interface v2 do negotiate): a layer nÃ£o intercepta
-// nenhuma funÃ§Ã£o de physical device â€” encaminha para o GIPA da cadeia.
+// Repasse para physical device (interface v2 do negotiate): a layer não intercepta
+// nenhuma função de physical device — encaminha para o GIPA da cadeia.
 static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetPhysicalDeviceProcAddr(
     VkInstance instance,
     const char* pName)
@@ -648,7 +648,7 @@ PHANTOM_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL Phantom_vkGetInstancePro
     }
     catch (...)
     {
-        // fronteira extern "C": falha de alocaÃ§Ã£o no lookup nÃ£o termina o processo
+        // fronteira extern "C": falha de alocação no lookup não termina o processo
     }
     return nullptr;
 }
@@ -711,7 +711,7 @@ PHANTOM_EXPORT VKAPI_ATTR VkResult VKAPI_CALL Phantom_vkNegotiateLoaderLayerInte
     if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
         pVersionStruct->pfnGetInstanceProcAddr = Phantom_vkGetInstanceProcAddr;
         pVersionStruct->pfnGetDeviceProcAddr = Phantom_vkGetDeviceProcAddr;
-        // A v2 da interface existe justamente para permitir este ponteiro; devolvÃª-lo
+        // A v2 da interface existe justamente para permitir este ponteiro; devolvê-lo
         // nulo deixava o comportamento dependente do fallback de loaders antigos.
         pVersionStruct->pfnGetPhysicalDeviceProcAddr = Phantom_vkGetPhysicalDeviceProcAddr;
     }

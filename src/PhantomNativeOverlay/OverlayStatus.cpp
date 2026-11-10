@@ -66,18 +66,23 @@ StatusPublisher::StatusPublisher(StatusProducer producer) {
         + "_" + std::to_string(current_pid()) + "_" + producer_name_;
     descriptor_ = shm_open(name_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0600);
     if (descriptor_ < 0 || ftruncate(descriptor_, sizeof(SharedStatus)) != 0) {
-        if (descriptor_ >= 0) close(descriptor_);
+        if (descriptor_ >= 0) {
+            close(descriptor_);
+            shm_unlink(name_.c_str());
+        }
         descriptor_ = -1;
         return;
     }
     if (fchmod(descriptor_, 0600) != 0) {
         close(descriptor_);
+        shm_unlink(name_.c_str());
         descriptor_ = -1;
         return;
     }
     void* view = mmap(nullptr, sizeof(SharedStatus), PROT_READ | PROT_WRITE, MAP_SHARED, descriptor_, 0);
     if (view == MAP_FAILED) {
         close(descriptor_);
+        shm_unlink(name_.c_str());
         descriptor_ = -1;
         return;
     }

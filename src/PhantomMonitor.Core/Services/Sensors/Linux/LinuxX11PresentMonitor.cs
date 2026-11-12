@@ -162,6 +162,9 @@ internal sealed class LinuxX11PresentMonitor : IDisposable
                     {
                         if (windowId == 0 || liveWindows.Contains(windowId)) continue;
                         var pid = ReadWindowProperty(connection, windowId, processIdAtom, CardinalPropertyType);
+                        // Alguns clientes (glxgears, SDL/Wine antigos) não publicam _NET_WM_PID:
+                        // pede o PID ao próprio servidor pela extensão XRes.
+                        if (pid == 0) pid = QueryClientPid(connection, windowId);
                         if (pid == 0 || pid == Environment.ProcessId) continue;
                         liveWindows.Add(windowId);
 
@@ -301,6 +304,43 @@ internal sealed class LinuxX11PresentMonitor : IDisposable
         finally { Native.free(reply); }
     }
 
+    private const uint ResClientIdMaskLocalClientPid = 2; // XCB_RES_CLIENT_ID_MASK_LOCAL_CLIENT_PID
+
+    /// <summary>PID do cliente X dono da janela via XRes (ClientIds); 0 se indisponível.</summary>
+    private static uint QueryClientPid(IntPtr connection, uint window)
+    {
+        try
+        {
+            var spec = new ResClientIdSpec { Client = window, Mask = ResClientIdMaskLocalClientPid };
+            var cookie = Native.xcb_res_query_client_ids(connection, 1, ref spec);
+            var reply = Native.xcb_res_query_client_ids_reply(connection, cookie, out var error);
+            if (error != IntPtr.Zero) Native.free(error);
+            if (reply == IntPtr.Zero) return 0;
+            try
+            {
+                // Layout da resposta: cabeçalho de 32 bytes (num_ids em +8) seguido, por id, de
+                // spec{client,mask}(8) + length(4, em bytes) + valores uint32.
+                var numIds = Marshal.ReadInt32(reply, 8);
+                var offset = 32;
+                for (var index = 0; index < numIds && index < 4; index++)
+                {
+                    var mask = unchecked((uint)Marshal.ReadInt32(reply, offset + 4));
+                    var length = Marshal.ReadInt32(reply, offset + 8);
+                    if (length < 0 || length > 64) return 0;
+                    if (mask == ResClientIdMaskLocalClientPid && length >= sizeof(uint))
+                        return unchecked((uint)Marshal.ReadInt32(reply, offset + 12));
+                    offset += 12 + length;
+                }
+                return 0;
+            }
+            finally { Native.free(reply); }
+        }
+        catch (DllNotFoundException) { return 0; }
+        catch (EntryPointNotFoundException) { return 0; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)] private struct ResClientIdSpec { public uint Client; public uint Mask; }
+
     private static string ReadProcessName(uint pid)
     {
         if (pid == 0) return "X11";
@@ -333,6 +373,7 @@ internal sealed class LinuxX11PresentMonitor : IDisposable
     {
         private const string Xcb = "libxcb.so.1";
         private const string XcbPresent = "libxcb-present.so.0";
+        private const string XcbRes = "libxcb-res.so.0";
 
         [StructLayout(LayoutKind.Sequential)] internal struct Iterator
         {
@@ -362,6 +403,8 @@ internal sealed class LinuxX11PresentMonitor : IDisposable
         [DllImport(XcbPresent, CallingConvention = CallingConvention.Cdecl)] internal static extern IntPtr xcb_present_query_version_reply(IntPtr connection, Cookie cookie, out IntPtr error);
         [DllImport(XcbPresent, CallingConvention = CallingConvention.Cdecl)] internal static extern Cookie xcb_present_select_input(IntPtr connection, uint eventId, uint window, uint eventMask);
         [DllImport(XcbPresent, CallingConvention = CallingConvention.Cdecl)] internal static extern Cookie xcb_present_select_input_checked(IntPtr connection, uint eventId, uint window, uint eventMask);
+        [DllImport(XcbRes, CallingConvention = CallingConvention.Cdecl)] internal static extern Cookie xcb_res_query_client_ids(IntPtr connection, uint numSpecs, ref ResClientIdSpec specs);
+        [DllImport(XcbRes, CallingConvention = CallingConvention.Cdecl)] internal static extern IntPtr xcb_res_query_client_ids_reply(IntPtr connection, Cookie cookie, out IntPtr error);
         [DllImport(Xcb, CallingConvention = CallingConvention.Cdecl)] internal static extern IntPtr xcb_request_check(IntPtr connection, Cookie cookie);
         [DllImport("libc.so.6", CallingConvention = CallingConvention.Cdecl)] internal static extern void free(IntPtr pointer);
     }

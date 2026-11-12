@@ -10,7 +10,9 @@
 #include <dlfcn.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <mutex>
@@ -34,15 +36,62 @@ struct RendererState {
 };
 
 FrameReader g_reader;
-StatusPublisher g_status(StatusProducer::OpenGL);
 std::mutex g_mutex;
 RendererState g_state;
 Publisher g_fps_publisher;
 
+// O arquivo de status em /dev/shm só é criado quando este processo realmente apresenta um quadro GL;
+// criá-lo no carregamento da biblioteca geraria um arquivo para cada processo da sessão (LD_PRELOAD global).
+StatusPublisher& status_publisher() {
+    static StatusPublisher publisher(StatusProducer::OpenGL);
+    return publisher;
+}
+
+using DlsymFn = void* (*)(void*, const char*);
+
+// Esta biblioteca exporta `dlsym` (veja o fim do arquivo); a função real vem do libc por versão de símbolo.
+DlsymFn real_dlsym() {
+    static const DlsymFn fn = [] {
+        for (const char* version : {"GLIBC_2.34", "GLIBC_2.2.5", "GLIBC_2.17"}) {
+            if (void* symbol = dlvsym(RTLD_NEXT, "dlsym", version)) return reinterpret_cast<DlsymFn>(symbol);
+        }
+        return static_cast<DlsymFn>(nullptr);
+    }();
+    return fn;
+}
+
 template<typename T>
 T next_symbol(const char* name) {
-    return reinterpret_cast<T>(dlsym(RTLD_NEXT, name));
+    const auto lookup = real_dlsym();
+    return lookup ? reinterpret_cast<T>(lookup(RTLD_NEXT, name)) : nullptr;
 }
+
+// Processos do próprio desktop (compositor, shell, greeter) usam GL/EGL, mas nunca são jogos:
+// o hook fica em passagem direta neles, sem telemetria, sem renderer e sem arquivos em /dev/shm.
+bool is_desktop_process() {
+    static const bool desktop = [] {
+        char name[64] = {};
+        FILE* file = std::fopen("/proc/self/comm", "re");
+        if (!file) return false;
+        const bool read_ok = std::fgets(name, sizeof(name), file) != nullptr;
+        std::fclose(file);
+        if (!read_ok) return false;
+        name[std::strcspn(name, "\n")] = '\0';
+        static const char* const kPrefixes[] = {
+            "plasma", "kwin", "kded", "krunner", "ksplash", "kscreen", "kglobalacceld", "ksmserver",
+            "gnome-shell", "gnome-session", "mutter", "gdm", "sddm", "Xwayland", "Xorg", "Xephyr",
+            "xdg-", "baloo", "polkit", "xwaylandvideo"};
+        for (const char* prefix : kPrefixes) {
+            if (std::strncmp(name, prefix, std::strlen(prefix)) == 0) return true;
+        }
+        return false;
+    }();
+    return desktop;
+}
+
+// Ponteiros reais obtidos quando o app resolve os símbolos por dlsym(handle, ...) (GLFW/LWJGL/SDL).
+std::atomic<void*> g_real_glx_swap{nullptr};
+std::atomic<void*> g_real_egl_swap{nullptr};
 
 bool try_get_viewport_dimensions(unsigned int& width, unsigned int& height) {
     const auto get_integerv = next_symbol<GlGetIntegerv>("glGetIntegerv");
@@ -64,7 +113,7 @@ bool explicitly_enabled() {
 }
 
 void set_status(RenderState state, const std::string& message) noexcept {
-    try { g_status.Update(RenderApi::OpenGL, state, message); }
+    try { status_publisher().Update(RenderApi::OpenGL, state, message); }
     catch (...) { }
 }
 
@@ -124,8 +173,10 @@ void draw(std::uintptr_t native_context, std::uint32_t width, std::uint32_t heig
 } // namespace
 
 extern "C" __attribute__((visibility("default"))) void glXSwapBuffers(Display* display, GLXDrawable drawable) {
-    const auto original = next_symbol<GlxSwapBuffers>("glXSwapBuffers");
+    auto original = reinterpret_cast<GlxSwapBuffers>(g_real_glx_swap.load(std::memory_order_acquire));
+    if (!original) original = next_symbol<GlxSwapBuffers>("glXSwapBuffers");
     if (!original) return;
+    if (is_desktop_process()) { original(display, drawable); return; }
     if (explicitly_enabled()) {
         const auto get_context = next_symbol<GlxGetCurrentContext>("glXGetCurrentContext");
         const auto query_drawable = next_symbol<GlxQueryDrawable>("glXQueryDrawable");
@@ -148,8 +199,10 @@ extern "C" __attribute__((visibility("default"))) void glXSwapBuffers(Display* d
 }
 
 extern "C" __attribute__((visibility("default"))) EGLBoolean eglSwapBuffers(EGLDisplay display, EGLSurface surface) {
-    const auto original = next_symbol<EglSwapBuffers>("eglSwapBuffers");
+    auto original = reinterpret_cast<EglSwapBuffers>(g_real_egl_swap.load(std::memory_order_acquire));
+    if (!original) original = next_symbol<EglSwapBuffers>("eglSwapBuffers");
     if (!original) return EGL_FALSE;
+    if (is_desktop_process()) return original(display, surface);
     if (explicitly_enabled()) {
         const auto get_context = next_symbol<EglGetCurrentContext>("eglGetCurrentContext");
         const auto query_surface = next_symbol<EglQuerySurface>("eglQuerySurface");
@@ -192,4 +245,60 @@ extern "C" __attribute__((visibility("default"))) EGLBoolean eglSwapBuffers(EGLD
     const auto result = original(display, surface);
     if (result == EGL_TRUE) g_fps_publisher.RecordPresent();
     return result;
+}
+
+// --- Interceptação de resolução dinâmica ---------------------------------------------------------
+// GLFW (Minecraft/LWJGL), SDL e vários engines abrem a libGL/libEGL com dlopen e obtêm
+// glXSwapBuffers/eglSwapBuffers por dlsym(handle, ...), o que ignora um LD_PRELOAD comum. Quando o app
+// pede esses símbolos explicitamente, devolvemos os wrappers acima; as demais chamadas passam direto.
+
+namespace {
+using GlProc = void (*)();
+
+void* wrap_symbol(const char* name, void* real) {
+    if (!real || !name || is_desktop_process()) return real;
+    if (std::strcmp(name, "glXSwapBuffers") == 0) {
+        if (real != reinterpret_cast<void*>(&glXSwapBuffers)) g_real_glx_swap.store(real, std::memory_order_release);
+        return reinterpret_cast<void*>(&glXSwapBuffers);
+    }
+    if (std::strcmp(name, "eglSwapBuffers") == 0) {
+        if (real != reinterpret_cast<void*>(&eglSwapBuffers)) g_real_egl_swap.store(real, std::memory_order_release);
+        return reinterpret_cast<void*>(&eglSwapBuffers);
+    }
+    return real;
+}
+} // namespace
+
+extern "C" __attribute__((visibility("default"))) void* dlsym(void* handle, const char* name) {
+    const auto lookup = real_dlsym();
+    if (!lookup) return nullptr;
+    void* result = lookup(handle, name);
+    // RTLD_NEXT vindo de outro interposer (ex.: outra camada) mantém a semântica original.
+    if (handle == RTLD_NEXT) return result;
+    return wrap_symbol(name, result);
+}
+
+extern "C" __attribute__((visibility("default"))) __GLXextFuncPtr glXGetProcAddress(const GLubyte* name) {
+    using Fn = __GLXextFuncPtr (*)(const GLubyte*);
+    const auto original = next_symbol<Fn>("glXGetProcAddress");
+    if (!original) return nullptr;
+    void* result = reinterpret_cast<void*>(original(name));
+    return reinterpret_cast<__GLXextFuncPtr>(wrap_symbol(reinterpret_cast<const char*>(name), result));
+}
+
+extern "C" __attribute__((visibility("default"))) __GLXextFuncPtr glXGetProcAddressARB(const GLubyte* name) {
+    using Fn = __GLXextFuncPtr (*)(const GLubyte*);
+    auto original = next_symbol<Fn>("glXGetProcAddressARB");
+    if (!original) original = next_symbol<Fn>("glXGetProcAddress");
+    if (!original) return nullptr;
+    void* result = reinterpret_cast<void*>(original(name));
+    return reinterpret_cast<__GLXextFuncPtr>(wrap_symbol(reinterpret_cast<const char*>(name), result));
+}
+
+extern "C" __attribute__((visibility("default"))) __eglMustCastToProperFunctionPointerType eglGetProcAddress(const char* name) {
+    using Fn = __eglMustCastToProperFunctionPointerType (*)(const char*);
+    const auto original = next_symbol<Fn>("eglGetProcAddress");
+    if (!original) return nullptr;
+    void* result = reinterpret_cast<void*>(original(name));
+    return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(wrap_symbol(name, result));
 }

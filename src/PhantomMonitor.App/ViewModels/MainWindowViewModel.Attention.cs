@@ -27,8 +27,9 @@ public sealed partial class MainWindowViewModel
         {
             messages.Add("FPS indisponível: execute como administrador ou adicione sua conta ao grupo Performance Log Users.");
         }
-        if ((OverlayHotkeyStatus ?? "").StartsWith("Falha", StringComparison.Ordinal))
-            messages.Add(OverlayHotkeyStatus);
+        var hotkeyStatus = OverlayHotkeyStatus ?? "";
+        if (hotkeyStatus.StartsWith("Falha", StringComparison.Ordinal))
+            messages.Add(hotkeyStatus);
         AttentionMessage = string.Join("  ", messages);
     }
 }

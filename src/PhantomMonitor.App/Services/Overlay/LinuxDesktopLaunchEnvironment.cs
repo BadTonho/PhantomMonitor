@@ -29,6 +29,18 @@ internal static class LinuxDesktopLaunchEnvironment
         }
     }
 
+    /// <summary>
+    /// True quando todas as falhas indicam que o serviço de lançamento simplesmente não existe neste
+    /// Plasma (comum no Plasma 6, que inicia aplicativos por unidades do systemd --user e portanto herda o
+    /// ambiente do gerenciador). Falhas de outra natureza (permissão, timeout) continuam sendo erro.
+    /// </summary>
+    internal static bool AllServicesAbsent(string error)
+        => !string.IsNullOrWhiteSpace(error)
+            && error.Split("; ", StringSplitOptions.RemoveEmptyEntries).All(failure =>
+                failure.Contains("ServiceUnknown", StringComparison.Ordinal)
+                || failure.Contains("not activatable", StringComparison.OrdinalIgnoreCase)
+                || failure.Contains("was not provided by any", StringComparison.OrdinalIgnoreCase));
+
     private static bool IsPlasma6Session
         => (Environment.GetEnvironmentVariable("KDE_SESSION_VERSION") ?? "")
             .StartsWith("6", StringComparison.Ordinal);

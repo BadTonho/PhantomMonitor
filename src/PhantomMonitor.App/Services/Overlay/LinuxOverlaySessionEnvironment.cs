@@ -83,8 +83,13 @@ internal static class LinuxOverlaySessionEnvironment
                     WritePersistentEnvironment(overlayEnabled, captureEnabled: true);
                     if (!desktopLaunchEnvironmentUpdated)
                     {
-                        return new(false, true,
-                            $"D-Bus/systemd foram atualizados e a configuração foi gravada para sessões futuras, mas nenhum serviço de lançamento do desktop confirmou o ambiente. Jogos abertos pelo desktop podem não receber o hook. {launchEnvironmentError}");
+                        if (!LinuxDesktopLaunchEnvironment.AllServicesAbsent(launchEnvironmentError))
+                            return new(false, true,
+                                $"D-Bus/systemd foram atualizados e a configuração foi gravada para sessões futuras, mas nenhum serviço de lançamento do desktop confirmou o ambiente. Jogos abertos pelo desktop podem não receber o hook. {launchEnvironmentError}");
+
+                        // Plasma 6 não expõe KLauncher/Startup: os aplicativos nascem de unidades do
+                        // systemd --user, que já foi atualizado e é verificado logo abaixo.
+                        launchEnvironmentProvider = "";
                     }
 
                     var verified = ReadUserManagerEnvironment();
@@ -95,9 +100,9 @@ internal static class LinuxOverlaySessionEnvironment
                         && verified.TryGetValue(CaptureVariable, out var captureValue)
                         && captureValue == "1")
                     {
-                        var launchManagerStatus = plasmaSession
+                        var launchManagerStatus = plasmaSession && launchEnvironmentProvider.Length > 0
                             ? $"{launchEnvironmentProvider}, D-Bus e systemd confirmaram o ambiente de lançamento"
-                            : "D-Bus/systemd confirmaram as variáveis para serviços da sessão";
+                            : "D-Bus/systemd confirmaram as variáveis para serviços e aplicativos da sessão";
                         var purpose = overlayEnabled
                             ? "Camada registrada e overlay dentro do jogo habilitado"
                             : "Captura passiva de FPS EGL/Vulkan habilitada; o overlay dentro do jogo permanece desativado";
@@ -179,7 +184,8 @@ internal static class LinuxOverlaySessionEnvironment
 
             if (LinuxDesktopLaunchEnvironment.IsPlasmaSession
                 && !LinuxDesktopLaunchEnvironment.TryUpdate(
-                    CreateLaunchEnvironment(preload, overlayEnabled: false, captureEnabled: false), out _, out var desktopLaunchError))
+                    CreateLaunchEnvironment(preload, overlayEnabled: false, captureEnabled: false), out _, out var desktopLaunchError)
+                && !LinuxDesktopLaunchEnvironment.AllServicesAbsent(desktopLaunchError))
             {
                 return new(false, false,
                     $"D-Bus/systemd foram atualizados, mas nenhum serviço de lançamento do desktop confirmou a desativação do ambiente. O manifesto e a configuração persistente foram mantidos. {desktopLaunchError}");

@@ -59,7 +59,7 @@ the Linux Vulkan layer must still be reinstalled separately.
 
 ## Asset convention and publishing (maintainers)
 
-Releases are generated locally (no publishing CI); the updater looks for these exact names:
+Releases come from the `.github/workflows/release.yml` workflow (or the local script); the updater looks for these exact names. **The workflow always creates the release as a draft, and drafts are invisible to the updater: users only see the version after you open the release on GitHub and click Publish release** (check that all 5 assets are attached first):
 
 The Windows ZIP and Linux tar.gz include `phantom.portable`, never a personal `config.json`. The Windows installer excludes that marker and the `.deb` removes it; both include `phantom.installed`. AppImage uses the `APPIMAGE` environment variable to locate the file outside its mounted image.
 
@@ -93,9 +93,13 @@ The repository includes the `.github/workflows/release.yml` workflow, which comp
 
 Switching the channel does not re-evaluate on its own: use the manual button to re-check on the new channel.
 
+## Post-update cleanup
+
+On startup (release builds), `UpdateHousekeeping` removes the staging of versions that are already installed (≤ the running version; a newer pending version is never deleted) and keeps only the **most recent backup** (`.phantom-update-backup*`) of completed updates (`status = committed`). Backups of failed transactions (`rolled-back`/`recovery-required`) or without a `status` file are never removed automatically.
+
 ## Development builds
 
-Local builds (`dotnet build`) carry the `0.0.0-dev` marker; they **never** check or update on purpose (running from the repository folder is not updatable). The real version is injected into the release publish (`-p:Version=<tag>`).
+Local builds (`dotnet build`) carry the `0.0.0-dev` marker (keep the csproj `<Version>` that way; the release injects the real version via `-p:Version`); they **never** check or update on purpose (running from the repository folder is not updatable). The real version is injected into the release publish (`-p:Version=<tag>`).
 
 ## Configuration
 

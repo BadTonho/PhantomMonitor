@@ -82,9 +82,11 @@ public sealed partial class MainWindowViewModel
         {
             _updateStatusText = "Build de desenvolvimento: verificação de atualização desativada.";
         }
-        else if (_updates.ShouldAutoCheck)
+        else
         {
-            _ = _updates.CheckAsync();
+            // Remove o staging de versões já instaladas e backups antigos de atualizações concluídas.
+            _ = Task.Run(UpdateHousekeeping.Run);
+            if (_updates.ShouldAutoCheck) _ = _updates.CheckAsync();
         }
 
         _updateTimer = new DispatcherTimer(TimeSpan.FromHours(24), DispatcherPriority.Background, OnUpdateTimerTick);

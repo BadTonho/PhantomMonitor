@@ -61,7 +61,7 @@ em modo de notificação; a camada Linux deve ser reinstalada separadamente.
 
 ## Convenção de assets e publicação (mantenedor)
 
-As releases são geradas localmente (sem CI de publicação); o updater procura os nomes exatos abaixo:
+As releases saem do workflow `.github/workflows/release.yml` (ou do script local); o updater procura os nomes exatos abaixo:
 
 O ZIP Windows e o tar.gz Linux incluem `phantom.portable`, mas nunca um `config.json` pessoal. O instalador Windows exclui esse marcador e o `.deb` o remove; ambos incluem `phantom.installed`. O AppImage identifica sua própria localização pela variável `APPIMAGE`, sem gravar na imagem montada.
 
@@ -80,7 +80,7 @@ Fluxo de publicação:
 O repositório inclui a automação `.github/workflows/release.yml` que compila os módulos nativos e gera todos os pacotes em ambientes isolados (runners Windows e Ubuntu):
 1. **Pelo Git:** crie e envie a tag da versão (ex.: `git tag v0.1.0 && git push origin v0.1.0`).
 2. **Pela interface web:** na aba **Actions** do GitHub, execute o workflow **Release** via `workflow_dispatch` informando a versão (ex.: `0.1.0`).
-3. O workflow compila os renderizadores nativos, monta os 5 pacotes e publica automaticamente a Release com notas e anexos.
+3. O workflow compila os renderizadores nativos, monta os 5 pacotes e cria a Release **sempre como rascunho (draft)**. **Rascunho não aparece para o updater:** os usuários só enxergam a versão depois que você abrir a release no GitHub e clicar em **Publish release**. Confira que os 5 assets estão anexados antes de publicar.
 
 ### Manual / Local
 1. Em uma máquina Linux, compile o payload nativo com `scripts/build-linux-overlay.sh build/linux-overlay-payload` e disponibilize essa pasta na máquina Windows de release. No Windows, `scripts/release.ps1 -Version <x.y.z> -LinuxOverlayDirectory <pasta-do-payload>` publica o app único (win-x64 e linux-x64) self-contained single-file com `-p:Version=<versão>` e gera o zip e o tarball em `releases/<versão>/`. O pacote Linux inclui as duas bibliotecas e o manifesto, sem exigir download separado pelo usuário. O payload do Windows é `PhantomMonitor.exe` + `PresentMon.exe` + `config.example.json` (o script garante o PresentMon solto e limpa os `*.pdb`) e o do Linux inclui também o hardlink transicional. Opções: `-PackWindowsSetup`, `-SkipWindows/-SkipLinux` e `-OutDirectory`. Sem `-LinuxOverlayDirectory`, a geração Linux falha em vez de produzir um pacote sem o renderer.
@@ -95,9 +95,13 @@ O repositório inclui a automação `.github/workflows/release.yml` que compila 
 
 Trocar o canal não reavalia sozinho: use "Buscar agora" para refazer a checagem no canal novo.
 
+## Limpeza pós-atualização
+
+Ao iniciar (build de release), `UpdateHousekeeping` remove o staging das versões já instaladas (≤ a versão atual; uma versão mais nova pendente nunca é apagada) e mantém somente o **backup mais recente** (`.phantom-update-backup*`) de atualizações concluídas (`status = committed`). Backups de transações que falharam (`rolled-back`/`recovery-required`) ou sem `status` nunca são removidos automaticamente.
+
 ## Builds de desenvolvimento
 
-Builds locais (`dotnet build`) trazem o marcador `0.0.0-dev`; eles **nunca** checam nem atualizam, de propósito (a própria execução na pasta do repositório não é atualizável). A versão real entra no publish da release (`-p:Version=<tag>`).
+Builds locais (`dotnet build`) trazem o marcador `0.0.0-dev` (o `<Version>` do csproj deve permanecer assim; a release injeta a versão real por `-p:Version`); eles **nunca** checam nem atualizam, de propósito (a própria execução na pasta do repositório não é atualizável). A versão real entra no publish da release (`-p:Version=<tag>`).
 
 ## Configuração
 

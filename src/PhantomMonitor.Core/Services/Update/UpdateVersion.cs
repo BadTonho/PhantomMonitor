@@ -60,7 +60,15 @@ public static class UpdateVersion
     /// Build de desenvolvimento não participa de atualização: versão não-SemVer
     /// ou 0.0.0 (marcador "-dev") nunca é comparada com tags de release.
     /// </summary>
-    public static bool IsDevelopmentBuild => _currentParsed is null || _currentParsed.Value.IsZero;
+    public static bool IsDevelopmentBuild => IsDevelopmentVersion(Current);
+
+    /// <summary>
+    /// Regra pura da guarda: texto ausente/não-SemVer ou 0.0.0 (marcador "0.0.0-dev") é build de
+    /// desenvolvimento. Não depende de cache lazy: lê sempre a versão resolvida (bug corrigido: a guarda
+    /// consultava o campo ainda não preenchido e desativava o updater em qualquer build).
+    /// </summary>
+    internal static bool IsDevelopmentVersion(string? version)
+        => !TryParse(version, out var parsed) || parsed.IsZero;
 
     /// <summary>
     /// Aceita "1.2.3", "v1.2.3", "1.2.3-beta" e "1.2.3+build"; rejeita texto

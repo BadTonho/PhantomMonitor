@@ -4,7 +4,7 @@
 
 The unified app (Avalonia, Windows and Linux) uses a dark dashboard with switchable left or bottom navigation and metric cards. Linux-specific behavior is described in [Linux support](linux-support.md).
 
-In the implementation, the main window owns the sidebar, navigation, and global elements; Settings, Custom Sensors, Alerts, and Diagnostics are separate page controls that share the same ViewModel. Overview, Inventory, and Per-series tuning remain in the main XAML.
+In the implementation, the main window owns the sidebar, navigation, and global elements; all pages (Overview, Inventory, Custom Sensors, Per-series tuning, Alerts, Diagnostics, and Settings) are separate page controls (`*Page.axaml`) that share the same ViewModel.
 
 ## Dashboard
 
@@ -16,7 +16,7 @@ The cards use history charts and restrained temperature badges. CPU/GPU details 
 
 Monitoring starts automatically. The runtime pause control is available from the tray or global hotkey; restarting the app resumes collection.
 
-The sensor inventory has compact expandable category headers, indented sensor instances, and aligned current, minimum, maximum, and average columns. Tooltips expose long names and values; the table and monitor list scroll horizontally in narrow windows. Colors follow the selected theme and custom palette.
+The sensor inventory has compact expandable category headers, quick text search by name/key/category, an **Available only** filter, indented sensor instances, and aligned current, minimum, maximum, and average columns. Tooltips expose long names and values; the table and monitor list scroll horizontally in narrow windows. Colors follow the selected theme and custom palette.
 
 
 Desktop windows share styles for actions, inputs, and secondary text. The four smaller dashboard cards use two columns below 760 logical units of available width. When FPS is unavailable, the chart and statistics are hidden until a reading arrives. Missing board temperature is shown as unavailable; a zero reading remains valid. The in-game overlay windows do not include the desktop styles.

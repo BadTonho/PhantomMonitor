@@ -16,13 +16,11 @@ public sealed partial class MainWindow : Window
     private ThemePaletteEditorWindow? _themePaletteEditorWindow;
     private HardwareInventoryWindow? _hardwareInventoryWindow;
     private TrayIconService? _tray;
-    private bool _overviewCompact;
 
     public MainWindow()
     {
         InitializeComponent();
         SyncNavPage("overview");
-        OverviewSecondaryCards.SizeChanged += (_, _) => ArrangeOverviewCards();
         Opened += (_, _) =>
         {
             if (Screens.Primary is { } screen)
@@ -58,21 +56,6 @@ public sealed partial class MainWindow : Window
             _hardwareInventoryWindow?.Close();
             ViewModel.Dispose();
         };
-    }
-
-    private void ArrangeOverviewCards()
-    {
-        var grid = OverviewSecondaryCards;
-        var compact = grid.Bounds.Width < 760;
-        if (compact == _overviewCompact) return;
-        _overviewCompact = compact;
-        grid.ColumnDefinitions = ColumnDefinitions.Parse(compact ? "*,*" : "*,*,*,*");
-        grid.RowDefinitions = RowDefinitions.Parse(compact ? "Auto,Auto" : "Auto");
-        for (var i = 0; i < grid.Children.Count; i++)
-        {
-            Grid.SetColumn(grid.Children[i], compact ? i % 2 : i);
-            Grid.SetRow(grid.Children[i], compact ? i / 2 : 0);
-        }
     }
 
     private void EnsureOverlayWindow()
@@ -266,11 +249,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnStartClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Start();
-    private void OnPauseClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.TogglePause();
-    private void OnResetStatsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ResetSessionStats();
-    private void OnStopClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.Stop();
-    private void OnToggleOverlayClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ToggleOverlay();
     private void OnOverviewClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         SyncNavPage("overview");
@@ -281,12 +259,7 @@ public sealed partial class MainWindow : Window
         SyncNavPage("inventory");
         ViewModel.ShowInventory();
     }
-    private void OnInventoryRowToggleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (sender is Button { DataContext: InventoryRowViewModel row } && row.CanCollapseChildren)
-            row.IsExpanded = !row.IsExpanded;
-    }
-    private void OnOpenHardwareInventoryClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnOpenHardwareInventoryRequested(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_hardwareInventoryWindow is null)
         {
@@ -349,7 +322,6 @@ public sealed partial class MainWindow : Window
         if (palette is not null)
             ViewModel.SetThemePaletteDraft(selectedTheme, palette);
     }
-    private void OnRestartAsAdminClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.RestartAsAdmin();
     private void OnUpdateBadgeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.ShowSettings();
     private void OnDockStatusClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -366,23 +338,6 @@ public sealed partial class MainWindow : Window
         SyncNavPage("diagnostics");
         ViewModel.ShowDiagnostics();
         this.FindControl<DiagnosticsPage>("DiagnosticsPageControl")?.SyncTabSelection();
-    }
-    private void OnAddSensorTuningClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.AddSensorTuning();
-    private void OnSaveSensorTuningsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel.SaveSensorTunings();
-
-    private void OnRemoveSensorTuningClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: SensorTuningEditorViewModel editor })
-            ViewModel.RemoveSensorTuning(editor);
-    }
-
-    private void OnMoveSensorTuningUpClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => MoveSensorTuning(sender, -1);
-    private void OnMoveSensorTuningDownClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => MoveSensorTuning(sender, 1);
-
-    private void MoveSensorTuning(object? sender, int offset)
-    {
-        if (sender is Control { DataContext: SensorTuningEditorViewModel editor })
-            ViewModel.MoveSensorTuning(editor, offset);
     }
 
 }

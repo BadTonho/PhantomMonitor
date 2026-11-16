@@ -42,6 +42,69 @@ public sealed partial class MainWindowViewModel
 
     private readonly DelayedActionScheduler _inventoryStatusClearTimer = new(TimeSpan.FromSeconds(4));
 
+    private string _inventorySearchText = "";
+    private bool _inventoryOnlyAvailable;
+    private bool _hasInventoryFilterResults = true;
+
+    /// <summary>Texto de busca rápida na lista de sensores do inventário.</summary>
+    public string InventorySearchText
+    {
+        get => _inventorySearchText;
+        set
+        {
+            if (!Set(ref _inventorySearchText, value ?? "")) return;
+            Raise(nameof(HasInventoryFilter));
+            ApplyInventoryFilter();
+        }
+    }
+
+    /// <summary>Quando ativo, oculta sensores sem leitura disponível no snapshot atual.</summary>
+    public bool InventoryOnlyAvailable
+    {
+        get => _inventoryOnlyAvailable;
+        set
+        {
+            if (!Set(ref _inventoryOnlyAvailable, value)) return;
+            Raise(nameof(HasInventoryFilter));
+            ApplyInventoryFilter();
+        }
+    }
+
+    public bool HasInventoryFilter => !string.IsNullOrWhiteSpace(InventorySearchText) || InventoryOnlyAvailable;
+
+    public bool HasInventoryFilterResults
+    {
+        get => _hasInventoryFilterResults;
+        private set => Set(ref _hasInventoryFilterResults, value);
+    }
+
+    /// <summary>Limpa o texto de busca e o filtro de disponibilidade do inventário.</summary>
+    public void ClearInventoryFilter()
+    {
+        var changed = false;
+        if (_inventorySearchText.Length > 0)
+        {
+            _inventorySearchText = "";
+            Raise(nameof(InventorySearchText));
+            changed = true;
+        }
+        if (_inventoryOnlyAvailable)
+        {
+            _inventoryOnlyAvailable = false;
+            Raise(nameof(InventoryOnlyAvailable));
+            changed = true;
+        }
+        if (!changed) return;
+        Raise(nameof(HasInventoryFilter));
+        ApplyInventoryFilter();
+    }
+
+    private void ApplyInventoryFilter()
+    {
+        var visibleGroups = InventoryFilter.Apply(_inventoryGroups, _inventorySearchText, _inventoryOnlyAvailable);
+        HasInventoryFilterResults = _inventoryGroups.Count == 0 || visibleGroups > 0;
+    }
+
     /// <summary>Chamado por UpdateSnapshot: árvore + monitores com guardas por assinatura.</summary>
     private void UpdateInventorySession(SensorData data)
     {
@@ -149,6 +212,8 @@ public sealed partial class MainWindowViewModel
 
         for (var index = 0; index < plan.Count; index++)
             ReconcileInventoryRows(groups[index], plan[index].Rows);
+
+        ApplyInventoryFilter();
     }
 
     private void ReconcileInventoryRows(InventoryGroupViewModel group, IReadOnlyList<InventoryRowPlan> plan)

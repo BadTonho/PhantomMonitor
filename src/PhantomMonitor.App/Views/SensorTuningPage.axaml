@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             x:Class="PhantomMonitor.App.Views.SensorTuningPage"
+             x:DataType="vmroot:MainWindowViewModel">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsSensorTuning}">
+    <StackPanel Margin="28,23,28,28" Spacing="16">
+      <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Ajuste por série" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Text="Configure a cadência de publicação e a suavização das leituras." Classes="muted" FontSize="11" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" />
+          <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" />
+          <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" />
+        </StackPanel>
+      </Grid>
+
+      <Border Classes="desktop-card" Padding="16">
+        <StackPanel Spacing="7">
+          <TextBlock Text="COMO AS REGRAS SE APLICAM" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+          <TextBlock Text="Intervalo 0 usa cada tick global; valores positivos são limitados a 100–3.600.000 ms e elevados ao intervalo global quando necessário. Suavização 0 ou 1 desliga o filtro; 2–60 usa uma média móvel das amostras frescas." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+          <TextBlock Text="Padrões podem sobrepor várias séries. A última regra correspondente na lista prevalece; use as setas para mudar a ordem. Série ausente fica preservada e será ajustada quando aparecer." Foreground="{DynamicResource AccentWarningBrush}" FontSize="11" TextWrapping="Wrap" />
+          <TextBlock Text="Salvar recria a sessão de sensores e zera as estatísticas. Coleta parada permanece parada; coleta pausada continua pausada." Classes="muted" FontSize="11" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Text="REGRAS DE AJUSTE" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+          <TextBlock Text="Até 64 regras. Selecione uma série detectada/salva ou digite uma série/padrão." Classes="muted" FontSize="11" />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="action accent" Content="Adicionar regra" Click="OnAddSensorTuningClick" />
+      </Grid>
+
+      <ItemsControl ItemsSource="{Binding SensorTuningEditors}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vmroot:SensorTuningEditorViewModel">
+            <Border Classes="desktop-card" Padding="16" Margin="0,0,0,12">
+              <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                  <TextBlock Text="{Binding SeriesLabel}" Foreground="{DynamicResource AccentChipCpuBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <Button Grid.Column="1" Content="↑" IsEnabled="{Binding CanMoveUp}" Click="OnMoveSensorTuningUpClick" />
+                  <Button Grid.Column="2" Content="↓" IsEnabled="{Binding CanMoveDown}" Click="OnMoveSensorTuningDownClick" />
+                  <Button Grid.Column="3" Content="Remover" Click="OnRemoveSensorTuningClick" />
+                </Grid>
+                <Grid ColumnDefinitions="1.3*,*" ColumnSpacing="10">
+                  <StackPanel Spacing="5">
+                    <TextBlock Text="SÉRIE OU PADRÃO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+                    <TextBox Text="{Binding Series, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="GpuTemperature ou Gpu*" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="5">
+                    <TextBlock Text="SUGESTÕES DO INVENTÁRIO" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+                    <ComboBox ItemsSource="{Binding SeriesOptions}" SelectedItem="{Binding SelectedSeriesOption, Mode=TwoWay}" />
+                  </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                  <StackPanel Spacing="5">
+                    <TextBlock Text="INTERVALO (MS)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+                    <TextBox Text="{Binding IntervalText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="0 = global" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="5">
+                    <TextBlock Text="SUAVIZAÇÃO (AMOSTRAS)" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" />
+                    <TextBox Text="{Binding SmoothingText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="0 = desativada" />
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+        <Button Classes="action accent" Content="Salvar e aplicar" Click="OnSaveSensorTuningsClick" />
+        <TextBlock Grid.Column="1" Text="{Binding SensorTuningMessage}" Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+      </Grid>
+      <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

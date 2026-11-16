@@ -1,0 +1,168 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmroot="using:PhantomMonitor.App.ViewModels"
+             xmlns:models="using:PhantomMonitor.Models"
+             x:Class="PhantomMonitor.App.Views.InventoryPage"
+             x:DataType="vmroot:MainWindowViewModel">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsInventory}">
+    <StackPanel Margin="28,23,28,28" Spacing="16">
+      <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,3" RowSpacing="10">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Inventário de sensores" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding InventorySummaryText}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding InventoryUpdatedText}" Classes="muted" FontSize="11" />
+          <TextBlock IsVisible="{Binding HasInventoryActionStatus}" Text="{Binding InventoryActionStatusText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextWrapping="Wrap" />
+        </StackPanel>
+        <WrapPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Classes="action" Content="Iniciar" IsEnabled="{Binding CanStart}" Click="OnStartClick" Margin="0,0,8,8" />
+          <Button Classes="action" Content="{Binding PauseButtonText}" IsEnabled="{Binding CanPause}" Click="OnPauseClick" Margin="0,0,8,8" />
+          <Button Classes="action" Content="Parar" IsEnabled="{Binding CanStop}" Click="OnStopClick" Margin="0,0,8,8" />
+          <Button Classes="action" Content="Resetar estatísticas" Click="OnResetStatsClick"
+                  Margin="0,0,8,8"
+                  ToolTip.Tip="Zera as colunas Mín/Máx/Média da sessão e grava um marcador no CSV/journal ativo (#marker), como no WPF." />
+        </WrapPanel>
+      </Grid>
+
+      <Border IsVisible="{Binding HasInventorySnapshot}" Classes="desktop-card" Padding="12">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+          <TextBox Text="{Binding InventorySearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                   PlaceholderText="Buscar sensor por nome, chave ou categoria…"
+                   AutomationProperties.Name="Buscar sensor no inventário" />
+          <CheckBox Grid.Column="1" Content="Somente disponíveis"
+                    IsChecked="{Binding InventoryOnlyAvailable, Mode=TwoWay}"
+                    VerticalAlignment="Center" />
+          <Button Grid.Column="2" Content="Limpar"
+                  IsVisible="{Binding HasInventoryFilter}"
+                  Click="OnClearInventoryFilterClick"
+                  VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+
+      <Border IsVisible="{Binding IsWaitingForInventorySnapshot}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="18">
+        <TextBlock Text="Aguardando a primeira leitura dos sensores…" Classes="muted" FontSize="12" />
+      </Border>
+
+      <Border IsVisible="{Binding !HasInventoryFilterResults}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="18">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="Nenhum sensor encontrado para o filtro atual." Classes="muted" FontSize="12" VerticalAlignment="Center" />
+          <Button Content="Limpar filtro" Click="OnClearInventoryFilterClick" />
+        </StackPanel>
+      </Border>
+
+      <ScrollViewer IsVisible="{Binding HasInventorySnapshot}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <Border MinWidth="640" IsVisible="{Binding HasInventoryFilterResults}" Background="{DynamicResource BgCardBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="0" HorizontalAlignment="Stretch">
+            <Border Background="{DynamicResource BgChipBrush}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,0,0,1" Padding="10,6" HorizontalAlignment="Stretch">
+              <Grid ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch">
+                <TextBlock Text="Sensor" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="20,0,0,0" />
+                <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,2">
+                  <TextBlock Text="Atual" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" />
+                </Border>
+                <TextBlock Grid.Column="2" Text="Mínimo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Text="Máximo" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="4" Text="Média" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+            <ItemsControl ItemsSource="{Binding InventoryGroups}" HorizontalAlignment="Stretch">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vmroot:InventoryGroupViewModel">
+                  <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" HorizontalAlignment="Stretch">
+                    <StackPanel>
+                      <ToggleButton Classes="inventory-group" Content="{Binding Title}" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                    HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Title}" />
+                      <ItemsControl ItemsSource="{Binding Rows}" IsVisible="{Binding IsExpanded}" HorizontalAlignment="Stretch">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vmroot:InventoryRowViewModel">
+                            <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="10,2" HorizontalAlignment="Stretch">
+                              <StackPanel Spacing="0" HorizontalAlignment="Stretch">
+                                <Grid ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch">
+                                  <Grid ColumnDefinitions="20,*">
+                                    <TextBlock Text="{Binding SensorName}"
+                                               Grid.Column="1" FontWeight="SemiBold"
+                                               ToolTip.Tip="{Binding SensorNameTooltip}"
+                                               ToolTip.ShowDelay="2000"
+                                               Foreground="{DynamicResource TextBodyBrush}"
+                                               FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <Button Classes="inventory-row-toggle" Content="{Binding ExpansionGlyph}"
+                                            IsVisible="{Binding CanCollapseChildren}"
+                                            Click="OnInventoryRowToggleClick"
+                                            Width="20" Height="22" Foreground="{DynamicResource TextBodyBrush}"
+                                            FontSize="12" FontWeight="SemiBold"
+                                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center"
+                                            ToolTip.Tip="Expandir ou recolher sensores" AutomationProperties.Name="{Binding SensorName}" />
+                                  </Grid>
+                                  <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
+                                    <TextBlock Text="{Binding Current}" ToolTip.Tip="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  </Border>
+                                  <TextBlock Grid.Column="2" Text="{Binding Min}" ToolTip.Tip="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="3" Text="{Binding Max}" ToolTip.Tip="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="4" Text="{Binding Avg}" ToolTip.Tip="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding ShowChildren}" HorizontalAlignment="Stretch">
+                                  <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vmroot:InventoryRowViewModel">
+                                      <Grid IsVisible="{Binding IsVisible}" ColumnDefinitions="*,96,96,96,96" ColumnSpacing="8" HorizontalAlignment="Stretch" Margin="0,1,0,0">
+                                        <TextBlock Text="{Binding SensorName}" ToolTip.Tip="{Binding SensorName}" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="38,0,0,0" />
+                                        <Border Grid.Column="1" Background="{DynamicResource InventoryValueCellBrush}" BorderBrush="{DynamicResource InventoryValueCellBorderBrush}" BorderThickness="1,0" Padding="5,3">
+                                          <TextBlock Text="{Binding Current}" ToolTip.Tip="{Binding Current}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Grid.Column="2" Text="{Binding Min}" ToolTip.Tip="{Binding Min}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="3" Text="{Binding Max}" ToolTip.Tip="{Binding Max}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="4" Text="{Binding Avg}" ToolTip.Tip="{Binding Avg}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="monospace" FontSize="12" TextAlignment="Right" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                      </Grid>
+                                    </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                              </StackPanel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </ScrollViewer>
+
+      <Button Content="Hardware detectado…" HorizontalAlignment="Left" Margin="0,0,0,14"
+              IsVisible="{Binding HasInventorySnapshot}" Click="OnOpenHardwareInventoryClick" />
+
+      <Border Classes="desktop-card" Padding="16" Margin="0,0,0,14" IsVisible="{Binding HasMonitors}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Monitores (EDID)" Foreground="{DynamicResource TextBodyBrush}" FontSize="14" FontWeight="SemiBold" />
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Monitors}" MinWidth="620">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:MonitorInfo">
+                  <Border BorderBrush="{DynamicResource BgCardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8">
+                    <StackPanel Spacing="3">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding InstanceName}" Foreground="{DynamicResource TextMonoBrush}" FontFamily="monospace" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="PRIMÁRIO" IsVisible="{Binding Primary}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+                      </Grid>
+                      <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="{Binding Manufacturer}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" MinWidth="48" />
+                        <TextBlock Text="{Binding Model}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" MinWidth="120" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding ProductCode}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" MinWidth="64" />
+                        <TextBlock Text="{Binding Serial}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" MinWidth="96" />
+                        <TextBlock Text="{Binding DiagonalText}" Foreground="{DynamicResource TextBodyBrush}" FontSize="11" MinWidth="56" />
+                        <TextBlock Text="{Binding MadeText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="Os sensores indisponíveis dependem do hardware, dos drivers e dos dados expostos pelo kernel." Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="2,0,0,0" />
+      <Border Height="88" IsVisible="{Binding IsDockNavigation}" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

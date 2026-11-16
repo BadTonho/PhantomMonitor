@@ -14,6 +14,7 @@ namespace PhantomMonitor.App.ViewModels;
 public sealed class InventoryGroupViewModel(string title, ObservableCollection<InventoryRowViewModel> rows) : INotifyPropertyChanged
 {
     private bool _isExpanded = true;
+    private bool _isVisible = true;
 
     public string Title { get; } = title;
     public ObservableCollection<InventoryRowViewModel> Rows { get; } = rows;
@@ -27,6 +28,18 @@ public sealed class InventoryGroupViewModel(string title, ObservableCollection<I
             if (_isExpanded == value) return;
             _isExpanded = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+        }
+    }
+
+    /// <summary>Indica se o grupo possui ao menos uma linha visível pelo filtro atual.</summary>
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set
+        {
+            if (_isVisible == value) return;
+            _isVisible = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsVisible)));
         }
     }
 
@@ -48,6 +61,7 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
     private string _max;
     private string _avg;
     private bool _isExpanded = true;
+    private bool _isVisible = true;
 
     public InventoryRowViewModel(string key)
     {
@@ -80,6 +94,18 @@ public sealed class InventoryRowViewModel : INotifyPropertyChanged
             Raise();
             Raise(nameof(ExpansionGlyph));
             Raise(nameof(ShowChildren));
+        }
+    }
+
+    /// <summary>Indica se a linha corresponde ao filtro atual do inventário.</summary>
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set
+        {
+            if (_isVisible == value) return;
+            _isVisible = value;
+            Raise();
         }
     }
 
